@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -36,6 +37,12 @@ public class MainActivity extends Activity {
             return;
         }
         setContentView(web);
+        // 게임의 첫 화면이 그려질 때까지 웹뷰를 숨긴다. 그동안은 창 바탕(어두운 바탕 + 아이콘)이 보인다.
+        // 숨기지 않으면 페이지를 받아 오는 동안 빈 흰 화면이 번쩍인다.
+        web.setBackgroundColor(0xFF17180F);
+        web.setVisibility(View.INVISIBLE);
+        // 안전장치: 무슨 이유로든 "그려졌다"는 신호가 오지 않아도 8초 뒤에는 보여 준다(빈 화면에 갇히지 않게).
+        web.postDelayed(this::reveal, 8000);
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);                   // 게임이 자바스크립트다
@@ -58,6 +65,12 @@ public class MainActivity extends Activity {
                 return true;
             }
 
+            /** 페이지의 첫 내용이 화면에 그려졌다. 이제 웹뷰를 보여 준다(게임의 시작 화면이 이어서 보인다). */
+            @Override
+            public void onPageCommitVisible(WebView view, String url) {
+                reveal();
+            }
+
             /**
              * 첫 화면을 못 받았을 때(처음 켜는데 인터넷이 없는 경우)만 안내 화면을 보여 준다.
              * 그림 하나를 못 받은 정도의 오류는 무시한다. 한 번이라도 열었다면 서비스 워커가 저장본으로 열어 주므로 여기로 오지 않는다.
@@ -70,6 +83,11 @@ public class MainActivity extends Activity {
 
         // 화면을 돌리는 등으로 다시 만들어진 경우에는 웹뷰가 기억한 상태를 되살리고, 아니면 게임을 연다.
         if (saved == null || web.restoreState(saved) == null) web.loadUrl(BuildConfig.GAME_URL);
+    }
+
+    /** 숨겨 둔 웹뷰를 보여 준다. 여러 번 불려도 괜찮다. 액티비티가 이미 끝났으면 아무 일도 하지 않는다. */
+    private void reveal() {
+        if (web != null) web.setVisibility(View.VISIBLE);
     }
 
     /** 바깥 브라우저로 연다. https 주소만 내보낸다. 열 앱이 없어도 죽지 않는다. */
@@ -94,6 +112,7 @@ public class MainActivity extends Activity {
             + "padding:14px 28px;border:3px solid #17180f;text-decoration:none'>다시 시도</a></body></html>";
         // 기준 주소를 게임 주소로 두어, 뒤로 가기 기록에 깨진 주소가 남지 않게 한다.
         web.loadDataWithBaseURL(BuildConfig.GAME_URL, html, "text/html", "utf-8", null);
+        reveal();
     }
 
     /* 앱이 가려지면 웹뷰도 쉬게 한다. 게임은 이때 "자리를 비웠다"로 처리하고 저장한다(페이지의 visibilitychange). */

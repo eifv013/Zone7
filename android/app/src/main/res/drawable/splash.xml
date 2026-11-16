@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 앱을 누른 직후, 웹뷰가 게임을 받아 오기 전까지 보이는 바탕: 어두운 바탕 가운데에 아이콘.
+     게임의 시작 화면(로딩)과 같은 색이라 자연스럽게 이어진다. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/ink" />
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/splash_logo" />
+    </item>
+</layer-list>

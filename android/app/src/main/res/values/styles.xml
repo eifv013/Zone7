@@ -3,9 +3,9 @@
     <color name="ink">#17180F</color>
     <color name="paper">#CFCFC4</color>
     <color name="icon_bg">#131827</color>
-    <!-- 제목 줄 없는 화면. 게임이 뜨기 전 잠깐 보이는 바탕은 게임의 라이트 테마 색과 맞춘다. -->
-    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@color/paper</item>
+    <!-- 제목 줄 없는 화면. 게임이 뜨기 전에는 바탕 그림(drawable/splash: 어두운 바탕 + 아이콘)이 보인다. -->
+    <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
         <item name="android:statusBarColor">@color/ink</item>
         <item name="android:navigationBarColor">@color/ink</item>
     </style>

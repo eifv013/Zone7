@@ -1123,6 +1123,11 @@
    */
   function start(snapshot) {
     var now = Date.now();
+    // 시작 화면에 진행을 알린다. 시작 화면이 없으면(테스트 등) 아무 일도 하지 않는 대역을 쓴다.
+    var boot = window.BOOT || { mark: function () {}, skip: function () {} };
+    boot.mark('code');
+    // 뷰어가 진행 중이던 게임을 넘겨받아 페이지만 바꾼 경우에는 시작 화면을 건너뛴다(하던 플레이가 끊기지 않게).
+    if (snapshot && snapshot.version === C.SAVE_VERSION) boot.skip();
     var loaded = { state: null, error: null };
     if (snapshot && snapshot.version === C.SAVE_VERSION) state = C.sanitizeState(snapshot, now);
     else {
@@ -1130,6 +1135,7 @@
       state = loaded.state || C.createState(now);
     }
 
+    boot.mark('save');
     build();
     wire();
 
@@ -1148,6 +1154,7 @@
     // 도트 화면은 부가 요소다. 모듈이 없거나 캔버스를 못 써도 게임은 그대로 진행한다.
     try { if (window.Scene) scene = window.Scene.mount($('scene'), sceneView); }
     catch (e) { console.warn('scene', e); scene = null; }
+    boot.mark('ready');
     setInterval(safeFrame, 100);
     Cloud.init();
     Update.afterUpdate();

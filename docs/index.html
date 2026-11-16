@@ -73,6 +73,19 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); ou
 .update-bar button:disabled { opacity: .7; cursor: default; }
 .update-bar .update-later { background: transparent; color: var(--on-slab); border-color: var(--on-slab); }
 
+/* 시작 화면(로딩). 테마와 상관없이 어두운 바탕이다: 앱 아이콘과 같은 느낌으로, 플레이 화면과 구분되게. */
+#boot { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; background: #17180f; color: #f0b400; transition: opacity .3s; }
+#boot.boot-out { opacity: 0; pointer-events: none; }
+#boot .boot-tape { flex: none; height: 22px; background: repeating-linear-gradient(-45deg, #f0b400 0 18px, #17180f 18px 36px); }
+#boot .boot-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+#boot .boot-title { margin: 0; font: 400 clamp(64px, 22vw, 120px)/1 var(--font-display); letter-spacing: -.01em; }
+#boot .boot-sub { margin: 10px 0 44px; font: 400 14px/1.5 var(--font-body); letter-spacing: .12em; color: #cfcfc4; }
+#boot .boot-track { width: min(280px, 72vw); height: 14px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
+#boot #boot-bar { height: 100%; width: 0; background: #f0b400; transition: width .12s linear; }
+#boot #boot-text { margin: 12px 0 0; min-height: 1.5em; font: 600 13px/1.5 var(--font-mono); }
+#boot #boot-tip { margin: 36px 0 0; max-width: 300px; min-height: 3em; font: 400 13px/1.6 var(--font-body); color: #9a9a8c; }
+#boot .boot-ver { flex: none; padding: 0 0 10px; text-align: center; font: 400 11px/1.5 var(--font-body); color: #6d6d60; }
+
 /* 머리띠 */
 .tape { height: 14px; background: repeating-linear-gradient(-45deg, var(--hazard) 0 14px, var(--ink) 14px 28px); }
 .mast {
@@ -494,6 +507,159 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 </style>
 </head>
 <body data-mview="base">
+<!-- 시작 화면. 게임 코드보다 먼저 그려지도록 맨 위에 둔다. 움직이는 것은 바로 아래 스크립트(src/boot.js)다. -->
+<div id="boot" role="status" aria-live="polite">
+  <div class="boot-tape"></div>
+  <div class="boot-mid">
+    <h1 class="boot-title">7구역</h1>
+    <p class="boot-sub">“생존자는 7구역으로 오라”</p>
+    <div class="boot-track"><div id="boot-bar"></div></div>
+    <p id="boot-text">신호를 잡는 중…</p>
+    <p id="boot-tip"></p>
+  </div>
+  <div class="boot-ver">7구역 알파 0.6.1</div>
+  <div class="boot-tape"></div>
+</div>
+<script>
+/*
+ * Boot — 시작 화면(로딩)
+ * ------------------------------------------------------------
+ * 게임을 열면 플레이 화면이 바로 나오지 않고, 제목과 진행 막대가 있는 시작 화면이 먼저 나온다.
+ *
+ * 두 부분으로 나뉜다.
+ *   1) createBoot: 화면(DOM)을 모르는 계산부. "지금 막대를 몇 %로 그릴까, 닫아도 되나"만 판단한다. Node 에서 테스트한다.
+ *   2) mount:     실제 화면을 움직이는 부분. 0.05초마다 계산부에 물어 막대와 문구를 고친다.
+ *
+ * 진행 단계는 실제로 일어나는 일이다(가짜 대기가 아니다). ui.js 가 그 일을 마칠 때마다 mark 로 알린다.
+ *   page  페이지가 도착했다         code  게임 코드를 다 읽었다
+ *   save  저장을 불러왔다           ready 첫 화면을 그렸다
+ * 다만 이 일들은 보통 눈 깜짝할 사이에 끝나므로, 화면이 번쩍하고 사라지지 않게 최소 시간(minMs) 동안은 막대가 차오르는 것을 보여 준다.
+ * 반대로 무언가 잘못돼 끝내 준비되지 않아도 maxMs 가 지나면 닫는다: 시작 화면이 게임(과 오류 안내)을 영영 가리면 안 된다.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Boot = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  /** 단계: id, 여기까지 오면 채워지는 비율, 이 단계를 "하는 중"에 보여 줄 문구. 순서대로 진행한다. */
+  var STAGES = [
+    { id: 'page', upTo: 0.25, text: '신호를 잡는 중' },
+    { id: 'code', upTo: 0.55, text: '장비를 푸는 중' },
+    { id: 'save', upTo: 0.85, text: '거점을 확인하는 중' },
+    { id: 'ready', upTo: 1, text: '문을 여는 중' }
+  ];
+  var MIN_MS = 1200, MAX_MS = 8000;
+  var TIPS = [
+    '자리를 비워도 거점은 돌아간다. 최대 4시간, 절반 효율이다.',
+    '방어력이 무리 규모보다 커야 밤을 넘긴다.',
+    '시세가 높을 때 팔면 같은 상품으로 더 번다.',
+    '철수하면 거점은 잃지만 항체 샘플은 남는다.',
+    '구역 목표를 채울 때마다 보급 하나를 고른다.',
+    '다음 구역을 열어도 앞 구역은 계속 물자를 보낸다.'
+  ];
+
+  function finite(n, fallback) { return typeof n === 'number' && isFinite(n) ? n : fallback; }
+
+  /**
+   * 계산부를 만든다. opts: { now: 시작 시각(ms), minMs, maxMs }. 잘못된 값은 기본값으로 바꾼다.
+   * 모든 함수는 예외를 던지지 않는다: 시작 화면의 오류가 게임 시작을 막으면 안 된다.
+   */
+  function createBoot(opts) {
+    opts = opts || {};
+    var startedAt = finite(opts.now, 0);
+    var minMs = Math.max(0, finite(opts.minMs, MIN_MS));
+    var maxMs = Math.max(minMs, finite(opts.maxMs, MAX_MS));
+    var reached = -1;      // 마친 단계 중 가장 뒤의 것(STAGES 의 번호)
+    var forced = false;    // 오류 등으로 당장 닫아야 하는가
+
+    function elapsed(now) { return Math.max(0, finite(now, startedAt) - startedAt); }
+    /** 실제 진행 비율(0~1). */
+    function real() { return reached < 0 ? 0 : STAGES[reached].upTo; }
+
+    return {
+      /** 단계를 마쳤다고 알린다. 모르는 이름은 무시하고, 뒤 단계를 마쳤으면 앞 단계도 마친 것으로 본다. */
+      mark: function (id) {
+        for (var i = 0; i < STAGES.length; i++) if (STAGES[i].id === id && i > reached) reached = i;
+      },
+      /** 기다리지 않고 닫는다(시작 중 오류, 또는 뷰어가 진행 중인 게임을 넘겨받아 다시 여는 경우). */
+      skip: function () { forced = true; },
+      /** 막대에 그릴 비율(0~1). 실제 진행을 넘지 않고, 최소 시간에 맞춰 차오른다. */
+      shown: function (now) {
+        var byTime = minMs > 0 ? elapsed(now) / minMs : 1;
+        return Math.max(0, Math.min(1, real(), byTime));
+      },
+      /** 지금 보여 줄 문구: 막대가 아직 닿지 못한 첫 단계의 것. */
+      text: function (now) {
+        var p = this.shown(now);
+        for (var i = 0; i < STAGES.length; i++) if (p < STAGES[i].upTo) return STAGES[i].text;
+        return STAGES[STAGES.length - 1].text;
+      },
+      /** 닫아도 되는가: 준비가 끝났고 최소 시간도 지났거나, 강제로 닫으라고 했거나, 너무 오래 걸렸다. */
+      canClose: function (now) {
+        if (forced || elapsed(now) >= maxMs) return true;
+        return reached === STAGES.length - 1 && elapsed(now) >= minMs;
+      },
+      /** 준비가 안 됐는데 시간이 다 돼서 닫는 것인가(기록용). */
+      timedOut: function (now) { return !forced && reached < STAGES.length - 1 && elapsed(now) >= maxMs; }
+    };
+  }
+
+  /** 도움말 한 줄을 고른다. rand 는 0 이상 1 미만의 수를 돌려주는 함수(테스트에서는 고정값을 넣는다). */
+  function pickTip(rand) {
+    var r = finite(typeof rand === 'function' ? rand() : NaN, 0);
+    return TIPS[Math.min(TIPS.length - 1, Math.max(0, Math.floor(r * TIPS.length)))];
+  }
+
+  /**
+   * 시작 화면을 실제로 움직인다. 페이지의 #boot 를 찾아 막대·문구를 갱신하고, 닫을 때가 되면 흐리게 지운 뒤 없앤다.
+   * 돌려주는 것: { mark(id), skip() } — ui.js 가 진행을 알릴 때 쓴다. #boot 가 없으면 아무 일도 하지 않는 같은 모양의 객체를 준다.
+   */
+  function mount(doc, win) {
+    var nothing = { mark: function () {}, skip: function () {} };
+    try {
+      var box = doc && doc.getElementById('boot');
+      if (!box) return nothing;
+      var bar = doc.getElementById('boot-bar'), text = doc.getElementById('boot-text'), tip = doc.getElementById('boot-tip');
+      var boot = createBoot({ now: Date.now() });
+      var timer = null, closed = false;
+      if (tip) tip.textContent = pickTip(Math.random);
+      boot.mark('page');
+
+      var close = function () {
+        if (closed) return;
+        closed = true;
+        if (timer) win.clearInterval(timer);
+        if (boot.timedOut(Date.now()) && win.console) win.console.warn('boot', '준비가 끝나지 않았지만 시작 화면을 닫는다.');
+        box.className += ' boot-out';                                   // 0.3초 동안 흐려진다. 이때부터 터치는 게임으로 간다.
+        win.setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 350);
+      };
+      var paint = function () {
+        try {
+          var now = Date.now();
+          if (bar) bar.style.width = Math.round(boot.shown(now) * 100) + '%';
+          if (text) text.textContent = boot.text(now) + '…';
+          if (boot.canClose(now)) close();
+        } catch (e) { close(); }
+      };
+      timer = win.setInterval(paint, 50);
+      paint();
+      // 시작 도중 오류가 나면 기다리지 않고 닫는다. 게임 쪽의 오류 안내가 가려지지 않게.
+      win.addEventListener('error', function () { boot.skip(); });
+      return { mark: function (id) { boot.mark(id); }, skip: function () { boot.skip(); paint(); } };
+    } catch (e) {
+      // 시작 화면을 못 띄워도 게임은 열려야 한다. 남아 있으면 지운다.
+      try { var b = doc.getElementById('boot'); if (b && b.parentNode) b.parentNode.removeChild(b); } catch (e2) { /* 더 할 수 있는 일이 없다 */ }
+      return nothing;
+    }
+  }
+
+  return { STAGES: STAGES, TIPS: TIPS, MIN_MS: MIN_MS, MAX_MS: MAX_MS, createBoot: createBoot, pickTip: pickTip, mount: mount };
+});
+
+// 시작 화면이 실패해도 게임은 열려야 하므로 통째로 감싼다.
+try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BOOT = null; var b = document.getElementById('boot'); if (b) b.remove(); }
+</script>
 <div class="update-bar" id="update-bar" role="status" hidden>
   <p id="update-text"></p>
   <button type="button" id="update-now">지금 업데이트</button>
@@ -679,7 +845,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -748,7 +914,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.0";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.1";
 </script>
 <script>
 /*
@@ -767,6 +933,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.0";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.6.1', date: '2026-11-16', at: '2026-11-16 21:33:56', title: '시작 화면과 안드로이드 앱',
+      items: [
+        '게임을 열면 시작 화면이 먼저 나온다. 제목과 진행 막대, 그리고 도움말 한 줄이 보인 뒤 플레이 화면으로 넘어간다.',
+        '안드로이드 앱(APK)이 생겼다. 앱은 켤 때마다 최신 버전을 받아 오므로 따로 업데이트할 필요가 없다. 한 번 연 뒤에는 인터넷 없이도 열린다.',
+        '앱을 누르면 게임을 받아 오는 동안 빈 화면 대신 아이콘이 보인다.',
+        '앱의 진행은 그 기기에만 저장된다. 앱을 지우기 전에는 기록 > 저장에서 내보내기 코드를 받아 둔다.'
+      ] },
     { ver: '알파 0.6.0', date: '2026-11-16', at: '2026-11-16 20:38:19', title: '새 구조: 쌓이는 구역과 철수', items: [
       '게임의 뼈대를 새로 짰다. 지구(1-A ~ 7-Z)를 182번 이주하던 구조를 버렸다. 예전 저장은 이어지지 않고 새로 시작한다.',
       '구역은 일곱이고, 넘어가도 앞 구역이 남아 계속 물자를 보낸다. 구역마다 하는 일이 다르다.',
@@ -4153,6 +4326,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.0";
    */
   function start(snapshot) {
     var now = Date.now();
+    // 시작 화면에 진행을 알린다. 시작 화면이 없으면(테스트 등) 아무 일도 하지 않는 대역을 쓴다.
+    var boot = window.BOOT || { mark: function () {}, skip: function () {} };
+    boot.mark('code');
+    // 뷰어가 진행 중이던 게임을 넘겨받아 페이지만 바꾼 경우에는 시작 화면을 건너뛴다(하던 플레이가 끊기지 않게).
+    if (snapshot && snapshot.version === C.SAVE_VERSION) boot.skip();
     var loaded = { state: null, error: null };
     if (snapshot && snapshot.version === C.SAVE_VERSION) state = C.sanitizeState(snapshot, now);
     else {
@@ -4160,6 +4338,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.0";
       state = loaded.state || C.createState(now);
     }
 
+    boot.mark('save');
     build();
     wire();
 
@@ -4178,6 +4357,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.0";
     // 도트 화면은 부가 요소다. 모듈이 없거나 캔버스를 못 써도 게임은 그대로 진행한다.
     try { if (window.Scene) scene = window.Scene.mount($('scene'), sceneView); }
     catch (e) { console.warn('scene', e); scene = null; }
+    boot.mark('ready');
     setInterval(safeFrame, 100);
     Cloud.init();
     Update.afterUpdate();

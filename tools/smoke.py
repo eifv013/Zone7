@@ -43,7 +43,11 @@ def run_case(browser, name, size, state, mode):
     if state is not None:
         page.add_init_script("var s=%s; s.lastSeen=Date.now(); if(!localStorage.getItem('%s'))localStorage.setItem('%s', JSON.stringify(s))" % (json.dumps(state), SAVE_KEY, SAVE_KEY))
     page.goto(URL)
-    page.wait_for_timeout(1000)
+    # 시작 화면: 열자마자 보여야 하고, 준비가 끝나면(최소 1.2초 + 흐려지는 0.35초) 사라져야 한다.
+    page.wait_for_timeout(300)
+    if page.locator('#boot').count() != 1: problems.append('시작 화면이 나오지 않았다')
+    page.wait_for_timeout(2200)
+    if page.locator('#boot').count() != 0: problems.append('시작 화면이 사라지지 않았다')
 
     def close_story():
         for _ in range(8):

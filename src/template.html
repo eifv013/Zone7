@@ -61,6 +61,19 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); ou
 .update-bar button:disabled { opacity: .7; cursor: default; }
 .update-bar .update-later { background: transparent; color: var(--on-slab); border-color: var(--on-slab); }
 
+/* 시작 화면(로딩). 테마와 상관없이 어두운 바탕이다: 앱 아이콘과 같은 느낌으로, 플레이 화면과 구분되게. */
+#boot { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; background: #17180f; color: #f0b400; transition: opacity .3s; }
+#boot.boot-out { opacity: 0; pointer-events: none; }
+#boot .boot-tape { flex: none; height: 22px; background: repeating-linear-gradient(-45deg, #f0b400 0 18px, #17180f 18px 36px); }
+#boot .boot-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+#boot .boot-title { margin: 0; font: 400 clamp(64px, 22vw, 120px)/1 var(--font-display); letter-spacing: -.01em; }
+#boot .boot-sub { margin: 10px 0 44px; font: 400 14px/1.5 var(--font-body); letter-spacing: .12em; color: #cfcfc4; }
+#boot .boot-track { width: min(280px, 72vw); height: 14px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
+#boot #boot-bar { height: 100%; width: 0; background: #f0b400; transition: width .12s linear; }
+#boot #boot-text { margin: 12px 0 0; min-height: 1.5em; font: 600 13px/1.5 var(--font-mono); }
+#boot #boot-tip { margin: 36px 0 0; max-width: 300px; min-height: 3em; font: 400 13px/1.6 var(--font-body); color: #9a9a8c; }
+#boot .boot-ver { flex: none; padding: 0 0 10px; text-align: center; font: 400 11px/1.5 var(--font-body); color: #6d6d60; }
+
 /* 머리띠 */
 .tape { height: 14px; background: repeating-linear-gradient(-45deg, var(--hazard) 0 14px, var(--ink) 14px 28px); }
 .mast {
@@ -482,6 +495,24 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 </style>
 </head>
 <body data-mview="base">
+<!-- 시작 화면. 게임 코드보다 먼저 그려지도록 맨 위에 둔다. 움직이는 것은 바로 아래 스크립트(src/boot.js)다. -->
+<div id="boot" role="status" aria-live="polite">
+  <div class="boot-tape"></div>
+  <div class="boot-mid">
+    <h1 class="boot-title">7구역</h1>
+    <p class="boot-sub">“생존자는 7구역으로 오라”</p>
+    <div class="boot-track"><div id="boot-bar"></div></div>
+    <p id="boot-text">신호를 잡는 중…</p>
+    <p id="boot-tip"></p>
+  </div>
+  <div class="boot-ver">7구역 알파 0.6.1</div>
+  <div class="boot-tape"></div>
+</div>
+<script>
+/*__BOOT__*/
+// 시작 화면이 실패해도 게임은 열려야 하므로 통째로 감싼다.
+try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BOOT = null; var b = document.getElementById('boot'); if (b) b.remove(); }
+</script>
 <div class="update-bar" id="update-bar" role="status" hidden>
   <p id="update-text"></p>
   <button type="button" id="update-now">지금 업데이트</button>
@@ -667,7 +698,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
