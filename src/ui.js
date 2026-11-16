@@ -459,6 +459,67 @@
    * 되돌릴 수 없는 행동 전에 띄우는 확인 창. 안전한 쪽(noText) 버튼에 초점을 두어
    * 실수로 Enter 를 눌러도 실행되지 않게 한다. 확인을 누르면 onYes 를 실행한다.
    */
+  /* ---------- 의견 보내기 ---------- */
+  var FEEDBACK_REPO = 'https://github.com/eifv013/Zone7';   // "GitHub에 올리기"가 여는 곳
+  /** 지금 판의 정보를 붙인 의견 글. 쓴 글이 비어 있으면 ''. 글 자체는 Feedback 모듈이 만든다. */
+  function feedbackReport(text) {
+    if (!window.Feedback) return '';
+    return window.Feedback.compose({
+      text: text, version: window.ZONE7_VERSION || '', zone: C.zoneLabel(state), stats: C.stats(state, Date.now()),
+      screen: { w: window.innerWidth, h: window.innerHeight }, ua: navigator.userAgent, duration: C.formatDuration,
+      zoneName: function (i) { var z = C.ZONES[Math.min(i, C.ZONES.length - 1)]; return z.no + '구역 ' + z.name; }
+    });
+  }
+  /**
+   * 의견 창의 단추들을 잇는다. 보내는 길은 셋이고, 어느 것도 실패해도 게임에는 영향이 없다.
+   *   공유하기       : 폰의 공유 창(메신저 등). 지원하는 브라우저에서만 단추가 보인다.
+   *   복사하기       : 클립보드에 복사. 막혀 있으면 글 칸에 전체 글을 넣어 직접 복사하게 한다.
+   *   GitHub에 올리기: 글이 채워진 새 글 쓰기 화면을 연다(GitHub 계정이 필요하다).
+   */
+  function wireFeedback() {
+    var box = $('feedback'), area = $('feedback-text');
+    if (!box || !area || !window.Feedback) { if ($('feedback-open')) $('feedback-open').hidden = true; return; }
+    var say = function (t) { setText($('feedback-msg'), t); };
+    var refresh = function () {
+      var ok = window.Feedback.valid(area.value);
+      ['feedback-share', 'feedback-copy', 'feedback-issue'].forEach(function (id) { $(id).disabled = !ok; });
+      // 붙는 정보 미리 보기: 아무 글이나 넣어 만든 뒤, 정보 부분만 떼어 보여 준다
+      var sample = feedbackReport('-'), cut = sample.indexOf('--- 자동으로 붙는 정보 ---');
+      setText($('feedback-info'), cut >= 0 ? sample.slice(cut).split('\n').slice(1).join('\n') : '');
+    };
+    var close = function () { box.hidden = true; };
+    $('feedback-open').addEventListener('click', function () {
+      say(''); refresh(); box.hidden = false;
+      try { area.focus(); } catch (e) { /* 초점을 못 옮겨도 쓸 수 있다 */ }
+    });
+    $('feedback-close').addEventListener('click', close);
+    area.addEventListener('input', refresh);
+    $('feedback-share').hidden = typeof navigator.share !== 'function';
+    $('feedback-share').addEventListener('click', function () {
+      var report = feedbackReport(area.value);
+      if (!report) return;
+      try { navigator.share({ title: '7구역 의견', text: report }).then(function () { say('공유 창을 열었어요. 고마워요!'); }, function () { say('공유를 취소했어요.'); }); }
+      catch (e) { say('공유할 수 없어요. "복사하기"를 써 주세요.'); }
+    });
+    $('feedback-copy').addEventListener('click', function () {
+      var report = feedbackReport(area.value);
+      if (!report) return;
+      var done = function () { say('복사했어요. 테스트를 부탁한 사람에게 붙여 넣어 보내 주세요.'); };
+      var manual = function () { area.value = report; area.select(); say('자동 복사가 막혀 있어요. 위 글을 직접 복사해 주세요.'); refresh(); };
+      try { navigator.clipboard.writeText(report).then(done, manual); }
+      catch (e) { manual(); }
+    });
+    $('feedback-issue').addEventListener('click', function () {
+      var url = window.Feedback.issueUrl(FEEDBACK_REPO, feedbackReport(area.value), area.value);
+      if (!url) return;
+      // 앱(웹뷰)에서는 창을 새로 띄울 수 없으므로 주소로 이동한다: 껍데기가 게임 밖 주소를 바깥 브라우저로 넘긴다.
+      var opened = null;
+      try { opened = window.open(url, '_blank'); if (opened) opened.opener = null; } catch (e) { opened = null; }   // 새 창이 게임 창을 건드리지 못하게 한다
+      if (!opened) { try { location.href = url; } catch (e) { say('GitHub를 열 수 없어요. "복사하기"를 써 주세요.'); return; } }
+      say('GitHub 글쓰기 화면을 열었어요. GitHub 계정으로 로그인해야 올릴 수 있어요.');
+    });
+  }
+
   function confirmBox(title, text, noText, yesText, onYes) {
     setText($('confirm-title'), title);
     setText($('confirm-text'), text);
@@ -1116,6 +1177,7 @@
     });
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
+    wireFeedback();
     $('export').addEventListener('click', function () {
       var code;
       try { code = btoa(C.serialize(state)); }

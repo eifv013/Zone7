@@ -8,7 +8,7 @@ const read = f => fs.readFileSync(path.join(__dirname, 'src', f), 'utf8');
 
 try {
   const tpl = read('template.html');
-  for (const mark of ['/*__VERSION__*/', '/*__BOOT__*/', '/*__NOTES__*/', '/*__UPDATE__*/', '/*__CORE__*/', '/*__HELP__*/', '/*__SCENE__*/', '/*__SOUND__*/', '/*__UI__*/']) {
+  for (const mark of ['/*__VERSION__*/', '/*__BOOT__*/', '/*__NOTES__*/', '/*__FEEDBACK__*/', '/*__UPDATE__*/', '/*__CORE__*/', '/*__HELP__*/', '/*__SCENE__*/', '/*__SOUND__*/', '/*__UI__*/']) {
     if (!tpl.includes(mark)) throw new Error(`template.html 에 ${mark} 자리가 없습니다.`);
   }
   // 함수형 치환을 써서 소스 안의 '$' 가 치환 패턴으로 해석되지 않게 한다.
@@ -27,6 +27,7 @@ try {
   const html = tpl.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)};`)
     .replace('/*__BOOT__*/', () => read('boot.js'))
     .replace('/*__NOTES__*/', () => read('notes.js'))
+    .replace('/*__FEEDBACK__*/', () => read('feedback.js'))
     .replace('/*__UPDATE__*/', () => read('update.js'))
     .replace('/*__CORE__*/', () => read('core.js'))
     .replace('/*__HELP__*/', () => read('help.js'))

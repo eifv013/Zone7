@@ -436,6 +436,17 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 #confirm { z-index: 24; }
 .confirm-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
 .story-card .confirm-actions button { align-self: auto; }
+/* 의견 보내기 창 */
+.feedback-card { gap: 10px; max-height: 100%; overflow-y: auto; box-sizing: border-box; padding: 16px; background: #17180f; border: 2px solid #f0b400; }   /* 뒤의 게임 화면이 비쳐 글이 묻히지 않게 바탕을 채운다 */
+.feedback-card textarea { width: 100%; min-height: 110px; box-sizing: border-box; padding: 10px; font: 400 15px/1.5 var(--font-body); color: #17180f; background: #e6e5db; border: 2px solid #f0b400; resize: vertical; }
+.feedback-info { margin: 0; padding: 8px 10px; max-height: 96px; overflow-y: auto; white-space: pre-wrap; font: 500 11px/1.6 var(--font-mono); color: #b9b8ab; border: 1px dashed #6d6d60; }
+.story-card .feedback-note, .story-card .feedback-msg { min-height: 0; font-size: 13px; line-height: 1.5; color: #b9b8ab; }
+.story-card .feedback-note::after, .story-card .feedback-msg::after { content: none; }
+.story-card .feedback-msg { min-height: 1.5em; color: #f0b400; }
+.feedback-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.story-card .feedback-actions button { align-self: auto; padding: 8px 14px; }
+.story-card .feedback-actions button:disabled { opacity: .45; cursor: default; }
+.story-card .feedback-actions .feedback-close { margin-left: auto; background: transparent; color: #e6e5db; border-color: #e6e5db; }
 #confirm-no { background: transparent; color: #e6e5db; border-color: #e6e5db; }
 .story-card .confirm-danger { background: #d8493c; border-color: #d8493c; color: #fff; }
 #perk { z-index: 22; }
@@ -532,7 +543,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.6.3</div>
+  <div class="boot-ver">7구역 알파 0.6.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -853,6 +864,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <button type="button" id="save-now">지금 저장</button>
       <button type="button" id="export">저장 코드 복사</button>
       <button type="button" id="import">저장 코드 불러오기</button>
+      <button type="button" id="feedback-open">의견 보내기</button>
       <button type="button" class="danger" id="reset">처음부터 다시</button>
     </div>
     <div class="save-actions theme-row">
@@ -867,7 +879,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -877,6 +889,24 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <p class="sync-q">어느 쪽으로 이어서 할지 골라 주세요. 고르지 않은 쪽의 진행은 사라집니다.</p>
     <button type="button" class="sync-pick" id="sync-use-remote"><b>계정에 저장된 진행</b><span id="sync-remote"></span></button>
     <button type="button" class="sync-pick" id="sync-use-local"><b>이 기기의 진행</b><span id="sync-local"></span></button>
+  </div>
+</div>
+
+<!-- 의견 보내기: 쓴 글에 판 정보(버전, 구역, 플레이 시간 등)를 붙여 공유·복사하거나 GitHub 에 올린다. 글은 src/feedback.js 가 만든다. -->
+<div class="story-veil" id="feedback" role="dialog" aria-modal="true" aria-labelledby="feedback-title" hidden>
+  <div class="story-card feedback-card">
+    <div class="label" id="feedback-title">의견 보내기</div>
+    <p class="sync-q">해 보면서 느낀 점을 편하게 적어 주세요. 너무 빠르다, 막힌다, 헷갈린다 같은 한 줄도 큰 도움이 돼요.</p>
+    <textarea id="feedback-text" maxlength="2000" spellcheck="false" placeholder="예) 2구역에서 3구역까지가 너무 오래 걸려요."></textarea>
+    <pre class="feedback-info" id="feedback-info"></pre>
+    <p class="feedback-note">위 정보가 글에 함께 붙어요. 이름이나 연락처는 들어가지 않아요.</p>
+    <div class="feedback-actions">
+      <button type="button" id="feedback-share" hidden>공유하기</button>
+      <button type="button" id="feedback-copy">복사하기</button>
+      <button type="button" id="feedback-issue">GitHub에 올리기</button>
+      <button type="button" class="feedback-close" id="feedback-close">닫기</button>
+    </div>
+    <p class="feedback-msg" id="feedback-msg" role="status"></p>
   </div>
 </div>
 
@@ -936,7 +966,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.3";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.4";
 </script>
 <script>
 /*
@@ -955,6 +985,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.3";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.6.4', date: '2026-11-16', at: '2026-11-16 22:35:25', title: '의견 보내기',
+      items: [
+        '기록 > 설정에 "의견 보내기"가 생겼다. 느낀 점을 적으면 공유하거나 복사하거나 GitHub 에 올릴 수 있다.',
+        '의견에는 버전, 구역, 철수 횟수, 플레이 시간, 지난 판 기록, 화면 크기가 함께 붙는다. 어떤 판에서 나온 의견인지 알기 위해서다.',
+        '이름, 연락처, 기기 모델명, 저장 데이터는 붙지 않는다. 붙는 내용은 보내기 전에 창에서 미리 볼 수 있다.'
+      ] },
     { ver: '알파 0.6.3', date: '2026-11-16', at: '2026-11-16 22:23:04', title: '설명 다듬기',
       items: [
         '화면의 설명과 도움말, "다음 할 일" 안내를 부드러운 말투로 고쳐 썼다. 일지와 무전은 예전 말투 그대로다.',
@@ -1118,6 +1154,97 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.3";
     '폰 한 화면 배치, 라이트·다크 테마, 계정 저장(한 번에 한 기기).',
     '다음 할 일 안내와 알림 쪽지.' ] }
 ];
+});
+
+</script>
+<script>
+/*
+ * Feedback — 의견 보내기
+ * ------------------------------------------------------------
+ * 테스터가 쓴 글에 "어떤 판에서 나온 의견인지" 알 수 있는 정보를 붙여 한 덩어리의 글로 만든다.
+ * 서버가 없으므로 보내는 길은 셋이다: 공유(폰의 공유 창), 복사(붙여 넣어 전달), GitHub 에 올리기.
+ * 이 모듈은 글을 만드는 일만 한다(화면을 모른다). 실제로 창을 띄우고 보내는 일은 ui.js 가 한다.
+ *
+ * 붙는 정보: 버전, 구역, 철수 횟수, 플레이 시간, 지난 판 기록, 화면 크기, 브라우저 종류.
+ * 붙지 않는 정보: 이름, 연락처, 위치, 저장 데이터 전체. 사람을 알아볼 수 있는 것은 넣지 않는다.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Feedback = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var MAX_TEXT = 2000;       // 쓴 글의 최대 길이(글자)
+  var MAX_URL = 6000;        // GitHub 로 넘기는 주소의 최대 길이: 너무 길면 브라우저나 서버가 거절한다
+  var MAX_RUNS = 5;          // 붙이는 지난 판 기록의 수
+
+  function str(v) { return typeof v === 'string' ? v : ''; }
+  function num(v) { return typeof v === 'number' && isFinite(v) && v >= 0 ? v : 0; }
+  /** 줄바꿈을 정리하고 앞뒤 공백을 떼고 길이를 자른다. 글이 아니면 빈 글. */
+  function clean(text) {
+    return str(text).replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAX_TEXT);
+  }
+  /** 보낼 수 있는 글인가(빈 글은 보내지 않는다). */
+  function valid(text) { return clean(text).length > 0; }
+  /** 초 → "2시간 5분". 규칙 모듈의 것을 받아 쓰되, 없으면 간단히 만든다. */
+  function span(sec, fmt) {
+    if (typeof fmt === 'function') { try { return String(fmt(num(sec))); } catch (e) { /* 아래 기본 방식으로 */ } }
+    var m = Math.floor(num(sec) / 60);
+    return m >= 60 ? Math.floor(m / 60) + '시간 ' + (m % 60) + '분' : m + '분';
+  }
+  /** 브라우저 이름표(User-Agent)에서 기기 종류만 짧게 뽑는다. 긴 원문은 붙이지 않는다. */
+  function device(ua) {
+    ua = str(ua);
+    var os = /Android/i.test(ua) ? '안드로이드' : /iPhone|iPad|iPod/i.test(ua) ? '아이폰·아이패드' : /Windows/i.test(ua) ? '윈도우' : /Mac OS X/i.test(ua) ? '맥' : /Linux/i.test(ua) ? '리눅스' : '알 수 없음';
+    var app = /; wv\)/.test(ua) ? '앱' : /Electron/i.test(ua) ? 'PC 앱' : '브라우저';
+    return os + ' · ' + app;
+  }
+
+  /**
+   * 의견 글을 만든다.
+   *   input: { text, version, zone(지금 구역 이름), stats(GameCore.stats 의 결과), screen: { w, h }, ua, duration(초→글 함수), zoneName(번호→이름 함수) }
+   * 빠진 값이 있어도 예외를 던지지 않고 그 줄만 비워 둔다. 쓴 글이 비어 있으면 '' 를 돌려준다.
+   */
+  function compose(input) {
+    input = input && typeof input === 'object' ? input : {};
+    var text = clean(input.text);
+    if (!text) return '';
+    var s = input.stats && typeof input.stats === 'object' ? input.stats : {};
+    var zoneName = typeof input.zoneName === 'function' ? input.zoneName : function (i) { return (i + 1) + '구역'; };
+    var name = function (i) { try { return String(zoneName(num(i))); } catch (e) { return (num(i) + 1) + '구역'; } };
+    var lines = [
+      '[7구역 의견] 알파 ' + (str(input.version) || '?'),
+      '',
+      text,
+      '',
+      '--- 자동으로 붙는 정보 ---',
+      '지금: ' + (str(input.zone) || '?') + ' · 가장 멀리: ' + name(s.bestZone),
+      '철수 ' + num(s.retreats) + '번 · 항체 누적 ' + num(s.antibodyTotal) + ' · 막아낸 밤 ' + num(s.wavesCleared) + ' · 뚫린 밤 ' + num(s.breaches),
+      '플레이 ' + span(s.play, input.duration) + ' · 자리 비움 ' + span(s.away, input.duration) + ' · 이번 판 ' + span(s.run, input.duration) + (num(s.days) ? ' · ' + num(s.days) + '일째' : '')
+    ];
+    var runs = (Array.isArray(s.runs) ? s.runs : []).filter(function (r) { return r && typeof r === 'object'; }).slice(0, MAX_RUNS);
+    if (runs.length) lines.push('지난 판: ' + runs.map(function (r) { return name(r.zone) + ' ' + span(r.seconds, input.duration) + ' (+' + num(r.antibodies) + ')'; }).join(' / '));
+    var sc = input.screen && typeof input.screen === 'object' ? input.screen : {};
+    lines.push('기기: ' + device(input.ua) + ' · 화면 ' + Math.round(num(sc.w)) + '×' + Math.round(num(sc.h)));
+    return lines.join('\n');
+  }
+
+  /**
+   * GitHub 에 새 글(이슈)을 쓰는 화면의 주소를 만든다. 제목은 쓴 글의 첫 줄(40자), 본문은 의견 글 전체.
+   * 주소가 MAX_URL 을 넘으면 본문 뒤쪽을 잘라 맞춘다. repo 가 https://github.com/… 형식이 아니거나 글이 비면 ''.
+   */
+  function issueUrl(repo, report, text) {
+    repo = str(repo).replace(/\/+$/, '');
+    if (!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/.test(repo) || !str(report)) return '';
+    var first = clean(text).split('\n')[0].slice(0, 40) || '의견';
+    var head = repo + '/issues/new?title=' + encodeURIComponent('[의견] ' + first) + '&body=';
+    var body = str(report), tail = '\n…(길어서 잘림)';
+    while (body.length > 0 && (head + encodeURIComponent(body)).length > MAX_URL) body = body.slice(0, Math.floor(body.length * 0.9));
+    if (body.length < str(report).length) body += tail;
+    return head + encodeURIComponent(body);
+  }
+
+  return { MAX_TEXT: MAX_TEXT, MAX_URL: MAX_URL, MAX_RUNS: MAX_RUNS, clean: clean, valid: valid, device: device, compose: compose, issueUrl: issueUrl };
 });
 
 </script>
@@ -3829,6 +3956,67 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.3";
    * 되돌릴 수 없는 행동 전에 띄우는 확인 창. 안전한 쪽(noText) 버튼에 초점을 두어
    * 실수로 Enter 를 눌러도 실행되지 않게 한다. 확인을 누르면 onYes 를 실행한다.
    */
+  /* ---------- 의견 보내기 ---------- */
+  var FEEDBACK_REPO = 'https://github.com/eifv013/Zone7';   // "GitHub에 올리기"가 여는 곳
+  /** 지금 판의 정보를 붙인 의견 글. 쓴 글이 비어 있으면 ''. 글 자체는 Feedback 모듈이 만든다. */
+  function feedbackReport(text) {
+    if (!window.Feedback) return '';
+    return window.Feedback.compose({
+      text: text, version: window.ZONE7_VERSION || '', zone: C.zoneLabel(state), stats: C.stats(state, Date.now()),
+      screen: { w: window.innerWidth, h: window.innerHeight }, ua: navigator.userAgent, duration: C.formatDuration,
+      zoneName: function (i) { var z = C.ZONES[Math.min(i, C.ZONES.length - 1)]; return z.no + '구역 ' + z.name; }
+    });
+  }
+  /**
+   * 의견 창의 단추들을 잇는다. 보내는 길은 셋이고, 어느 것도 실패해도 게임에는 영향이 없다.
+   *   공유하기       : 폰의 공유 창(메신저 등). 지원하는 브라우저에서만 단추가 보인다.
+   *   복사하기       : 클립보드에 복사. 막혀 있으면 글 칸에 전체 글을 넣어 직접 복사하게 한다.
+   *   GitHub에 올리기: 글이 채워진 새 글 쓰기 화면을 연다(GitHub 계정이 필요하다).
+   */
+  function wireFeedback() {
+    var box = $('feedback'), area = $('feedback-text');
+    if (!box || !area || !window.Feedback) { if ($('feedback-open')) $('feedback-open').hidden = true; return; }
+    var say = function (t) { setText($('feedback-msg'), t); };
+    var refresh = function () {
+      var ok = window.Feedback.valid(area.value);
+      ['feedback-share', 'feedback-copy', 'feedback-issue'].forEach(function (id) { $(id).disabled = !ok; });
+      // 붙는 정보 미리 보기: 아무 글이나 넣어 만든 뒤, 정보 부분만 떼어 보여 준다
+      var sample = feedbackReport('-'), cut = sample.indexOf('--- 자동으로 붙는 정보 ---');
+      setText($('feedback-info'), cut >= 0 ? sample.slice(cut).split('\n').slice(1).join('\n') : '');
+    };
+    var close = function () { box.hidden = true; };
+    $('feedback-open').addEventListener('click', function () {
+      say(''); refresh(); box.hidden = false;
+      try { area.focus(); } catch (e) { /* 초점을 못 옮겨도 쓸 수 있다 */ }
+    });
+    $('feedback-close').addEventListener('click', close);
+    area.addEventListener('input', refresh);
+    $('feedback-share').hidden = typeof navigator.share !== 'function';
+    $('feedback-share').addEventListener('click', function () {
+      var report = feedbackReport(area.value);
+      if (!report) return;
+      try { navigator.share({ title: '7구역 의견', text: report }).then(function () { say('공유 창을 열었어요. 고마워요!'); }, function () { say('공유를 취소했어요.'); }); }
+      catch (e) { say('공유할 수 없어요. "복사하기"를 써 주세요.'); }
+    });
+    $('feedback-copy').addEventListener('click', function () {
+      var report = feedbackReport(area.value);
+      if (!report) return;
+      var done = function () { say('복사했어요. 테스트를 부탁한 사람에게 붙여 넣어 보내 주세요.'); };
+      var manual = function () { area.value = report; area.select(); say('자동 복사가 막혀 있어요. 위 글을 직접 복사해 주세요.'); refresh(); };
+      try { navigator.clipboard.writeText(report).then(done, manual); }
+      catch (e) { manual(); }
+    });
+    $('feedback-issue').addEventListener('click', function () {
+      var url = window.Feedback.issueUrl(FEEDBACK_REPO, feedbackReport(area.value), area.value);
+      if (!url) return;
+      // 앱(웹뷰)에서는 창을 새로 띄울 수 없으므로 주소로 이동한다: 껍데기가 게임 밖 주소를 바깥 브라우저로 넘긴다.
+      var opened = null;
+      try { opened = window.open(url, '_blank'); if (opened) opened.opener = null; } catch (e) { opened = null; }   // 새 창이 게임 창을 건드리지 못하게 한다
+      if (!opened) { try { location.href = url; } catch (e) { say('GitHub를 열 수 없어요. "복사하기"를 써 주세요.'); return; } }
+      say('GitHub 글쓰기 화면을 열었어요. GitHub 계정으로 로그인해야 올릴 수 있어요.');
+    });
+  }
+
   function confirmBox(title, text, noText, yesText, onYes) {
     setText($('confirm-title'), title);
     setText($('confirm-text'), text);
@@ -4486,6 +4674,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.3";
     });
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
+    wireFeedback();
     $('export').addEventListener('click', function () {
       var code;
       try { code = btoa(C.serialize(state)); }

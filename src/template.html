@@ -424,6 +424,17 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 #confirm { z-index: 24; }
 .confirm-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
 .story-card .confirm-actions button { align-self: auto; }
+/* 의견 보내기 창 */
+.feedback-card { gap: 10px; max-height: 100%; overflow-y: auto; box-sizing: border-box; padding: 16px; background: #17180f; border: 2px solid #f0b400; }   /* 뒤의 게임 화면이 비쳐 글이 묻히지 않게 바탕을 채운다 */
+.feedback-card textarea { width: 100%; min-height: 110px; box-sizing: border-box; padding: 10px; font: 400 15px/1.5 var(--font-body); color: #17180f; background: #e6e5db; border: 2px solid #f0b400; resize: vertical; }
+.feedback-info { margin: 0; padding: 8px 10px; max-height: 96px; overflow-y: auto; white-space: pre-wrap; font: 500 11px/1.6 var(--font-mono); color: #b9b8ab; border: 1px dashed #6d6d60; }
+.story-card .feedback-note, .story-card .feedback-msg { min-height: 0; font-size: 13px; line-height: 1.5; color: #b9b8ab; }
+.story-card .feedback-note::after, .story-card .feedback-msg::after { content: none; }
+.story-card .feedback-msg { min-height: 1.5em; color: #f0b400; }
+.feedback-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.story-card .feedback-actions button { align-self: auto; padding: 8px 14px; }
+.story-card .feedback-actions button:disabled { opacity: .45; cursor: default; }
+.story-card .feedback-actions .feedback-close { margin-left: auto; background: transparent; color: #e6e5db; border-color: #e6e5db; }
 #confirm-no { background: transparent; color: #e6e5db; border-color: #e6e5db; }
 .story-card .confirm-danger { background: #d8493c; border-color: #d8493c; color: #fff; }
 #perk { z-index: 22; }
@@ -520,7 +531,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.6.3</div>
+  <div class="boot-ver">7구역 알파 0.6.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -706,6 +717,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <button type="button" id="save-now">지금 저장</button>
       <button type="button" id="export">저장 코드 복사</button>
       <button type="button" id="import">저장 코드 불러오기</button>
+      <button type="button" id="feedback-open">의견 보내기</button>
       <button type="button" class="danger" id="reset">처음부터 다시</button>
     </div>
     <div class="save-actions theme-row">
@@ -720,7 +732,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -730,6 +742,24 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <p class="sync-q">어느 쪽으로 이어서 할지 골라 주세요. 고르지 않은 쪽의 진행은 사라집니다.</p>
     <button type="button" class="sync-pick" id="sync-use-remote"><b>계정에 저장된 진행</b><span id="sync-remote"></span></button>
     <button type="button" class="sync-pick" id="sync-use-local"><b>이 기기의 진행</b><span id="sync-local"></span></button>
+  </div>
+</div>
+
+<!-- 의견 보내기: 쓴 글에 판 정보(버전, 구역, 플레이 시간 등)를 붙여 공유·복사하거나 GitHub 에 올린다. 글은 src/feedback.js 가 만든다. -->
+<div class="story-veil" id="feedback" role="dialog" aria-modal="true" aria-labelledby="feedback-title" hidden>
+  <div class="story-card feedback-card">
+    <div class="label" id="feedback-title">의견 보내기</div>
+    <p class="sync-q">해 보면서 느낀 점을 편하게 적어 주세요. 너무 빠르다, 막힌다, 헷갈린다 같은 한 줄도 큰 도움이 돼요.</p>
+    <textarea id="feedback-text" maxlength="2000" spellcheck="false" placeholder="예) 2구역에서 3구역까지가 너무 오래 걸려요."></textarea>
+    <pre class="feedback-info" id="feedback-info"></pre>
+    <p class="feedback-note">위 정보가 글에 함께 붙어요. 이름이나 연락처는 들어가지 않아요.</p>
+    <div class="feedback-actions">
+      <button type="button" id="feedback-share" hidden>공유하기</button>
+      <button type="button" id="feedback-copy">복사하기</button>
+      <button type="button" id="feedback-issue">GitHub에 올리기</button>
+      <button type="button" class="feedback-close" id="feedback-close">닫기</button>
+    </div>
+    <p class="feedback-msg" id="feedback-msg" role="status"></p>
   </div>
 </div>
 
@@ -793,6 +823,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </script>
 <script>
 /*__NOTES__*/
+</script>
+<script>
+/*__FEEDBACK__*/
 </script>
 <script>
 /*__UPDATE__*/
