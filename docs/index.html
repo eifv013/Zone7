@@ -306,6 +306,9 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .rail-name small { margin-left: 6px; font: 400 12px/1.4 var(--font-body); color: var(--ink-soft); }
 .rail-side { font: 500 12px/1.4 var(--font-mono); white-space: nowrap; }
 .tabbar button[hidden] { display: none; }
+/* 구역 탭: 번호 칸은 좁게, 고른 구역과 방벽은 넓게. 일곱 구역이 다 열려도 폰 한 줄에 들어간다. */
+#zone-tabs button { flex: 1 1 0; min-width: 30px; }
+#zone-tabs button[aria-pressed="true"], #zone-tabs button[data-tab="wall"] { flex: 2.2 1 0; }
 .trade-goods .num { font-size: 15px; margin: 2px 0 4px; }
 .sell { margin-bottom: 8px; }
 .trait-reset { margin-top: 10px; }
@@ -555,7 +558,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.6.5</div>
+  <div class="boot-ver">7구역 알파 0.6.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -896,7 +899,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -983,7 +986,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.5";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.6";
 </script>
 <script>
 /*
@@ -1002,6 +1005,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.5";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.6.6', date: '2026-11-16', at: '2026-11-16 23:28:24', title: '구역 탭 정리',
+      items: [
+        '구역 탭을 번호만 보이게 줄였다. 고른 구역만 "4구역"처럼 넓게 펴진다. 일곱 구역이 다 열려도 한 줄에 여유 있게 들어간다.',
+        '어느 구역인지는 탭 바로 아래 설명 줄에 이름과 함께 나온다.'
+      ] },
     { ver: '알파 0.6.5', date: '2026-11-16', at: '2026-11-16 23:26:45', title: '4구역 환승역: 노선',
       items: [
         '4구역 환승역이 열렸다. 끊긴 노선을 복구하고 열차를 보낸다. 열차는 달리는 동안 화물을 싣고, 돌아왔을 때 한꺼번에 물자로 바뀐다.',
@@ -4228,7 +4236,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.5";
   function build() {
     rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, routes: {}, railRows: {}, train: null, stall: null, goals: [], stats: {}, tabs: {} };
     // 구역 탭
-    for (var i = 0; i < ZONE_TABS; i++) addTab('z' + i, (i + 1) + '구역');
+    for (var i = 0; i < ZONE_TABS; i++) { addTab('z' + i, String(i + 1)); rows.tabs['z' + i].setAttribute('aria-label', (i + 1) + '구역 ' + C.ZONES[i].name); rows.tabs['z' + i].title = (i + 1) + '구역 ' + C.ZONES[i].name; }
     addTab('wall', '방벽');
     // 1구역: 시설과 강화
     C.BUILDINGS.forEach(function (b) {
@@ -4449,6 +4457,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.5";
     Object.keys(rows.tabs).forEach(function (id) {
       var b = rows.tabs[id], n = id === 'wall' ? -1 : Number(id.slice(1));
       b.setAttribute('aria-pressed', String(id === tab));
+      // 구역 탭은 번호만 보여 주고, 고른 탭만 "4구역"으로 넓게 편다: 일곱 구역이 다 열려도 한 줄에 여유 있게 들어간다.
+      if (n >= 0) setText(b, id === tab ? (n + 1) + '구역' : String(n + 1));
       if (n > state.zone) b.setAttribute('data-locked', '1'); else b.removeAttribute('data-locked');
       b.hidden = n > state.zone + 1;      // 아직 먼 구역의 탭은 숨긴다: 초반에 탭이 여섯 개나 보이지 않게
     });

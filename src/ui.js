@@ -550,7 +550,7 @@
   function build() {
     rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, routes: {}, railRows: {}, train: null, stall: null, goals: [], stats: {}, tabs: {} };
     // 구역 탭
-    for (var i = 0; i < ZONE_TABS; i++) addTab('z' + i, (i + 1) + '구역');
+    for (var i = 0; i < ZONE_TABS; i++) { addTab('z' + i, String(i + 1)); rows.tabs['z' + i].setAttribute('aria-label', (i + 1) + '구역 ' + C.ZONES[i].name); rows.tabs['z' + i].title = (i + 1) + '구역 ' + C.ZONES[i].name; }
     addTab('wall', '방벽');
     // 1구역: 시설과 강화
     C.BUILDINGS.forEach(function (b) {
@@ -771,6 +771,8 @@
     Object.keys(rows.tabs).forEach(function (id) {
       var b = rows.tabs[id], n = id === 'wall' ? -1 : Number(id.slice(1));
       b.setAttribute('aria-pressed', String(id === tab));
+      // 구역 탭은 번호만 보여 주고, 고른 탭만 "4구역"으로 넓게 편다: 일곱 구역이 다 열려도 한 줄에 여유 있게 들어간다.
+      if (n >= 0) setText(b, id === tab ? (n + 1) + '구역' : String(n + 1));
       if (n > state.zone) b.setAttribute('data-locked', '1'); else b.removeAttribute('data-locked');
       b.hidden = n > state.zone + 1;      // 아직 먼 구역의 탭은 숨긴다: 초반에 탭이 여섯 개나 보이지 않게
     });

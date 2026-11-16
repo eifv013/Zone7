@@ -294,6 +294,9 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .rail-name small { margin-left: 6px; font: 400 12px/1.4 var(--font-body); color: var(--ink-soft); }
 .rail-side { font: 500 12px/1.4 var(--font-mono); white-space: nowrap; }
 .tabbar button[hidden] { display: none; }
+/* 구역 탭: 번호 칸은 좁게, 고른 구역과 방벽은 넓게. 일곱 구역이 다 열려도 폰 한 줄에 들어간다. */
+#zone-tabs button { flex: 1 1 0; min-width: 30px; }
+#zone-tabs button[aria-pressed="true"], #zone-tabs button[data-tab="wall"] { flex: 2.2 1 0; }
 .trade-goods .num { font-size: 15px; margin: 2px 0 4px; }
 .sell { margin-bottom: 8px; }
 .trait-reset { margin-top: 10px; }
@@ -543,7 +546,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.6.5</div>
+  <div class="boot-ver">7구역 알파 0.6.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -749,7 +752,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
