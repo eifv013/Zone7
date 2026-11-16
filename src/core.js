@@ -845,16 +845,16 @@
   /** 화면의 '다음 할 일'에 보일 한 줄 { id, text, view }. view 는 그 일을 하는 화면('zone', 'wall', 'trait'). */
   function guide(state) {
     function g(id, text, view) { return { id: id, text: text, view: view || null }; }
-    if (state.pendingPerks.length) return g('perk', '특전을 하나 고른다.');
-    if (state.clicks === 0 && state.supplies < 15) return g('click', '"잔해 수색"을 눌러 첫 물자를 모은다.');
-    if (!totalBuildings(state)) return g('scouts', '구역 > 1구역에서 잔해 수색조를 꾸린다. 그때부터는 가만히 있어도 물자가 들어온다.', 'zone');
-    if (!state.siege && defensePower(state) < nightStrength(state)) return g('defend', '방어력이 모자란다. 방벽을 보강한다.', 'wall');
-    if (state.antibodies > 0 && TRAITS.some(function (t) { return traitCost(state, t.id) <= state.antibodies; })) return g('trait', '쓸 수 있는 항체 샘플이 있다. 특성을 찍는다.', 'trait');
+    if (state.pendingPerks.length) return g('perk', '특전을 하나 골라 주세요.');
+    if (state.clicks === 0 && state.supplies < 15) return g('click', '"잔해 수색"을 눌러 첫 물자를 모아 보세요.');
+    if (!totalBuildings(state)) return g('scouts', '구역 > 1구역에서 잔해 수색조를 꾸려 보세요. 그때부터는 가만히 있어도 물자가 들어와요.', 'zone');
+    if (!state.siege && defensePower(state) < nightStrength(state)) return g('defend', '방어력이 모자라요. 방벽을 보강해 주세요.', 'wall');
+    if (state.antibodies > 0 && TRAITS.some(function (t) { return traitCost(state, t.id) <= state.antibodies; })) return g('trait', '쓸 수 있는 항체 샘플이 있어요. 특성을 찍어 보세요.', 'trait');
     var open = goals(state, state.zone).filter(function (x) { return !x.done; })[0];
     if (open) return g('goal', (state.zone + 1) + '구역 목표: ' + open.text + ' (' + formatNumber(open.value) + ' / ' + formatNumber(open.need) + ')', 'zone');
     var n = nextZone(state);
-    if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + '의 문을 연다. 물자 ' + formatNumber(n.cost) + ' 이 든다.', 'zone');
-    return g('retreat', '더 나아갈 곳이 없다. 철수해서 항체 샘플을 챙기고 더 강하게 다시 시작한다.');
+    if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + '의 문을 열 차례예요. 물자 ' + formatNumber(n.cost) + ' 이 들어요.', 'zone');
+    return g('retreat', '지금은 더 나아갈 곳이 없어요. 철수해서 항체 샘플을 챙기고, 더 강하게 다시 시작해 보세요.');
   }
 
   /* ---------- 통계 ---------- */

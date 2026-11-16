@@ -128,6 +128,7 @@ def run_case(browser, name, size, state, mode):
         tap('[data-tab=z0]'); tap('#row-garden'); tap('#row-maps')
         tap('[data-tab=z2]')
         if '아직 열지 않은' not in text('soon'): problems.append('잠긴 3구역 탭에 안내가 없다: ' + text('soon'))
+        if page.locator('#goals li:visible').count() != 0: problems.append('잠긴 구역 탭에 목표가 보인다')
         tap('[data-tab=z3]')
         if '다음 버전' not in text('soon'): problems.append('4구역 탭에 준비 중 안내가 없다: ' + text('soon'))
         tap('[data-tab=wall]'); tap('#row-wire')

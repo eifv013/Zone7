@@ -476,10 +476,10 @@
    * 위쪽(저장, 계정 저장, 업데이트, 일지 연출, 로그)은 예전 것을 그대로 쓴다.
    * ==================================================================== */
   var HINTS = {
-    z0: '1구역 주택가 · 수색. 시설은 가만히 있어도 물자를 만든다.',
-    z1: '2구역 재래시장 · 거래. 좌판이 상품을 만들고, 시세가 좋을 때 팔수록 많이 번다.',
-    z2: '3구역 공단 · 생산 라인. 기계 셋이 맞물려 돌고, 가장 느린 기계만큼만 나온다.',
-    wall: '방벽은 거점 전체를 지킨다. 방어력이 오늘 밤 무리 규모보다 커야 한다.'
+    z0: '1구역 주택가 · 수색. 시설을 지어 두면 가만히 있어도 물자가 들어와요.',
+    z1: '2구역 재래시장 · 거래. 좌판이 상품을 만들어요. 시세가 좋을 때 팔수록 많이 벌어요.',
+    z2: '3구역 공단 · 생산 라인. 기계 셋이 맞물려 돌아요. 가장 느린 기계만큼만 나와요.',
+    wall: '방벽은 거점 전체를 지켜요. 방어력이 오늘 밤 무리 규모보다 커야 해요.'
   };
   var perkShown = '', journalShown = '', statsShown = '';
   var ZONE_TABS = 4;   // 탭으로 보여 줄 구역 수: 만든 구역 셋 + 문 앞까지 갈 수 있는 다음 구역 하나
@@ -610,7 +610,7 @@
     var box = $('perk-list');
     box.textContent = '';
     if (!state.pendingPerks.length) { $('perk').hidden = true; return; }
-    setText($('perk-lead'), '구역의 목표를 달성했다. 하나를 고른다. 이번 판이 끝날 때까지 남는다.');
+    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 판이 끝날 때까지 남아요.');
     state.pendingPerks.forEach(function (id) {
       var def = null;
       C.PERKS.forEach(function (k) { if (k.id === id) def = k; });
@@ -672,8 +672,8 @@
     setText(pill, safe ? '방어 가능' : sieging ? '농성 중' : '방벽 위험');
     pill.className = 'pill ' + (safe ? 'pill-safe' : sieging ? 'pill-siege' : 'pill-danger');
     var plan = safe ? null : C.defensePlan(state);
-    setText($('night-hint'), (boss ? '변이체가 무리를 이끈다. ' : '') + (safe ? '막으면 물자 ' + fmt(C.nightReward(state)) + ' 을 얻는다. 이번 판에서 ' + state.wavesCleared + '밤을 막았다(생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%).'
-      : sieging ? '문을 걸어 잠그고 버티는 중이다. 더 잃지는 않지만 얻는 것도 없다. 방벽을 보강하면 풀린다.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '% 를 잃는다.'));
+    setText($('night-hint'), (boss ? '오늘은 변이체가 무리를 이끌어요. ' : '') + (safe ? '막으면 물자 ' + fmt(C.nightReward(state)) + ' 을 얻어요. 이번 판에서 ' + state.wavesCleared + '밤을 막았어요(생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%).'
+      : sieging ? '문을 걸어 잠그고 버티는 중이에요. 더 잃지는 않지만 얻는 것도 없어요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '% 를 잃어요.'));
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -684,8 +684,8 @@
     setText($('retreat-count'), state.retreats ? state.retreats + '번 철수함' : '');
     if (!rb.dataset.armed) setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
     setText($('retreat-hint'), can
-      ? '거점을 전부 버리고 1구역에서 다시 시작한다. 물자·시설·방벽·강화·특전은 사라지고, 항체 샘플과 영구 특성은 남는다. 더 모을수록 샘플도 많아진다.'
-      : state.pendingPerks.length ? '고르지 않은 특전이 있다.' : '이번 판에서 물자 ' + fmt(C.RETREAT_MIN) + ' 을 모으면 철수할 수 있다(지금 ' + fmt(state.runEarned) + '). 철수하면 항체 샘플을 얻어 영구 특성을 찍는다.');
+      ? '거점을 전부 버리고 1구역에서 다시 시작해요. 물자·시설·방벽·강화·특전은 사라지고, 항체 샘플과 영구 특성은 남아요. 더 모을수록 샘플도 많아져요.'
+      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에서 물자 ' + fmt(C.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요(지금 ' + fmt(state.runEarned) + '). 철수하면 항체 샘플을 얻고, 그걸로 영구 특성을 찍어요.');
 
     renderZone(m);
     renderTraits();
@@ -729,10 +729,10 @@
       ob.hidden = !showOpen;
       if (showOpen) {
         ob.disabled = !n.ready || n.cost > state.supplies;
-        setText(ob, n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다 · 물자 ' + fmt(n.cost) : n.zone.no + '구역은 ' + (state.zone + 1) + '구역의 목표를 모두 채워야 열린다 · 물자 ' + fmt(n.cost));
+        setText(ob, n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다 · 물자 ' + fmt(n.cost) : n.zone.no + '구역은 ' + (state.zone + 1) + '구역의 목표를 모두 채워야 열려요 · 물자 ' + fmt(n.cost));
       }
-      var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞에 닿았다. 이 구역은 다음 버전에서 열린다. 지금은 철수해서 항체 샘플을 모아 두면 된다.' : '이 구역은 다음 버전에서 열린다. 지금은 문 앞까지 갈 수 있다.')
-        : !open ? '아직 열지 않은 구역이다. 앞 구역의 목표를 모두 채우고 문을 연다.' : '';
+      var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 지금은 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 지금은 문 앞까지 갈 수 있어요.')
+        : !open ? '아직 열지 않은 구역이에요. 앞 구역의 목표를 모두 채우면 문을 열 수 있어요.' : '';
       $('soon').hidden = !soonText;
       setText($('soon'), soonText);
     } else $('soon').hidden = true;
@@ -782,8 +782,8 @@
       setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '%');
       ld.className = 'num' + (line.steady ? ' steady' : '');
       setText($('line-note'), line.flow > 0
-        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : Math.round(line.steadyAt * 100) + '% 이상이면 정속 가동') + ' · 초당 물자 ' + fmt(C.lineRate(state))
-        : '기계 셋이 모두 있어야 라인이 돈다');
+        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : Math.round(line.steadyAt * 100) + '% 이상이면 정속 가동이 돼요') + ' · 초당 물자 ' + fmt(C.lineRate(state))
+        : '기계 셋이 모두 있어야 라인이 돌아요');
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies);
@@ -1036,11 +1036,11 @@
       state = r.state;
       tab = 'z0'; perkShown = '';
       log('거점을 버리고 철수했다. 항체 샘플 ' + fmt(r.gained) + '개를 챙겼다. 다시 1구역이다.', 'good');
-      notice('항체 샘플 ' + fmt(r.gained) + '개를 얻었다. 특성 화면에서 영구 특성을 찍으면 다음 판이 빨라진다.');
+      notice('항체 샘플 ' + fmt(r.gained) + '개를 얻었어요. 특성 화면에서 영구 특성을 찍으면 다음 판이 빨라져요.');
       sfx('relocate'); Store.save(); Cloud.flush(); render();
     });
     $('trait-reset').addEventListener('click', function () {
-      confirmBox('특성 되돌리기', '찍은 특성을 모두 지우고 쓴 항체 샘플을 전부 돌려받는다. 드는 값은 없고, 바로 다시 찍을 수 있다.', '그만둔다', '되돌린다', function () {
+      confirmBox('특성 되돌리기', '찍은 특성을 모두 지우고, 쓴 항체 샘플을 전부 돌려받아요. 드는 값은 없고 바로 다시 찍을 수 있어요.', '그만둔다', '되돌린다', function () {
         var r = C.resetTraits(state);
         if (r.ok) { log('특성을 되돌렸다. 항체 샘플 ' + fmt(r.refunded) + '개를 돌려받았다.'); Store.save(); render(); }
       });
@@ -1189,7 +1189,7 @@
     } else if (!snapshot || !snapshot.version) {
       log('방벽을 손봐야 한다. 철조망 하나면 첫 밤은 넘길 수 있다.');
       log('잔해를 뒤져 물자를 모으고, 수색조를 꾸려라.');
-      if (!loaded.error) notice('알파 0.6 부터 구조가 새로 바뀌었다. "다음 할 일"을 따라가면 된다. 자세한 설명은 기록 > 도움말에 있다.');
+      if (!loaded.error) notice('알파 0.6 부터 구조가 새로 바뀌었어요. "다음 할 일"을 따라가면 돼요. 자세한 설명은 기록 > 도움말에 있어요.');
     }
 
     lastFrame = now; lastSave = now;

@@ -22,7 +22,7 @@ test('도움말: 숫자가 규칙의 상수와 같다', () => {
   assert.ok(find('trade').includes(C.PRICE_FLOOR + ' ~ ' + C.PRICE_CEIL));
   assert.ok(find('trade').includes('시세 ' + C.PEAK_PRICE + ' 이상'));
   assert.ok(find('line').includes('가동률 ' + Math.round(C.STEADY_AT * 100) + '% 이상'));
-  assert.ok(find('line').includes('산출이 ' + Math.round(C.STEADY_BONUS * 100) + '% 늘어난다'));
+  assert.ok(find('line').includes('산출이 ' + Math.round(C.STEADY_BONUS * 100) + '% 늘어나요'));
   for (const m of C.MACHINES) assert.ok(find('line').includes(m.name + ' ' + m.rate), m.id);
   assert.ok(find('retreat').includes('물자 ' + C.formatNumber(C.RETREAT_MIN)));
   assert.ok(find('away').includes('최대 ' + C.OFFLINE_CAP / 3600 + '시간치'));
@@ -45,4 +45,15 @@ test('도움말: 규칙 모듈이 없거나 상수가 빠지면 오류를 낸다
   assert.equal(H.pct(0.15), '15%');
   assert.equal(H.span(14400), '4시간');
   assert.equal(H.span(90), '90초');
+});
+
+test('도움말: 받침에 따라 은/는을 고른다', () => {
+  assert.equal(H.topic('환승역'), '환승역은');
+  assert.equal(H.topic('주택가'), '주택가는');
+  assert.equal(H.topic('대학 병원'), '대학 병원은');
+  assert.equal(H.topic('송신탑'), '송신탑은');
+  assert.equal(H.topic('Zone'), 'Zone는');
+  assert.doesNotThrow(() => H.topic(''));
+  const next = C.ZONES.find(z => z.kind === 'soon');
+  assert.ok(find('flow').includes(H.topic(next.name) + ' 문 앞까지만'));
 });

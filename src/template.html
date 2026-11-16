@@ -46,6 +46,7 @@ try { if (localStorage.getItem('zone7-skin') === 'dark') document.documentElemen
 html { background: var(--concrete); }
 body {
   margin: 0; background: var(--concrete); color: var(--ink);
+  word-break: keep-all; overflow-wrap: break-word;   /* 한글은 낱말 단위로 줄을 바꾼다(글자 중간에서 끊기지 않게). 아주 긴 낱말만 예외로 끊는다 */
   font: 400 15px/1.5 var(--font-body);
 }
 button { font: inherit; color: inherit; }
@@ -138,7 +139,8 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 /* 방어 구간(마지막 10초): 줄 전체를 경고색으로 */
 .timer-row.battle .label, .timer-row.battle .num { color: var(--blood); font-weight: 700; }
 .timer-row.battle + .track > i { background: var(--blood); }
-.hint { margin: 12px 0 0; font-size: 13px; color: var(--ink-soft); }
+.hint { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--ink-soft); text-wrap: balance; }   /* 줄 길이를 고르게 나눠 마지막 줄에 낱말 하나만 남지 않게 한다 */
+.panel-head + .hint { margin-top: -4px; margin-bottom: 12px; }   /* 제목 바로 밑 설명은 제목에 붙이고, 아래 목록과는 띄운다 */
 .shake { animation: shake .4s; }
 @keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 
@@ -256,6 +258,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .goal-list { margin: 0 0 10px; padding: 0; list-style: none; }
 .goal-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 14px; }
 .goal-list li:first-child { border-top: 0; }
+.goal-list li[hidden] { display: none; }   /* display: grid 가 hidden 속성을 이기지 않게 한다(잠긴 구역 탭에 앞 구역의 목표가 남아 보이던 문제) */
 .goal-list li .track { grid-column: 1 / -1; }
 .goal-list li.done { color: var(--safe); }
 .goal-list li.done .track > i { background: var(--safe); }
@@ -517,7 +520,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.6.2</div>
+  <div class="boot-ver">7구역 알파 0.6.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -654,13 +657,13 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <div class="col" data-view="exped">
     <section class="panel" aria-labelledby="h-traits">
       <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label" id="trait-points">항체 샘플 0</span></div>
-      <p class="hint">항체 샘플로 찍는다. 철수해도 남는다. 되돌리면 쓴 샘플을 모두 돌려받는다.</p>
+      <p class="hint">항체 샘플로 찍는 특성이에요. 철수해도 그대로 남고, 언제든 되돌려서 샘플을 전부 돌려받을 수 있어요.</p>
       <div class="rows" id="traits"></div>
       <button type="button" class="recall trait-reset" id="trait-reset">특성 되돌리기</button>
     </section>
     <section class="panel" aria-labelledby="h-perks">
       <div class="panel-head"><h2 id="h-perks">이번 판의 특전</h2><span class="label" id="perk-count">0장</span></div>
-      <p class="hint">구역의 목표를 달성할 때마다 셋 중 하나를 고른다. 철수하면 사라진다.</p>
+      <p class="hint">구역 목표를 하나 달성할 때마다 셋 중 하나를 골라요. 이번 판에만 쓰이고, 철수하면 사라져요.</p>
       <ul class="stats-list" id="perks"></ul>
     </section>
   </div>
@@ -717,7 +720,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
