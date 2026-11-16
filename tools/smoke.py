@@ -35,6 +35,15 @@ def factory(**over):
     s.update(over)
     return s
 
+def station(**over):
+    """4구역(환승역)까지 연 판: 열차도 노선도 아직 없고 물자는 넉넉하다."""
+    s = factory(zone=3, supplies=5e22, runEarned=5e22, machines={"sorter": 20, "press": 30, "assembler": 60},
+                defenses={"wire": 80, "tower": 60, "turret": 50, "flame": 40, "emp": 40, "rail": 30})
+    s["goalsDone"].update({"z3a": True, "z3b": True, "z3c": True})
+    s["story"].update({"z3-1": True, "z3-2": True, "z4-0": True})
+    s.update(over)
+    return s
+
 # (이름, 화면 크기, 저장, 할 일)
 CASES = [
     ('폰 · 2구역, 못 막는 밤', (390, 760), market(), 'full'),
@@ -42,6 +51,8 @@ CASES = [
     ('폰 · 새 게임', (390, 760), None, 'new'),
     ('폰 · 3구역 생산 라인', (390, 760), factory(), 'line'),
     ('PC · 3구역 생산 라인', (1280, 900), factory(), 'line'),
+    ('폰 · 4구역 노선', (390, 760), station(), 'rail'),
+    ('PC · 4구역 노선', (1280, 900), station(), 'rail'),
 ]
 
 def run_case(browser, name, size, state, mode):
@@ -54,10 +65,10 @@ def run_case(browser, name, size, state, mode):
     if state is not None:
         page.add_init_script("var s=%s; s.lastSeen=Date.now(); if(!localStorage.getItem('%s'))localStorage.setItem('%s', JSON.stringify(s))" % (json.dumps(state), SAVE_KEY, SAVE_KEY))
     page.goto(URL)
-    # 시작 화면: 열자마자 보여야 하고, 준비가 끝나면(최소 1.2초 + 흐려지는 0.35초) 사라져야 한다.
+    # 시작 화면: 열자마자 보여야 하고, 준비가 끝나면(최소 2.2초 + 흐려지는 0.35초) 사라져야 한다.
     page.wait_for_timeout(300)
     if page.locator('#boot').count() != 1: problems.append('시작 화면이 나오지 않았다')
-    page.wait_for_timeout(2200)
+    page.wait_for_timeout(3000)
     if page.locator('#boot').count() != 0: problems.append('시작 화면이 사라지지 않았다')
 
     def close_story():
@@ -126,7 +137,35 @@ def run_case(browser, name, size, state, mode):
         before = text('supplies'); page.wait_for_timeout(3000)
         if text('supplies') == before: problems.append('라인이 도는데 물자가 늘지 않는다')
         tap('[data-tab=z3]')
-        if '다음 버전' not in text('soon'): problems.append('4구역 탭에 준비 중 안내가 없다: ' + text('soon'))
+        if '아직 열지 않은' not in text('soon'): problems.append('잠긴 4구역 탭에 안내가 없다: ' + text('soon'))
+        if page.locator('[data-tab=z4]').is_visible(): problems.append('아직 먼 5구역 탭이 보인다')
+        tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
+        if not fits(): problems.append('한 화면에 들어오지 않는다')
+    elif mode == 'rail':
+        # 4구역: 열차가 없을 때의 안내 → 열차와 순환선 → 운행이 시작되고 → 30초 뒤 화물이 들어오는지
+        tap('[data-mview-set=manage]'); tap('[data-tab=z3]')
+        if not page.locator('#rail').is_visible(): problems.append('4구역 탭에 노선 칸이 없다')
+        if '열차가 없어요' not in text('rail-note'): problems.append('열차가 없을 때의 안내가 없다: ' + text('rail-note'))
+        if not tap('#row-train'): problems.append('열차를 살 수 없다')
+        if '쉬는 열차 1대' not in text('rail-note'): problems.append('노선이 없는데 쉬는 열차 표시가 없다: ' + text('rail-note'))
+        if not tap('#row-route-loop'): problems.append('순환선을 복구할 수 없다')
+        tap('#row-train'); tap('#row-train')
+        if '쉬는 열차 1대' not in text('rail-note'): problems.append('자리(2대)를 넘는 열차가 쉬지 않는다: ' + text('rail-note'))
+        tap('#row-route-river'); tap('#row-signal'); tap('#row-timetable')
+        rows_text = page.evaluate("[...document.querySelectorAll('#rail-list .rail-row')].map(e => e.textContent).join(' | ')")
+        if '끊김' not in rows_text or '/ 2대' not in rows_text: problems.append('노선 현황이 이상하다: ' + rows_text)
+        if not fits(): problems.append('한 화면에 들어오지 않는다(4구역)')
+        # 운행: 남은 시간이 줄다가, 한 바퀴(약 30초)를 돌면 다시 처음부터 센다. (들어온 물자의 양은 단위 테스트가 확인한다)
+        def loop_left():
+            t = page.evaluate("document.querySelector('#rail-list .rail-row .rail-side').textContent")   # 예: '2 / 2대 · 0:13'
+            m, sec = t.split('·')[-1].strip().split(':'); return int(m) * 60 + int(sec)
+        page.wait_for_timeout(15000); clear(); tap('[data-mview-set=manage]'); tap('[data-tab=z3]')
+        mid = loop_left()
+        if not (5 <= mid <= 20): problems.append('순환선의 남은 시간이 줄지 않는다: %d초' % mid)
+        page.wait_for_timeout(17000); clear(); tap('[data-mview-set=manage]'); tap('[data-tab=z3]')
+        if loop_left() <= mid: problems.append('순환선이 한 바퀴를 돌고도 다시 출발하지 않았다: %d초 → %d초' % (mid, loop_left()))
+        tap('[data-tab=z4]')
+        if '다음 버전' not in text('soon'): problems.append('5구역 탭에 준비 중 안내가 없다: ' + text('soon'))
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
     else:
@@ -141,8 +180,7 @@ def run_case(browser, name, size, state, mode):
         tap('[data-tab=z2]')
         if '아직 열지 않은' not in text('soon'): problems.append('잠긴 3구역 탭에 안내가 없다: ' + text('soon'))
         if page.locator('#goals li:visible').count() != 0: problems.append('잠긴 구역 탭에 목표가 보인다')
-        tap('[data-tab=z3]')
-        if '다음 버전' not in text('soon'): problems.append('4구역 탭에 준비 중 안내가 없다: ' + text('soon'))
+        if page.locator('[data-tab=z3]').is_visible(): problems.append('아직 먼 4구역 탭이 보인다')
         tap('[data-tab=wall]'); tap('#row-wire')
         # 특성: 하나 찍고, 되돌리고, 다시 찍는다
         tap('[data-mview-set=exped]')

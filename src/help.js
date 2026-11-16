@@ -31,7 +31,7 @@
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -72,6 +72,14 @@
         '기계 레벨의 합계가 ' + core.LINE_MILESTONES.slice(0, 4).join(', ') + '… 에 닿을 때마다 라인 전체가 2배가 돼요.',
         '자리를 비워도 라인은 나갈 때의 상태 그대로 돌아요. 정속으로 맞춰 두고 나가면 그 시간도 정속 가동으로 쳐 줘요.' ] },
 
+      { id: 'rail', title: '4구역: 노선', items: [
+        '노선을 복구하고 열차를 사면 운행이 시작돼요. 열차는 달리는 동안 화물을 싣고, 돌아왔을 때 한꺼번에 물자로 바뀌어요.',
+        '노선은 넷이에요. ' + core.ROUTES.map(function (r) { return r.name + '(' + span(r.seconds) + ', 화물 ×' + r.mult + ')'; }).join(', ') + '. 멀리 가는 노선일수록 같은 시간에 더 많이 실어요.',
+        '열차는 화물 배수가 높은 노선부터 알아서 타요. 노선 한 단계마다 열차 ' + core.ROUTE_SLOTS + '대가 다닐 수 있고, 자리가 없는 열차는 쉬어요.',
+        '그래서 고를 것은 열차를 살지, 노선을 늘릴지, 어느 노선을 늘릴지예요. 먼 노선은 비싸지만 열차 한 대가 버는 양이 커요.',
+        '열차가 ' + core.FLEET_MILESTONES.slice(0, 4).join(', ') + '… 대에 닿을 때마다 화물이 2배가 돼요.',
+        '자리를 비운 동안에도 열차는 다녀요. 돌아온 화물은 자리 비움 효율로 받아요.' ] },
+
       { id: 'night', title: '밤과 방벽', items: [
         '하루는 ' + span(core.DAY_SECONDS) + '예요. ' + span(core.DAY_SECONDS - core.BATTLE_SECONDS) + '가 지나면 무리가 도착하고, 남은 ' + span(core.BATTLE_SECONDS) + ' 동안 방벽에서 싸워요.',
         '승패는 그 ' + span(core.BATTLE_SECONDS) + '가 끝날 때의 방어력으로 갈려요. 싸우는 중에도 보강할 수 있어요.',
@@ -100,7 +108,7 @@
 
       { id: 'away', title: '자리 비움', items: [
         '게임을 꺼 둔 동안에도 물자가 쌓여요. 최대 ' + span(core.OFFLINE_CAP) + '치를, 평소 생산의 ' + pct(core.OFFLINE_RATE) + ' 효율로 받아요.',
-        '2구역은 평균 시세로 판 것으로 쳐요. 3구역 라인은 나갈 때의 상태 그대로 돈 것으로 쳐요.',
+        '2구역은 평균 시세로 판 것으로 쳐요. 3구역 라인은 나갈 때의 상태 그대로 돈 것으로 쳐요. 4구역 열차는 그동안 다녀온 만큼 화물을 내려요.',
         '자리를 비운 동안에도 밤은 지나가요. 막을 수 있는 밤은 막아서 전리품을 얻고, 못 막는 밤부터는 잃는 것 없이 버티기만 해요.' ] },
 
       { id: 'etc', title: '그 밖에', items: [

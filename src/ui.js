@@ -540,14 +540,15 @@
     z0: '1구역 주택가 · 수색. 시설을 지어 두면 가만히 있어도 물자가 들어와요.',
     z1: '2구역 재래시장 · 거래. 좌판이 상품을 만들어요. 시세가 좋을 때 팔수록 많이 벌어요.',
     z2: '3구역 공단 · 생산 라인. 기계 셋이 맞물려 돌아요. 가장 느린 기계만큼만 나와요.',
+    z3: '4구역 환승역 · 노선. 열차가 화물을 싣고 돌아와요. 멀리 가는 노선일수록 많이 실어요.',
     wall: '방벽은 거점 전체를 지켜요. 방어력이 오늘 밤 무리 규모보다 커야 해요.'
   };
   var perkShown = '', journalShown = '', statsShown = '';
-  var ZONE_TABS = 4;   // 탭으로 보여 줄 구역 수: 만든 구역 셋 + 문 앞까지 갈 수 있는 다음 구역 하나
+  var ZONE_TABS = 5;   // 탭으로 만들어 둘 구역 수: 만든 구역 넷 + 문 앞까지 갈 수 있는 다음 구역 하나. 화면에는 연 구역과 그다음 구역까지만 보인다
 
   /* ---------- 목록 만들기(처음 한 번) ---------- */
   function build() {
-    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, stall: null, goals: [], stats: {}, tabs: {} };
+    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, routes: {}, railRows: {}, train: null, stall: null, goals: [], stats: {}, tabs: {} };
     // 구역 탭
     for (var i = 0; i < ZONE_TABS; i++) addTab('z' + i, (i + 1) + '구역');
     addTab('wall', '방벽');
@@ -566,6 +567,16 @@
       rows.cells[d.id] = { cell: cell, cap: cap, bar: bar }; $('line-flow').appendChild(cell);
       var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - state.machines[d.id]))); });
       rows.machines[d.id] = r; $('rows-z2').appendChild(r.btn);
+    });
+    // 4구역: 노선 현황(위쪽)과 열차·노선 구매 줄(아래쪽)
+    rows.train = buildRow({ id: 'train', name: '열차', desc: '화물을 싣고 다닌다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '대마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains))); });
+    $('rows-z3').appendChild(rows.train.btn);
+    C.ROUTES.forEach(function (d) {
+      var row = el('div', 'rail-row'), name = el('div', 'rail-name', d.name), small = el('small'), side = el('div', 'rail-side'), track = el('div', 'track'), bar = el('i');
+      name.appendChild(small); track.appendChild(bar); row.appendChild(name); row.appendChild(side); row.appendChild(track);
+      rows.railRows[d.id] = { row: row, small: small, side: side, bar: bar }; $('rail-list').appendChild(row);
+      var r = buildRow({ id: 'route-' + d.id, name: d.name, desc: d.desc }, function () { buy(C.buyRoute(state, d.id)); });
+      rows.routes[d.id] = r; $('rows-z3').appendChild(r.btn);
     });
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id)); });
@@ -761,12 +772,15 @@
       var b = rows.tabs[id], n = id === 'wall' ? -1 : Number(id.slice(1));
       b.setAttribute('aria-pressed', String(id === tab));
       if (n > state.zone) b.setAttribute('data-locked', '1'); else b.removeAttribute('data-locked');
+      b.hidden = n > state.zone + 1;      // 아직 먼 구역의 탭은 숨긴다: 초반에 탭이 여섯 개나 보이지 않게
     });
     var open = zi >= 0 && zi <= state.zone, soon = zi >= 0 && C.ZONES[zi].kind === 'soon';
     setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳'));
     $('rows-z0').hidden = tab !== 'z0';
     $('rows-z1').hidden = !(tab === 'z1' && open);
     $('rows-z2').hidden = !(tab === 'z2' && open);
+    $('rows-z3').hidden = !(tab === 'z3' && open);
+    $('rail').hidden = !(tab === 'z3' && open);
     $('rows-wall').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
     $('line').hidden = !(tab === 'z2' && open);
@@ -849,6 +863,28 @@
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies);
       setText(tb, isFinite(tc) ? '병목 올리기 · ' + names[line.bottleneck] + ' · 물자 ' + fmt(tc) + (qtyMode === 1 ? '' : qtyMode === 'max' ? ' · 되는 만큼' : ' · ' + qtyMode + '번') : '기계가 모두 최대다');
+    }
+    if (tab === 'z3' && open) {
+      var plan = C.railPlan(state), cargo = C.cargoValue(state);
+      C.ROUTES.forEach(function (d) {
+        var v = rows.railRows[d.id], r = rows.routes[d.id], lv = state.routes[d.id], trip = C.tripSeconds(state, d.id), on = plan.riders[d.id];
+        v.row.classList.toggle('off', !lv);
+        setText(v.small, clock(trip) + ' · 화물 ×' + d.mult);
+        setText(v.side, !lv ? '끊김' : on ? on + ' / ' + plan.slots[d.id] + '대 · ' + clock(trip - state.routeClock[d.id]) : '0 / ' + plan.slots[d.id] + '대');
+        v.bar.style.width = (lv && (on || state.routeLoad[d.id] > 0) ? Math.min(100, state.routeClock[d.id] / trip * 100) : 0).toFixed(1) + '%';
+        var cost = C.routeCost(state, d.id);
+        setText(r.count, lv ? lv + '단계' : '끊김');
+        setText(r.info, (lv ? '열차 ' + plan.slots[d.id] + '대까지' : '복구하면 열차 ' + C.ROUTE_SLOTS + '대') + ' · ' + clock(trip) + ' · 화물 ×' + d.mult);
+        setText(r.cost, isFinite(cost) ? (lv ? '증편 ' : '복구 ') + fmt(cost) : '최대');
+        r.btn.disabled = !(cost <= state.supplies);
+      });
+      setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
+        : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
+      var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
+      setText(rows.train.count, state.trains + ' / ' + C.TRAIN_MAX);
+      setText(rows.train.info, '대당 초당 화물 ' + fmt(cargo) + (plan.idle ? ' · 탈 노선이 없음' : ''));
+      setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + fmt(tcost) : '최대');
+      rows.train.btn.disabled = !(tcost <= state.supplies);
     }
     if (tab === 'wall') {
       C.DEFENSES.forEach(function (d) {
@@ -954,6 +990,7 @@
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
           toast('목표 달성 · ' + ev.text); sfx('buy');
           break;
+        case 'train': if (ev.long) { log(ev.name + '이 돌아왔다. 화물 ' + fmt(ev.gain) + '.', 'good'); toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); } break;   // 짧은 노선은 너무 자주 오므로 적지 않는다
         case 'sold': if (ev.peak) log('좋은 시세(×' + ev.price.toFixed(2) + ')에 상품이 팔렸다. 물자 ' + fmt(ev.gain) + '.', 'good'); break;
         case 'story':
           log('일지에 새 기록을 남겼다. ' + ev.text, 'story');

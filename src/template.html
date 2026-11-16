@@ -69,8 +69,11 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); ou
 #boot .boot-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
 #boot .boot-title { margin: 0; font: 400 clamp(64px, 22vw, 120px)/1 var(--font-display); letter-spacing: -.01em; }
 #boot .boot-sub { margin: 10px 0 44px; font: 400 14px/1.5 var(--font-body); letter-spacing: .12em; color: #cfcfc4; }
-#boot .boot-track { width: min(280px, 72vw); height: 14px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
-#boot #boot-bar { height: 100%; width: 0; background: #f0b400; transition: width .12s linear; }
+#boot .boot-track { width: min(280px, 72vw); height: 18px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
+/* 진행 막대는 경고 줄무늬다. 줄무늬 크기가 막대 길이와 상관없이 같도록 고정 크기로 깔고, 천천히 흐르게 한다. */
+#boot #boot-bar { height: 100%; width: 0; background: repeating-linear-gradient(-45deg, #f0b400 0 8px, #17180f 8px 16px); background-size: 22.63px 100%; animation: boot-stripe .8s linear infinite; transition: width .12s linear; }
+@keyframes boot-stripe { to { background-position: 22.63px 0; } }
+@media (prefers-reduced-motion: reduce) { #boot #boot-bar { animation: none; } }
 #boot #boot-text { margin: 12px 0 0; min-height: 1.5em; font: 600 13px/1.5 var(--font-mono); }
 #boot #boot-tip { margin: 36px 0 0; max-width: 300px; min-height: 3em; font: 400 13px/1.6 var(--font-body); color: #9a9a8c; }
 #boot .boot-ver { flex: none; padding: 0 0 10px; text-align: center; font: 400 11px/1.5 var(--font-body); color: #6d6d60; }
@@ -128,7 +131,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .pill-safe { color: var(--safe); }
 .pill-danger { color: #fff; background: var(--blood); border-color: var(--blood); }
 .track { height: 12px; background: var(--rule); border: 1px solid var(--ink); overflow: hidden; }
-.track > i { display: block; height: 100%; width: 0; }
+.track > i { display: block; height: 100%; width: 0; background: var(--ink); }   /* 기본 채움색. 없으면 목표·기계·노선의 진행 막대가 차도 보이지 않는다 */
 #day-bar { background: var(--ink); }
 #horde-bar { background: var(--blood); }
 #defense-bar { background: var(--safe); }
@@ -282,6 +285,15 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .line-stat .num { font: 400 22px/1.1 var(--font-display); white-space: nowrap; }
 .line-stat .num.steady { color: var(--safe); }
 #line-mile { margin-bottom: 8px; }
+/* 4구역 노선: 노선마다 한 줄. 왼쪽에 이름과 운행 시간, 오른쪽에 탄 열차 수, 아래에 운행 진행 막대. */
+.rail-list { display: grid; gap: 6px; margin-bottom: 8px; }
+.rail-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; }
+.rail-row .track { grid-column: 1 / -1; }
+.rail-row.off { opacity: .45; }
+.rail-name { font: 600 13px/1.4 var(--font-body); }
+.rail-name small { margin-left: 6px; font: 400 12px/1.4 var(--font-body); color: var(--ink-soft); }
+.rail-side { font: 500 12px/1.4 var(--font-mono); white-space: nowrap; }
+.tabbar button[hidden] { display: none; }
 .trade-goods .num { font-size: 15px; margin: 2px 0 4px; }
 .sell { margin-bottom: 8px; }
 .trait-reset { margin-top: 10px; }
@@ -531,7 +543,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.6.4</div>
+  <div class="boot-ver">7구역 알파 0.6.5</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -653,6 +665,10 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="label" id="line-mile"></div>
         <button type="button" class="fortify sell" id="tune">병목 올리기</button>
       </div>
+      <div class="trade rail" id="rail" hidden>
+        <div class="rail-list" id="rail-list"></div>
+        <div class="label" id="rail-note"></div>
+      </div>
       <div class="zone-pane" id="pane-goals">
         <ul class="goal-list" id="goals"></ul>
         <button type="button" class="fortify open-zone" id="open-zone" hidden></button>
@@ -660,6 +676,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="rows" id="rows-z0"></div>
       <div class="rows" id="rows-z1" hidden></div>
       <div class="rows" id="rows-z2" hidden></div>
+      <div class="rows" id="rows-z3" hidden></div>
       <div class="rows" id="rows-wall" hidden></div>
       <p class="hint soon" id="soon" hidden></p>
     </section>
@@ -732,7 +749,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

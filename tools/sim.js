@@ -12,34 +12,40 @@ const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(k + '='));
 
 function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck = 300, share = 0.5 } = {}) {
   let z = seed >>> 0; const rng = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };
-  let s = C.createState(0), day = 0, active = 0; const marks = [];
-  const traitOrder = ['immune', 'bulwark', 'immune', 'dealer', 'immune', 'pioneer', 'immune', 'thrift', 'legacy', 'immune', 'bulwark', 'dealer', 'engineer'];
-  const spendTraits = () => { for (let k = 0, bought = true; bought && k < 500; k++) { bought = false; for (const id of traitOrder) if ((id !== 'engineer' || s.bestZone >= 2) && C.buyTrait(s, id).ok) bought = true; } };
+  let s = C.createState(0), day = 0, active = 0, cheapest = Infinity; const marks = [];
+  const traitOrder = ['immune', 'bulwark', 'immune', 'dealer', 'immune', 'pioneer', 'immune', 'thrift', 'legacy', 'immune', 'bulwark', 'dealer', 'engineer', 'railman'];
+  const spendTraits = () => { for (let k = 0, bought = true; bought && k < 500; k++) { bought = false; for (const id of traitOrder) if ((id !== 'engineer' || s.bestZone >= 2) && (id !== 'railman' || s.bestZone >= 3) && C.buyTrait(s, id).ok) bought = true; } };
   const step = () => {
     active++;
     C.tick(s, 1, rng);
     for (let zi = 1; zi <= s.zone; zi++) if (!marks.some(m => m.enter === zi)) marks.push({ enter: zi, day: day + 1, hours: active / 3600, retreats: s.retreats, pps: C.productionPerSec(s) });
     for (let k = 0; k < taps; k++) C.scavenge(s);
     if (s.clicks < 15) C.scavenge(s);
-    if (s.pendingPerks.length) C.choosePerk(s, (s.zone >= 2 ? ['foreman', 'harvest', 'bargain', 'watch'] : ['harvest', 'bargain', 'watch']).find(id => s.pendingPerks.includes(id)) || s.pendingPerks[0]);
+    if (s.pendingPerks.length) C.choosePerk(s, (s.zone >= 3 ? ['driver', 'foreman', 'harvest', 'watch'] : s.zone >= 2 ? ['foreman', 'harvest', 'bargain', 'watch'] : ['harvest', 'bargain', 'watch']).find(id => s.pendingPerks.includes(id)) || s.pendingPerks[0]);
     if (s.signalLeft > 0) C.answerSignal(s, rng);
     C.fortify(s);
     const n = C.nextZone(s);
     if (n && n.ready && !(n.soon && s.gate) && C.openZone(s).ok && s.gate && !marks.some(m => m.gate)) marks.push({ gate: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 회수가 가장 빠른 것부터 산다: 시설, 좌판, 구역 강화
-    let cheapest = Infinity;      // 못 산 것 중 가장 싼 값: 이것조차 한참 걸리면 '막혔다'고 본다
-    for (let g = 0; g < 60; g++) {
+    // 살 것을 고르는 일은 3초에 한 번만 한다(매초 하면 계산이 너무 느리다. 결과는 거의 같다)
+    for (let g = 0; g < 60 && active % 3 === 0; g++) {
       let best = null; const per = Math.max(1e-9, C.productionPerSec(s));
-      cheapest = Infinity;
+      cheapest = Infinity;      // 못 산 것 중 가장 싼 값: 이것조차 한참 걸리면 '막혔다'고 본다
       const consider = (cost, gain, buy) => { if (cost > s.supplies && gain > 0) cheapest = Math.min(cheapest, cost); if (cost <= s.supplies && gain > 0 && (!best || cost / gain < best.pay)) best = { pay: cost / gain, buy }; };
       for (const b of C.BUILDINGS) consider(C.buildingCost(s, b.id, 1), b.baseRate * C.mods(s).z1 * C.globalMult(s) * C.milestoneMult(s.buildings[b.id] + 1), () => C.buyBuilding(s, b.id, 1));
       if (s.zone >= 1) consider(C.stallCost(s, 1), C.goodsValue(s) * C.priceRange(s).mean * 1.2, () => C.buyStall(s, 1));
       if (s.zone >= 2) {   // 3구역: 병목 기계를 올렸을 때 늘어나는 산출로 따진다(처음에는 0 이라 조금 얹어 준다)
-        const cost = C.tuneCost(s), before = C.lineRate(s), probe = Object.assign({}, s, { machines: Object.assign({}, s.machines) });
+        const cost = C.tuneCost(s), before = C.lineRate(s), probe = Object.create(s); probe.machines = Object.assign({}, s.machines);   // 상태를 통째로 베끼지 않고 바뀐 것만 덮어쓴다(빠르다)
         probe.machines[C.lineInfo(s).bottleneck]++;
         consider(cost, Math.max(C.lineRate(probe) - before, C.productValue(s) * 0.2), () => C.tuneLine(s, 1));
       }
-      for (const u of C.UPGRADES) { const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' ? 0.03 : 0.12), () => C.buyUpgrade(s, u.id)); }
+      if (s.zone >= 3) {   // 4구역: 열차를 사거나 노선을 늘렸을 때 늘어나는 평균 수입으로 따진다
+        const rate = C.railRate(s), probe = () => { const o = Object.create(s); o.routes = Object.assign({}, s.routes); return o; };
+        const t = probe(); t.trains = s.trains + 1;
+        consider(C.trainCost(s, 1), C.railRate(t) - rate, () => C.buyTrain(s, 1));
+        for (const r of C.ROUTES) { const q = probe(); q.routes[r.id]++; consider(C.routeCost(s, r.id), Math.max(C.railRate(q) - rate, s.trains ? 0 : C.cargoValue(s) * 0.1), () => C.buyRoute(s, r.id)); }
+      }
+      for (const u of C.UPGRADES) { const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' || u.key === 'trip' || u.key === 'traincost' || u.key === 'routecost' ? 0.03 : 0.12), () => C.buyUpgrade(s, u.id)); }
       if (!best) break;
       best.buy();
     }

@@ -58,6 +58,15 @@
   var STEADY_AT = 0.9;             // 가동률이 이 이상이면 '정속 가동'
   var STEADY_BONUS = 0.5;          // 정속 가동일 때 라인 산출에 더하는 비율(+50%)
   var LINE_MILESTONES = [15, 30, 60, 100, 150, 220, 300, 400, 520, 660, 820, 1000]; // 기계 레벨 합계가 이 수에 닿을 때마다 라인 산출 2배
+  // 4구역 노선
+  var TRAIN_VALUE = 1e14;          // 열차 한 대가 운행 1초마다 싣는 화물의 기준 값(물자)
+  var TRAIN_GROWTH = 1.4;          // 열차를 한 대 더 살 때마다 값이 오르는 배수
+  var TRAIN_COST = 2e18;           // 첫 열차의 값
+  var TRAIN_MAX = 100;             // 열차의 최대 수
+  var ROUTE_GROWTH = 2.2;          // 노선을 한 단계 늘릴 때마다 값이 오르는 배수
+  var ROUTE_SLOTS = 2;             // 노선 한 단계마다 다닐 수 있는 열차 수
+  var ROUTE_MAX = 25;              // 노선의 최대 단계
+  var FLEET_MILESTONES = [4, 8, 12, 16, 24, 32, 48, 64, 80, 100]; // 열차가 이 수에 닿을 때마다 화물 2배
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
   var RETREAT_K = 2, RETREAT_POW = 0.4;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
@@ -81,9 +90,12 @@
       story: ['3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 문을 뜯고 들어가니 기계들이 멈춘 자리 그대로 서 있다. 컨베이어 위에는 만들다 만 것들이 줄지어 있다.',
         '작업 일지의 마지막 장. “야간조 전원 7구역으로 이동. 설비는 두고 간다. 돌릴 줄 아는 사람이 오면 쓰라.”',
         '라인이 돈다. 밤에도 공단에 불이 켜진다. 불빛을 보고 사람이 오고, 소리를 듣고 무리가 온다. 선로를 따라가면 환승역이다.'] },
-    { no: 4, name: '환승역', kind: 'soon', cost: 1e19, lead: '끊긴 노선을 다시 잇는다',
-      story: ['환승역 계단 아래로 선로가 네 갈래로 갈라진다. 전광판 하나가 아직 켜져 있다. 행선지: 7구역. 개찰구 셔터는 내려가 있다.'] },
-    { no: 5, name: '대학 병원', kind: 'soon', cost: 1e20, lead: '', story: [] },
+    { no: 4, name: '환승역', kind: 'rail', cost: 1e19, lead: '끊긴 노선을 잇고 열차를 보낸다',
+      story: ['4구역. 환승역 계단 아래로 선로가 네 갈래로 갈라진다. 전광판 하나가 아직 켜져 있다. 행선지: 7구역. 승강장에 열차 한 대가 문을 연 채 서 있다.',
+        '역무실 칠판에 분필 글씨가 남아 있다. “막차는 7구역행. 못 탄 사람은 선로를 따라 걸을 것. 터널 안에서는 소리 내지 말 것.”',
+        '열차가 다시 다닌다. 멀리 간 열차일수록 많이 싣고 돌아온다. 심야 급행의 기관사가 말했다. 강 건너 병원 옥상에 아직 불이 켜져 있다고.'] },
+    { no: 5, name: '대학 병원', kind: 'soon', cost: 1e24, lead: '남은 연구를 이어 간다',
+      story: ['대학 병원의 응급실 문은 쇠사슬로 묶여 있다. 유리 너머 복도에 비상등이 깜박인다. 안내판의 화살표는 한 곳을 가리킨다. 감염내과, 7층.'] },
     { no: 6, name: '강변 검문소', kind: 'soon', cost: 1e25, lead: '', story: [] },
     { no: 7, name: '송신탑', kind: 'soon', cost: 1e30, lead: '', story: [] }
   ];
@@ -103,6 +115,17 @@
     { id: 'sorter',    name: '선별기', desc: '고철을 골라 원료로 만든다',   baseCost: 2e10,  rate: 3 },
     { id: 'press',     name: '가공기', desc: '원료를 눌러 부품으로 찍는다', baseCost: 4e10,  rate: 2 },
     { id: 'assembler', name: '조립기', desc: '부품을 맞춰 완제품을 낸다',   baseCost: 8e10,  rate: 1 }
+  ];
+  /*
+   * 4구역의 노선: 멀리 가는 노선일수록 운행이 오래 걸리지만 같은 시간에 더 많이 싣는다(mult).
+   *   seconds 한 번 다녀오는 시간, mult 화물 배수, baseCost 첫 단계(복구)의 값. 단계마다 열차 ROUTE_SLOTS 대가 더 다닐 수 있다.
+   * 열차는 배수가 높은 노선부터 알아서 채워 탄다. 화물은 열차가 돌아왔을 때 한꺼번에 들어온다.
+   */
+  var ROUTES = [
+    { id: 'loop',    name: '순환선',    desc: '역 주변을 한 바퀴 돈다',       seconds: 30,   mult: 1,   baseCost: 1e18 },
+    { id: 'river',   name: '강변선',    desc: '강을 따라 창고 지대까지 간다', seconds: 180,  mult: 1.4, baseCost: 1e19 },
+    { id: 'outer',   name: '외곽선',    desc: '도시 바깥 화물역을 돈다',      seconds: 900,  mult: 2,   baseCost: 1e20 },
+    { id: 'express', name: '심야 급행', desc: '밤새 달려 가장 먼 곳까지 간다', seconds: 3600, mult: 3,   baseCost: 1e21 }
   ];
   // 방벽: 구역과 상관없이 거점 전체를 지킨다
   var DEFENSES = [
@@ -130,18 +153,23 @@
     { id: 'manual',  zone: 2, name: '정비 교범', desc: '기계 값 -4%',            key: 'z3cost',  per: -0.04, baseCost: 1e12, growth: 3,  max: 12 },
     { id: 'belt',    zone: 2, name: '컨베이어',  desc: '정속 가동 보너스 +10%p', key: 'steady',  per: 0.1,  baseCost: 2e12, growth: 3.5, max: 10 },
     { id: 'spare',   zone: 2, name: '예비 부품', desc: '정속 가동으로 치는 가동률 -3%p', key: 'slack', per: 0.03, baseCost: 1e12, growth: 4, max: 5 },
+    { id: 'signal',  zone: 3, name: '신호기',    desc: '화물 값 +25%',           key: 'z4',      per: 0.25, baseCost: 3e18, growth: 2.4, max: 40 },
+    { id: 'timetable', zone: 3, name: '시간표',  desc: '운행 시간 -5%',          key: 'trip',    per: -0.05, baseCost: 1e19, growth: 4,  max: 8 },
+    { id: 'tracks',  zone: 3, name: '선로 정비', desc: '노선 값 -6%',            key: 'routecost', per: -0.06, baseCost: 1e19, growth: 3, max: 12 },
+    { id: 'depot',   zone: 3, name: '차량 기지', desc: '열차 값 -4%',            key: 'traincost', per: -0.04, baseCost: 1e19, growth: 3, max: 12 },
     { id: 'broker',  zone: 1, name: '거간꾼',    desc: '자동 판매가 평균 시세 이상일 때만 판다(창고가 차면 그냥 판다)', key: 'broker', per: 1, baseCost: 5e6, growth: 1, max: 1 }
   ];
   /*
    * 특전: 구역의 목표를 달성할 때마다 셋 중 하나를 고른다. 이번 판에만 유효하고 철수하면 사라진다.
-   * 같은 특전을 또 고르면 레벨이 오른다.
+   * 같은 특전을 또 고르면 레벨이 오른다. zone 이 있는 특전은 그 구역을 연 뒤에만 나온다(쓸모없는 특전이 섞이지 않게).
    */
   var PERKS = [
     { id: 'harvest', name: '풍작',      desc: '전체 생산 +40%',  key: 'prod',    per: 0.4 },
     { id: 'watch',   name: '불침번',    desc: '방어력 +50%',     key: 'defense', per: 0.5 },
     { id: 'hands',   name: '빠른 손',   desc: '수색 배수 +200%', key: 'click',   per: 2 },
-    { id: 'bargain', name: '입담',      desc: '상품 값 +40%',    key: 'z2',      per: 0.4 },
-    { id: 'foreman', name: '작업 반장', desc: '완제품 값 +40%',  key: 'z3',      per: 0.4 },
+    { id: 'bargain', name: '입담',      desc: '상품 값 +40%',    key: 'z2',      per: 0.4, zone: 1 },
+    { id: 'foreman', name: '작업 반장', desc: '완제품 값 +40%',  key: 'z3',      per: 0.4, zone: 2 },
+    { id: 'driver',  name: '기관사',    desc: '화물 값 +40%',    key: 'z4',      per: 0.4, zone: 3 },
     { id: 'spoils',  name: '전리품 수거', desc: '밤 전리품 +60%', key: 'loot',    per: 0.6 },
     { id: 'frugal',  name: '알뜰함',    desc: '모든 값 -6%',     key: 'cost',    per: -0.06 }
   ];
@@ -157,6 +185,7 @@
     { id: 'pioneer', name: '선발대',    desc: '철수 뒤 시작 물자 10배(레벨 1: 1,000)', key: 'start', per: 1, baseCost: 2, growth: 2, max: 8 },
     { id: 'dealer',  name: '장사 수완', desc: '상품 값 +30%',              key: 'z2',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'engineer', name: '기술자',   desc: '완제품 값 +30%',            key: 'z3',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
+    { id: 'railman', name: '철도원',    desc: '화물 값 +30%',              key: 'z4',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 }
   ];
@@ -174,7 +203,10 @@
       { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
     [ { id: 'z3a', text: '기계 레벨 합계 120', need: 120, value: function (s) { return machineLevels(s); } },
       { id: 'z3b', text: '정속 가동 누적 10분', need: 600, unit: 'time', value: function (s) { return s.steadySeconds; } },
-      { id: 'z3c', text: '완제품으로 번 물자 누적 100경', need: 1e18, value: function (s) { return s.lineEarned; } } ]
+      { id: 'z3c', text: '완제품으로 번 물자 누적 100경', need: 1e18, value: function (s) { return s.lineEarned; } } ],
+    [ { id: 'z4a', text: '열차 16대', need: 16, value: function (s) { return s.trains; } },
+      { id: 'z4b', text: '심야 급행 3번 도착', need: 3, value: function (s) { return s.expressRuns; } },
+      { id: 'z4c', text: '화물로 번 물자 누적 100해', need: 1e22, value: function (s) { return s.railEarned; } } ]
   ];
 
   /* ---------- 작은 도우미 ---------- */
@@ -199,6 +231,8 @@
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
+      // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
+      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
       // 밤
       day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false,
       // 구조 신호
@@ -219,6 +253,7 @@
     BUILDINGS.forEach(function (b) { s.buildings[b.id] = 0; });
     DEFENSES.forEach(function (d) { s.defenses[d.id] = 0; });
     MACHINES.forEach(function (d) { s.machines[d.id] = 0; });
+    ROUTES.forEach(function (d) { s.routes[d.id] = 0; s.routeClock[d.id] = 0; s.routeLoad[d.id] = 0; });
     UPGRADES.forEach(function (u) { s.upgrades[u.id] = 0; });
     PERKS.forEach(function (p) { s.perks[p.id] = 0; });
     TRAITS.forEach(function (t) { s.traits[t.id] = 0; });
@@ -232,8 +267,8 @@
   function sanitizeState(raw, now) {
     var s = createState(now);
     if (!raw || typeof raw !== 'object') return s;
-    ['supplies', 'runEarned', 'lifetimeEarned', 'goods', 'tradeEarned', 'lineEarned', 'steadySeconds', 'playSeconds', 'awaySeconds', 'runSeconds', 'startedAt'].forEach(function (k) { s[k] = safeNum(raw[k], s[k]); });
-    ['clicks', 'stalls', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
+    ['supplies', 'runEarned', 'lifetimeEarned', 'goods', 'tradeEarned', 'lineEarned', 'steadySeconds', 'railEarned', 'playSeconds', 'awaySeconds', 'runSeconds', 'startedAt'].forEach(function (k) { s[k] = safeNum(raw[k], s[k]); });
+    ['clicks', 'stalls', 'trains', 'expressRuns', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
     s.zone = clamp(safeCount(raw.zone), 0, ZONES.length - 1);
     while (s.zone > 0 && ZONES[s.zone].kind === 'soon') s.zone--;     // 아직 없는 구역에 들어가 있을 수는 없다
     s.bestZone = clamp(Math.max(safeCount(raw.bestZone), s.zone), 0, ZONES.length - 1);
@@ -255,6 +290,13 @@
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
+    s.trains = Math.min(s.trains, TRAIN_MAX);
+    s.routes = counts(ROUTES, raw.routes, ROUTE_MAX);
+    ROUTES.forEach(function (d) {
+      var rc = raw.routeClock && typeof raw.routeClock === 'object' ? raw.routeClock[d.id] : 0, rl = raw.routeLoad && typeof raw.routeLoad === 'object' ? raw.routeLoad[d.id] : 0;
+      s.routeClock[d.id] = clamp(safeNum(rc, 0), 0, d.seconds);
+      s.routeLoad[d.id] = clamp(safeNum(rl, 0), 0, TRAIN_MAX * d.seconds);      // 한 번의 운행에 실릴 수 있는 양을 넘지 않는다
+    });
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
     s.perks = counts(PERKS, raw.perks, 999);
     s.traits = counts(TRAITS, raw.traits, function (t) { return t.max; });
@@ -284,10 +326,11 @@
    *   prod 전체 생산, z1 / z2 구역별 생산, click 수색 배수, defense 방어력, loot 밤 전리품,
    *   cost 모든 값, z1cost 1구역 시설 값, floor / ceil 시세 범위에 더하는 값, cap 창고 배수,
    *   offline 자리 비움 효율에 더하는 값, antibody 철수 항체 배수, start 선발대 레벨, broker 거간꾼 여부,
+   *   z4 화물 값, trip 운행 시간, routecost 노선 값, traincost 열차 값,
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, steady: 0, slack: 0 };
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, steady: 0, slack: 0 };
     var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
@@ -304,6 +347,8 @@
     m.cost = Math.max(0.2, m.cost);
     m.z1cost = Math.max(0.2, m.z1cost);
     m.z3cost = Math.max(0.2, m.z3cost);
+    m.routecost = Math.max(0.2, m.routecost); m.traincost = Math.max(0.2, m.traincost);
+    m.trip = Math.max(0.5, m.trip);        // 운행 시간은 절반 아래로 줄지 않는다
     return m;
   }
   /** 전체 생산 배수: 특성·특전 × 막아낸 밤 보너스 × 지원 효과. */
@@ -492,6 +537,92 @@
   /** 병목을 한 단계 올리는 값(단추에 보일 값). */
   function tuneCost(state) { return zoneOpen(state, 2) ? machineCost(state, lineInfo(state).bottleneck, 1) : Infinity; }
 
+  /* ---------- 4구역: 노선 ---------- */
+  /*
+   * 노선을 복구하고 열차를 보낸다. 열차는 운행하는 동안 화물을 싣고, 돌아왔을 때 한꺼번에 물자로 바뀐다.
+   *   멀리 가는 노선일수록 같은 시간에 더 많이 싣지만(mult) 돌아오기까지 오래 걸린다.
+   *   열차는 배수가 높은 노선부터 알아서 탄다. 노선마다 다닐 수 있는 열차 수(단계 × ROUTE_SLOTS)가 정해져 있다.
+   * 그래서 할 일은 "열차를 살까, 노선을 늘릴까, 어느 노선을 늘릴까"다. 물자가 띄엄띄엄 크게 들어오는 것이 앞 구역들과 다르다.
+   */
+  function fleetMilestone(trains) { var m = 1; FLEET_MILESTONES.forEach(function (t) { if (trains >= t) m *= 2; }); return m; }
+  function trainCost(state, qty) {
+    if (!zoneOpen(state, 3) || state.trains + qty > TRAIN_MAX) return Infinity;
+    var m = mods(state);
+    return seriesCost(TRAIN_COST * m.cost * m.traincost, TRAIN_GROWTH, state.trains, qty);
+  }
+  function maxTrains(state) {
+    if (!zoneOpen(state, 3)) return 0;
+    var m = mods(state);
+    return seriesMax(TRAIN_COST * m.cost * m.traincost, TRAIN_GROWTH, state.trains, state.supplies, TRAIN_MAX);
+  }
+  function buyTrain(state, qty) {
+    qty = Math.floor(qty);
+    if (!zoneOpen(state, 3)) return fail('locked');
+    if (!(qty >= 1)) return fail('unknown');
+    return pay(state, trainCost(state, qty), function () { state.trains += qty; });
+  }
+  /** 노선을 한 단계 늘리는 값(첫 단계는 복구). */
+  function routeCost(state, id) {
+    var def = findById(ROUTES, id);
+    if (!def || !zoneOpen(state, 3) || state.routes[id] >= ROUTE_MAX) return Infinity;
+    var m = mods(state);
+    return Math.ceil(def.baseCost * Math.pow(ROUTE_GROWTH, state.routes[id]) * m.cost * m.routecost);
+  }
+  function buyRoute(state, id) {
+    if (!findById(ROUTES, id)) return fail('unknown');
+    if (!zoneOpen(state, 3)) return fail('locked');
+    return pay(state, routeCost(state, id), function () { state.routes[id]++; });
+  }
+  /** 노선 하나를 다녀오는 데 걸리는 시간(초, 강화 포함). */
+  function tripSeconds(state, id) { var def = findById(ROUTES, id); return def ? def.seconds * mods(state).trip : Infinity; }
+  /**
+   * 지금의 배차 { riders: { 노선: 열차 수 }, slots: { 노선: 자리 수 }, idle: 탈 노선이 없어 쉬는 열차 수 }.
+   * 배수가 높은 노선부터 자리를 채운다.
+   */
+  function railPlan(state) {
+    var left = zoneOpen(state, 3) ? state.trains : 0, riders = {}, slots = {};
+    ROUTES.slice().sort(function (a, b) { return b.mult - a.mult; }).forEach(function (d) {
+      slots[d.id] = (state.routes[d.id] || 0) * ROUTE_SLOTS;
+      riders[d.id] = Math.min(left, slots[d.id]);
+      left -= riders[d.id];
+    });
+    return { riders: riders, slots: slots, idle: left };
+  }
+  /** 열차 한 대가 운행 1초마다 싣는 화물의 값(노선 배수를 곱하기 전). */
+  function cargoValue(state) { return zoneOpen(state, 3) ? TRAIN_VALUE * fleetMilestone(state.trains) * mods(state).z4 * globalMult(state) : 0; }
+  /** 4구역이 평균적으로 초당 버는 물자(운행 중인 열차 기준). 실제로는 열차가 돌아올 때 한꺼번에 들어온다. */
+  function railRate(state) {
+    if (!zoneOpen(state, 3)) return 0;
+    var plan = railPlan(state), sum = 0;
+    ROUTES.forEach(function (d) { sum += plan.riders[d.id] * d.mult; });
+    return sum * cargoValue(state);
+  }
+  /**
+   * 열차를 dt 초 운행한다. 돌아온 노선이 있으면 그동안 실은 화물을 물자로 바꾸고 'train' 사건을 남긴다.
+   * 열차 수가 운행 도중에 바뀌어도 실제로 달린 만큼(열차 × 초)만 실린다.
+   */
+  function stepRail(state, dt, events) {
+    if (!zoneOpen(state, 3) || !state.trains) return;
+    var plan = railPlan(state), value = cargoValue(state);
+    ROUTES.forEach(function (d) {
+      var n = plan.riders[d.id];
+      if (!n && !(state.routeLoad[d.id] > 0)) return;
+      var trip = tripSeconds(state, d.id);
+      state.routeLoad[d.id] += n * dt;
+      state.routeClock[d.id] += dt;
+      if (state.routeClock[d.id] < trip) return;
+      // dt 가 길어 여러 번 다녀왔을 수도 있다: 다녀온 횟수만큼의 몫을 내리고, 남은 시간의 몫은 실은 채로 둔다
+      var trips = Math.floor(state.routeClock[d.id] / trip), share = trips * trip / state.routeClock[d.id];
+      var gain = state.routeLoad[d.id] * share * d.mult * value;
+      state.routeLoad[d.id] *= 1 - share;
+      state.routeClock[d.id] -= trips * trip;
+      earn(state, gain);
+      state.railEarned += gain;
+      if (d.id === 'express') state.expressRuns += trips;
+      events.push({ type: 'train', route: d.id, name: d.name, gain: gain, trips: trips, long: d.seconds >= 900 });
+    });
+  }
+
   /* ---------- 구역 강화 ---------- */
   function upgradeCost(state, id) {
     var def = findById(UPGRADES, id);
@@ -509,8 +640,8 @@
   }
 
   /* ---------- 생산 합계와 직접 수색 ---------- */
-  /** 가만히 둘 때의 초당 생산(1구역 시설 + 2구역 평균 판매 + 3구역 라인). */
-  function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state); }
+  /** 가만히 둘 때의 초당 생산(1구역 시설 + 2구역 평균 판매 + 3구역 라인 + 4구역 열차의 평균). */
+  function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
   function clickPower(state) { return 1 + Math.log(Math.max(1, mods(state).click)) / Math.LN2; }
   function clickValue(state) { return (globalMult(state) + productionPerSec(state) * CLICK_SHARE) * clickPower(state); }
@@ -537,7 +668,7 @@
         try { v = g.value(state); } catch (e) { v = 0; }
         if (!(v >= g.need)) continue;
         state.goalsDone[g.id] = true;
-        state.pendingPerks = drawPerks(rng);
+        state.pendingPerks = drawPerks(rng, state);
         events.push({ type: 'goal', zone: z, id: g.id, text: g.text });
       }
     }
@@ -665,9 +796,10 @@
   }
 
   /* ---------- 특전 ---------- */
-  /** 특전 PERK_CHOICES 장을 겹치지 않게 뽑는다. */
-  function drawPerks(rng) {
-    var pool = PERKS.map(function (p) { return p.id; }), out = [];
+  /** 특전 PERK_CHOICES 장을 겹치지 않게 뽑는다. state 를 주면 아직 열지 않은 구역의 특전은 뺀다. */
+  function drawPerks(rng, state) {
+    var reach = state && typeof state.zone === 'number' ? state.zone : Infinity;
+    var pool = PERKS.filter(function (p) { return !(p.zone > reach); }).map(function (p) { return p.id; }), out = [];
     rng = typeof rng === 'function' ? rng : Math.random;
     while (out.length < PERK_CHOICES && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length) % pool.length, 1)[0]);
     return out;
@@ -688,7 +820,7 @@
   function canRetreat(state) { return antibodiesOnRetreat(state) >= 1 && !state.pendingPerks.length; }
   /**
    * 철수: 거점을 전부 버리고 1구역에서 다시 시작한다.
-   *   사라지는 것 : 물자, 시설, 방벽, 구역 강화, 좌판과 상품, 기계, 연 구역, 특전, 막아낸 밤, 달성한 목표
+   *   사라지는 것 : 물자, 시설, 방벽, 구역 강화, 좌판과 상품, 기계, 열차와 노선, 연 구역, 특전, 막아낸 밤, 달성한 목표
    *   남는 것     : 항체 샘플과 영구 특성, 읽은 일지, 통계
    */
   function retreat(state, now) {
@@ -774,7 +906,7 @@
   var MAX_NIGHTS_PER_TICK = 600;
   /**
    * dt 초를 진행하고 그동안 일어난 일을 돌려준다.
-   * 순서: 지원 효과 → 생산(1구역 시설, 3구역 라인) → 거래 → 신호 → 밤 → 목표 → 이야기.
+   * 순서: 지원 효과 → 생산(1구역 시설, 3구역 라인) → 거래 → 열차 → 신호 → 밤 → 목표 → 이야기.
    */
   function tick(state, dt, rng) {
     var events = [];
@@ -790,6 +922,7 @@
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
 
     stepTrade(state, dt, rng, events);
+    stepRail(state, dt, events);
 
     if (state.signalLeft > 0) {
       state.signalLeft -= dt;
@@ -820,7 +953,7 @@
   function applyOffline(state, elapsed) {
     elapsed = safeNum(elapsed, 0);
     var counted = Math.min(elapsed, OFFLINE_CAP), rate = offlineRate(state);
-    var report = { elapsed: elapsed, counted: counted, capped: elapsed > OFFLINE_CAP, rate: rate, gain: 0, nights: 0, nightReward: 0, held: false };
+    var report = { elapsed: elapsed, counted: counted, capped: elapsed > OFFLINE_CAP, rate: rate, gain: 0, nights: 0, nightReward: 0, held: false, trains: 0 };
     if (!(counted > 0)) return report;
     state.buff = null;
     state.signalLeft = 0;
@@ -830,6 +963,13 @@
     state.tradeEarned += trade;
     state.lineEarned += line;
     if (line > 0 && lineInfo(state).steady) state.steadySeconds += counted;     // 정속으로 맞춰 두고 나갔으면 그 시간도 친다
+    // 4구역 열차: 자리를 비운 동안에도 다닌다. 돌아온 열차의 화물은 자리 비움 효율로 쳐서 받는다.
+    var railEvents = [], before = state.supplies, earnedBefore = state.railEarned;
+    stepRail(state, counted, railEvents);
+    var railFull = state.railEarned - earnedBefore, cut = railFull * (1 - rate);
+    if (cut > 0) { state.supplies -= cut; state.runEarned -= cut; state.lifetimeEarned -= cut; state.railEarned -= cut; }
+    report.gain += state.supplies - before;
+    report.trains = railEvents.length;
     state.awaySeconds += counted; state.runSeconds += counted;
     var clock = state.dayClock + counted, nights = Math.floor(clock / DAY_SECONDS);
     state.dayClock = clock - nights * DAY_SECONDS;
@@ -912,6 +1052,9 @@
     PRODUCT_VALUE: PRODUCT_VALUE, STEADY_AT: STEADY_AT, STEADY_BONUS: STEADY_BONUS, LINE_MILESTONES: LINE_MILESTONES, MACHINES: MACHINES,
     machineLevels: machineLevels, lineMilestone: lineMilestone, machineCost: machineCost, maxMachines: maxMachines, buyMachine: buyMachine,
     lineInfo: lineInfo, productValue: productValue, lineRate: lineRate, tuneLine: tuneLine, tuneCost: tuneCost,
+    TRAIN_VALUE: TRAIN_VALUE, TRAIN_COST: TRAIN_COST, TRAIN_GROWTH: TRAIN_GROWTH, TRAIN_MAX: TRAIN_MAX, ROUTE_GROWTH: ROUTE_GROWTH, ROUTE_SLOTS: ROUTE_SLOTS, ROUTE_MAX: ROUTE_MAX,
+    FLEET_MILESTONES: FLEET_MILESTONES, ROUTES: ROUTES, fleetMilestone: fleetMilestone, trainCost: trainCost, maxTrains: maxTrains, buyTrain: buyTrain,
+    routeCost: routeCost, buyRoute: buyRoute, tripSeconds: tripSeconds, railPlan: railPlan, cargoValue: cargoValue, railRate: railRate,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,

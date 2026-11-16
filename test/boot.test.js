@@ -107,3 +107,11 @@ test('mount: 시작 화면이 없는 페이지에서도 같은 모양의 객체�
     m.mark('ready'); m.skip();
   }
 });
+
+test('기본 시간: 최소 2초 남짓은 보여 주고, 10초 안에는 반드시 닫는다', () => {
+  assert.ok(Boot.MIN_MS >= 2000 && Boot.MIN_MS <= 3000);
+  assert.ok(Boot.MAX_MS > Boot.MIN_MS && Boot.MAX_MS <= 10000);
+  const b = Boot.createBoot({ now: 0 }); Boot.STAGES.forEach(s => b.mark(s.id));
+  assert.equal(b.canClose(Boot.MIN_MS - 1), false);
+  assert.equal(b.canClose(Boot.MIN_MS), true);
+});
