@@ -13,8 +13,8 @@ const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(k + '='));
 function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck = 300, share = 0.5 } = {}) {
   let z = seed >>> 0; const rng = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };
   let s = C.createState(0), day = 0, active = 0, cheapest = Infinity; const marks = [];
-  const traitOrder = ['immune', 'bulwark', 'immune', 'dealer', 'immune', 'pioneer', 'immune', 'thrift', 'legacy', 'immune', 'bulwark', 'dealer', 'engineer', 'railman'];
-  const spendTraits = () => { for (let k = 0, bought = true; bought && k < 500; k++) { bought = false; for (const id of traitOrder) if ((id !== 'engineer' || s.bestZone >= 2) && (id !== 'railman' || s.bestZone >= 3) && C.buyTrait(s, id).ok) bought = true; } };
+  const traitOrder = ['immune', 'bulwark', 'immune', 'dealer', 'immune', 'pioneer', 'immune', 'thrift', 'legacy', 'immune', 'bulwark', 'dealer', 'engineer', 'railman', 'scholar'];
+  const spendTraits = () => { for (let k = 0, bought = true; bought && k < 500; k++) { bought = false; for (const id of traitOrder) if ((id !== 'engineer' || s.bestZone >= 2) && (id !== 'railman' || s.bestZone >= 3) && (id !== 'scholar' || s.bestZone >= 4) && C.buyTrait(s, id).ok) bought = true; } };
   const step = () => {
     active++;
     C.tick(s, 1, rng);
@@ -23,6 +23,13 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (s.clicks < 15) C.scavenge(s);
     if (s.pendingPerks.length) C.choosePerk(s, (s.zone >= 3 ? ['driver', 'foreman', 'harvest', 'watch'] : s.zone >= 2 ? ['foreman', 'harvest', 'bargain', 'watch'] : ['harvest', 'bargain', 'watch']).find(id => s.pendingPerks.includes(id)) || s.pendingPerks[0]);
     if (s.signalLeft > 0) C.answerSignal(s, rng);
+    // 5구역: 점수가 되면 과제를 끝낸다. 지금 가장 많이 버는 구역을 키우는 과제 > 혈청 배양 > 나머지 순으로 고른다.
+    if (s.zone >= 4 && s.offers.length && s.points >= C.projectCost(s)) {
+      const share = { soil: C.searchRate(s), ledger: C.tradeRate(s), process: C.lineRate(s), transit: C.railRate(s) }, per = C.productionPerSec(s) || 1;
+      // 구역 목표(혈청 배양 3번)가 남아 있으면 그것부터 고른다: 사람도 목표를 보고 고른다
+      const worth = id => id === 'serum' && s.research.serum < 3 ? 9 : id in share ? 1 + share[id] / per : id === 'serum' ? 1.3 : id === 'drill' ? (C.defensePower(s) < C.nightStrength(s) ? 1.4 : 1.05) : id === 'refine' ? 1.1 : 1.02;
+      C.runProject(s, s.offers.slice().sort((a, b) => worth(b) - worth(a))[0], rng);
+    }
     C.fortify(s);
     const n = C.nextZone(s);
     if (n && n.ready && !(n.soon && s.gate) && C.openZone(s).ok && s.gate && !marks.some(m => m.gate)) marks.push({ gate: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
@@ -45,7 +52,8 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
         consider(C.trainCost(s, 1), C.railRate(t) - rate, () => C.buyTrain(s, 1));
         for (const r of C.ROUTES) { const q = probe(); q.routes[r.id]++; consider(C.routeCost(s, r.id), Math.max(C.railRate(q) - rate, s.trains ? 0 : C.cargoValue(s) * 0.1), () => C.buyRoute(s, r.id)); }
       }
-      for (const u of C.UPGRADES) { const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' || u.key === 'trip' || u.key === 'traincost' || u.key === 'routecost' ? 0.03 : 0.12), () => C.buyUpgrade(s, u.id)); }
+      if (s.zone >= 4) consider(C.staffCost(s, 1), per * 0.03, () => C.buyStaff(s, 1));   // 5구역: 연구원은 물자를 직접 벌지 않으므로 어림값으로 따진다
+      for (const u of C.UPGRADES) { const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' || u.key === 'trip' || u.key === 'traincost' || u.key === 'routecost' || u.key === 'staffcost' || u.key === 'labcost' ? 0.03 : u.key === 'lab' ? 0.06 : 0.12), () => C.buyUpgrade(s, u.id)); }
       if (!best) break;
       best.buy();
     }

@@ -44,6 +44,15 @@ def station(**over):
     s.update(over)
     return s
 
+def lab(**over):
+    """5구역(대학 병원)까지 연 판: 연구원은 없고, 과제 셋이 나와 있으며 점수는 한 과제를 끝낼 만큼 있다."""
+    s = station(zone=4, supplies=5e27, runEarned=5e27, trains=12, routes={"loop": 2, "river": 2, "outer": 2, "express": 1},
+                points=100, offers=["soil", "serum", "drop"])
+    s["goalsDone"].update({"z4a": True, "z4b": True, "z4c": True})
+    s["story"].update({"z4-1": True, "z4-2": True, "z5-0": True})
+    s.update(over)
+    return s
+
 # (이름, 화면 크기, 저장, 할 일)
 CASES = [
     ('폰 · 2구역, 못 막는 밤', (390, 760), market(), 'full'),
@@ -53,6 +62,8 @@ CASES = [
     ('PC · 3구역 생산 라인', (1280, 900), factory(), 'line'),
     ('폰 · 4구역 노선', (390, 760), station(), 'rail'),
     ('PC · 4구역 노선', (1280, 900), station(), 'rail'),
+    ('폰 · 5구역 연구', (390, 760), lab(), 'lab'),
+    ('PC · 5구역 연구', (1280, 900), lab(), 'lab'),
 ]
 
 def run_case(browser, name, size, state, mode):
@@ -141,6 +152,30 @@ def run_case(browser, name, size, state, mode):
         if page.locator('[data-tab=z4]').is_visible(): problems.append('아직 먼 5구역 탭이 보인다')
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
+    elif mode == 'lab':
+        # 5구역: 과제 셋이 보이고 → 하나를 끝내면 점수가 줄고 셋이 새로 나오고 → 다음 과제가 비싸지고 → 연구원을 뽑으면 점수가 모인다
+        tap('[data-mview-set=manage]'); tap('[data-tab=z4]')
+        if not page.locator('#lab').is_visible(): problems.append('5구역 탭에 연구 칸이 없다')
+        if page.locator('.lab-offer:visible').count() != 3: problems.append('과제가 셋이 아니다: %d' % page.locator('.lab-offer:visible').count())
+        if '토양 분석' not in text('offer-0') or '점수 60' not in text('offer-0'): problems.append('첫 과제 표시가 이상하다: ' + text('offer-0'))
+        if '연구원을 뽑으면' not in text('lab-rate'): problems.append('연구원이 없을 때의 안내가 없다: ' + text('lab-rate'))
+        if not tap('#offer-0'): problems.append('과제를 고를 수 없다')
+        if text('lab-points') != '40': problems.append('과제를 끝냈는데 점수가 40이 아니다: ' + text('lab-points'))
+        if '끝낸 과제 1개' not in text('lab-done') or '토양 분석 1' not in text('lab-done'): problems.append('끝낸 과제 표시가 없다: ' + text('lab-done'))
+        if '점수 108' not in text('offer-0'): problems.append('다음 과제 값이 오르지 않았다: ' + text('offer-0'))
+        if not page.is_disabled('#offer-0'): problems.append('점수가 모자란데 과제 단추가 켜져 있다')
+        if not tap('#lab-reroll'): problems.append('다른 과제 보기를 누를 수 없다')
+        if text('lab-points') != '13': problems.append('다시 뽑은 뒤 점수가 13이 아니다: ' + text('lab-points'))
+        if not tap('#row-staff'): problems.append('연구원을 뽑을 수 없다')
+        tap('[data-qty="10"]'); tap('#row-staff'); tap('[data-qty="1"]'); tap('#row-scope')
+        if '초당 +' not in text('lab-rate'): problems.append('연구원을 뽑았는데 점수 속도가 없다: ' + text('lab-rate'))
+        if not fits(): problems.append('한 화면에 들어오지 않는다(5구역)')
+        page.wait_for_timeout(4000)
+        if text('lab-points') == '13': problems.append('연구원이 있는데 점수가 모이지 않는다')
+        tap('[data-tab=z5]')
+        if '다음 버전' not in text('soon'): problems.append('6구역 탭에 준비 중 안내가 없다: ' + text('soon'))
+        tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=radio]'); tap('[data-mview-set=base]')
+        if not fits(): problems.append('한 화면에 들어오지 않는다')
     elif mode == 'rail':
         # 4구역: 열차가 없을 때의 안내 → 열차와 순환선 → 운행이 시작되고 → 30초 뒤 화물이 들어오는지
         tap('[data-mview-set=manage]'); tap('[data-tab=z3]')
@@ -165,7 +200,8 @@ def run_case(browser, name, size, state, mode):
         page.wait_for_timeout(17000); clear(); tap('[data-mview-set=manage]'); tap('[data-tab=z3]')
         if loop_left() <= mid: problems.append('순환선이 한 바퀴를 돌고도 다시 출발하지 않았다: %d초 → %d초' % (mid, loop_left()))
         tap('[data-tab=z4]')
-        if '다음 버전' not in text('soon'): problems.append('5구역 탭에 준비 중 안내가 없다: ' + text('soon'))
+        if '아직 열지 않은' not in text('soon'): problems.append('잠긴 5구역 탭에 안내가 없다: ' + text('soon'))
+        if page.locator('[data-tab=z5]').is_visible(): problems.append('아직 먼 6구역 탭이 보인다')
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
     else:

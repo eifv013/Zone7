@@ -31,7 +31,7 @@
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -79,6 +79,14 @@
         '그래서 고를 것은 열차를 살지, 노선을 늘릴지, 어느 노선을 늘릴지예요. 먼 노선은 비싸지만 열차 한 대가 버는 양이 커요.',
         '열차가 ' + core.FLEET_MILESTONES.slice(0, 4).join(', ') + '… 대에 닿을 때마다 화물이 2배가 돼요.',
         '자리를 비운 동안에도 열차는 다녀요. 돌아온 화물은 자리 비움 효율로 받아요.' ] },
+
+      { id: 'lab', title: '5구역: 연구', items: [
+        '연구원을 뽑으면 연구 점수가 모여요. 이 구역은 물자를 직접 만들지 않고, 대신 이번 판의 다른 구역들을 강하게 만들어요.',
+        '과제는 한 번에 ' + core.OFFER_COUNT + '개가 나와요. 점수를 써서 하나를 끝내면 효과를 얻고, 과제 ' + core.OFFER_COUNT + '개가 모두 새로 바뀌어요.',
+        '과제: ' + core.PROJECTS.map(function (p) { return p.name + '(' + p.desc + ')'; }).join(', ') + '.',
+        '같은 과제를 또 끝내면 효과가 곱으로 쌓여요. 대신 과제를 하나 끝낼 때마다 다음 과제에 드는 점수가 ' + core.PROJECT_GROWTH + '배가 돼요. 그래서 무엇을 먼저 키울지가 중요해요.',
+        '마음에 드는 과제가 없으면 "다른 과제 보기"로 다시 뽑을 수 있어요. 과제 값의 ' + pct(core.REROLL_SHARE) + ' 만큼 점수가 들어요.',
+        '자리를 비운 동안에도 점수는 모여요. 철수하면 끝낸 과제의 효과는 사라져요.' ] },
 
       { id: 'night', title: '밤과 방벽', items: [
         '하루는 ' + span(core.DAY_SECONDS) + '예요. ' + span(core.DAY_SECONDS - core.BATTLE_SECONDS) + '가 지나면 무리가 도착하고, 남은 ' + span(core.BATTLE_SECONDS) + ' 동안 방벽에서 싸워요.',

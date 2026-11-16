@@ -26,6 +26,9 @@ test('도움말: 숫자가 규칙의 상수와 같다', () => {
   for (const m of C.MACHINES) assert.ok(find('line').includes(m.name + ' ' + m.rate), m.id);
   for (const r of C.ROUTES) assert.ok(find('rail').includes(r.name + '(') && find('rail').includes('화물 ×' + r.mult), r.id);
   assert.ok(find('rail').includes('열차 ' + C.ROUTE_SLOTS + '대가'));
+  for (const p of C.PROJECTS) assert.ok(find('lab').includes(p.name + '(' + p.desc + ')'), p.id);
+  assert.ok(find('lab').includes('점수가 ' + C.PROJECT_GROWTH + '배가'));
+  assert.ok(find('lab').includes('과제 값의 ' + Math.round(C.REROLL_SHARE * 100) + '%'));
   assert.ok(find('retreat').includes('물자 ' + C.formatNumber(C.RETREAT_MIN)));
   assert.ok(find('away').includes('최대 ' + C.OFFLINE_CAP / 3600 + '시간치'));
   assert.ok(find('signal').includes(C.SIGNAL_WINDOW + '초 안에'));

@@ -67,6 +67,14 @@
   var ROUTE_SLOTS = 2;             // 노선 한 단계마다 다닐 수 있는 열차 수
   var ROUTE_MAX = 25;              // 노선의 최대 단계
   var FLEET_MILESTONES = [4, 8, 12, 16, 24, 32, 48, 64, 80, 100]; // 열차가 이 수에 닿을 때마다 화물 2배
+  // 5구역 연구
+  var STAFF_COST = 5e23;           // 첫 연구원의 값
+  var STAFF_GROWTH = 1.25;         // 연구원을 한 명 더 뽑을 때마다 값이 오르는 배수
+  var PROJECT_BASE = 60;           // 첫 연구 과제에 드는 연구 점수
+  var PROJECT_GROWTH = 1.8;        // 과제를 하나 끝낼 때마다 다음 과제의 점수가 오르는 배수
+  var OFFER_COUNT = 3;             // 한 번에 내미는 과제 수
+  var REROLL_SHARE = 0.25;         // 과제를 다시 뽑는 데 드는 점수: 지금 과제 값의 이 비율
+  var SUPPLY_DROP_SECONDS = 600;   // '보급 요청' 과제가 주는 물자: 생산 이만큼의 초치
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
   var RETREAT_K = 2, RETREAT_POW = 0.4;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
@@ -94,9 +102,12 @@
       story: ['4구역. 환승역 계단 아래로 선로가 네 갈래로 갈라진다. 전광판 하나가 아직 켜져 있다. 행선지: 7구역. 승강장에 열차 한 대가 문을 연 채 서 있다.',
         '역무실 칠판에 분필 글씨가 남아 있다. “막차는 7구역행. 못 탄 사람은 선로를 따라 걸을 것. 터널 안에서는 소리 내지 말 것.”',
         '열차가 다시 다닌다. 멀리 간 열차일수록 많이 싣고 돌아온다. 심야 급행의 기관사가 말했다. 강 건너 병원 옥상에 아직 불이 켜져 있다고.'] },
-    { no: 5, name: '대학 병원', kind: 'soon', cost: 1e24, lead: '남은 연구를 이어 간다',
-      story: ['대학 병원의 응급실 문은 쇠사슬로 묶여 있다. 유리 너머 복도에 비상등이 깜박인다. 안내판의 화살표는 한 곳을 가리킨다. 감염내과, 7층.'] },
-    { no: 6, name: '강변 검문소', kind: 'soon', cost: 1e25, lead: '', story: [] },
+    { no: 5, name: '대학 병원', kind: 'lab', cost: 1e24, lead: '남은 연구를 이어 가며 과제를 고른다',
+      story: ['5구역. 응급실 문의 쇠사슬을 끊었다. 복도에 비상등이 깜박인다. 안내판의 화살표는 한 곳을 가리킨다. 감염내과, 7층. 연구실 냉장고는 아직 돌아가고 있다.',
+        '실험 노트의 마지막 쪽. “샘플 114번에서 반응. 양이 모자란다. 사람이 더 필요하다. 살아서 여기까지 온 사람들의 피가.” 날짜는 사태 9일째다.',
+        '연구가 다시 굴러간다. 우리가 들고 다니던 냉장 상자가 무엇이었는지 이제 안다. 옥상에서 보면 강 건너 검문소의 탐조등이 아직 돈다. 그 너머가 7구역이다.'] },
+    { no: 6, name: '강변 검문소', kind: 'soon', cost: 1e31, lead: '다리를 지키며 밀려오는 무리를 막는다',
+      story: ['다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 다리 위에는 버려진 차들이 끝까지 늘어서 있다. 건너편 어둠 속에서 무언가 움직인다.'] },
     { no: 7, name: '송신탑', kind: 'soon', cost: 1e30, lead: '', story: [] }
   ];
 
@@ -126,6 +137,22 @@
     { id: 'river',   name: '강변선',    desc: '강을 따라 창고 지대까지 간다', seconds: 180,  mult: 1.4, baseCost: 1e19 },
     { id: 'outer',   name: '외곽선',    desc: '도시 바깥 화물역을 돈다',      seconds: 900,  mult: 2,   baseCost: 1e20 },
     { id: 'express', name: '심야 급행', desc: '밤새 달려 가장 먼 곳까지 간다', seconds: 3600, mult: 3,   baseCost: 1e21 }
+  ];
+  /*
+   * 5구역의 연구 과제: 연구 점수를 써서 끝내면 이번 판 동안 효과가 남는다. 같은 과제를 또 끝내면 효과가 곱으로 쌓인다.
+   *   key  : mods() 의 어느 항목에 곱하는가. 'drop' 은 효과가 남지 않고 물자를 바로 받는다.
+   *   mult : 한 번 끝낼 때마다 곱하는 값
+   * 과제는 한 번에 OFFER_COUNT 개가 나오고 그중 하나를 고른다. 무엇이 나올지는 그때그때 다르다.
+   */
+  var PROJECTS = [
+    { id: 'soil',    name: '토양 분석', desc: '1구역 생산 2배',        key: 'z1',       mult: 2 },
+    { id: 'ledger',  name: '유통 기록', desc: '상품 값 2배',           key: 'z2',       mult: 2 },
+    { id: 'process', name: '공정 개선', desc: '완제품 값 2배',         key: 'z3',       mult: 2 },
+    { id: 'transit', name: '운행 분석', desc: '화물 값 2배',           key: 'z4',       mult: 2 },
+    { id: 'drill',   name: '방어 교범', desc: '방어력 1.5배',          key: 'defense',  mult: 1.5 },
+    { id: 'serum',   name: '혈청 배양', desc: '전체 생산 1.3배',       key: 'prod',     mult: 1.3 },
+    { id: 'refine',  name: '항체 정제', desc: '철수 항체 샘플 1.15배', key: 'antibody', mult: 1.15 },
+    { id: 'drop',    name: '보급 요청', desc: '생산 10분치 물자를 바로 받는다', key: 'drop', mult: 1 }
   ];
   // 방벽: 구역과 상관없이 거점 전체를 지킨다
   var DEFENSES = [
@@ -157,6 +184,9 @@
     { id: 'timetable', zone: 3, name: '시간표',  desc: '운행 시간 -5%',          key: 'trip',    per: -0.05, baseCost: 1e19, growth: 4,  max: 8 },
     { id: 'tracks',  zone: 3, name: '선로 정비', desc: '노선 값 -6%',            key: 'routecost', per: -0.06, baseCost: 1e19, growth: 3, max: 12 },
     { id: 'depot',   zone: 3, name: '차량 기지', desc: '열차 값 -4%',            key: 'traincost', per: -0.04, baseCost: 1e19, growth: 3, max: 12 },
+    { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e24, growth: 2.4, max: 40 },
+    { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
+    { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
     { id: 'broker',  zone: 1, name: '거간꾼',    desc: '자동 판매가 평균 시세 이상일 때만 판다(창고가 차면 그냥 판다)', key: 'broker', per: 1, baseCost: 5e6, growth: 1, max: 1 }
   ];
   /*
@@ -170,6 +200,7 @@
     { id: 'bargain', name: '입담',      desc: '상품 값 +40%',    key: 'z2',      per: 0.4, zone: 1 },
     { id: 'foreman', name: '작업 반장', desc: '완제품 값 +40%',  key: 'z3',      per: 0.4, zone: 2 },
     { id: 'driver',  name: '기관사',    desc: '화물 값 +40%',    key: 'z4',      per: 0.4, zone: 3 },
+    { id: 'aide',    name: '조교',      desc: '연구 속도 +40%',  key: 'lab',     per: 0.4, zone: 4 },
     { id: 'spoils',  name: '전리품 수거', desc: '밤 전리품 +60%', key: 'loot',    per: 0.6 },
     { id: 'frugal',  name: '알뜰함',    desc: '모든 값 -6%',     key: 'cost',    per: -0.06 }
   ];
@@ -186,6 +217,7 @@
     { id: 'dealer',  name: '장사 수완', desc: '상품 값 +30%',              key: 'z2',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'engineer', name: '기술자',   desc: '완제품 값 +30%',            key: 'z3',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'railman', name: '철도원',    desc: '화물 값 +30%',              key: 'z4',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
+    { id: 'scholar', name: '연구자',    desc: '연구 속도 +30%',            key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 }
   ];
@@ -206,7 +238,10 @@
       { id: 'z3c', text: '완제품으로 번 물자 누적 100경', need: 1e18, value: function (s) { return s.lineEarned; } } ],
     [ { id: 'z4a', text: '열차 16대', need: 16, value: function (s) { return s.trains; } },
       { id: 'z4b', text: '심야 급행 3번 도착', need: 3, value: function (s) { return s.expressRuns; } },
-      { id: 'z4c', text: '화물로 번 물자 누적 100해', need: 1e22, value: function (s) { return s.railEarned; } } ]
+      { id: 'z4c', text: '화물로 번 물자 누적 100해', need: 1e22, value: function (s) { return s.railEarned; } } ],
+    [ { id: 'z5a', text: '연구원 40명', need: 40, value: function (s) { return s.staff; } },
+      { id: 'z5b', text: '연구 과제 15개 끝내기', need: 15, value: function (s) { return s.projectsDone; } },
+      { id: 'z5c', text: '혈청 배양 3번 끝내기', need: 3, value: function (s) { return s.research.serum; } } ]
   ];
 
   /* ---------- 작은 도우미 ---------- */
@@ -233,6 +268,8 @@
       machines: {}, lineEarned: 0, steadySeconds: 0,
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
+      // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
+      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
       // 밤
       day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false,
       // 구조 신호
@@ -254,6 +291,7 @@
     DEFENSES.forEach(function (d) { s.defenses[d.id] = 0; });
     MACHINES.forEach(function (d) { s.machines[d.id] = 0; });
     ROUTES.forEach(function (d) { s.routes[d.id] = 0; s.routeClock[d.id] = 0; s.routeLoad[d.id] = 0; });
+    PROJECTS.forEach(function (d) { s.research[d.id] = 0; });
     UPGRADES.forEach(function (u) { s.upgrades[u.id] = 0; });
     PERKS.forEach(function (p) { s.perks[p.id] = 0; });
     TRAITS.forEach(function (t) { s.traits[t.id] = 0; });
@@ -267,8 +305,8 @@
   function sanitizeState(raw, now) {
     var s = createState(now);
     if (!raw || typeof raw !== 'object') return s;
-    ['supplies', 'runEarned', 'lifetimeEarned', 'goods', 'tradeEarned', 'lineEarned', 'steadySeconds', 'railEarned', 'playSeconds', 'awaySeconds', 'runSeconds', 'startedAt'].forEach(function (k) { s[k] = safeNum(raw[k], s[k]); });
-    ['clicks', 'stalls', 'trains', 'expressRuns', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
+    ['supplies', 'runEarned', 'lifetimeEarned', 'goods', 'tradeEarned', 'lineEarned', 'steadySeconds', 'railEarned', 'points', 'playSeconds', 'awaySeconds', 'runSeconds', 'startedAt'].forEach(function (k) { s[k] = safeNum(raw[k], s[k]); });
+    ['clicks', 'stalls', 'trains', 'expressRuns', 'staff', 'projectsDone', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
     s.zone = clamp(safeCount(raw.zone), 0, ZONES.length - 1);
     while (s.zone > 0 && ZONES[s.zone].kind === 'soon') s.zone--;     // 아직 없는 구역에 들어가 있을 수는 없다
     s.bestZone = clamp(Math.max(safeCount(raw.bestZone), s.zone), 0, ZONES.length - 1);
@@ -290,6 +328,10 @@
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
+    s.staff = Math.min(s.staff, COUNT_MAX);
+    s.research = counts(PROJECTS, raw.research, 200);
+    s.offers = [];
+    (Array.isArray(raw.offers) ? raw.offers : []).forEach(function (id) { if (findById(PROJECTS, id) && s.offers.indexOf(id) < 0 && s.offers.length < OFFER_COUNT) s.offers.push(id); });
     s.trains = Math.min(s.trains, TRAIN_MAX);
     s.routes = counts(ROUTES, raw.routes, ROUTE_MAX);
     ROUTES.forEach(function (d) {
@@ -326,11 +368,12 @@
    *   prod 전체 생산, z1 / z2 구역별 생산, click 수색 배수, defense 방어력, loot 밤 전리품,
    *   cost 모든 값, z1cost 1구역 시설 값, floor / ceil 시세 범위에 더하는 값, cap 창고 배수,
    *   offline 자리 비움 효율에 더하는 값, antibody 철수 항체 배수, start 선발대 레벨, broker 거간꾼 여부,
+   *   lab 연구 속도, labcost 과제에 드는 점수, staffcost 연구원 값,
    *   z4 화물 값, trip 운행 시간, routecost 노선 값, traincost 열차 값,
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, steady: 0, slack: 0 };
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, steady: 0, slack: 0 };
     var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
@@ -344,6 +387,9 @@
     apply(UPGRADES, state.upgrades);
     apply(PERKS, state.perks);
     apply(TRAITS, state.traits);
+    // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
+    if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
+    m.labcost = Math.max(0.3, m.labcost); m.staffcost = Math.max(0.2, m.staffcost);
     m.cost = Math.max(0.2, m.cost);
     m.z1cost = Math.max(0.2, m.z1cost);
     m.z3cost = Math.max(0.2, m.z3cost);
@@ -623,6 +669,75 @@
     });
   }
 
+  /* ---------- 5구역: 연구 ---------- */
+  /*
+   * 연구원이 연구 점수를 모으고, 점수를 써서 과제를 끝낸다. 과제는 이번 판의 다른 구역들을 강하게 만든다.
+   *   한 번에 세 과제가 나오고 그중 하나를 고른다. 고르면 세 과제가 모두 새로 바뀐다.
+   *   과제를 하나 끝낼 때마다 다음 과제에 드는 점수가 오른다(어느 과제든 같다). 그래서 무엇을 먼저 키울지가 중요하다.
+   * 이 구역은 물자를 직접 만들지 않는다. 대신 "이번 판은 어디를 키울까"를 정한다. 판마다 나오는 과제가 달라 고르는 것도 달라진다.
+   */
+  function staffCost(state, qty) {
+    if (!zoneOpen(state, 4) || state.staff + qty > COUNT_MAX) return Infinity;
+    var m = mods(state);
+    return seriesCost(STAFF_COST * m.cost * m.staffcost, STAFF_GROWTH, state.staff, qty);
+  }
+  function maxStaff(state) {
+    if (!zoneOpen(state, 4)) return 0;
+    var m = mods(state);
+    return seriesMax(STAFF_COST * m.cost * m.staffcost, STAFF_GROWTH, state.staff, state.supplies, COUNT_MAX);
+  }
+  function buyStaff(state, qty) {
+    qty = Math.floor(qty);
+    if (!zoneOpen(state, 4)) return fail('locked');
+    if (!(qty >= 1)) return fail('unknown');
+    return pay(state, staffCost(state, qty), function () { state.staff += qty; });
+  }
+  /** 초당 모이는 연구 점수. 연구원 수가 10·25·50…명에 닿을 때마다 2배(시설과 같다). */
+  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab : 0; }
+  /** 지금 과제 하나를 끝내는 데 드는 점수. 어느 과제를 고르든 같다. */
+  function projectCost(state) { return Math.ceil(PROJECT_BASE * Math.pow(PROJECT_GROWTH, state.projectsDone) * mods(state).labcost); }
+  function rerollCost(state) { return Math.ceil(projectCost(state) * REROLL_SHARE); }
+  /** 과제 OFFER_COUNT 개를 겹치지 않게 뽑는다. */
+  function drawOffers(rng) {
+    var pool = PROJECTS.map(function (p) { return p.id; }), out = [];
+    rng = typeof rng === 'function' ? rng : Math.random;
+    while (out.length < OFFER_COUNT && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length) % pool.length, 1)[0]);
+    return out;
+  }
+  /**
+   * 내민 과제 가운데 하나를 끝낸다. 점수를 치르고 효과를 얻고, 과제 셋을 새로 뽑는다.
+   * '보급 요청'은 효과가 남는 대신 물자를 바로 준다.
+   */
+  function runProject(state, id, rng) {
+    var def = findById(PROJECTS, id);
+    if (!def) return fail('unknown');
+    if (!zoneOpen(state, 4)) return fail('locked');
+    if (state.offers.indexOf(id) < 0) return fail('not-offered');
+    var cost = projectCost(state);
+    if (cost > state.points) return fail('points');
+    state.points -= cost;
+    var gain = 0;
+    if (def.key === 'drop') { gain = Math.max(1, productionPerSec(state) * SUPPLY_DROP_SECONDS); earn(state, gain); }
+    state.research[id]++;
+    state.projectsDone++;
+    state.offers = drawOffers(rng);
+    return { ok: true, id: id, name: def.name, level: state.research[id], cost: cost, gain: gain };
+  }
+  /** 점수를 조금 내고 과제 셋을 다시 뽑는다. */
+  function rerollOffers(state, rng) {
+    if (!zoneOpen(state, 4)) return fail('locked');
+    var cost = rerollCost(state);
+    if (cost > state.points) return fail('points');
+    state.points -= cost;
+    state.offers = drawOffers(rng);
+    return { ok: true, cost: cost };
+  }
+  function stepLab(state, dt, rng) {
+    if (!zoneOpen(state, 4)) return;
+    if (!state.offers.length) state.offers = drawOffers(rng);       // 구역에 처음 들어섰을 때
+    state.points += researchRate(state) * dt;
+  }
+
   /* ---------- 구역 강화 ---------- */
   function upgradeCost(state, id) {
     var def = findById(UPGRADES, id);
@@ -728,7 +843,7 @@
   }
   /** 오늘 밤을 막는 데 가장 싼 보강 { cost, picks: [{ id, qty }], enough }. 이미 막을 수 있으면 cost 0. */
   function defensePlan(state) {
-    var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, zone: state.zone };   // defensePower 가 읽는 것만 담는다
+    var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, research: state.research, zone: state.zone };   // defensePower 가 읽는 것만 담는다(연구 과제 '방어 교범' 포함)
     DEFENSES.forEach(function (d) { tmp.defenses[d.id] = state.defenses[d.id]; });
     var need = nightStrength(state), cost = 0, picked = {}, guard = 0;
     while (defensePower(tmp) < need && guard++ < 3000) {
@@ -820,7 +935,7 @@
   function canRetreat(state) { return antibodiesOnRetreat(state) >= 1 && !state.pendingPerks.length; }
   /**
    * 철수: 거점을 전부 버리고 1구역에서 다시 시작한다.
-   *   사라지는 것 : 물자, 시설, 방벽, 구역 강화, 좌판과 상품, 기계, 열차와 노선, 연 구역, 특전, 막아낸 밤, 달성한 목표
+   *   사라지는 것 : 물자, 시설, 방벽, 구역 강화, 좌판과 상품, 기계, 열차와 노선, 연구원과 끝낸 과제, 연 구역, 특전, 막아낸 밤, 달성한 목표
    *   남는 것     : 항체 샘플과 영구 특성, 읽은 일지, 통계
    */
   function retreat(state, now) {
@@ -923,6 +1038,7 @@
 
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
+    stepLab(state, dt, rng);
 
     if (state.signalLeft > 0) {
       state.signalLeft -= dt;
@@ -953,7 +1069,7 @@
   function applyOffline(state, elapsed) {
     elapsed = safeNum(elapsed, 0);
     var counted = Math.min(elapsed, OFFLINE_CAP), rate = offlineRate(state);
-    var report = { elapsed: elapsed, counted: counted, capped: elapsed > OFFLINE_CAP, rate: rate, gain: 0, nights: 0, nightReward: 0, held: false, trains: 0 };
+    var report = { elapsed: elapsed, counted: counted, capped: elapsed > OFFLINE_CAP, rate: rate, gain: 0, nights: 0, nightReward: 0, held: false, trains: 0, points: 0 };
     if (!(counted > 0)) return report;
     state.buff = null;
     state.signalLeft = 0;
@@ -970,6 +1086,9 @@
     if (cut > 0) { state.supplies -= cut; state.runEarned -= cut; state.lifetimeEarned -= cut; state.railEarned -= cut; }
     report.gain += state.supplies - before;
     report.trains = railEvents.length;
+    // 5구역 연구: 점수도 자리 비움 효율로 모인다
+    report.points = researchRate(state) * counted * rate;
+    state.points += report.points;
     state.awaySeconds += counted; state.runSeconds += counted;
     var clock = state.dayClock + counted, nights = Math.floor(clock / DAY_SECONDS);
     state.dayClock = clock - nights * DAY_SECONDS;
@@ -1055,6 +1174,10 @@
     TRAIN_VALUE: TRAIN_VALUE, TRAIN_COST: TRAIN_COST, TRAIN_GROWTH: TRAIN_GROWTH, TRAIN_MAX: TRAIN_MAX, ROUTE_GROWTH: ROUTE_GROWTH, ROUTE_SLOTS: ROUTE_SLOTS, ROUTE_MAX: ROUTE_MAX,
     FLEET_MILESTONES: FLEET_MILESTONES, ROUTES: ROUTES, fleetMilestone: fleetMilestone, trainCost: trainCost, maxTrains: maxTrains, buyTrain: buyTrain,
     routeCost: routeCost, buyRoute: buyRoute, tripSeconds: tripSeconds, railPlan: railPlan, cargoValue: cargoValue, railRate: railRate,
+    STAFF_COST: STAFF_COST, STAFF_GROWTH: STAFF_GROWTH, PROJECT_BASE: PROJECT_BASE, PROJECT_GROWTH: PROJECT_GROWTH, OFFER_COUNT: OFFER_COUNT,
+    REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
+    staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
+    drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,

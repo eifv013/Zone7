@@ -541,14 +541,15 @@
     z1: '2구역 재래시장 · 거래. 좌판이 상품을 만들어요. 시세가 좋을 때 팔수록 많이 벌어요.',
     z2: '3구역 공단 · 생산 라인. 기계 셋이 맞물려 돌아요. 가장 느린 기계만큼만 나와요.',
     z3: '4구역 환승역 · 노선. 열차가 화물을 싣고 돌아와요. 멀리 가는 노선일수록 많이 실어요.',
+    z4: '5구역 대학 병원 · 연구. 연구 점수로 과제를 골라 끝내면 이번 판의 다른 구역이 강해져요.',
     wall: '방벽은 거점 전체를 지켜요. 방어력이 오늘 밤 무리 규모보다 커야 해요.'
   };
   var perkShown = '', journalShown = '', statsShown = '';
-  var ZONE_TABS = 5;   // 탭으로 만들어 둘 구역 수: 만든 구역 넷 + 문 앞까지 갈 수 있는 다음 구역 하나. 화면에는 연 구역과 그다음 구역까지만 보인다
+  var ZONE_TABS = 6;   // 탭으로 만들어 둘 구역 수: 만든 구역 넷 + 문 앞까지 갈 수 있는 다음 구역 하나. 화면에는 연 구역과 그다음 구역까지만 보인다
 
   /* ---------- 목록 만들기(처음 한 번) ---------- */
   function build() {
-    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, routes: {}, railRows: {}, train: null, stall: null, goals: [], stats: {}, tabs: {} };
+    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, routes: {}, railRows: {}, train: null, staff: null, offers: [], stall: null, goals: [], stats: {}, tabs: {} };
     // 구역 탭
     for (var i = 0; i < ZONE_TABS; i++) { addTab('z' + i, String(i + 1)); rows.tabs['z' + i].setAttribute('aria-label', (i + 1) + '구역 ' + C.ZONES[i].name); rows.tabs['z' + i].title = (i + 1) + '구역 ' + C.ZONES[i].name; }
     addTab('wall', '방벽');
@@ -578,6 +579,22 @@
       var r = buildRow({ id: 'route-' + d.id, name: d.name, desc: d.desc }, function () { buy(C.buyRoute(state, d.id)); });
       rows.routes[d.id] = r; $('rows-z3').appendChild(r.btn);
     });
+    // 5구역: 과제 세 장(위쪽)과 연구원 구매 줄(아래쪽). 과제 단추는 자리만 만들어 두고, 무엇을 보여 줄지는 그릴 때 정한다.
+    for (var k = 0; k < C.OFFER_COUNT; k++) (function (slot) {
+      var b = el('button', 'lab-offer'), name = el('b'), desc = el('span'), cost = el('em');
+      b.type = 'button'; b.id = 'offer-' + slot;
+      b.appendChild(name); b.appendChild(cost); b.appendChild(desc);
+      b.addEventListener('click', function () {
+        var r = C.runProject(state, state.offers[slot]);
+        if (!r.ok) return;
+        log('연구 과제 완료: ' + r.name + ' (' + r.level + '번째).' + (r.gain ? ' 물자 ' + fmt(r.gain) + ' 확보.' : ''), 'good');
+        if (r.gain) popNumber('+' + fmt(r.gain));
+        sfx('buy'); Store.save(); render();
+      });
+      rows.offers.push({ btn: b, name: name, desc: desc, cost: cost }); $('lab-offers').appendChild(b);
+    })(k);
+    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수를 모은다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff))); });
+    $('rows-z4').appendChild(rows.staff.btn);
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id)); });
       r.btn.classList.add('row-zone');
@@ -783,6 +800,8 @@
     $('rows-z2').hidden = !(tab === 'z2' && open);
     $('rows-z3').hidden = !(tab === 'z3' && open);
     $('rail').hidden = !(tab === 'z3' && open);
+    $('rows-z4').hidden = !(tab === 'z4' && open);
+    $('lab').hidden = !(tab === 'z4' && open);
     $('rows-wall').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
     $('line').hidden = !(tab === 'z2' && open);
@@ -887,6 +906,32 @@
       setText(rows.train.info, '대당 초당 화물 ' + fmt(cargo) + (plan.idle ? ' · 탈 노선이 없음' : ''));
       setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + fmt(tcost) : '최대');
       rows.train.btn.disabled = !(tcost <= state.supplies);
+    }
+    if (tab === 'z4' && open) {
+      var pc = C.projectCost(state), rc = C.rerollCost(state), rate = C.researchRate(state);
+      setText($('lab-points'), fmt(state.points));
+      setText($('lab-rate'), rate > 0 ? '초당 +' + fmt(rate) + (state.points < pc ? ' · 다음 과제까지 ' + clock((pc - state.points) / rate) : ' · 과제를 고를 수 있어요') : '연구원을 뽑으면 점수가 모여요');
+      rows.offers.forEach(function (o, i) {
+        var def = null, id = state.offers[i];
+        C.PROJECTS.forEach(function (p) { if (p.id === id) def = p; });
+        o.btn.hidden = !def;
+        if (!def) return;
+        var lv = state.research[def.id];
+        setText(o.name, def.name + (lv ? ' · ' + lv + '번 끝냄' : ''));
+        setText(o.desc, def.desc);
+        setText(o.cost, '점수 ' + fmt(pc));
+        o.btn.disabled = !(pc <= state.points);
+      });
+      var rr = $('lab-reroll');
+      rr.disabled = !(rc <= state.points) || !state.offers.length;
+      setText(rr, '다른 과제 보기 · 점수 ' + fmt(rc));
+      var doneList = C.PROJECTS.filter(function (p) { return state.research[p.id] > 0 && p.key !== 'drop'; }).map(function (p) { return p.name + ' ' + state.research[p.id]; });
+      setText($('lab-done'), '끝낸 과제 ' + state.projectsDone + '개' + (doneList.length ? ' · ' + doneList.join(', ') : '') + ' · 과제를 끝낼수록 다음 과제가 비싸져요');
+      var sq = qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff), scost = C.staffCost(state, sq);
+      setText(rows.staff.count, state.staff + ' / ' + C.COUNT_MAX);
+      setText(rows.staff.info, '초당 연구 점수 ' + fmt(rate));
+      setText(rows.staff.cost, isFinite(scost) ? '×' + sq + ' ' + fmt(scost) : '최대');
+      rows.staff.btn.disabled = !(scost <= state.supplies);
     }
     if (tab === 'wall') {
       C.DEFENSES.forEach(function (d) {
@@ -1115,6 +1160,11 @@
       if (r.soon) log(r.zone.no + '구역 ' + r.zone.name + '의 문 앞에 닿았다. 문은 아직 열리지 않는다.', 'good');
       else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; }
       sfx('relocate'); Store.save(); Cloud.flush(); render();
+    });
+    // 5구역: 점수를 조금 내고 과제 셋을 다시 뽑는다.
+    $('lab-reroll').addEventListener('click', function () {
+      if (!C.rerollOffers(state).ok) return;
+      sfx('buy'); render();
     });
     // 3구역: 병목인 기계를 올린다. 수량 모드를 따른다(×1 한 번, ×10 열 번, 최대는 물자가 되는 만큼).
     $('tune').addEventListener('click', function () {

@@ -31,6 +31,13 @@ function inStation() {
   s.zone = 3; s.bestZone = 3;
   return s;
 }
+/** 5구역(대학 병원)까지 연 상태. */
+function inLab() {
+  const s = inStation();
+  C.GOALS[3].forEach(g => { s.goalsDone[g.id] = true; });
+  s.zone = 4; s.bestZone = 4;
+  return s;
+}
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) <= Math.max(1e-9, Math.abs(b) * 1e-9), `${msg || ''} ${a} ≠ ${b}`);
 
 /* ================= 상태와 저장 ================= */
@@ -55,8 +62,8 @@ test('저장: 직렬화를 거쳐도 같고, 깨진 값과 모르는 항목을 �
     traits: { immune: 9999 }, pendingPerks: ['harvest', 'nothing', 42], goalsDone: { z1a: 1, fake: 1 }, story: { 'z1-0': true, fake: true },
     runLog: [null, { zone: 1, seconds: 5, antibodies: 2 }, 'x'], buff: { mult: 99, left: 1e9 } }, 0);
   assert.equal(bad.supplies, 0);
-  assert.equal(bad.zone, 3, '아직 없는 구역에는 들어가 있을 수 없다');
-  assert.equal(C.ZONES[4].kind, 'soon');
+  assert.equal(bad.zone, 4, '아직 없는 구역에는 들어가 있을 수 없다');
+  assert.equal(C.ZONES[5].kind, 'soon');
   assert.equal(bad.buildings.scouts, 0);
   assert.equal(bad.buildings.nothing, undefined);
   assert.equal(bad.stalls, C.COUNT_MAX);
@@ -204,16 +211,16 @@ test('다음 구역: 목표를 다 채우고 값을 치러야 열리고, 열어�
 });
 
 test('다음 구역: 아직 만들지 않은 구역은 문 앞까지만 간다', () => {
-  const s = inStation();
-  C.GOALS[3].forEach(g => { s.goalsDone[g.id] = true; });
+  const s = inLab();
+  C.GOALS[4].forEach(g => { s.goalsDone[g.id] = true; });
   const n = C.nextZone(s);
   assert.equal(n.soon, true);
   s.supplies = n.cost;
   const r = C.openZone(s);
   assert.ok(r.ok && r.soon);
-  assert.equal(s.zone, 3, '들어가지는 못한다');
+  assert.equal(s.zone, 4, '들어가지는 못한다');
   assert.equal(s.gate, true);
-  assert.equal(s.bestZone, 4);
+  assert.equal(s.bestZone, 5);
   assert.equal(s.supplies, 0);
   s.supplies = 1e40;
   assert.equal(C.openZone(s).reason, 'soon', '두 번 치르지 않는다');
@@ -761,9 +768,9 @@ test('저장: 기계와 라인 기록을 안전하게 읽고, 문 앞에 있던 
   // 알파 0.6.4 까지: 4구역도 같은 식으로 문 앞까지만 갈 수 있었다
   const old4 = C.sanitizeState({ version: 2, zone: 2, gate: true, story: { 'gate-4': true } }, 0);
   assert.equal(old4.zone, 3); assert.equal(old4.gate, false);
-  // 지금의 문 앞(5구역)은 그대로 둔다
-  const now = C.sanitizeState({ version: 2, zone: 3, gate: true }, 0);
-  assert.equal(now.zone, 3); assert.equal(now.gate, true);
+  // 지금의 문 앞(6구역)은 그대로 둔다
+  const now = C.sanitizeState({ version: 2, zone: 4, gate: true }, 0);
+  assert.equal(now.zone, 4); assert.equal(now.gate, true);
 });
 
 /* ================= 4구역: 노선 ================= */
@@ -948,4 +955,157 @@ test('특전: 아직 열지 않은 구역의 특전은 나오지 않는다', () 
   C.tick(s, 0.1, half);
   assert.equal(s.pendingPerks.length, C.PERK_CHOICES);
   for (const id of s.pendingPerks) assert.ok(!(C.PERKS.find(p => p.id === id).zone > 0), id);
+});
+
+/* ================= 5구역: 연구 ================= */
+
+test('연구: 5구역을 열기 전에는 연구원도 과제도 없다', () => {
+  const s = inStation(); s.supplies = 1e40; s.points = 1e9; s.offers = ['soil'];
+  assert.equal(C.buyStaff(s, 1).reason, 'locked');
+  assert.equal(C.runProject(s, 'soil', half).reason, 'locked');
+  assert.equal(C.rerollOffers(s, half).reason, 'locked');
+  assert.equal(C.staffCost(s, 1), Infinity);
+  assert.equal(C.maxStaff(s), 0);
+  s.staff = 10;
+  assert.equal(C.researchRate(s), 0);
+  s.defenses.rail = 1e9; s.signalIn = 1e9; s.offers = [];
+  C.tick(s, 10, half);
+  assert.equal(s.points, 1e9);
+  assert.deepEqual(s.offers, []);
+});
+
+test('연구: 연구원이 점수를 모으고, 들어서면 과제 셋이 나온다', () => {
+  const s = inLab(); s.defenses.rail = 1e9; s.signalIn = 1e9;
+  const c1 = C.staffCost(s, 1);
+  s.supplies = c1;
+  assert.ok(C.buyStaff(s, 1).ok);
+  assert.equal(C.staffCost(s, 1), Math.ceil(c1 * C.STAFF_GROWTH));
+  assert.equal(C.researchRate(s), 1);
+  C.tick(s, 30, half);
+  near(s.points, 30);
+  assert.equal(s.offers.length, C.OFFER_COUNT);
+  assert.equal(new Set(s.offers).size, C.OFFER_COUNT);
+  s.staff = 10;
+  assert.equal(C.researchRate(s), 20, '10명에 닿으면 2배');
+  s.upgrades.scope = 4;
+  assert.equal(C.researchRate(s), 40);
+  s.upgrades.dorm = 1; s.staff = 1;
+  near(C.staffCost(s, 1), c1 * C.STAFF_GROWTH * 0.96);      // 이만큼 큰 수는 곱하는 순서에 따라 끝자리가 달라진다
+});
+
+test('연구: 과제를 끝내면 점수를 쓰고 효과가 곱으로 쌓이며, 다음 과제가 비싸진다', () => {
+  const s = inLab();
+  s.buildings.scouts = 10;
+  const before = C.searchRate(s), cost = C.projectCost(s);
+  assert.equal(cost, C.PROJECT_BASE);
+  s.offers = ['soil', 'drill', 'serum']; s.points = cost - 1;
+  assert.equal(C.runProject(s, 'soil', half).reason, 'points');
+  s.points = cost;
+  const r = C.runProject(s, 'soil', half);
+  assert.ok(r.ok);
+  assert.equal(r.level, 1);
+  assert.equal(s.points, 0);
+  assert.equal(s.projectsDone, 1);
+  near(C.searchRate(s), before * 2);
+  assert.equal(C.projectCost(s), Math.ceil(C.PROJECT_BASE * C.PROJECT_GROWTH));
+  assert.equal(s.offers.length, C.OFFER_COUNT, '과제 셋이 새로 나온다');
+  s.offers = ['soil', 'drill', 'serum']; s.points = 1e9;
+  C.runProject(s, 'soil', half);
+  near(C.searchRate(s), before * 4);
+  s.upgrades.notes = 2;
+  assert.equal(C.projectCost(s), Math.ceil(C.PROJECT_BASE * Math.pow(C.PROJECT_GROWTH, 2) * 0.95 * 0.95));
+});
+
+test('연구: 내밀지 않은 과제와 모르는 과제는 끝낼 수 없다', () => {
+  const s = inLab(); s.points = 1e9; s.offers = ['soil', 'drill', 'serum'];
+  assert.equal(C.runProject(s, 'transit', half).reason, 'not-offered');
+  assert.equal(C.runProject(s, 'nothing', half).reason, 'unknown');
+  assert.equal(s.points, 1e9);
+  assert.equal(s.projectsDone, 0);
+});
+
+test('연구: 과제마다 다른 곳을 키운다', () => {
+  const run = (id) => { const s = inLab(); s.points = 1e9; s.offers = [id, 'soil', 'drop'].filter((x, i, a) => a.indexOf(x) === i); C.runProject(s, id, half); return s; };
+  const base = inLab();
+  near(C.goodsValue(run('ledger')), C.goodsValue(base) * 2);
+  near(C.productValue(run('process')), C.productValue(base) * 2);
+  near(C.mods(run('transit')).z4, C.mods(base).z4 * 2);
+  near(C.mods(run('drill')).defense, C.mods(base).defense * 1.5);
+  near(C.globalMult(run('serum')), C.globalMult(base) * 1.3);
+  near(C.mods(run('refine')).antibody, C.mods(base).antibody * 1.15);
+  // 방어 교범은 보강 계획에도 반영된다
+  const d = run('drill'); d.defenses.wire = 10;
+  assert.equal(C.defensePower(d), Math.floor((C.BASE_DEFENSE + 40) * 1.5));
+  assert.ok(C.defensePlan(d).cost <= C.defensePlan(Object.assign(inLab(), { defenses: Object.assign({}, d.defenses) })).cost);
+});
+
+test('연구: 보급 요청은 효과가 남지 않고 물자를 바로 준다', () => {
+  const s = inLab(); s.buildings.scouts = 100; s.points = 1e9; s.offers = ['drop', 'soil', 'serum'];
+  const per = C.productionPerSec(s), before = s.supplies, m = JSON.stringify(C.mods(s));
+  const r = C.runProject(s, 'drop', half);
+  near(r.gain, per * C.SUPPLY_DROP_SECONDS);
+  near(s.supplies - before, r.gain);
+  assert.equal(JSON.stringify(C.mods(s)), m, '배수는 그대로다');
+  assert.equal(s.projectsDone, 1, '끝낸 과제로는 센다');
+  const empty = inLab(); empty.points = 1e9; empty.offers = ['drop'];
+  assert.ok(C.runProject(empty, 'drop', half).gain >= 1, '생산이 0 이어도 0 을 주지는 않는다');
+});
+
+test('연구: 다시 뽑기는 과제 값의 일부를 낸다', () => {
+  const s = inLab(); s.offers = ['soil', 'drill', 'serum'];
+  assert.equal(C.rerollCost(s), Math.ceil(C.PROJECT_BASE * C.REROLL_SHARE));
+  s.points = C.rerollCost(s) - 1;
+  assert.equal(C.rerollOffers(s, half).reason, 'points');
+  s.points = 100;
+  let k = 0;
+  const r = C.rerollOffers(s, () => (k += 0.37) % 1);
+  assert.ok(r.ok);
+  assert.equal(s.points, 100 - r.cost);
+  assert.equal(s.offers.length, C.OFFER_COUNT);
+  assert.equal(s.projectsDone, 0, '다시 뽑기는 과제 값을 올리지 않는다');
+  for (let i = 0; i < 200; i++) { let z = i; const o = C.drawOffers(() => ((z = (z * 9301 + 49297) % 233280) / 233280)); assert.equal(new Set(o).size, C.OFFER_COUNT); o.forEach(id => assert.ok(C.PROJECTS.find(p => p.id === id))); }
+});
+
+test('연구: 자리를 비운 동안에도 점수가 모인다', () => {
+  const s = inLab(); s.staff = 10; s.defenses.rail = 1e9;
+  const rep = C.applyOffline(s, 1000);
+  near(s.points, 20 * 1000 * C.OFFLINE_RATE);
+  near(rep.points, s.points);
+});
+
+test('연구: 목표와 일지, 그리고 철수하면 연구가 사라진다', () => {
+  const s = inLab();
+  assert.equal(C.goals(s, 4).length, 3);
+  s.defenses.rail = 1e9; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
+  let ev = C.tick(s, 0.1, half);
+  assert.ok(ev.some(e => e.type === 'story' && e.id === 'z5-0'));
+  s.research.serum = 3;
+  ev = C.tick(s, 0.1, half);
+  assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z5c'));
+  s.pendingPerks = []; s.runEarned = C.RETREAT_MIN * 10; s.staff = 9; s.points = 77; s.projectsDone = 4;
+  const gainPlain = C.antibodiesOnRetreat(Object.assign(inLab(), { runEarned: s.runEarned }));
+  s.research.refine = 2;
+  assert.ok(C.antibodiesOnRetreat(s) >= Math.floor(gainPlain * 1.15 * 1.15) - 1, '항체 정제는 철수 항체를 늘린다');
+  const r = C.retreat(s, 0);
+  assert.equal(r.state.staff, 0);
+  assert.equal(r.state.points, 0);
+  assert.equal(r.state.projectsDone, 0);
+  assert.deepEqual(r.state.offers, []);
+  assert.ok(Object.values(r.state.research).every(v => v === 0));
+});
+
+test('저장: 연구를 안전하게 읽는다', () => {
+  const s = inLab();
+  s.staff = 7; s.points = 123.5; s.research.soil = 2; s.offers = ['soil', 'drop', 'serum']; s.projectsDone = 2;
+  assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
+  const bad = C.sanitizeState({ version: 2, zone: 4, staff: 1e9, points: -3, research: { soil: 1e9, ghost: 4, drill: 'x' }, offers: ['soil', 'soil', 'ghost', 42, 'drop', 'serum', 'drill'], projectsDone: 3.9 }, 0);
+  assert.equal(bad.staff, C.COUNT_MAX);
+  assert.equal(bad.points, 0);
+  assert.equal(bad.research.soil, 200);
+  assert.equal(bad.research.ghost, undefined);
+  assert.equal(bad.research.drill, 0);
+  assert.deepEqual(bad.offers, ['soil', 'drop', 'serum']);
+  assert.equal(bad.projectsDone, 3);
+  for (const junk of [null, 'x', 7, {}]) assert.doesNotThrow(() => C.sanitizeState({ version: 2, zone: 4, research: junk, offers: junk }, 0));
+  assert.doesNotThrow(() => C.mods({ upgrades: {}, perks: {}, traits: {} }), '연구 기록이 없는 상태에도 배수를 셀 수 있다');
 });
