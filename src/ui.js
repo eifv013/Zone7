@@ -553,6 +553,58 @@
     });
   }
 
+  /**
+   * 3구역 컨베이어를 그린다(320×64 도트). 기계 셋이 벨트 위에 서 있고 물건이 왼쪽에서 오른쪽으로 흐른다.
+   *   - 구간마다 물건의 촘촘함이 다르다: 병목 앞까지는 앞 기계가 내놓는 만큼, 병목 뒤로는 병목이 내놓는 만큼만 지나간다.
+   *   - 병목인 기계는 붉게 칠하고, 그 앞에는 못 지나간 물건이 쌓인다(가동률이 낮을수록 높이).
+   *   - 전력 투입 중에는 물건이 빨리 흐르고 기계 위에 불빛이 켜진다.
+   * 색은 테마(라이트·다크)를 따르도록 CSS 변수에서 읽는다. 그리다 실패해도 게임은 계속된다.
+   */
+  function drawBelt(line) {
+    try {
+      var cv = $('belt'), g = cv.getContext('2d');
+      var css = getComputedStyle(document.body), ink = css.getPropertyValue('--ink').trim() || '#17180f', hazard = css.getPropertyValue('--hazard').trim() || '#f0b400',
+        blood = css.getPropertyValue('--blood').trim() || '#a3261d', soft = css.getPropertyValue('--ink-soft').trim() || '#666';
+      var W = cv.width, H = cv.height, beltY = 46, xs = [70, 160, 250], ids = C.MACHINES.map(function (d) { return d.id; });
+      var surge = state.surgeLeft > 0, still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var t = still ? 0 : Date.now() / 1000 * (surge ? 60 : 30);            // 벨트가 흐른 거리(도트)
+      g.clearRect(0, 0, W, H);
+      // 벨트: 굵은 줄과 흘러가는 눈금
+      g.fillStyle = ink; g.fillRect(0, beltY, W, 3);
+      g.fillStyle = soft; for (var x = Math.floor(t) % 8 - 8; x < W; x += 8) g.fillRect(x, beltY + 5, 4, 2);
+      // 물건: 구간마다 간격이 다르다(촘촘할수록 많이 지나간다)
+      var top = 0; ids.forEach(function (id) { top = Math.max(top, line.caps[id]); });
+      var bi = ids.indexOf(line.bottleneck), running = line.flow > 0;
+      for (var seg = 0; seg <= 3 && top > 0; seg++) {
+        var x0 = seg === 0 ? 0 : xs[seg - 1] + 14, x1 = seg === 3 ? W : xs[seg] - 14;
+        // 이 구간을 지나는 양: 맨 앞 구간은 넉넉히, 그 뒤는 앞 기계들 가운데 가장 느린 것만큼
+        var through = top; for (var k = 0; k < seg; k++) through = Math.min(through, line.caps[ids[k]]);
+        if (!(through > 0)) continue;
+        var gap = Math.max(7, Math.round(10 * top / through)), done = seg === 3;
+        g.fillStyle = done ? hazard : soft;
+        for (var px = x0 + (running || seg <= bi ? Math.floor(t) % gap : 0); px < x1 - 4; px += gap) { g.fillRect(px, beltY - 7, 6, 6); if (done) { g.fillStyle = ink; g.fillRect(px, beltY - 7, 6, 1); g.fillStyle = hazard; } }
+      }
+      // 병목 앞에 쌓인 물건
+      if (top > 0 && bi >= 0 && line.load < 0.95) {
+        var pile = Math.min(9, Math.max(1, Math.round((1 - line.load) * 9)));
+        g.fillStyle = soft;
+        for (var n = 0; n < pile; n++) g.fillRect(xs[bi] - 22 - (n % 3) * 7, beltY - 7 - Math.floor(n / 3) * 7, 6, 6);
+      }
+      // 기계 셋
+      ids.forEach(function (id, i) {
+        var has = line.caps[id] > 0, slow = id === line.bottleneck && top > 0, shake = surge && has && !still ? (Math.floor(Date.now() / 80) % 2) : 0;
+        g.fillStyle = has ? (slow ? blood : ink) : soft;
+        g.fillRect(xs[i] - 13, 14 + shake, 26, 34 - shake);
+        g.fillStyle = css.getPropertyValue('--concrete').trim() || '#cfcfc4';
+        g.fillRect(xs[i] - 8, 20 + shake, 16, 8);                               // 창
+        g.fillStyle = has ? hazard : soft;
+        g.fillRect(xs[i] - 6, 22 + shake, has && running && !still ? 4 + Math.floor(Date.now() / 200 + i) % 3 * 4 : 4, 4);   // 계기
+        if (surge && has) { g.fillStyle = hazard; g.fillRect(xs[i] - 2, 8, 4, 4); }                                          // 투입 중 불빛
+        if (has) { g.fillStyle = ink; g.fillRect(xs[i] + 6, 6 + shake, 4, 8); }                                              // 굴뚝
+      });
+    } catch (e) { /* 그림이 없어도 숫자로 다 보인다 */ }
+  }
+
   function confirmBox(title, text, noText, yesText, onYes) {
     setText($('confirm-title'), title);
     setText($('confirm-text'), text);
@@ -978,8 +1030,13 @@
       setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '%');
       ld.className = 'num' + (line.steady ? ' steady' : '');
       setText($('line-note'), line.flow > 0
-        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : Math.round(line.steadyAt * 100) + '% 이상이면 정속 가동이 돼요') + ' · 초당 물자 ' + fmt(C.lineRate(state))
+        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : Math.round(line.steadyAt * 100) + '% 이상이면 정속 가동이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
         : '기계 셋이 모두 있어야 라인이 돌아요');
+      drawBelt(line);
+      var sg = $('surge'), sOn = state.surgeLeft > 0;
+      sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
+      sg.className = 'surge' + (sOn ? ' on' : '');
+      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '충전 ' + clock(state.surgeCool) : '전력 투입 ×' + C.SURGE_MULT);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies);
@@ -1282,6 +1339,12 @@
     $('lab-reroll').addEventListener('click', function () {
       if (!C.rerollOffers(state).ok) return;
       sfx('buy'); render();
+    });
+    // 3구역: 전력 투입
+    $('surge').addEventListener('click', function () {
+      if (!C.surge(state).ok) return;
+      log('공단에 전력을 몰아넣었다. ' + C.SURGE_SECONDS + '초 동안 라인이 ' + C.SURGE_MULT + '배로 돈다.', 'good');
+      sfx('defended'); render();
     });
     // 3구역: 병목인 기계를 올린다. 수량 모드를 따른다(×1 한 번, ×10 열 번, 최대는 물자가 되는 만큼).
     $('tune').addEventListener('click', function () {

@@ -306,6 +306,12 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .trade-price.high { color: var(--safe); }
 .trade-price.low { color: var(--blood); }
 /* 3구역 생산 라인: 기계 셋이 왼쪽에서 오른쪽으로 이어진다. 병목인 기계는 붉은 테두리로 표시한다. */
+.belt { display: block; width: 100%; height: auto; margin-bottom: 8px; border: 2px solid var(--ink); background: var(--concrete); image-rendering: pixelated; }
+.line-acts { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 6px; }
+.line-acts .sell { margin: 0; }
+.surge { padding: 8px 6px; background: var(--hazard); color: var(--on-hazard); border: 2px solid var(--ink); font: 600 13px/1.3 var(--font-body); cursor: pointer; }
+.surge:disabled { background: transparent; color: var(--ink-soft); cursor: default; }
+.surge.on { background: var(--ink); color: var(--hazard); }
 .line-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
 .line-cell { position: relative; padding: 6px 8px; border: 2px solid var(--ink); background: var(--panel, transparent); }
 .line-cell + .line-cell::before { content: '▶'; position: absolute; left: -9px; top: 50%; transform: translateY(-50%); font-size: 9px; line-height: 1; background: var(--paper); }
@@ -638,7 +644,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.7.1</div>
+  <div class="boot-ver">7구역 알파 0.7.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -904,10 +910,12 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <label class="check" for="auto-sell"><input type="checkbox" id="auto-sell"> 창고가 차면 알아서 판다</label>
       </div>
       <div class="trade line" id="line" hidden>
+        <!-- 컨베이어: 물건이 왼쪽에서 오른쪽으로 흐른다. 병목인 기계 앞에는 물건이 쌓인다. 그림은 ui.js 의 drawBelt 가 그린다. -->
+        <canvas class="belt" id="belt" width="320" height="64" aria-hidden="true"></canvas>
         <div class="line-flow" id="line-flow"></div>
         <div class="line-stat"><span class="num" id="line-load">가동률 0%</span><span class="label" id="line-note"></span></div>
         <div class="label" id="line-mile"></div>
-        <button type="button" class="fortify sell" id="tune">병목 올리기</button>
+        <div class="line-acts"><button type="button" class="fortify sell" id="tune">병목 올리기</button><button type="button" class="surge" id="surge">전력 투입</button></div>
       </div>
       <div class="trade rail" id="rail" hidden>
         <div class="rail-list" id="rail-list"></div>
@@ -1005,7 +1013,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.7.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.7.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1112,7 +1120,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.2";
 </script>
 <script>
 /*
@@ -1131,6 +1139,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.7.2', date: '2026-11-17', at: '2026-11-17 08:58:51', title: '3구역 공단: 컨베이어와 전력 투입',
+      items: [
+        '3구역에 컨베이어 그림이 생겼다. 물건이 기계 셋을 지나 흘러가고, 병목인 기계는 붉게 칠해지며 그 앞에 물건이 쌓인다. 기계를 맞추면 쌓인 것이 사라지고 고르게 흐른다.',
+        '"전력 투입"이 생겼다. 누르면 15초 동안 라인이 2배로 돈다. 누른 때부터 90초 뒤에 다시 쓸 수 있다. 자리를 비운 동안에는 효과가 없다.',
+        '전력 투입은 밤 전리품이나 직접 수색의 기준이 되는 평균 수입에는 들어가지 않는다.'
+      ] },
     { ver: '알파 0.7.1', date: '2026-11-17', at: '2026-11-17 08:01:03', title: '2구역 재래시장: 시세판과 연속 호가',
       items: [
         '2구역에 시세판이 생겼다. 지난 시세가 막대로 흘러가고 맨 오른쪽이 지금 시세다. 평균과 고점이 선으로 그어져 있어 지금이 팔 때인지 한눈에 보인다.',
@@ -1569,6 +1583,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
   var PRODUCT_VALUE = 2e8;          // 완제품 하나의 기준 값(물자)
   var STEADY_AT = 0.9;             // 가동률이 이 이상이면 '정속 가동'
   var STEADY_BONUS = 0.5;          // 정속 가동일 때 라인 산출에 더하는 비율(+50%)
+  var SURGE_MULT = 2;              // 전력 투입 중의 라인 산출 배수
+  var SURGE_SECONDS = 15;          // 전력 투입이 이어지는 시간
+  var SURGE_COOLDOWN = 90;         // 다시 쓸 수 있을 때까지의 시간(투입을 누른 때부터)
   var LINE_MILESTONES = [15, 30, 60, 100, 150, 220, 300, 400, 520, 660, 820, 1000]; // 기계 레벨 합계가 이 수에 닿을 때마다 라인 산출 2배
   // 4구역 노선
   var TRAIN_VALUE = 1e14;          // 열차 한 대가 운행 1초마다 싣는 화물의 기준 값(물자)
@@ -1782,6 +1799,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
+      surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
@@ -1847,6 +1865,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
+    s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
+    s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
     s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
     s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
     s.sweepClock = clamp(safeNum(raw.sweepClock, 0), 0, SWEEP_AUTO_SECONDS);
@@ -2117,6 +2137,19 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
     }
     return bought ? { ok: true, bought: bought, cost: spent } : fail(last);
   }
+  /**
+   * 전력 투입: 라인을 SURGE_SECONDS 초 동안 SURGE_MULT 배로 돌린다. 누른 때부터 SURGE_COOLDOWN 초 뒤에 다시 쓸 수 있다.
+   * 늘 챙겨 써도 평균 +17% 정도다: 지켜보는 사람의 작은 덤이고, 안 써도 뒤처지지 않는다. 라인이 서 있으면 쓸 수 없다.
+   */
+  function surge(state) {
+    if (!zoneOpen(state, 2)) return fail('locked');
+    if (state.surgeCool > 0) return fail('cooldown');
+    if (!(lineInfo(state).flow > 0)) return fail('stopped');
+    state.surgeLeft = SURGE_SECONDS; state.surgeCool = SURGE_COOLDOWN;
+    return { ok: true, seconds: SURGE_SECONDS };
+  }
+  /** 지금 이 순간 라인이 초당 버는 물자(전력 투입 포함). 화면 표시용이다. 평균 수입 계산에는 lineRate 를 쓴다. */
+  function lineNow(state) { return lineRate(state) * (state.surgeLeft > 0 ? SURGE_MULT : 1); }
   /** 병목을 한 단계 올리는 값(단추에 보일 값). */
   function tuneCost(state) { return zoneOpen(state, 2) ? machineCost(state, lineInfo(state).bottleneck, 1) : Infinity; }
 
@@ -2624,7 +2657,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
     if (boosted > 0) { earn(state, searchRate(state) * boosted); line += lineRate(state) * boosted; }
     if (state.buff) { state.buff.left -= dt; if (state.buff.left <= 0) { state.buff = null; events.push({ type: 'buff-end' }); } }
     if (dt > boosted) { earn(state, searchRate(state) * (dt - boosted)); line += lineRate(state) * (dt - boosted); }
+    // 전력 투입 중인 시간만큼은 라인이 SURGE_MULT 배로 돈다(dt 가 길어도 남은 투입 시간까지만 친다)
+    if (line > 0 && state.surgeLeft > 0) line *= 1 + (SURGE_MULT - 1) * Math.min(dt, state.surgeLeft) / dt;
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
+    if (state.surgeLeft > 0 || state.surgeCool > 0) {
+      var wasOn = state.surgeLeft > 0;
+      state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
+      if (wasOn && !(state.surgeLeft > 0)) events.push({ type: 'surge-end' });
+    }
 
     stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
@@ -2664,6 +2704,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
     if (!(counted > 0)) return report;
     state.buff = null;
     state.signalLeft = 0;
+    state.surgeLeft = 0; state.surgeCool = Math.max(0, state.surgeCool - elapsed);      // 전력 투입은 자리를 비우면 끝난 것으로 친다
     var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
     report.gain = searchRate(state) * counted * rate + trade + line;
     earn(state, report.gain);
@@ -2771,6 +2812,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
+    SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
@@ -2828,7 +2870,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'STREAK_MAX', 'STREAK_BONUS', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'STREAK_MAX', 'STREAK_BONUS', 'SURGE_MULT', 'SURGE_SECONDS', 'SURGE_COOLDOWN', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -2875,6 +2917,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
         '기계마다 레벨당 처리량이 달라요(' + core.MACHINES.map(function (m) { return m.name + ' ' + m.rate; }).join(', ') + '). 처리량이 비슷해지게 맞추면 돼요.',
         '가동률은 가장 느린 기계 ÷ 가장 빠른 기계예요. 가동률 ' + pct(core.STEADY_AT) + ' 이상이면 "정속 가동"이 되어 산출이 ' + pct(core.STEADY_BONUS) + ' 늘어나요.',
         '기계 레벨의 합계가 ' + core.LINE_MILESTONES.slice(0, 4).join(', ') + '… 에 닿을 때마다 라인 전체가 2배가 돼요.',
+        '"전력 투입"을 누르면 ' + span(core.SURGE_SECONDS) + ' 동안 라인이 ' + core.SURGE_MULT + '배로 돌아요. 누른 때부터 ' + span(core.SURGE_COOLDOWN) + ' 뒤에 다시 쓸 수 있어요. 안 써도 뒤처지지 않는 작은 덤이에요.',
         '자리를 비워도 라인은 나갈 때의 상태 그대로 돌아요. 정속으로 맞춰 두고 나가면 그 시간도 정속 가동으로 쳐 줘요.' ] },
 
       { id: 'rail', title: '4구역: 노선', items: [
@@ -4624,6 +4667,58 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
     });
   }
 
+  /**
+   * 3구역 컨베이어를 그린다(320×64 도트). 기계 셋이 벨트 위에 서 있고 물건이 왼쪽에서 오른쪽으로 흐른다.
+   *   - 구간마다 물건의 촘촘함이 다르다: 병목 앞까지는 앞 기계가 내놓는 만큼, 병목 뒤로는 병목이 내놓는 만큼만 지나간다.
+   *   - 병목인 기계는 붉게 칠하고, 그 앞에는 못 지나간 물건이 쌓인다(가동률이 낮을수록 높이).
+   *   - 전력 투입 중에는 물건이 빨리 흐르고 기계 위에 불빛이 켜진다.
+   * 색은 테마(라이트·다크)를 따르도록 CSS 변수에서 읽는다. 그리다 실패해도 게임은 계속된다.
+   */
+  function drawBelt(line) {
+    try {
+      var cv = $('belt'), g = cv.getContext('2d');
+      var css = getComputedStyle(document.body), ink = css.getPropertyValue('--ink').trim() || '#17180f', hazard = css.getPropertyValue('--hazard').trim() || '#f0b400',
+        blood = css.getPropertyValue('--blood').trim() || '#a3261d', soft = css.getPropertyValue('--ink-soft').trim() || '#666';
+      var W = cv.width, H = cv.height, beltY = 46, xs = [70, 160, 250], ids = C.MACHINES.map(function (d) { return d.id; });
+      var surge = state.surgeLeft > 0, still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var t = still ? 0 : Date.now() / 1000 * (surge ? 60 : 30);            // 벨트가 흐른 거리(도트)
+      g.clearRect(0, 0, W, H);
+      // 벨트: 굵은 줄과 흘러가는 눈금
+      g.fillStyle = ink; g.fillRect(0, beltY, W, 3);
+      g.fillStyle = soft; for (var x = Math.floor(t) % 8 - 8; x < W; x += 8) g.fillRect(x, beltY + 5, 4, 2);
+      // 물건: 구간마다 간격이 다르다(촘촘할수록 많이 지나간다)
+      var top = 0; ids.forEach(function (id) { top = Math.max(top, line.caps[id]); });
+      var bi = ids.indexOf(line.bottleneck), running = line.flow > 0;
+      for (var seg = 0; seg <= 3 && top > 0; seg++) {
+        var x0 = seg === 0 ? 0 : xs[seg - 1] + 14, x1 = seg === 3 ? W : xs[seg] - 14;
+        // 이 구간을 지나는 양: 맨 앞 구간은 넉넉히, 그 뒤는 앞 기계들 가운데 가장 느린 것만큼
+        var through = top; for (var k = 0; k < seg; k++) through = Math.min(through, line.caps[ids[k]]);
+        if (!(through > 0)) continue;
+        var gap = Math.max(7, Math.round(10 * top / through)), done = seg === 3;
+        g.fillStyle = done ? hazard : soft;
+        for (var px = x0 + (running || seg <= bi ? Math.floor(t) % gap : 0); px < x1 - 4; px += gap) { g.fillRect(px, beltY - 7, 6, 6); if (done) { g.fillStyle = ink; g.fillRect(px, beltY - 7, 6, 1); g.fillStyle = hazard; } }
+      }
+      // 병목 앞에 쌓인 물건
+      if (top > 0 && bi >= 0 && line.load < 0.95) {
+        var pile = Math.min(9, Math.max(1, Math.round((1 - line.load) * 9)));
+        g.fillStyle = soft;
+        for (var n = 0; n < pile; n++) g.fillRect(xs[bi] - 22 - (n % 3) * 7, beltY - 7 - Math.floor(n / 3) * 7, 6, 6);
+      }
+      // 기계 셋
+      ids.forEach(function (id, i) {
+        var has = line.caps[id] > 0, slow = id === line.bottleneck && top > 0, shake = surge && has && !still ? (Math.floor(Date.now() / 80) % 2) : 0;
+        g.fillStyle = has ? (slow ? blood : ink) : soft;
+        g.fillRect(xs[i] - 13, 14 + shake, 26, 34 - shake);
+        g.fillStyle = css.getPropertyValue('--concrete').trim() || '#cfcfc4';
+        g.fillRect(xs[i] - 8, 20 + shake, 16, 8);                               // 창
+        g.fillStyle = has ? hazard : soft;
+        g.fillRect(xs[i] - 6, 22 + shake, has && running && !still ? 4 + Math.floor(Date.now() / 200 + i) % 3 * 4 : 4, 4);   // 계기
+        if (surge && has) { g.fillStyle = hazard; g.fillRect(xs[i] - 2, 8, 4, 4); }                                          // 투입 중 불빛
+        if (has) { g.fillStyle = ink; g.fillRect(xs[i] + 6, 6 + shake, 4, 8); }                                              // 굴뚝
+      });
+    } catch (e) { /* 그림이 없어도 숫자로 다 보인다 */ }
+  }
+
   function confirmBox(title, text, noText, yesText, onYes) {
     setText($('confirm-title'), title);
     setText($('confirm-text'), text);
@@ -5049,8 +5144,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
       setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '%');
       ld.className = 'num' + (line.steady ? ' steady' : '');
       setText($('line-note'), line.flow > 0
-        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : Math.round(line.steadyAt * 100) + '% 이상이면 정속 가동이 돼요') + ' · 초당 물자 ' + fmt(C.lineRate(state))
+        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : Math.round(line.steadyAt * 100) + '% 이상이면 정속 가동이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
         : '기계 셋이 모두 있어야 라인이 돌아요');
+      drawBelt(line);
+      var sg = $('surge'), sOn = state.surgeLeft > 0;
+      sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
+      sg.className = 'surge' + (sOn ? ' on' : '');
+      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '충전 ' + clock(state.surgeCool) : '전력 투입 ×' + C.SURGE_MULT);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies);
@@ -5353,6 +5453,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
     $('lab-reroll').addEventListener('click', function () {
       if (!C.rerollOffers(state).ok) return;
       sfx('buy'); render();
+    });
+    // 3구역: 전력 투입
+    $('surge').addEventListener('click', function () {
+      if (!C.surge(state).ok) return;
+      log('공단에 전력을 몰아넣었다. ' + C.SURGE_SECONDS + '초 동안 라인이 ' + C.SURGE_MULT + '배로 돈다.', 'good');
+      sfx('defended'); render();
     });
     // 3구역: 병목인 기계를 올린다. 수량 모드를 따른다(×1 한 번, ×10 열 번, 최대는 물자가 되는 만큼).
     $('tune').addEventListener('click', function () {

@@ -70,6 +70,9 @@
   var PRODUCT_VALUE = 2e8;          // 완제품 하나의 기준 값(물자)
   var STEADY_AT = 0.9;             // 가동률이 이 이상이면 '정속 가동'
   var STEADY_BONUS = 0.5;          // 정속 가동일 때 라인 산출에 더하는 비율(+50%)
+  var SURGE_MULT = 2;              // 전력 투입 중의 라인 산출 배수
+  var SURGE_SECONDS = 15;          // 전력 투입이 이어지는 시간
+  var SURGE_COOLDOWN = 90;         // 다시 쓸 수 있을 때까지의 시간(투입을 누른 때부터)
   var LINE_MILESTONES = [15, 30, 60, 100, 150, 220, 300, 400, 520, 660, 820, 1000]; // 기계 레벨 합계가 이 수에 닿을 때마다 라인 산출 2배
   // 4구역 노선
   var TRAIN_VALUE = 1e14;          // 열차 한 대가 운행 1초마다 싣는 화물의 기준 값(물자)
@@ -283,6 +286,7 @@
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
+      surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
@@ -348,6 +352,8 @@
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
+    s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
+    s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
     s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
     s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
     s.sweepClock = clamp(safeNum(raw.sweepClock, 0), 0, SWEEP_AUTO_SECONDS);
@@ -618,6 +624,19 @@
     }
     return bought ? { ok: true, bought: bought, cost: spent } : fail(last);
   }
+  /**
+   * 전력 투입: 라인을 SURGE_SECONDS 초 동안 SURGE_MULT 배로 돌린다. 누른 때부터 SURGE_COOLDOWN 초 뒤에 다시 쓸 수 있다.
+   * 늘 챙겨 써도 평균 +17% 정도다: 지켜보는 사람의 작은 덤이고, 안 써도 뒤처지지 않는다. 라인이 서 있으면 쓸 수 없다.
+   */
+  function surge(state) {
+    if (!zoneOpen(state, 2)) return fail('locked');
+    if (state.surgeCool > 0) return fail('cooldown');
+    if (!(lineInfo(state).flow > 0)) return fail('stopped');
+    state.surgeLeft = SURGE_SECONDS; state.surgeCool = SURGE_COOLDOWN;
+    return { ok: true, seconds: SURGE_SECONDS };
+  }
+  /** 지금 이 순간 라인이 초당 버는 물자(전력 투입 포함). 화면 표시용이다. 평균 수입 계산에는 lineRate 를 쓴다. */
+  function lineNow(state) { return lineRate(state) * (state.surgeLeft > 0 ? SURGE_MULT : 1); }
   /** 병목을 한 단계 올리는 값(단추에 보일 값). */
   function tuneCost(state) { return zoneOpen(state, 2) ? machineCost(state, lineInfo(state).bottleneck, 1) : Infinity; }
 
@@ -1125,7 +1144,14 @@
     if (boosted > 0) { earn(state, searchRate(state) * boosted); line += lineRate(state) * boosted; }
     if (state.buff) { state.buff.left -= dt; if (state.buff.left <= 0) { state.buff = null; events.push({ type: 'buff-end' }); } }
     if (dt > boosted) { earn(state, searchRate(state) * (dt - boosted)); line += lineRate(state) * (dt - boosted); }
+    // 전력 투입 중인 시간만큼은 라인이 SURGE_MULT 배로 돈다(dt 가 길어도 남은 투입 시간까지만 친다)
+    if (line > 0 && state.surgeLeft > 0) line *= 1 + (SURGE_MULT - 1) * Math.min(dt, state.surgeLeft) / dt;
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
+    if (state.surgeLeft > 0 || state.surgeCool > 0) {
+      var wasOn = state.surgeLeft > 0;
+      state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
+      if (wasOn && !(state.surgeLeft > 0)) events.push({ type: 'surge-end' });
+    }
 
     stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
@@ -1165,6 +1191,7 @@
     if (!(counted > 0)) return report;
     state.buff = null;
     state.signalLeft = 0;
+    state.surgeLeft = 0; state.surgeCool = Math.max(0, state.surgeCool - elapsed);      // 전력 투입은 자리를 비우면 끝난 것으로 친다
     var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
     report.gain = searchRate(state) * counted * rate + trade + line;
     earn(state, report.gain);
@@ -1272,6 +1299,7 @@
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
+    SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,

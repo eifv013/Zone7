@@ -1262,3 +1262,44 @@ test('시세판: 저장을 안전하게 읽고, 철수하면 비워진다', () =
   const r = C.retreat(s, 0).state;
   assert.deepEqual(r.priceHistory, []); assert.equal(r.streak, 0);
 });
+
+/* ================= 3구역: 전력 투입 ================= */
+
+test('전력 투입: 정해진 시간 동안 라인이 배로 돌고, 쉬는 시간이 있다', () => {
+  const s = inFactory(); s.defenses.rail = 1e9; s.signalIn = 1e9; s.autoSell = false;
+  assert.equal(C.surge(s).reason, 'stopped', '라인이 서 있으면 쓸 수 없다');
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
+  const rate = C.lineRate(s);
+  assert.ok(C.surge(s).ok);
+  assert.equal(C.surge(s).reason, 'cooldown');
+  near(C.lineNow(s), rate * C.SURGE_MULT);
+  near(C.productionPerSec(s), C.searchRate(s) + C.tradeRate(s) + rate, '평균 수입(밤 전리품 등의 기준)은 그대로다');
+  C.tick(s, 5, half);
+  near(s.lineEarned, rate * 5 * C.SURGE_MULT);
+  near(s.surgeLeft, C.SURGE_SECONDS - 5);
+  // 남은 투입 시간보다 긴 시간을 한 번에 진행해도 투입 시간만큼만 배로 친다
+  const before = s.lineEarned, r2 = C.lineRate(s);
+  const ev = C.tick(s, 20, half);
+  assert.ok(Math.abs((s.lineEarned - before) - r2 * (20 + (C.SURGE_SECONDS - 5) * (C.SURGE_MULT - 1))) / s.lineEarned < 0.02);
+  assert.ok(ev.some(e => e.type === 'surge-end'));
+  assert.equal(s.surgeLeft, 0);
+  near(C.lineNow(s), C.lineRate(s));
+  assert.equal(C.surge(s).reason, 'cooldown');
+  C.tick(s, C.SURGE_COOLDOWN, half);
+  assert.ok(C.surge(s).ok);
+});
+
+test('전력 투입: 잠긴 구역, 자리 비움, 저장', () => {
+  assert.equal(C.surge(inMarket()).reason, 'locked');
+  const s = inFactory(); s.defenses.rail = 1e5;      // 저장에서 읽을 수 있는 범위 안의 수
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
+  C.surge(s);
+  const rate = C.lineRate(s);
+  C.applyOffline(s, 1000);
+  near(s.lineEarned, rate * 1000 * C.OFFLINE_RATE, '자리를 비운 동안에는 투입 효과가 없다');
+  assert.equal(s.surgeLeft, 0); assert.equal(s.surgeCool, 0);
+  C.surge(s);
+  assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
+  const bad = C.sanitizeState({ version: 2, zone: 2, surgeLeft: 1e9, surgeCool: -5 }, 0);
+  assert.equal(bad.surgeLeft, C.SURGE_SECONDS); assert.equal(bad.surgeCool, 0);
+});
