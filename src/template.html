@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7구역</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+try { if (localStorage.getItem('zone7-skin') === 'dark') document.documentElement.setAttribute('data-skin', 'dark'); } catch (e) { /* 저장소를 못 쓰면 기본(라이트) */ }
+</script>
+<style>
+/* 민방위 대피 안내문: 콘크리트색 종이, 검은 잉크, 위험 표지 노랑. 기본은 라이트, 사용자가 다크를 고를 수 있다.
+   배치: 위험 테이프 머리띠 + D+ 카운터, 아래로 상황판 / 시설 / 방벽·장비·무전 3단. */
+:root {
+  color-scheme: light;
+  --concrete: #cfcfc4;
+  --paper: #e6e5db;
+  --ink: #17180f;
+  --ink-soft: #55574a;
+  --hazard: #f0b400;
+  --blood: #a8261b;
+  --safe: #2c6638;
+  --rule: rgba(23, 24, 15, .22);
+  --on-hazard: #17180f;   /* 노란 바탕 위 글자: 두 테마에서 같다 */
+  --slab: #17180f;        /* 현재 위치 띠, 구조 신호 버튼의 어두운 바탕: 두 테마에서 같다 */
+  --on-slab: #e6e5db;
+  --font-display: 'Black Han Sans', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+/* 다크 버전: 사용자가 고른 경우에만 적용한다(기본은 라이트). 값만 바꾸고 규칙은 그대로 쓴다. */
+:root[data-skin="dark"] {
+  color-scheme: dark;
+  --concrete: #12130d;
+  --paper: #1d1e16;
+  --ink: #e6e5db;
+  --ink-soft: #a09f8e;
+  --hazard: #f0b400;
+  --blood: #d8493c;
+  --safe: #74b881;
+  --rule: rgba(230, 229, 219, .2);
+}
+* { box-sizing: border-box; }
+html { background: var(--concrete); }
+body {
+  margin: 0; background: var(--concrete); color: var(--ink);
+  font: 400 15px/1.5 var(--font-body);
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.fatal { margin: 16px; padding: 12px; background: var(--blood); color: #fff; }
+
+/* 업데이트 알림 띠: 화면 맨 위, 다른 것을 가리지 않고 밀어낸다 */
+.update-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 16px; background: var(--slab); color: var(--on-slab); font-size: 14px; }
+.update-bar[hidden] { display: none; }
+.update-bar p { margin: 0; flex: 1 1 200px; }
+.update-bar button { background: var(--hazard); color: var(--on-hazard); border: 2px solid var(--hazard); padding: 6px 14px; font-weight: 600; cursor: pointer; }
+.update-bar button:disabled { opacity: .7; cursor: default; }
+.update-bar .update-later { background: transparent; color: var(--on-slab); border-color: var(--on-slab); }
+
+/* 머리띠 */
+.tape { height: 14px; background: repeating-linear-gradient(-45deg, var(--hazard) 0 14px, var(--ink) 14px 28px); }
+.mast {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px;
+  padding: 18px 20px 14px; border-bottom: 3px solid var(--ink); max-width: 1280px; margin: 0 auto;
+}
+.mast h1 { margin: 0; font: 400 clamp(40px, 7vw, 64px)/1 var(--font-display); letter-spacing: -.01em; }
+.mast-sub { margin: 6px 0 0; color: var(--ink-soft); font-size: 13px; letter-spacing: .08em; }
+.dplus { text-align: right; }
+.dplus-num { font: 600 clamp(40px, 8vw, 72px)/0.9 var(--font-mono); letter-spacing: -.04em; }
+.dplus-num small { font-size: .5em; letter-spacing: 0; margin-right: 2px; }
+.dplus-sub { font-size: 13px; color: var(--ink-soft); letter-spacing: .08em; }
+
+/* 3단 배치 */
+.grid {
+  display: grid; gap: 20px; padding: 20px; max-width: 1280px; margin: 0 auto;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 1fr); align-items: start;
+}
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+@media (max-width: 1020px) { .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .col-main { grid-column: 1 / -1; } }
+@media (max-width: 640px) { .grid { grid-template-columns: minmax(0, 1fr); padding: 16px; } .mast { padding: 16px; } }
+
+.panel { background: var(--paper); border: 2px solid var(--ink); padding: 16px; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
+.label { font-size: 12px; letter-spacing: .1em; color: var(--ink-soft); }
+
+/* 알림 */
+.notice { display: flex; gap: 12px; align-items: flex-start; color: var(--on-hazard); background: var(--hazard); border: 2px solid var(--ink); padding: 10px 12px; }
+.notice[hidden] { display: none; }
+.notice p { margin: 0; flex: 1; }
+.notice button { background: var(--slab); color: var(--on-slab); border: 0; padding: 4px 10px; cursor: pointer; }
+
+/* 물자 + 수색 */
+.stock-num { font: 600 clamp(40px, 7vw, 60px)/1 var(--font-mono); letter-spacing: -.04em; overflow-wrap: anywhere; }
+.stock-rate { color: var(--ink-soft); margin-top: 4px; }
+#scavenge-wrap { position: relative; margin-top: 16px; }
+.scavenge {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  background: var(--hazard); color: var(--on-hazard); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+  padding: 16px 18px; cursor: pointer; font: 400 26px/1 var(--font-display);
+  transition: transform .06s, box-shadow .06s; touch-action: manipulation; user-select: none;
+}
+.scavenge:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.scavenge .num { font-size: 18px; font-weight: 600; }
+.pop { position: absolute; top: 0; pointer-events: none; font: 600 18px var(--font-mono); animation: pop .8s ease-out forwards; }
+@keyframes pop { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-46px); opacity: 0; } }
+
+/* 오늘 밤 */
+.pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border: 2px solid currentColor; letter-spacing: .06em; }
+.pill-safe { color: var(--safe); }
+.pill-danger { color: #fff; background: var(--blood); border-color: var(--blood); }
+.track { height: 12px; background: var(--rule); border: 1px solid var(--ink); overflow: hidden; }
+.track > i { display: block; height: 100%; width: 0; }
+#day-bar { background: var(--ink); }
+#horde-bar { background: var(--blood); }
+#defense-bar { background: var(--safe); }
+.versus { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 10px; align-items: center; margin-top: 14px; }
+.versus .num { text-align: right; font-weight: 600; }
+.timer-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.timer-row .num { font-size: 20px; font-weight: 600; }
+/* 방어 구간(마지막 10초): 줄 전체를 경고색으로 */
+.timer-row.battle .label, .timer-row.battle .num { color: var(--blood); font-weight: 700; }
+.timer-row.battle + .track > i { background: var(--blood); }
+.hint { margin: 12px 0 0; font-size: 13px; color: var(--ink-soft); }
+.shake { animation: shake .4s; }
+@keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+
+/* 기록 수치 */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0; border: 2px solid var(--ink); background: var(--paper); }
+.stats div { padding: 10px 12px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.stats dt { font-size: 12px; color: var(--ink-soft); letter-spacing: .06em; }
+.stats dd { margin: 2px 0 0; font: 600 20px/1.2 var(--font-mono); }
+
+/* 구매 목록 */
+.qty { display: flex; border: 2px solid var(--ink); }
+.qty[hidden] { display: none; }
+.qty button { background: transparent; border: 0; padding: 3px 10px; cursor: pointer; font: 600 13px var(--font-mono); }
+.qty button + button { border-left: 2px solid var(--ink); }
+.qty button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.rows { display: flex; flex-direction: column; }
+.row {
+  display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; cursor: pointer;
+  background: transparent; border: 0; border-top: 1px solid var(--rule); padding: 10px 8px;
+}
+.row:first-child { border-top: 2px solid var(--ink); }
+@media (hover: hover) {
+  .row:not(:disabled):hover, .row:not(:disabled):hover .row-desc, .row:not(:disabled):hover .row-cost { background: var(--hazard); color: var(--on-hazard); }
+}
+.row:not(:disabled):active, .row:not(:disabled):active .row-desc, .row:not(:disabled):active .row-cost { background: var(--hazard); color: var(--on-hazard); }
+.row:disabled { cursor: default; color: var(--ink-soft); }
+.row:disabled .row-name { opacity: .6; }
+.row-head, .row-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.row-name { font-weight: 600; font-size: 16px; }
+.row-count { font: 600 20px/1 var(--font-mono); white-space: nowrap; }
+.row-max { font-size: 12px; font-weight: 500; color: var(--ink-soft); }
+.row-bar { display: block; height: 3px; margin-top: 5px; background: var(--rule); }
+.row-bar i { display: block; height: 100%; width: 0; background: var(--ink); }
+.row:disabled .row-bar i { background: var(--ink-soft); }
+.row-desc { font-size: 13px; color: var(--ink-soft); }
+.row-foot { font: 500 12.5px/1.4 var(--font-mono); flex-wrap: wrap; }
+.row-cost { font-weight: 600; white-space: pre; margin-left: auto; }
+.row:not(:disabled) .row-cost { color: var(--ink); }
+.row-owned .row-count { font-size: 12px; color: var(--safe); }
+/* 구역 고유 시설·방벽: 왼쪽 띠와 꼬리표로 구분한다 */
+.row-zone { border-left: 4px solid var(--hazard); padding-left: 8px; }
+.row-zone .row-name::after { content: '이 구역 전용'; margin-left: 8px; padding: 0 5px; font: 600 11px/1.7 var(--font-body); background: var(--hazard); color: var(--on-hazard); vertical-align: 2px; }
+.row[hidden] { display: none; }
+.horde-note { font-weight: 600; color: var(--ink); }
+/* 통계 */
+.stats-list { margin: 0 0 14px; padding: 0; list-style: none; font-size: 14px; }
+.stats-list li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-top: 1px solid var(--rule); }
+.stats-list li.hint { display: block; }
+.stats-h { margin: 16px 0 4px; font: 600 14px/1.4 var(--font-body); }
+
+/* 구역 경로, 현재 위치, 일지 */
+.route { display: flex; gap: 4px; list-style: none; margin: 12px 0 0; padding: 0; }
+.route li { width: 28px; height: 28px; display: grid; place-items: center; border: 2px solid var(--ink); font: 600 13px var(--font-mono); color: var(--ink-soft); }
+.route .past { background: var(--ink); color: var(--paper); }
+.route .here { background: var(--hazard); color: var(--on-hazard); }
+.brief { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); border: 2px solid var(--ink); background: var(--paper); }
+.brief > div { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.brief-zone { background: var(--slab); color: var(--on-slab); }
+.brief-zone .label { color: var(--hazard); }
+.brief-zone b { font: 400 26px/1.15 var(--font-display); }
+.brief-zone span { font-size: 13px; opacity: .85; }
+.sector-track { border-color: var(--on-slab); background: transparent; height: 8px; }
+#sector-bar { background: var(--hazard); }
+.brief-zone #sector-text { margin-top: 6px; font-size: 12px; }
+.brief-story p { margin: 0; font-size: 15.5px; line-height: 1.6; max-width: 62ch; }
+@media (max-width: 640px) { .brief { grid-template-columns: minmax(0, 1fr); } }
+.journal { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow-y: auto; }
+.journal li { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 14px; line-height: 1.6; }
+.journal li:first-child { border-top: 2px solid var(--ink); }
+.journal .j-zone { font: 600 12px/1.9 var(--font-mono); color: var(--ink-soft); }
+.journal .j-empty { grid-column: 1 / -1; color: var(--ink-soft); }
+@media (max-width: 480px) { .journal li { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+.log-story .log-text { font-weight: 600; }
+.foot-block { margin-bottom: 20px; }
+
+/* 도트 화면: 저해상도로 그리고 확대한다. 색은 장면 자체의 낮밤을 따르므로 테마와 무관하다 */
+.scene-wrap { grid-column: 1 / -1; border: 2px solid var(--ink); background: #10141f; overflow: hidden; display: flex; align-items: flex-end; }
+.scene { display: block; width: 100%; height: 160px; flex: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* 탭, 구조 신호, 원정, 유물, 업적 */
+.rows[hidden] { display: none; }
+/* 색인 탭: 서류철의 견출지처럼, 고른 탭만 노랗게 올라와 아래 내용과 이어진다 */
+.tabbar { flex: none; display: flex; gap: 3px; align-items: flex-end; border-bottom: 2px solid var(--ink); margin-bottom: 4px; overflow-x: auto; scrollbar-width: none; }
+.tabbar::-webkit-scrollbar { display: none; }
+.tabbar button {
+  flex: 1 0 auto; min-width: 0; padding: 6px 8px 5px; cursor: pointer; white-space: nowrap;
+  font: 600 13.5px/1.4 var(--font-body); color: var(--ink-soft);
+  background: transparent; border: 2px solid var(--rule); border-bottom: 0;
+}
+.tabbar button:hover { color: var(--ink); border-color: var(--ink-soft); }
+.tabbar button[aria-pressed="true"] { background: var(--hazard); color: var(--on-hazard); border-color: var(--ink); padding-top: 9px; }
+.tabbar button[aria-pressed="true"].avail::after { background: var(--on-hazard); }
+/* 탭이 많은 줄(거점 관리 7개): 폭을 똑같이 나눠 한 줄에 다 보이게 하고, 살 수 있음 점은 모서리에 찍는다 */
+.tabbar.even { gap: 2px; }
+.tabbar.even button { flex: 1 1 0; position: relative; padding-left: 1px; padding-right: 1px; font-size: 13px; }
+.tabbar.even .avail::after { position: absolute; top: 3px; right: 3px; margin: 0; width: 6px; height: 6px; }
+.exped-ctl { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 12px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.auto-ctl { margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--rule); font-weight: 500; }
+.auto-ctl[hidden] { display: none; }
+.auto-ctl:has(input:disabled) { color: var(--ink-soft); cursor: default; }
+.recall { background: transparent; color: var(--blood); border: 2px solid var(--blood); padding: 4px 12px; font-weight: 600; font-size: 13px; cursor: pointer; }
+.recall[hidden] { display: none; }
+.recall:hover { background: var(--blood); color: #fff; }
+.check input { width: 18px; height: 18px; accent-color: var(--ink); margin: 0; }
+.stock-rate b { color: var(--ink); font-weight: 600; }
+.tab-hint { margin: 8px 0 10px; min-height: 1.5em; }
+.signal {
+  width: 100%; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  background: var(--slab); color: var(--hazard); border: 2px solid var(--hazard); padding: 12px 14px;
+  cursor: pointer; font-weight: 600; animation: blink 1s steps(2, start) infinite;
+}
+.signal[hidden] { display: none; }
+/* 구역 목표 */
+.goal-list { margin: 0 0 10px; padding: 0; list-style: none; }
+.goal-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+.goal-list li:first-child { border-top: 0; }
+.goal-list li .track { grid-column: 1 / -1; }
+.goal-list li.done { color: var(--safe); }
+.goal-list li.done .track > i { background: var(--safe); }
+.open-zone { margin-bottom: 10px; }
+.open-zone[hidden], .trade[hidden], .soon[hidden], .zone-pane[hidden] { display: none; }
+/* 2구역 거래 */
+.trade { margin: 4px 0 12px; padding: 10px; border: 2px solid var(--ink); background: var(--paper); }
+.trade-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; margin-bottom: 10px; }
+.trade-price { font: 400 34px/1 var(--font-display); }
+.trade-price.high { color: var(--safe); }
+.trade-price.low { color: var(--blood); }
+.trade-goods .num { font-size: 15px; margin: 2px 0 4px; }
+.sell { margin-bottom: 8px; }
+.trait-reset { margin-top: 10px; }
+.tabbar button[data-locked] { opacity: .5; }
+/* 사건 단추: 구조 신호와 구분되게 어두운 바탕 */
+.event-btn { background: var(--slab); color: var(--on-slab); animation: none; }
+.event-title { margin: 6px 0 8px; font: 400 24px/1.25 var(--font-display); color: #e6e5db; }
+.event-later { margin-top: 12px; padding: 8px 12px; width: 100%; background: transparent; color: #b9b8ae; border: 1px dashed #77786c; font: 500 14px var(--font-body); cursor: pointer; }
+.perk-list .sync-pick[disabled] { opacity: .45; cursor: not-allowed; }
+.perk-list .sync-pick .pick-default { margin-left: 8px; padding: 0 5px; font: 600 11px/1.7 var(--font-body); background: #f0b400; color: #17180f; vertical-align: 2px; }
+/* 생존자 배치 */
+.job { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 2px; border-top: 1px solid var(--rule); }
+.job:first-child { border-top: 0; }
+.job-name { font-weight: 600; }
+.job-name span { margin-left: 8px; font: 500 12px var(--font-mono); color: var(--ink-soft); }
+.job-desc { grid-column: 1; font-size: 13px; color: var(--ink-soft); }
+.job-ctl { grid-row: 1 / span 2; grid-column: 2; display: flex; align-items: center; gap: 8px; }
+.job-ctl b { min-width: 28px; text-align: center; font: 600 20px var(--font-mono); }
+.job-ctl button { width: 40px; height: 40px; font: 600 20px/1 var(--font-mono); background: var(--paper); color: var(--ink); border: 2px solid var(--ink); cursor: pointer; }
+.job-ctl button[disabled] { opacity: .35; cursor: not-allowed; }
+.relocate.cycle { margin-top: 12px; }
+.relocate.cycle[hidden], #cycle-hint[hidden] { display: none; }
+.signal-main { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+.signal-main small { font-weight: 500; font-size: 12px; opacity: .9; }
+/* 다음 할 일 옆의 바로 가기 단추 */
+.goal > span:not(.label) { flex: 1 1 auto; min-width: 0; }
+.goal-go { flex: none; align-self: center; padding: 3px 9px; font: 600 12px/1.5 var(--font-body); background: var(--hazard); color: var(--on-hazard); border: 1px solid var(--ink); cursor: pointer; }
+.goal-go[hidden] { display: none; }
+/* 도움말 */
+.help-h { margin: 4px 0 6px; font: 600 14px/1.4 var(--font-body); }
+.help-steps { margin: 0 0 14px; padding: 0; list-style: none; font-size: 14px; line-height: 1.6; }
+.help-steps li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; padding: 3px 0; color: var(--ink-soft); }
+.help-steps li::before { content: '□'; font-family: var(--font-mono); }
+.help-steps li.done { text-decoration: line-through; opacity: .6; }
+.help-steps li.done::before { content: '■'; }
+.help-steps li.now { color: var(--ink); font-weight: 600; }
+.help-steps li.now::before { content: '▶'; }
+@keyframes blink { 50% { background: var(--blood); color: #fff; border-color: var(--blood); } }
+.exped-rows { margin-top: 14px; }
+.info-row { display: flex; flex-direction: column; gap: 2px; padding: 9px 8px; border-top: 1px solid var(--rule); color: var(--ink-soft); }
+.info-row:first-child { border-top: 2px solid var(--ink); }
+.info-row b { font-size: 16px; }
+.info-row span { font-size: 13px; }
+.info-on { color: var(--ink); }
+.info-on b::after { content: ' · 보유'; font: 600 12px var(--font-body); color: var(--safe); }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 20px; margin-bottom: 20px; align-items: start; }
+@media (max-width: 820px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ach { border: 1px dashed var(--ink-soft); padding: 7px 9px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 1px; }
+.ach b { font-size: 14px; }
+.ach span { font-size: 12px; line-height: 1.35; }
+.ach-on { border: 2px solid var(--ink); background: var(--hazard); color: var(--on-hazard); padding: 6px 8px; }
+.skin { display: inline-flex; margin-top: 8px; }
+.skin { border-width: 1px; }
+.skin button { font: 600 12px/1.4 var(--font-body); padding: 3px 10px; color: var(--ink-soft); }
+.skin button + button { border-left-width: 1px; }
+.skin button[aria-pressed="true"] { color: var(--paper); }
+
+/* 이주 */
+.relocate { width: 100%; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); padding: 12px; cursor: pointer; font-weight: 600; }
+.relocate:disabled { background: transparent; color: var(--ink-soft); border-style: dashed; cursor: default; }
+.relocate[data-armed] { background: var(--blood); border-color: var(--blood); color: #fff; }
+
+/* 무전 로그 */
+.log { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; font-size: 13.5px; }
+.log li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid var(--rule); }
+.log li:first-child { border-top: 2px solid var(--ink); }
+.log-day { font: 500 12px/1.7 var(--font-mono); color: var(--ink-soft); }
+.log-good .log-text { color: var(--safe); font-weight: 500; }
+.log-bad .log-text { color: var(--blood); font-weight: 600; }
+
+/* 기록 보관 */
+.foot { max-width: 1280px; margin: 0 auto; padding: 0 20px 32px; }
+.save-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.save-actions button { background: transparent; border: 2px solid var(--ink); padding: 6px 12px; cursor: pointer; font-weight: 500; }
+.save-actions button:hover { background: var(--ink); color: var(--paper); }
+.save-actions .danger { border-color: var(--blood); color: var(--blood); margin-left: auto; }
+.save-actions .danger:hover, .save-actions .danger[data-armed] { background: var(--blood); color: #fff; }
+#save-code { width: 100%; margin-top: 10px; min-height: 56px; resize: vertical; background: transparent; border: 1px solid var(--ink); padding: 8px; font: 500 12px/1.4 var(--font-mono); color: var(--ink); }
+.save-msg { margin: 8px 0 0; font-size: 13px; min-height: 1.5em; color: var(--ink-soft); }
+.save-bad { color: var(--blood); font-weight: 600; }
+
+/* 기록 영역: 탭으로 고른 패널 하나만 보인다 */
+.record-tabs { margin-bottom: 14px; }
+.foot .two, .foot .foot-block { display: contents; }
+.foot [data-rpane] { display: none; }
+.foot[data-rtab="journal"] [data-rpane="journal"], .foot[data-rtab="radio"] [data-rpane="radio"], .foot[data-rtab="stats"] [data-rpane="stats"], .foot[data-rtab="notes"] [data-rpane="notes"], .foot[data-rtab="help"] [data-rpane="help"], .foot[data-rtab="save"] [data-rpane="save"] { display: block; }
+.journal { max-height: none; }
+/* 패치노트 */
+.notes { display: flex; flex-direction: column; }
+.note { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 20px; padding: 14px 0; border-top: 1px solid var(--rule); }
+.note:first-child { border-top: 2px solid var(--ink); }
+.note-ver { font: 400 22px/1.1 var(--font-display); }
+.note-date { font: 500 12px/1.6 var(--font-mono); color: var(--ink-soft); }
+.note-title { grid-column: 2; grid-row: 1; margin: 0; font-weight: 600; font-size: 16px; }
+.note ul { grid-column: 2; margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.65; max-width: 70ch; }
+.note-now .note-ver::after { content: '현재'; margin-left: 8px; padding: 1px 6px; font: 600 11px/1.6 var(--font-body); background: var(--hazard); color: var(--on-hazard); vertical-align: 4px; }
+@media (max-width: 640px) { .note { grid-template-columns: minmax(0, 1fr); } .note-title, .note ul { grid-column: 1; grid-row: auto; } }
+
+/* 방어 안내: 무엇을 사면 되는지와 한 번에 보강하는 버튼, 앞으로의 밤 예고 */
+.fortify { width: 100%; margin-top: 10px; background: var(--blood); color: #fff; border: 2px solid var(--blood); padding: 10px 12px; font-weight: 600; cursor: pointer; }
+.fortify[hidden] { display: none; }
+.fortify:disabled { background: transparent; color: var(--ink-soft); border: 2px dashed var(--ink-soft); cursor: default; }
+.forecast { padding-top: 10px; border-top: 1px solid var(--rule); }
+
+/* 지구 과제 */
+.quest-text { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
+#quest-bar { background: var(--hazard); }
+.quest-foot { margin: 8px 0 0; }
+.quest-foot .num { font-size: 14px; }
+.pill-idle { color: var(--ink-soft); }
+.pill-siege { color: var(--on-hazard); background: var(--hazard); border-color: var(--hazard); }
+.stats .stat-small { font-size: 15px; }
+
+/* 다음 할 일, 살 수 있음 표시, 알림 쪽지, 버전 */
+.goal { display: flex; gap: 10px; align-items: baseline; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 14px; font-weight: 500; }
+.goal .label { flex: none; }
+.avail::after { content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 5px; background: var(--safe); vertical-align: 1px; }
+
+.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 15; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
+.toast { background: var(--slab); color: var(--on-slab); border-left: 6px solid var(--hazard); padding: 9px 14px; font-size: 14px; max-width: min(340px, calc(100vw - 32px)); animation: toast 4.2s forwards; }
+@keyframes toast { 0% { transform: translateY(8px); opacity: 0; } 6%, 88% { transform: none; opacity: 1; } 100% { opacity: 0; } }
+.ver { margin: 10px 0 0; font-size: 12px; color: var(--ink-soft); }
+
+/* 일지 연출: 화면을 어둡게 덮고 글을 한 자씩 찍는다. 게임은 뒤에서 계속 진행된다 */
+.story-veil { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(10, 11, 7, .86); animation: veil .35s ease-out; }
+.story-veil[hidden] { display: none; }
+@keyframes veil { from { opacity: 0; } }
+.story-card { width: min(100%, 520px); display: flex; flex-direction: column; gap: 14px; color: #e6e5db; }
+.story-card .label { color: #f0b400; font-size: 13px; }
+.story-card p { margin: 0; min-height: 6.4em; font-size: 19px; line-height: 1.7; }
+.story-card p::after { content: '▌'; margin-left: 2px; animation: caret 1s steps(2, start) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+.story-card button { align-self: flex-end; background: #f0b400; color: #17180f; border: 2px solid #f0b400; padding: 8px 22px; font-weight: 600; cursor: pointer; }
+.story-card button:focus-visible { outline-color: #e6e5db; }
+
+/* 저장 선택 화면: 일지 연출과 같은 어두운 덮개를 쓴다 */
+#sync { z-index: 26; }
+#standby { z-index: 25; }
+#confirm { z-index: 24; }
+.confirm-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.story-card .confirm-actions button { align-self: auto; }
+#confirm-no { background: transparent; color: #e6e5db; border-color: #e6e5db; }
+.story-card .confirm-danger { background: #d8493c; border-color: #d8493c; color: #fff; }
+#perk { z-index: 22; }
+.perk-list { display: flex; flex-direction: column; gap: 10px; }
+.story-card .perk-list .sync-pick { background: transparent; color: #e6e5db; border-color: #e6e5db; }
+.story-card .perk-list .sync-pick:hover, .story-card .perk-list .sync-pick:focus-visible { background: #f0b400; color: #17180f; border-color: #f0b400; }
+.perk-list .sync-pick b::after { content: attr(data-lv); margin-left: 8px; font: 500 12px var(--font-mono); opacity: .8; }
+.ach.perk-on { border: 2px solid var(--ink); color: var(--ink); padding: 6px 8px; }
+.ach.perk-on b::after { content: attr(data-lv); margin-left: 6px; font: 600 12px var(--font-mono); color: var(--safe); }
+.story-card .standby-info { font: 500 13px/1.5 var(--font-mono); color: #f0b400; }
+#standby-take { align-items: center; font-size: 17px; font-weight: 600; }
+#standby-take:disabled { opacity: .6; cursor: default; }
+.story-card .sync-q { min-height: 0; font-size: 16px; }
+.story-card .sync-q::after { content: none; }
+.story-card .sync-pick { align-self: stretch; display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 12px 16px; }
+.story-card .sync-pick b { font-size: 17px; }
+.story-card .sync-pick span { font: 500 13px/1.5 var(--font-mono); }
+#sync-use-local { background: transparent; color: #e6e5db; border-color: #e6e5db; }
+
+/* ---------- 폰: 페이지 스크롤 없이 한 화면 ----------
+   위쪽(제목 줄, 도트 화면, 물자와 수색 버튼)은 고정하고, 아래 한 칸에 네 가지 보기 중 하나만 띄운다.
+   목록이 긴 보기는 그 칸 안에서만 스크롤된다. 데스크톱에서는 .mv 가 display: contents 라 영향이 없다. */
+.mv { display: contents; }
+.m-only, .mnav { display: none; }
+.stock-rates { display: flex; flex-direction: column; }
+.theme-row { align-items: center; margin-top: 12px; }
+.theme-row .qty button { font: 600 13px/1.4 var(--font-body); padding: 4px 12px; border: 0; }
+.theme-row .qty button:hover { background: transparent; color: inherit; }
+.theme-row .qty button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+@media (max-width: 640px) {
+  html, body { height: 100%; }
+  body { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr) auto; overflow: hidden; }
+  .update-bar { grid-row: 1; padding: 8px 12px; font-size: 13px; }
+  .tape { grid-row: 2; height: 6px; }
+  .mast { grid-row: 3; padding: 6px 12px; border-bottom-width: 2px; flex-wrap: nowrap; align-items: center; }
+  .mast > div:first-child { display: flex; align-items: center; gap: 10px; }
+  .mast h1 { font-size: 22px; white-space: nowrap; }
+  .mast-sub, .skin-mast, .brief { display: none; }
+  .route { margin: 0; gap: 2px; }
+  .route li { width: 16px; height: 16px; font-size: 9px; border-width: 1px; }
+  .dplus { display: flex; align-items: baseline; gap: 8px; }
+  .dplus-num { font-size: 24px; }
+  .dplus-sub { font-size: 11px; letter-spacing: 0; white-space: nowrap; }
+  .grid, .col-main { display: contents; }
+  .scene-wrap { grid-row: 4; margin: 8px 12px 0; height: 124px; } /* 거점 건물의 지붕까지 보이도록 104 에서 키웠다 */
+  .notice { grid-row: 5; margin: 8px 12px 0; padding: 6px 10px; font-size: 13px; }
+  .stock-panel { grid-row: 6; margin: 8px 12px 0; padding: 10px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: end; }
+  .stock-panel > .label { display: none; }
+  .stock-num { font-size: 32px; }
+  .stock-rates { text-align: right; font-size: 13px; }
+  .stock-rate { margin-top: 0; }
+  #scavenge-wrap, .signal { grid-column: 1 / -1; margin-top: 8px; }
+  .scavenge { padding: 12px 14px; font-size: 22px; }
+  [data-view] { grid-row: 7; display: none; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px 12px; flex-direction: column; gap: 10px; }
+  body[data-mview="base"] [data-view="base"], body[data-mview="manage"] [data-view="manage"],
+  body[data-mview="exped"] [data-view="exped"], body[data-mview="record"] [data-view="record"] { display: flex; }
+  .foot { max-width: none; margin: 0; }
+  .record-tabs { margin-bottom: 0; }
+  .foot-block { margin: 0; }
+  .story-card p { font-size: 17px; }
+  .panel { padding: 12px; }
+  .log, .journal { max-height: none; }
+  .m-only { display: block; }
+  .m-story { margin: 4px 0 0; font-size: 14px; line-height: 1.55; }
+  .mnav { grid-row: 8; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink); background: var(--paper); }
+  .mnav button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; background: transparent; border: 0; border-top: 3px solid transparent; padding: 7px 4px 8px; font: 600 12px/1 var(--font-body); color: var(--ink-soft); cursor: pointer; }
+  .mnav button + button { border-left: 1px solid var(--rule); }
+  .mnav button[aria-pressed="true"] { color: var(--ink); border-top-color: var(--hazard); background: var(--concrete); }
+  .mnav .ico { width: 20px; height: 20px; fill: currentColor; }
+  .mnav .alert::after, .mnav .avail::after { position: absolute; top: 6px; left: calc(50% + 9px); margin: 0; }
+  /* 세로가 짧은 폰: 도트 화면을 낮춰 아래 보기 칸을 넓힌다 */
+  @media (max-height: 700px) { .scene-wrap { height: 84px; } .scavenge { padding: 9px 14px; font-size: 20px; } .stock-num { font-size: 28px; } }
+  .toasts { right: 12px; left: 12px; bottom: 62px; align-items: stretch; }
+  .tabbar button { padding-left: 5px; padding-right: 5px; font-size: 13px; }
+  .toast { max-width: none; }
+  .toast:not(:last-child) { display: none; } /* 좁은 화면에서는 가장 최근 쪽지 하나만 보여 화면을 가리지 않게 한다 */
+  .mnav .avail::after { width: 8px; height: 8px; }
+  .mnav .alert::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 6px; background: var(--blood); vertical-align: 1px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .shake, .pop, .signal, .story-veil, .story-card p::after { animation: none; }
+  .toast { animation: toast-still 4.2s forwards; }
+  @keyframes toast-still { 0%, 95% { opacity: 1; } 100% { opacity: 0; } } .scavenge { transition: none; } }
+</style>
+</head>
+<body data-mview="base">
+<div class="update-bar" id="update-bar" role="status" hidden>
+  <p id="update-text"></p>
+  <button type="button" id="update-now">지금 업데이트</button>
+  <button type="button" class="update-later" id="update-later">나중에</button>
+</div>
+<div class="tape" aria-hidden="true"></div>
+<header class="mast">
+  <div>
+    <h1>7구역</h1>
+    <p class="mast-sub">“생존자는 7구역으로 오라”</p>
+    <ol class="route" id="route" aria-label="지나온 구역"></ol>
+  </div>
+  <div class="dplus">
+    <div class="dplus-num"><small>D+</small><span id="day">001</span></div>
+    <div class="dplus-sub" id="base-no">1구역 주택가</div>
+    <div class="qty skin skin-mast" role="group" aria-label="화면 테마와 소리">
+      <button type="button" data-skin-set="light" aria-pressed="true">라이트</button>
+      <button type="button" data-skin-set="dark" aria-pressed="false">다크</button>
+      <button type="button" data-sound-toggle aria-pressed="true">소리 켬</button>
+    </div>
+  </div>
+</header>
+
+<main class="grid">
+  <section class="brief" aria-labelledby="zone-name">
+    <div>
+      <div class="label">가장 멀리 연 구역</div>
+      <b id="zone-name">1구역 주택가</b>
+      <span id="zone-trait"></span>
+    </div>
+    <div>
+      <div class="label">최근 일지</div>
+      <p id="story-latest"></p>
+      <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
+    </div>
+  </section>
+  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas></div>
+  <div class="col col-main">
+    <div class="notice" id="notice" role="status" hidden>
+      <p id="notice-text"></p>
+      <button type="button" id="notice-close">닫기</button>
+    </div>
+
+    <section class="panel stock-panel" aria-labelledby="h-stock">
+      <div class="label" id="h-stock">보유 물자</div>
+      <div class="stock-num" id="supplies">0</div>
+      <div class="stock-rates">
+        <div class="stock-rate num" id="pps">초당 +0</div>
+        <div class="stock-rate num">항체 샘플 <b id="antibodies">0</b></div>
+      </div>
+      <div id="scavenge-wrap">
+        <button type="button" class="scavenge" id="scavenge">
+          <span>잔해 수색</span><span class="num" id="click-value">+1</span>
+        </button>
+      </div>
+      <button type="button" class="signal" id="signal" hidden>
+        <span class="signal-main"><b>구조 신호 수신 · 응답하기</b><small id="signal-gain"></small></span><span class="num" id="signal-left">20초</span>
+      </button>
+    </section>
+
+    <div class="mv" data-view="base">
+    <section class="panel m-only" aria-label="현재 위치와 최근 일지">
+      <div class="label" id="m-zone-trait"></div>
+      <p class="m-story" id="m-story"></p>
+      <div class="goal"><span class="label">다음 할 일</span><span id="m-goal"></span><button type="button" class="goal-go" id="m-goal-go" hidden>바로 가기</button></div>
+    </section>
+    <section class="panel" id="night" aria-labelledby="h-night">
+      <div class="panel-head">
+        <h2 id="h-night">오늘 밤</h2>
+        <span class="pill" id="night-pill">방벽 위험</span>
+      </div>
+      <div class="timer-row" id="night-timer-row"><span class="label" id="night-timer-label">무리 도착까지</span><span class="num" id="night-timer">0:50</span></div>
+      <div class="track"><i id="day-bar"></i></div>
+      <div class="versus">
+        <span class="label">무리 규모</span><div class="track"><i id="horde-bar"></i></div><span class="num" id="horde-strength">8</span>
+        <span class="label">방어력</span><div class="track"><i id="defense-bar"></i></div><span class="num" id="defense-power">5</span>
+      </div>
+      <p class="hint" id="night-hint"></p>
+      <button type="button" class="fortify" id="fortify" hidden></button>
+    </section>
+    <section class="panel" aria-labelledby="h-retreat">
+      <div class="panel-head"><h2 id="h-retreat">철수</h2><span class="label" id="retreat-count"></span></div>
+      <button type="button" class="relocate" id="retreat" disabled>아직 철수할 수 없다</button>
+      <p class="hint" id="retreat-hint"></p>
+    </section>
+    </div>
+  </div>
+
+  <div class="col" data-view="manage">
+    <section class="panel" aria-labelledby="h-build">
+      <div class="panel-head">
+        <h2 id="h-build">구역</h2>
+        <div class="qty" id="qty" role="group" aria-label="한 번에 살 수량">
+          <button type="button" data-qty="1" aria-pressed="true">×1</button>
+          <button type="button" data-qty="10" aria-pressed="false">×10</button>
+          <button type="button" data-qty="max" aria-pressed="false">최대</button>
+        </div>
+      </div>
+      <div class="tabbar even" id="zone-tabs" role="group" aria-label="구역 고르기"></div>
+      <p class="hint tab-hint" id="tab-hint"></p>
+      <div class="trade" id="trade" hidden>
+        <div class="trade-top">
+          <div><div class="label">지금 시세</div><div class="trade-price num" id="price">×1.00</div><div class="label" id="price-range"></div></div>
+          <div class="trade-goods"><div class="label">쌓인 상품</div><div class="num" id="goods">0 / 0</div><div class="track"><i id="goods-bar"></i></div><div class="label" id="price-next"></div></div>
+        </div>
+        <button type="button" class="fortify sell" id="sell">상품이 없다</button>
+        <label class="check" for="auto-sell"><input type="checkbox" id="auto-sell"> 창고가 차면 알아서 판다</label>
+      </div>
+      <div class="zone-pane" id="pane-goals">
+        <ul class="goal-list" id="goals"></ul>
+        <button type="button" class="fortify open-zone" id="open-zone" hidden></button>
+      </div>
+      <div class="rows" id="rows-z0"></div>
+      <div class="rows" id="rows-z1" hidden></div>
+      <div class="rows" id="rows-wall" hidden></div>
+      <p class="hint soon" id="soon" hidden></p>
+    </section>
+  </div>
+
+  <div class="col" data-view="exped">
+    <section class="panel" aria-labelledby="h-traits">
+      <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label" id="trait-points">항체 샘플 0</span></div>
+      <p class="hint">항체 샘플로 찍는다. 철수해도 남는다. 되돌리면 쓴 샘플을 모두 돌려받는다.</p>
+      <div class="rows" id="traits"></div>
+      <button type="button" class="recall trait-reset" id="trait-reset">특성 되돌리기</button>
+    </section>
+    <section class="panel" aria-labelledby="h-perks">
+      <div class="panel-head"><h2 id="h-perks">이번 판의 특전</h2><span class="label" id="perk-count">0장</span></div>
+      <p class="hint">구역의 목표를 달성할 때마다 셋 중 하나를 고른다. 철수하면 사라진다.</p>
+      <ul class="stats-list" id="perks"></ul>
+    </section>
+  </div>
+</main>
+
+<footer class="foot" id="record" data-view="record" data-rtab="journal">
+  <div class="tabbar record-tabs" role="group" aria-label="기록 항목">
+    <button type="button" data-rtab-set="journal" aria-pressed="true">일지</button>
+    <button type="button" data-rtab-set="radio" aria-pressed="false">무전</button>
+    <button type="button" data-rtab-set="stats" aria-pressed="false">통계</button>
+    <button type="button" data-rtab-set="notes" aria-pressed="false">패치</button>
+    <button type="button" data-rtab-set="help" aria-pressed="false">도움말</button>
+    <button type="button" data-rtab-set="save" aria-pressed="false">설정</button>
+  </div>
+  <section class="panel" data-rpane="journal" aria-labelledby="h-journal">
+    <div class="panel-head"><h2 id="h-journal">생존 일지</h2><span class="label" id="journal-count">0 / 0</span></div>
+    <ol class="journal" id="journal"></ol>
+  </section>
+  <section class="panel" data-rpane="radio" aria-labelledby="h-log">
+    <div class="panel-head"><h2 id="h-log">무전 로그</h2></div>
+    <ul class="log" id="log" aria-live="polite"></ul>
+  </section>
+  <section class="panel" data-rpane="notes" aria-labelledby="h-notes">
+    <div class="panel-head"><h2 id="h-notes">패치노트</h2><span class="label" id="notes-current"></span></div>
+    <div class="notes" id="notes"></div>
+  </section>
+  <section class="panel" data-rpane="stats" aria-labelledby="h-stats">
+    <div class="panel-head"><h2 id="h-stats">통계</h2><span class="label">시간은 게임이 진행된 시간 기준</span></div>
+    <dl class="stats" id="stats-grid"></dl>
+    <h3 class="stats-h">지난 판</h3>
+    <ul class="stats-list" id="stats-runs"></ul>
+  </section>
+  <section class="panel" data-rpane="help" aria-labelledby="h-help">
+    <div class="panel-head"><h2 id="h-help">도움말</h2></div>
+    <div class="notes" id="help"></div>
+  </section>
+  <section class="panel" data-rpane="save" aria-labelledby="h-save">
+    <div class="panel-head"><h2 id="h-save">기록 보관</h2><span class="label" id="cloud-status">10초마다 이 브라우저에 자동 저장</span></div>
+    <div class="save-actions">
+      <button type="button" id="save-now">지금 저장</button>
+      <button type="button" id="export">저장 코드 복사</button>
+      <button type="button" id="import">저장 코드 불러오기</button>
+      <button type="button" class="danger" id="reset">처음부터 다시</button>
+    </div>
+    <div class="save-actions theme-row">
+      <span class="label">화면 테마</span>
+      <div class="qty" role="group" aria-label="화면 테마">
+        <button type="button" data-skin-set="light" aria-pressed="true">라이트</button>
+        <button type="button" data-skin-set="dark" aria-pressed="false">다크</button>
+      </div>
+      <span class="label">효과음</span>
+      <div class="qty"><button type="button" data-sound-toggle aria-pressed="true">소리 켬</button></div>
+    </div>
+    <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
+    <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
+    <p class="save-msg" id="save-msg" role="status"></p>
+    <p class="ver">7구역 알파 0.6.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+  </section>
+</footer>
+
+<div class="story-veil" id="sync" role="dialog" aria-modal="true" aria-labelledby="sync-title" hidden>
+  <div class="story-card">
+    <div class="label" id="sync-title">이 기기와 계정 저장의 진행이 다릅니다</div>
+    <p class="sync-q">어느 쪽으로 이어서 할지 골라 주세요. 고르지 않은 쪽의 진행은 사라집니다.</p>
+    <button type="button" class="sync-pick" id="sync-use-remote"><b>계정에 저장된 진행</b><span id="sync-remote"></span></button>
+    <button type="button" class="sync-pick" id="sync-use-local"><b>이 기기의 진행</b><span id="sync-local"></span></button>
+  </div>
+</div>
+
+<div class="story-veil" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text" hidden>
+  <div class="story-card">
+    <div class="label" id="confirm-title"></div>
+    <p class="sync-q" id="confirm-text"></p>
+    <div class="confirm-actions">
+      <button type="button" id="confirm-no"></button>
+      <button type="button" class="confirm-danger" id="confirm-yes"></button>
+    </div>
+  </div>
+</div>
+
+<div class="story-veil" id="perk" role="dialog" aria-modal="true" aria-labelledby="perk-title" hidden>
+  <div class="story-card">
+    <div class="label" id="perk-title">특전</div>
+    <p class="sync-q" id="perk-lead"></p>
+    <div class="perk-list" id="perk-list"></div>
+  </div>
+</div>
+
+<div class="story-veil" id="event" role="dialog" aria-modal="true" aria-labelledby="event-title" hidden>
+  <div class="story-card">
+    <div class="label">사건 · <span id="event-left"></span></div>
+    <h2 class="event-title" id="event-title"></h2>
+    <p class="sync-q" id="event-text"></p>
+    <div class="perk-list" id="event-list"></div>
+    <button type="button" class="event-later" id="event-later">나중에 고른다</button>
+  </div>
+</div>
+
+<div class="story-veil" id="standby" role="dialog" aria-modal="true" aria-labelledby="standby-title" hidden>
+  <div class="story-card">
+    <div class="label" id="standby-title">다른 기기에서 진행 중입니다</div>
+    <p class="sync-q">7구역은 한 번에 한 기기에서만 진행됩니다. 여기서 이어하면 다른 기기는 멈추고, 그 기기의 진행을 그대로 넘겨받습니다.</p>
+    <p class="sync-q standby-info" id="standby-info"></p>
+    <button type="button" class="sync-pick" id="standby-take">여기서 이어하기</button>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<div class="story-veil" id="story" role="dialog" aria-modal="true" aria-labelledby="story-zone" hidden>
+  <div class="story-card">
+    <div class="label" id="story-zone"></div>
+    <p id="story-text"></p>
+    <button type="button" id="story-close">계속</button>
+  </div>
+</div>
+
+<nav class="mnav" aria-label="화면 전환">
+  <button type="button" data-mview-set="base" id="mnav-base" aria-pressed="true"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 0h5v1H2zM2 1h1v2H2zM6 1h1v2H6zM1 3h7v1H1zM4 4h1v5H4zM3 8h3v1H3z"/></svg><span>상황</span></button>
+  <button type="button" data-mview-set="manage" id="mnav-manage" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h5v3H1zM6 2h2v1H6zM3 4h1v5H3z"/></svg><span>구역</span></button>
+  <button type="button" data-mview-set="exped" id="mnav-exped" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 0h1v9H1zM2 1h5v1H2zM2 2h6v1H2zM2 3h5v1H2zM2 4h4v1H2z"/></svg><span>특성</span></button>
+  <button type="button" data-mview-set="record" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h7v7H1zM2 2v5h2V2zM5 2v5h2V2z"/></svg><span>기록</span></button>
+</nav>
+
+<script>
+/*__VERSION__*/
+</script>
+<script>
+/*__NOTES__*/
+</script>
+<script>
+/*__UPDATE__*/
+</script>
+<script>
+/*__CORE__*/
+</script>
+<script>
+/*__HELP__*/
+</script>
+<script>
+/*__SCENE__*/
+</script>
+<script>
+/*__SOUND__*/
+</script>
+<script>
+/*__UI__*/
+</script>
+</body>
+</html>

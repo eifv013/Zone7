@@ -1,0 +1,40 @@
+{
+  "name": "beyond-the-barricade",
+  "productName": "7구역",
+  "version": "0.6.0",
+  "description": "좀비 세계관 idle 게임",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/core.test.js test/scene.test.js test/sound.test.js test/update.test.js test/help.test.js",
+    "build": "node build.js",
+    "start": "node build.js && electron .",
+    "dist": "node build.js && electron-builder --win portable",
+    "dist:mac": "node build.js && electron-builder --mac dmg",
+    "dist:linux": "node build.js && electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.example.beyondthebarricade",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "dist/index.html"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "icon": "build/icon.png"
+    }
+  }
+}

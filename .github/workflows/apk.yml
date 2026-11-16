@@ -1,0 +1,66 @@
+# 안드로이드 APK 만들기
+#
+# 언제 도는가: android/ 폴더나 이 파일이 바뀌었을 때, 또는 Actions 화면에서 직접 실행했을 때.
+# 게임 내용(docs/)만 바뀐 패치에는 돌지 않는다. 앱은 켤 때 서버에서 새 게임을 받아 가므로 APK 를 다시 만들 필요가 없다.
+#
+# 결과물: Releases 의 "apk" 항목에 zone7.apk 가 올라간다.
+#   받는 주소(항상 같다): https://github.com/eifv013/Zone7/releases/latest/download/zone7.apk
+name: APK 빌드
+
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # Releases 에 APK 를 올리기 위해 필요하다
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: 단위 테스트
+        run: gradle -p android testReleaseUnitTest --no-daemon
+
+      - name: APK 만들기(서명 포함)
+        run: gradle -p android assembleRelease --no-daemon
+
+      - name: 서명 확인
+        run: |
+          set -e
+          cp android/app/build/outputs/apk/release/app-release.apk zone7.apk
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs zone7.apk | head -3
+          ls -la zone7.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zone7-apk
+          path: zone7.apk
+
+      - name: Releases 에 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 항상 같은 이름(apk)으로 갈아 끼운다. 받는 주소가 바뀌지 않게 하기 위해서다.
+          gh release delete apk --yes --cleanup-tag || true
+          gh release create apk zone7.apk --target "$GITHUB_SHA" \
+            --title "7구역 앱 (APK) · 빌드 ${GITHUB_RUN_NUMBER}" \
+            --notes "안드로이드 폰에서 zone7.apk 를 받아 설치한다. 게임 내용은 앱을 켤 때 자동으로 최신이 된다. 이 파일을 다시 받을 일은 앱 껍데기(아이콘 등)가 바뀔 때뿐이다."

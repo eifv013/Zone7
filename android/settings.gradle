@@ -1,0 +1,10 @@
+// 7구역 안드로이드 껍데기 앱. 게임 본체는 들어 있지 않고, 켤 때 GitHub Pages 에서 불러온다.
+pluginManagement {
+    repositories { google(); mavenCentral(); gradlePluginPortal() }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories { google(); mavenCentral() }
+}
+rootProject.name = 'zone7'
+include ':app'

@@ -1,0 +1,1032 @@
+/*
+ * Scene — 도트 화면(게임 상황을 보여 주는 그림 계층)
+ * ------------------------------------------------------------
+ * 게임 규칙에는 전혀 관여하지 않는다. ui.js 가 넘겨주는 view(시간, 구역, 방벽 종류 등)를
+ * 받아 캔버스에 그릴 뿐이고, 여기서 주인공이 물자를 날라도 실제 물자는 변하지 않는다.
+ *
+ * 두 부분으로 나뉜다.
+ *   1) 모델(create / step / poke / night) : DOM 을 모르는 순수 상태 기계. Node 에서 테스트한다.
+ *   2) 그리기(mount / draw)               : 캔버스에 저해상도로 그리고 CSS 가 확대한다.
+ *
+ * view = { t: 하루 진행도 0~1, day: 날짜, zone: 구역 순번 0~6, safe, boss, signal, buff,
+ *          def: { wire, tower, turret, flame, emp, rail } (방벽 종류별 보유 수),
+ *          buildings: { scouts, garden, … } (시설별 보유 수),
+ *          expedition: { elapsed, left } | null (원정 진행 초),
+ *          battle: 무리가 도착해 싸우는 중인지(없으면 해 질 녘 전체를 싸움으로 본다),
+ *          horde: 그 구역 무리의 성격 id('walker', 'swarm', 'plated', 'runner', 'patient', 'gather', 'drawn'),
+ *          surge: 오늘이 떼로 몰려오는 밤인지,
+ *          zoneBuilding / zoneDefense: 이 구역 고유 시설·방벽의 보유 수,
+ *          research / upgrades / gear: 끝낸 연구, 산 수색 장비, 제작 레벨(거점에 소품과 사람으로 나타난다) }
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Scene = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  /* ---------- 배치 상수(저해상도 픽셀 단위) ---------- */
+  var H = 80;            // 화면 높이(폭은 화면 크기에 따라 달라진다)
+  var GROUND = 64;       // 땅의 y 좌표(발이 닿는 곳)
+  var WALL_X = 84;       // 좁은 화면(폰)의 방벽 위치. 왼쪽이 거점, 오른쪽이 바깥(60 이었으나 거점이 비좁아 넓혔다)
+  var WALL_WIDE = 132;   // 넓은 화면의 방벽 위치
+  var SQUAD_TIME = 8;    // 원정대가 화면을 가로질러 나가거나 들어오는 데 걸리는 시간(초)
+  var FACILITIES = ['scouts', 'garden', 'purifier', 'workshop', 'solar', 'radio', 'bunker', 'lab', 'port', 'district'];
+  var DUSK = 0.72;       // 하루의 이 시점부터 해가 지고 좀비가 나타난다
+  var WALK = 30;         // 주인공 걷는 속도(px/초)
+  var SEARCH_TIME = 1.4; // 잔해 더미 하나를 뒤지는 시간
+  /*
+   * 무리 성격에 따라 달라지는 것(그림 전용. 실제 규모와 보상은 core.js 가 정한다).
+   *   speed : 걷는 속도 배수,  extra : 화면에 더 나오는 수,  bossScale : 변이체의 크기 배수
+   *   hp    : 쓰러지기까지 맞는 발 수(기본 1)
+   *   look  : 옷·몸 색을 바꾸는 표(PAL 의 일부만 덮어쓴다),  hat : 머리 위에 얹는 색(안전모 등)
+   */
+  var HORDES = {
+    walker:  { speed: 1,   extra: 0, bossScale: 2 },
+    swarm:   { speed: 1.1, extra: 2, bossScale: 2 },
+    plated:  { speed: 0.8, extra: 0, bossScale: 2, hp: 2, look: { c: '#7b8186', d: '#4a4f55' }, hat: '#f0b400' },
+    runner:  { speed: 2,   extra: 1, bossScale: 2, look: { c: '#2f4f8f', d: '#17180f' } },
+    patient: { speed: 0.9, extra: 0, bossScale: 2, look: { c: '#d9d8cf', d: '#9fa39c' } },
+    gather:  { speed: 1,   extra: 1, bossScale: 3 },
+    drawn:   { speed: 1.2, extra: 3, bossScale: 2, look: { x: '#e0392b' } }
+  };
+  var SURGE_EXTRA = 5;   // 떼로 몰려오는 밤에 더 나오는 수
+  /** 무리 성격 id 에 해당하는 표. 모르는 값이면 기본(배회자)으로 그린다. */
+  function hordeFor(id) { return Object.prototype.hasOwnProperty.call(HORDES, id) ? HORDES[id] : HORDES.walker; }
+
+  /* ---------- 색 ---------- */
+  function hexToRgb(hex) {
+    var n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  /** 두 색 사이를 k(0~1)만큼 섞는다. 범위를 벗어난 k 는 잘라 낸다. */
+  function lerpColor(a, b, k) {
+    k = Math.max(0, Math.min(1, k));
+    var x = hexToRgb(a), y = hexToRgb(b);
+    var r = Math.round(x[0] + (y[0] - x[0]) * k), g = Math.round(x[1] + (y[1] - x[1]) * k), bl = Math.round(x[2] + (y[2] - x[2]) * k);
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1);
+  }
+  // 하늘 색 열쇠 장면: [시점, 위쪽 색, 아래쪽 색]
+  var SKY = [
+    [0.00, '#7fb0c4', '#d9e3d0'],
+    [0.55, '#7fb0c4', '#d9e3d0'],
+    [0.75, '#b85a36', '#efbd6c'],
+    [0.90, '#10141f', '#2a2f45'],
+    [1.00, '#10141f', '#2a2f45']
+  ];
+  /** 하루 진행도 t 에서의 하늘 색과 어두운 정도(dark: 0 낮 ~ 1 밤). */
+  function skyAt(t) {
+    t = Math.max(0, Math.min(1, typeof t === 'number' && isFinite(t) ? t : 0));
+    for (var i = 1; i < SKY.length; i++) {
+      if (t <= SKY[i][0]) {
+        var a = SKY[i - 1], b = SKY[i], k = (t - a[0]) / ((b[0] - a[0]) || 1);
+        return { top: lerpColor(a[1], b[1], k), bottom: lerpColor(a[2], b[2], k),
+                 dark: Math.max(0, Math.min(1, (t - 0.55) / 0.35)) };
+      }
+    }
+    return { top: SKY[4][1], bottom: SKY[4][2], dark: 1 };
+  }
+
+  /* ---------- 모델 ---------- */
+  function wallFor(W) { return W >= 300 ? WALL_WIDE : WALL_X; }
+  /** 화면 폭 W 에 맞춰 잔해 더미 세 곳의 위치를 정한다(방벽 바깥, 화면 안). */
+  function pilesFor(W, wall) {
+    wall = wall || wallFor(W);
+    var span = Math.max(40, W - wall - 30);
+    return [0.3, 0.57, 0.84].map(function (f) { return Math.round(wall + 14 + span * f); });
+  }
+  function create(W) {
+    W = W > 120 ? Math.floor(W) : 256;
+    var wall = wallFor(W);
+    return {
+      W: W, wall: wall, home: wall - 12, piles: pilesFor(W, wall), time: 0,
+      hero: { x: wall - 12, state: 'home', timer: 0.6, target: 0, carrying: false, boost: 0, face: 1 },
+      zombies: [], spawn: 0, particles: [], flash: 0, flashColor: '#ffffff', shake: 0, delivered: 0,
+      corpses: [], shots: [], raiders: [], fire: 0, turn: 0, bang: 0
+    };
+  }
+  function resize(model, W) {
+    if (!(W > 120) || Math.floor(W) === model.W) return;
+    model.W = Math.floor(W);
+    model.wall = wallFor(model.W);
+    model.home = model.wall - 12;
+    model.piles = pilesFor(model.W, model.wall);
+    // 폭이 바뀌면 걷던 길이 달라지므로 주인공과 좀비를 제자리로 돌려 새로 시작한다
+    model.hero.x = model.home; model.hero.state = 'home'; model.hero.timer = 0.4; model.hero.carrying = false;
+    model.zombies.length = 0; model.corpses.length = 0; model.shots.length = 0; model.raiders.length = 0;
+  }
+  function burst(model, x, y, color, n, rng) {
+    for (var i = 0; i < n && model.particles.length < 120; i++) {
+      model.particles.push({ x: x, y: y, vx: (rng() - 0.5) * 30, vy: -10 - rng() * 28, life: 0.5 + rng() * 0.4, color: color });
+    }
+  }
+
+  /**
+   * 주인공 상태 기계를 dt 만큼 진행한다.
+   *   home → out(더미로 걸어감) → search(뒤짐) → back(물자를 들고 귀환) → home
+   * 해가 지면 하던 일을 멈추고 돌아와 아침까지 거점에 머문다.
+   * 돌려주는 값: 'found'(물자 발견) | 'delivered'(거점에 내려놓음) | null
+   */
+  function stepHero(model, dt, dusk, rng) {
+    var h = model.hero, speed = WALK * (h.boost > 0 ? 2.2 : 1);
+    h.boost = Math.max(0, h.boost - dt);
+    if (dusk && (h.state === 'out' || h.state === 'search')) h.state = 'back';
+    if (h.state === 'home') {
+      if (dusk) return null;
+      h.timer -= dt;
+      if (h.timer <= 0) { h.target = model.piles[Math.floor(rng() * model.piles.length) % model.piles.length]; h.state = 'out'; }
+      return null;
+    }
+    if (h.state === 'out') {
+      h.face = 1;
+      h.x = Math.min(h.target, h.x + speed * dt);
+      if (h.x >= h.target) { h.state = 'search'; h.timer = SEARCH_TIME; }
+      return null;
+    }
+    if (h.state === 'search') {
+      h.timer -= dt * (h.boost > 0 ? 2.2 : 1);
+      if (h.timer > 0) return null;
+      h.carrying = true; h.state = 'back';
+      return 'found';
+    }
+    // back
+    h.face = -1;
+    h.x = Math.max(model.home, h.x - speed * dt);
+    if (h.x > model.home) return null;
+    h.state = 'home'; h.timer = 0.5; h.face = 1;
+    if (!h.carrying) return null;
+    h.carrying = false;
+    model.delivered++;
+    return 'delivered';
+  }
+
+  /** 해 질 녘에 좀비를 화면 오른쪽에서 하나씩 들여보내 방벽 앞까지 걷게 한다. */
+  function stepZombies(model, view, dt, rng) {
+    var dusk = view.t >= DUSK;
+    if (!dusk) { if (view.t < 0.1) model.zombies.length = 0; return; }
+    var kind = hordeFor(view.horde);
+    var want = (view.boss ? 5 : view.safe ? 4 : 8) + kind.extra + (view.surge ? SURGE_EXTRA : 0);
+    // 수가 많은 밤에는 간격을 좁혀 화면 밖으로 줄이 늘어지지 않게 한다
+    var gap = want > 9 ? 4 : 7;
+    model.spawn -= dt;
+    if (model.zombies.length < want && model.spawn <= 0) {
+      var big = !!view.boss && !model.zombies.some(function (z) { return z.big; });
+      model.zombies.push({ x: model.W + 4 + rng() * 12, speed: (9 + rng() * 6) * kind.speed, big: big, look: Math.floor(rng() * 3) % 3,
+        // 다섯에 하나는 기어서 온다. 변이체는 여러 발을 맞아야 쓰러진다
+        crawl: !big && rng() < 0.2, hp: big ? BOSS_HP : (kind.hp || 1), stop: 0, phase: rng() * 6 });
+      model.spawn = (0.5 + rng() * 0.9) / (view.surge ? 2.5 : 1) / kind.speed;
+    }
+    // 쓰러진 자리는 뒤에서 채운다: 방벽에 가까운 순서대로 멈출 자리를 다시 매긴다
+    model.zombies.sort(function (a, b) { return a.x - b.x; });
+    model.zombies.forEach(function (z, i) {
+      z.stop = model.wall + 6 + i * gap;
+      if (z.x > z.stop) z.x = Math.max(z.stop, z.x - z.speed * (z.crawl ? 0.6 : 1) * dt);
+    });
+  }
+
+  /*
+   * 방벽의 사격: 화면에 보이는 싸움일 뿐이고, 밤의 승패는 core.js 가 정한다.
+   *   무기(가진 방어 수단)마다 쏘는 자리와 쓰러뜨리는 모습이 다르다.
+   *   reach : 방벽에서 이 거리 안에 들어온 좀비만 맞힌다. 화면 끝에서 쓰러지면 폰에서는 싸움이 보이지 않으므로
+   *           모든 무기에 사거리를 두어 무리가 방벽 가까이 온 뒤에 쏘게 한다
+   *   death : 맞은 좀비가 쓰러지는 방식 'shot'(뒤로 넘어짐) 'burn'(불탐) 'zap'(감전) 'blast'(터짐)
+   */
+  var WEAPONS = [
+    { id: 'tower',  death: 'shot',  shot: 'bullet', reach: 84, from: function (m) { return [m.wall - 8, GROUND - 34]; } },
+    { id: 'turret', death: 'shot',  shot: 'bullet', reach: 62, from: function (m) { return [m.wall + 6, GROUND - 13]; } },
+    { id: 'flame',  death: 'burn',  shot: 'flame',  reach: 24, from: function (m) { return [m.wall + 5, GROUND - 4]; } },
+    { id: 'emp',    death: 'zap',   shot: 'arc',    reach: 40, from: function (m) { return [m.wall + 2, GROUND - 16]; } },
+    { id: 'rail',   death: 'blast', shot: 'beam',   reach: 110, from: function (m) { return [m.wall + 10, GROUND - 14]; } }
+  ];
+  var BOSS_HP = 8;          // 변이체가 버티는 발 수
+  var CORPSE_TIME = 1.6;    // 쓰러진 좀비가 화면에 남는 시간(초)
+  var CORPSE_MAX = 24;      // 화면에 남기는 시체 수의 상한
+  /** 쓰러진 좀비를 시체 목록으로 옮긴다(상한을 넘으면 가장 오래된 것부터 지운다). */
+  function fell(model, z, death, rng) {
+    model.corpses.push({ x: z.x, big: !!z.big, look: z.look || 0, crawl: !!z.crawl, death: death, life: CORPSE_TIME, total: CORPSE_TIME });
+    if (model.corpses.length > CORPSE_MAX) model.corpses.shift();
+    burst(model, z.x + 3, GROUND - 7, death === 'burn' ? '#e0602b' : death === 'zap' ? '#7fe0f0' : '#7da35a', death === 'blast' ? 14 : z.big ? 12 : 5, rng);
+  }
+  function stepCombat(model, view, dt, rng) {
+    var i;
+    for (i = model.shots.length - 1; i >= 0; i--) { model.shots[i].life -= dt; if (model.shots[i].life <= 0) model.shots.splice(i, 1); }
+    for (i = model.corpses.length - 1; i >= 0; i--) { model.corpses[i].life -= dt; if (model.corpses[i].life <= 0) model.corpses.splice(i, 1); }
+    for (i = model.raiders.length - 1; i >= 0; i--) { var rd = model.raiders[i]; rd.x -= 46 * dt; rd.life -= dt; if (rd.life <= 0 || rd.x < -10) model.raiders.splice(i, 1); }
+    // 사격은 무리가 도착한 뒤(방어 구간)에만 한다. 그 전의 해 질 녘에는 무리가 다가오기만 한다.
+    if (view.battle === undefined ? view.t < DUSK : !view.battle) return;
+    var d = view.def || {};
+    var armed = WEAPONS.filter(function (w) { return d[w.id] > 0; });
+    // 못 막는 밤에는 무리가 방벽을 두드린다(방벽이 가볍게 흔들린다)
+    var atWall = model.zombies.length > 0 && model.zombies[0].x <= model.zombies[0].stop + 0.5;
+    if (!view.safe && atWall) {
+      model.bang -= dt;
+      if (model.bang <= 0) { model.bang = 0.7; model.shake = Math.max(model.shake, 0.12); burst(model, model.wall + 4, GROUND - 8, '#c9c2a3', 3, rng); }
+    }
+    if (!armed.length || !model.zombies.length) return;
+    model.fire -= dt;
+    if (model.fire > 0) return;
+    // 무기 종류가 많을수록 자주 쏜다. 못 막는 밤에는 쓰러뜨리는 속도가 무리를 따라가지 못한다
+    model.fire = Math.max(0.3, 1.5 / armed.length) * (view.safe ? 1 : 2.6);
+    var w = armed[model.turn++ % armed.length];
+    var target = null;
+    for (i = 0; i < model.zombies.length && !target; i++) {
+      var z = model.zombies[i];
+      if (z.x < model.W - 6 && (!w.reach || z.x <= model.wall + w.reach)) target = z;
+    }
+    if (!target) return;
+    var from = w.from(model);
+    model.shots.push({ kind: w.shot, x0: from[0], y0: from[1], x1: target.x + 3, y1: GROUND - (target.crawl ? 3 : 7), life: w.shot === 'beam' ? 0.22 : 0.12 });
+    target.hp -= w.id === 'rail' ? 4 : 1;
+    if (target.hp <= 0) {
+      model.zombies.splice(model.zombies.indexOf(target), 1);
+      fell(model, target, w.death, rng);
+    } else burst(model, target.x + 3, GROUND - 8, '#7da35a', 2, rng);
+  }
+
+  /** 모델 전체를 dt 초 진행한다. 잘못된 dt 는 무시하고, 긴 dt 는 한 번에 0.25초까지만 반영한다. */
+  function step(model, view, dt, rng) {
+    if (!(typeof dt === 'number' && isFinite(dt) && dt > 0)) return null;
+    dt = Math.min(dt, 0.25);
+    rng = typeof rng === 'function' ? rng : Math.random;
+    model.time += dt;
+    var ev = stepHero(model, dt, view.t >= DUSK, rng);
+    if (ev === 'found') burst(model, model.hero.x + 3, GROUND - 6, '#c9c2a3', 5, rng);
+    if (ev === 'delivered') burst(model, model.home - 4, GROUND - 10, '#f0b400', 6, rng);
+    stepZombies(model, view, dt, rng);
+    stepCombat(model, view, dt, rng);
+    model.flash = Math.max(0, model.flash - dt);
+    model.shake = Math.max(0, model.shake - dt);
+    for (var i = model.particles.length - 1; i >= 0; i--) {
+      var p = model.particles[i];
+      p.life -= dt; p.vy += 90 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.life <= 0 || p.y > GROUND) model.particles.splice(i, 1);
+    }
+    return ev;
+  }
+
+  /**
+   * 원정대가 화면에 보이는 위치. 출발 직후에는 방벽에서 오른쪽 끝으로 걸어 나가고,
+   * 귀환 직전에는 오른쪽 끝에서 걸어 들어온다. 그 사이에는 화면 밖이라 null.
+   */
+  function squadAt(model, exp) {
+    if (!exp || !(exp.left >= 0) || !(exp.elapsed >= 0)) return null;
+    var from = model.wall + 8, span = model.W + 14 - from;
+    if (exp.left < SQUAD_TIME) return { x: from + span * (exp.left / SQUAD_TIME), dir: -1 };
+    if (exp.elapsed < SQUAD_TIME) return { x: from + span * (exp.elapsed / SQUAD_TIME), dir: 1 };
+    return null;
+  }
+
+  /**
+   * 그날의 날씨. 날짜와 구역이 같으면 언제나 같은 결과다(새로 고쳐도 날씨가 바뀌지 않게).
+   * 강변(6구역)은 안개가 잦고, 눈은 여정 후반(5구역부터)에만 내린다. 연출일 뿐 수치에는 영향이 없다.
+   */
+  function weatherFor(day, zone) {
+    day = typeof day === 'number' && isFinite(day) ? Math.floor(day) : 1;
+    zone = typeof zone === 'number' && isFinite(zone) ? Math.floor(zone) : 0;
+    var r = seeded(day * 7 + zone * 131)() * 100;
+    var rain = 20, fog = zone === 5 ? 30 : 10, snow = zone >= 4 ? 12 : 0;
+    if (r < rain) return 'rain';
+    if (r < rain + fog) return 'fog';
+    if (r < rain + fog + snow) return 'snow';
+    return 'clear';
+  }
+
+  /** 플레이어가 '잔해 수색'을 눌렀을 때: 주인공이 잠깐 빨라지고, 뒤지는 중이면 곧 끝난다. */
+  function poke(model, rng) {
+    rng = typeof rng === 'function' ? rng : Math.random;
+    var h = model.hero;
+    h.boost = 1.5;
+    if (h.state === 'home') h.timer = 0;
+    burst(model, h.x + 3, GROUND - 8, '#f0b400', 3, rng);
+  }
+
+  /**
+   * 밤의 결과를 연출한다. 막았으면(true) 좀비가 흩어지고, 뚫렸으면(false) 화면이 붉게 흔들린다.
+   * 'held'(농성 중 버틴 밤)는 번쩍임 없이 좀비만 물러난다.
+   */
+  function night(model, defended, rng) {
+    rng = typeof rng === 'function' ? rng : Math.random;
+    model.shots.length = 0;
+    if (defended === 'held') { model.zombies.length = 0; return; }
+    if (defended) {
+      // 막아낸 밤: 남은 무리가 한꺼번에 쓰러진다
+      model.zombies.forEach(function (z) { fell(model, z, z.big ? 'blast' : 'shot', rng); });
+    } else {
+      // 뚫린 밤: 무리가 방벽을 넘어 거점 안으로 달려든다
+      model.zombies.slice(0, 8).forEach(function (z) { model.raiders.push({ x: z.x, look: z.look || 0, big: !!z.big, life: 1.6, phase: z.phase }); });
+      burst(model, model.wall + 2, GROUND - 8, '#7a5a36', 12, rng);
+    }
+    model.zombies.length = 0;
+    model.flash = 0.45;
+    model.flashColor = defended ? '#f5f1dc' : '#b3261a';
+    if (!defended) model.shake = 0.5;
+  }
+
+  /* ---------- 도트 그림 ---------- */
+  // 한 글자가 한 픽셀. '.' 은 투명.
+  var PAL = { h: '#2b241c', s: '#e2b48c', j: '#f0b400', k: '#6b4a2b', p: '#30343c', b: '#17180f',
+              g: '#7da35a', x: '#1b2414', c: '#6f6a60', d: '#3c3a34', e: '#c0392b' };
+  var HERO_TOP = ['..hhh...', '.hhhhh..', '.hsss...', '..sss...', 'kjjjj...', 'kjjjjs..', 'kjjjj...', '.jjjj...'];
+  var HERO_LEGS = [['.pp.pp..', '.pp.pp..', '.bb.bb..'], ['..ppp...', '.pp.pp..', 'bb...bb.']];
+  var HERO_SEARCH = ['........', '........', '..hhh...', '.hhhhh..', 'kjhsss..', 'kjjjjss.', 'kjjjj...', '.jjjjj..', '.pp.pp..', '.bb.bb..', '........'];
+  var ZOMBIE = [
+    ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.ccccgg.', '.cccc...', '.cccc...', '.cccc...', '.dd.dd..', '.dd.dd..', '.dd.dd..'],
+    ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.cccc...', '.ccccgg.', '.cccc...', '.cccc...', '..ddd...', '.dd.dd..', 'dd...dd.']
+  ];
+  // 원정대원: 주인공과 같은 몸에 회색 옷(주인공의 노란 우비와 구별된다)
+  var SQUAD_TOP = HERO_TOP.map(function (row) { return row.replace(/j/g, 'c').replace(/k/g, 'd'); });
+  // 좀비 옷 색 세 가지(같은 무리가 복제된 것처럼 보이지 않게). 각 항목은 PAL 의 일부만 바꾼다.
+  var ZOMBIE_LOOKS = [{}, { c: '#4f5d73', d: '#2a3140' }, { c: '#6b4a3a', d: '#3a2a22' }];
+  /** rows 의 글자를 색으로 바꿔 찍는다. look 을 주면 그 글자들만 다른 색으로 그린다. */
+  function sprite(ctx, rows, x, y, flip, scale, look) {
+    scale = scale || 1;
+    for (var r = 0; r < rows.length; r++) {
+      for (var c = 0; c < rows[r].length; c++) {
+        var ch = rows[r][c];
+        if (ch === '.') continue;
+        ctx.fillStyle = (look && look[ch]) || PAL[ch];
+        var px = flip ? rows[r].length - 1 - c : c;
+        ctx.fillRect(Math.round(x + px * scale), Math.round(y + r * scale), scale, scale);
+      }
+    }
+  }
+  /** 같은 구역이면 언제나 같은 배경이 나오도록 하는 작은 난수기. */
+  function seeded(seed) {
+    var s = (seed * 9301 + 49297) % 233280;
+    return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  }
+
+  /* ---------- 배경 ---------- */
+  /** 하늘: 8단 띠 사이를 점 무늬로 이어 부드럽게 보이게 하고, 해(또는 달과 별)와 흘러가는 구름을 그린다. */
+  function drawSky(ctx, model, view, sky) {
+    var W = model.W, t = model.time, i, x;
+    for (i = 0; i < 8; i++) {
+      ctx.fillStyle = lerpColor(sky.top, sky.bottom, i / 7); ctx.fillRect(0, i * 8, W, 8);
+      if (i === 7) break;
+      ctx.fillStyle = lerpColor(sky.top, sky.bottom, (i + 1) / 7); // 아래 띠의 색을 위 띠 끝에 섞는다
+      for (x = i % 2; x < W; x += 2) ctx.fillRect(x, i * 8 + 7, 1, 1);
+      for (x = (i % 2) * 2; x < W; x += 4) ctx.fillRect(x, i * 8 + 6, 1, 1);
+    }
+    if (sky.dark > 0.6) {
+      var star = seeded(77);
+      ctx.fillStyle = '#e6e5db';
+      for (i = 0; i < 30; i++) { var sx = Math.floor(star() * W), sy = Math.floor(star() * 40); if ((i + Math.floor(t * 2)) % 7) ctx.fillRect(sx, sy, 1, 1); }
+      ctx.fillRect(W - 62, 10, 6, 6);
+      ctx.fillStyle = sky.top; ctx.fillRect(W - 60, 9, 5, 5); // 초승달
+    } else {
+      var k = Math.min(1, view.t / 0.78), sunX = Math.round(70 + (W - 110) * k), sunY = Math.round(8 + 44 * k * k);
+      ctx.fillStyle = 'rgba(255,240,190,0.16)'; ctx.fillRect(sunX - 4, sunY - 4, 15, 15); ctx.fillRect(sunX - 2, sunY - 2, 11, 11); // 햇무리
+      ctx.fillStyle = lerpColor('#fff6c9', '#f08a3c', sky.dark * 1.6); ctx.fillRect(sunX, sunY, 7, 7);
+    }
+    var cl = seeded(31), cloud = lerpColor('#f4f1e4', '#343a52', sky.dark);
+    ctx.globalAlpha = 0.8; ctx.fillStyle = cloud;
+    for (i = 0; i < 5; i++) {
+      var cw = 14 + Math.floor(cl() * 18), cy = 5 + Math.floor(cl() * 22);
+      var cx = Math.floor((cl() * (W + 60) + t * (1.5 + i * 0.6)) % (W + 60)) - 40;
+      ctx.fillRect(cx, cy, cw, 3); ctx.fillRect(cx + 3, cy - 2, cw - 8, 2); ctx.fillRect(cx + 2, cy + 3, cw - 6, 1);
+    }
+    ctx.globalAlpha = 1;
+    if (sky.dark < 0.3) { // 낮에는 까마귀 두 마리가 지나간다
+      ctx.fillStyle = '#17180f';
+      for (i = 0; i < 2; i++) {
+        var bx = Math.floor((t * (9 + i * 3) + i * 90) % (W + 40)) - 20, by = Math.round(12 + i * 7 + Math.sin(t * 2 + i) * 2), up = Math.floor(t * 5 + i) % 2 ? -1 : 1;
+        ctx.fillRect(bx, by + up, 1, 1); ctx.fillRect(bx + 1, by, 1, 1); ctx.fillRect(bx + 2, by + up, 1, 1);
+      }
+    }
+  }
+
+  /**
+   * 건물은 두 겹이다. 먼 겹은 하늘빛에 흐려 놓고(구역마다 모양이 다르다) 가까운 겹은 더 어둡고 낮게 그려
+   * 거리감이 생기게 한다. 그 사이로 전봇대와 늘어진 전선이 지나간다.
+   */
+  function drawSkyline(ctx, model, view, sky) {
+    var W = model.W, wall = model.wall, i, x;
+    var solid = lerpColor('#6c7c80', '#0b0d14', sky.dark);
+    var far = lerpColor(solid, sky.bottom, 0.38), rnd = seeded(view.zone + 3);
+    ctx.fillStyle = far; x = wall + 8;
+    while (x < W) {
+      var bw = 9 + Math.floor(rnd() * 13), bh = 12 + Math.floor(rnd() * (view.zone === 1 ? 8 : view.zone === 6 ? 6 : 26));
+      ctx.fillRect(x, GROUND - bh, bw, bh);
+      if (view.zone === 0) { for (i = 0; i < bw / 2; i++) ctx.fillRect(x + i, GROUND - bh - i - 1, bw - i * 2, 1); }      // 주택가: 박공지붕
+      if (view.zone === 1 && rnd() > 0.3) { ctx.fillStyle = lerpColor('#b8762f', '#1a1410', sky.dark); ctx.fillRect(x - 1, GROUND - bh, bw + 2, 2); ctx.fillStyle = far; } // 시장: 차양
+      if (view.zone === 2 && rnd() > 0.5) ctx.fillRect(x + 2, GROUND - bh - 12, 3, 12);                                    // 공단: 굴뚝
+      if (view.zone === 3 && rnd() > 0.6) ctx.fillRect(x - 3, GROUND - 14, bw + 6, 2);                                     // 환승역: 승강장 지붕
+      if (view.zone === 4 && bh > 22) { ctx.fillStyle = lerpColor('#a8261b', '#3a1310', sky.dark); ctx.fillRect(x + 3, GROUND - bh + 3, 3, 1); ctx.fillRect(x + 4, GROUND - bh + 2, 1, 3); ctx.fillStyle = far; } // 병원: 십자
+      if (rnd() > 0.5) { ctx.fillStyle = sky.bottom; ctx.fillRect(x + 2 + Math.floor(rnd() * (bw - 4)), GROUND - bh, 2, 3); ctx.fillStyle = far; } // 무너진 귀퉁이
+      x += bw + 2 + Math.floor(rnd() * 6);
+    }
+    if (view.zone === 5) { // 강변 검문소: 다리 트러스
+      for (x = wall + 20; x < W; x += 8) ctx.fillRect(x, GROUND - 28 + ((x / 8) % 2 ? 0 : 4), 1, 8);
+      ctx.fillRect(wall + 20, GROUND - 29, W, 1); ctx.fillRect(wall + 20, GROUND - 20, W, 2);
+    }
+    // 송신탑: 구역을 넘어갈수록 가까워져 커진다. 꼭대기의 붉은 불은 항상 깜빡인다.
+    var th = 12 + view.zone * 7, tx = W - 16;
+    ctx.fillStyle = solid;
+    ctx.fillRect(tx, GROUND - th, 1, th);
+    for (i = 4; i < th; i += 5) { var half = Math.ceil((th - i) / 9) + 1; ctx.fillRect(tx - half, GROUND - i, half * 2 + 1, 1); }
+    if (Math.floor(model.time * 1.3) % 2) { ctx.fillStyle = '#e0392b'; ctx.fillRect(tx - 1, GROUND - th - 2, 3, 2); }
+    // 전봇대와 전선(먼 겹과 가까운 겹 사이)
+    var wire = lerpColor('#3a3d38', '#05060a', sky.dark), px, prev = -1;
+    ctx.fillStyle = wire;
+    for (px = wall + 30; px < W + 60; px += 62) {
+      ctx.fillRect(px, GROUND - 24, 1, 24); ctx.fillRect(px - 2, GROUND - 22, 5, 1);
+      if (prev >= 0) for (x = prev; x <= px; x += 2) { var u = (x - prev) / (px - prev); ctx.fillRect(x, Math.round(GROUND - 22 + 16 * u * (1 - u)), 1, 1); } // 늘어진 전선
+      prev = px;
+    }
+    // 가까운 겹: 낮고 어두운 폐허, 깨진 창
+    var near = lerpColor('#4c5a5e', '#06070c', sky.dark), hole = lerpColor('#2e383b', '#020308', sky.dark), r2 = seeded(view.zone + 41);
+    x = wall + 14;
+    while (x < W) {
+      var w2 = 12 + Math.floor(r2() * 16), h2 = 5 + Math.floor(r2() * 11);
+      ctx.fillStyle = near; ctx.fillRect(x, GROUND - h2, w2, h2);
+      if (r2() > 0.4) ctx.fillRect(x + Math.floor(r2() * (w2 - 3)), GROUND - h2 - 2, 3, 2); // 삐죽 남은 벽
+      ctx.fillStyle = hole;
+      for (i = 2; i < w2 - 2; i += 4) if (r2() > 0.35 && h2 > 6) ctx.fillRect(x + i, GROUND - h2 + 2, 2, 2);
+      x += w2 + 6 + Math.floor(r2() * 22);
+    }
+  }
+
+  /** 땅: 거점 안은 흙바닥, 방벽 밖은 보도 턱과 차선이 남은 아스팔트 도로. */
+  function drawGround(ctx, model, view, sky) {
+    var W = model.W, wall = model.wall, i, x, dirt = seeded(11);
+    ctx.fillStyle = lerpColor('#8d8973', '#24251f', sky.dark); ctx.fillRect(0, GROUND, W, H - GROUND);
+    ctx.fillStyle = lerpColor('#77735f', '#1a1b16', sky.dark);
+    for (i = 0; i < 30; i++) ctx.fillRect(Math.floor(dirt() * (wall + 4)), GROUND + 2 + Math.floor(dirt() * 13), 2, 1);
+    ctx.fillStyle = lerpColor('#a09c88', '#2c2d27', sky.dark); ctx.fillRect(wall + 4, GROUND, W, 2);            // 보도 턱
+    ctx.fillStyle = lerpColor('#6a685f', '#191a17', sky.dark); ctx.fillRect(wall + 4, GROUND + 2, W, H - GROUND - 2); // 아스팔트
+    ctx.fillStyle = lerpColor('#57554d', '#111210', sky.dark);
+    for (i = 0; i < W / 4; i++) ctx.fillRect(wall + 6 + Math.floor(dirt() * (W - wall)), GROUND + 3 + Math.floor(dirt() * 12), 1 + Math.floor(dirt() * 3), 1); // 갈라진 자국
+    ctx.fillStyle = lerpColor('#cfc9a8', '#4a4838', sky.dark);
+    for (x = wall + 12; x < W; x += 16) ctx.fillRect(x, GROUND + 9, 7, 1); // 차선
+  }
+
+  /** 길 위의 소품: 버려진 차, 꺼진 가로등, 그리고 구역마다 하나씩 있는 고유 소품. */
+  function drawProps(ctx, model, view, sky) {
+    var d = sky.dark, t = model.time, p = model.piles;
+    function c(day, night) { return lerpColor(day, night, d * 0.9); }
+    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x), GROUND - y - h, w, h); }
+    // 가로등(더미 사이마다)
+    for (var i = 0; i < p.length - 1; i++) {
+      var lx = Math.round((p[i] + p[i + 1]) / 2) + 9;
+      r(c('#3a3d38', '#0a0b0d'), lx, 0, 1, 19); r(c('#3a3d38', '#0a0b0d'), lx - 3, 18, 4, 1); r(c('#c9c2a3', '#33322a'), lx - 4, 17, 2, 1);
+    }
+    // 버려진 차(첫 더미와 둘째 더미 사이)
+    var cx = Math.round((p[0] + p[1]) / 2) - 10;
+    r(c('#7d4f3f', '#241612'), cx, 2, 17, 4); r(c('#7d4f3f', '#241612'), cx + 4, 6, 9, 3);
+    r(c('#2c343a', '#07090b'), cx + 5, 6, 3, 2); r(c('#2c343a', '#07090b'), cx + 9, 6, 3, 2);
+    r('#17180f', cx + 2, 0, 3, 3); r('#17180f', cx + 12, 0, 3, 2); // 바퀴 하나는 주저앉았다
+    // 구역 고유 소품(방벽 바로 밖)
+    var zx = model.wall + 16;
+    if (view.zone === 0) { r(c('#3a3d38', '#0a0b0d'), zx + 1, 0, 1, 5); r(c('#a8261b', '#3a1310'), zx - 1, 5, 5, 4); r(c('#e6e5db', '#55544c'), zx, 7, 3, 1); }           // 주택가: 우체통
+    if (view.zone === 1) { r(c('#8a5a34', '#2a1c11'), zx - 2, 0, 12, 5); for (i = 0; i < 6; i++) r(i % 2 ? c('#e6e5db', '#55544c') : c('#b85a36', '#3a1c11'), zx - 3 + i * 2, 9, 2, 2); r(c('#3a3d38', '#0a0b0d'), zx - 2, 5, 1, 4); r(c('#3a3d38', '#0a0b0d'), zx + 9, 5, 1, 4); } // 시장: 좌판
+    if (view.zone === 2) { for (i = 0; i < 3; i++) { r(c('#f0b400', '#4a3a08'), zx + i * 5, 0, 4, 6); r('#17180f', zx + i * 5, 2, 4, 1); } }                               // 공단: 드럼통
+    if (view.zone === 3) { r(c('#3a3d38', '#0a0b0d'), zx + 3, 0, 1, 14); r(c('#2f4f8f', '#12203c'), zx, 13, 7, 5); r(c('#e6e5db', '#55544c'), zx + 2, 14, 3, 3); r(c('#57554d', '#111210'), zx - 3, 0, 14, 2); } // 환승역: 역 표지와 계단 입구
+    if (view.zone === 4) { r(c('#e6e5db', '#4a4a45'), zx - 2, 2, 16, 7); r(c('#a8261b', '#3a1310'), zx + 3, 4, 4, 1); r(c('#a8261b', '#3a1310'), zx + 4, 3, 2, 3); r(c('#2c343a', '#07090b'), zx + 10, 5, 3, 3); r('#17180f', zx, 0, 3, 3); r('#17180f', zx + 9, 0, 3, 3); } // 병원: 구급차
+    if (view.zone === 5) { r(c('#57554d', '#111210'), zx - 2, 0, 7, 10); r(c('#2c343a', '#07090b'), zx, 5, 3, 3); r(c('#3a3d38', '#0a0b0d'), zx + 7, 0, 1, 8); for (i = 0; i < 7; i++) r(i % 2 ? c('#e6e5db', '#55544c') : c('#a8261b', '#3a1310'), zx + 8 + i * 2, 8 + i, 2, 1); } // 검문소: 초소와 올라간 차단기
+    if (view.zone === 6) { r(c('#57554d', '#111210'), zx - 2, 0, 12, 8); r(c('#2c343a', '#07090b'), zx + 1, 3, 3, 3); r(c('#c9c2a3', '#4a4738'), zx + 5, 8, 6, 1); r(c('#c9c2a3', '#4a4738'), zx + 6, 9, 4, 2); if (Math.floor(t * 2) % 2) r('#e0392b', zx + 7, 11, 1, 1); } // 송신탑: 송신소 건물과 접시
+  }
+
+  /** 화면 맨 앞의 풀 무더기: 가장 어둡게 그려 앞쪽에 있는 것처럼 보이게 한다. */
+  function drawForeground(ctx, model, view, sky) {
+    var g = seeded(53), W = model.W, x = 0;
+    ctx.fillStyle = lerpColor('#39452b', '#0a0d08', sky.dark);
+    while (x < W) {
+      var gh = 1 + Math.floor(g() * 3);
+      ctx.fillRect(x, H - gh, 1, gh); ctx.fillRect(x + 1, H - gh - 1, 1, gh + 1); ctx.fillRect(x + 2, H - gh + 1, 1, Math.max(1, gh - 1));
+      x += 3 + Math.floor(g() * 9);
+    }
+  }
+
+  function drawBackdrop(ctx, model, view, sky) {
+    drawSky(ctx, model, view, sky);
+    drawSkyline(ctx, model, view, sky);
+    drawGround(ctx, model, view, sky);
+    drawProps(ctx, model, view, sky);
+  }
+
+  function drawBase(ctx, model, view, sky) {
+    var d = view.def || {}, t = model.time;
+    var kinds = ['wire', 'tower', 'turret', 'flame', 'emp', 'rail'].filter(function (k) { return d[k] > 0; }).length;
+    var night = sky.dark > 0.5;
+    // 무전 안테나: 구조 신호가 오면 노랗게 깜빡인다
+    ctx.fillStyle = '#17180f'; ctx.fillRect(8, GROUND - 22, 1, 22); ctx.fillRect(6, GROUND - 18, 5, 1);
+    if (view.signal && Math.floor(t * 4) % 2) { ctx.fillStyle = '#f0b400'; ctx.fillRect(7, GROUND - 25, 3, 3); }
+    // 천막: 거점 건물이 서면(1단계부터) 걷는다. 그 자리는 건물 1층의 창고가 된다
+    var i;
+    if (baseStage(Math.max(totalFacilities(view), view.zoneBuilding > 0 ? 1 : 0)) < 1) {
+      ctx.fillStyle = lerpColor('#5d6b4a', '#1e241a', sky.dark);
+      for (i = 0; i < 10; i++) ctx.fillRect(16 + i, GROUND - 1 - i, 22 - i * 2, 1);
+      ctx.fillStyle = '#17180f'; ctx.fillRect(25, GROUND - 6, 4, 6);
+    }
+    // 모닥불(밤에는 주변이 따뜻하게 밝아진다)
+    if (sky.dark > 0.4) {
+      glow(ctx, 42, GROUND - 1, 15, '240,170,70', 0.055, true); // 네모난 빛이 안개처럼 보여서 둥근 빛으로 바꿨다
+    }
+    ctx.fillStyle = '#3c3a34'; ctx.fillRect(40, GROUND - 1, 5, 1);
+    ctx.fillStyle = Math.floor(t * 8) % 2 ? '#f0b400' : '#e0602b'; ctx.fillRect(41, GROUND - 3 - (Math.floor(t * 6) % 2), 3, 3);
+    if (view.buff) { ctx.fillStyle = '#f0b400'; ctx.fillRect(30 + Math.floor(t * 20) % 8, GROUND - 30 + Math.floor(t * 30) % 20, 2, 2); } // 지원 물자 낙하
+    // 방벽: 방어 수단의 종류가 늘수록 높아지고 철판으로 바뀐다
+    var wh = 7 + kinds * 3, wx = model.wall + (model.shake > 0 ? (Math.floor(t * 30) % 2 ? 1 : -1) : 0);
+    var tw = model.wall - 10; // 감시탑 기둥 위치
+    ctx.fillStyle = kinds >= 3 ? lerpColor('#7b8186', '#2c3035', sky.dark) : lerpColor('#7a5a36', '#2a1f14', sky.dark);
+    ctx.fillRect(wx, GROUND - wh, 4, wh);
+    ctx.fillStyle = '#17180f';
+    for (i = 3; i < wh; i += 4) ctx.fillRect(wx, GROUND - i, 4, 1);
+    if (d.wire > 0) { ctx.fillStyle = '#c9c2a3'; for (i = 0; i < 6; i++) ctx.fillRect(wx - 1 + i, GROUND - wh - 1 - (i % 2), 1, 1); }
+    if (d.tower > 0) {
+      ctx.fillStyle = lerpColor('#5b4630', '#1c160f', sky.dark);
+      ctx.fillRect(tw, GROUND - 30, 2, 30); ctx.fillRect(tw - 4, GROUND - 31, 10, 2); ctx.fillRect(tw - 4, GROUND - 36, 1, 5); ctx.fillRect(tw + 5, GROUND - 36, 1, 5);
+      ctx.fillStyle = '#17180f'; ctx.fillRect(tw, GROUND - 37, 3, 6);               // 경계병
+      if (night) { for (i = 0; i < 26; i++) { ctx.fillStyle = 'rgba(240,220,150,' + (0.11 - i * 0.003).toFixed(3) + ')'; ctx.fillRect(tw + 6 + i * 2, GROUND - 33 + Math.floor(i * 1.1), 2, 4 + Math.floor(i / 3)); } } // 탐조등: 멀어질수록 옅어진다
+    }
+    if (d.turret > 0) { ctx.fillStyle = '#30343c'; ctx.fillRect(wx, GROUND - wh - 4, 4, 3); ctx.fillRect(wx + 4, GROUND - wh - 3, d.rail > 0 ? 9 : 4, 1); }
+    if (d.flame > 0 && night) { ctx.fillStyle = Math.floor(t * 9) % 2 ? '#f0b400' : '#e0602b'; for (i = 0; i < 4; i++) ctx.fillRect(wx + 5 + i * 3, GROUND - 2 - ((i + Math.floor(t * 7)) % 3), 2, 3); }
+    drawZoneDefense(ctx, model, view, sky, wx, wh);
+    if (d.emp > 0 && Math.floor(t * 5) % 3 === 0) { ctx.fillStyle = '#7fe0f0'; ctx.fillRect(wx + 1 + Math.floor(t * 13) % 4, GROUND - wh - 6 - Math.floor(t * 17) % 4, 1, 2); }
+  }
+
+  /**
+   * 구역 고유 방벽: 가지고 있으면 방벽 바로 바깥(오른쪽)에 그 구역만의 구조물을 세운다.
+   * wx 는 방벽의 x(흔들림 반영), wh 는 방벽 높이.
+   */
+  function drawZoneDefense(ctx, model, view, sky, wx, wh) {
+    if (!(view.zoneDefense > 0)) return;
+    var x = wx + 5, t = model.time, i;
+    function c(day, night) { return lerpColor(day, night, sky.dark * 0.85); }
+    function r(col, dx, y, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + dx), GROUND - y - h, w, h); }
+    if (view.zone === 0) { r(c('#8f3a2e', '#2e1410'), 0, 0, 11, 4); r(c('#6d2a20', '#22100c'), 2, 4, 6, 3); r('#17180f', 1, 0, 2, 1); r('#17180f', 8, 0, 2, 1); r(c('#9fc6d8', '#2a4658'), 3, 5, 4, 1); } // 주택가: 가로로 세운 폐차
+    if (view.zone === 1) { for (i = 0; i < 3; i++) { r(c('#8a8f93', '#2c3035'), i * 4, 0, 3, 12); for (var k = 2; k < 12; k += 3) r(c('#5d6266', '#1c1f23'), i * 4, k, 3, 1); } }   // 시장: 셔터 세 장
+    if (view.zone === 2) { r(c('#6d7479', '#24282c'), 0, 0, 10, 15); for (i = 0; i < 3; i++) r('#17180f', 1 + i * 3, 3 + i * 4, 2, 2); r(c('#f0b400', '#4a3a08'), 0, 15, 10, 1); }  // 공단: 강철 담장과 경고 띠
+    if (view.zone === 3) { r('#17180f', 0, 0, 1, 13); r('#17180f', 9, 0, 1, 13); for (i = 0; i < 4; i++) r(i % 2 ? c('#f0b400', '#4a3a08') : '#17180f', 1, 2 + i * 3, 8, 2); }        // 환승역: 줄무늬 차단문
+    if (view.zone === 4) { r(c('#d9d8cf', '#4a4a45'), 0, 0, 9, 14); r(c('#2c343a', '#07090b'), 2, 8, 5, 4); r(c('#a8261b', '#3a1310'), 3, 3, 3, 1); r(c('#a8261b', '#3a1310'), 4, 2, 1, 3); } // 병원: 격리 병동 문
+    if (view.zone === 5) { r(c('#8d8a80', '#2a2925'), 0, 0, 12, 9); r(c('#a8261b', '#3a1310'), 0, 6, 12, 1); r(c('#e6e5db', '#55544c'), 0, 5, 12, 1); r(c('#6f6c63', '#1f1e1b'), 0, 0, 12, 2); } // 검문소: 콘크리트 차단벽
+    if (view.zone === 6) { for (i = 0; i < 3; i++) r('#17180f', i * 5, 0, 1, 14); for (i = 0; i < 3; i++) r(c('#c9c2a3', '#4a4738'), 0, 4 + i * 4, 11, 1); if (Math.floor(t * 6) % 2) r('#7fe0f0', 2 + Math.floor(t * 11) % 8, 4 + (Math.floor(t * 7) % 3) * 4, 2, 1); } // 송신탑: 전류가 흐르는 울타리
+  }
+
+  /** 구역 고유 시설 하나를 x 위치에 그린다. r 은 바닥 기준 사각형 도우미(drawUpgrades 가 앞마당 바닥으로 넘긴다). */
+  function drawZoneFacility(view, sky, x, r, c, t) {
+    if (view.zone === 0) { r(c('#57554d', '#17160f'), x, 0, 6, 3); r('#17180f', x + 1, 3, 4, 1); if (Math.floor(t * 3) % 2) r('#d9d8cf', x + 2, 5, 1, 2); else r('#d9d8cf', x + 3, 6, 1, 2); }  // 취사장: 솥과 김
+    if (view.zone === 1) { r(c('#8a5a34', '#2a1c11'), x, 0, 7, 3); r(c('#b85a36', '#3a1c11'), x - 1, 5, 9, 1); r(c('#e6e5db', '#55544c'), x + 1, 5, 2, 1); r('#17180f', x, 3, 1, 2); r('#17180f', x + 6, 3, 1, 2); } // 거래소: 차양 친 좌판
+    if (view.zone === 2) { r(c('#6f6a60', '#22211d'), x, 0, 7, 5); r('#17180f', x + 5, 5, 2, 5); r(c('#9a9a94', '#33332f'), x + 5, 10 + Math.floor(t * 2) % 2, 2, 1); r('#f0b400', x + 1, 1, 2, 2); } // 프레스 공장: 굴뚝과 연기
+    if (view.zone === 3) { r(c('#8f3a2e', '#2e1410'), x, 1, 8, 4); r('#17180f', x + 1, 0, 2, 1); r('#17180f', x + 5, 0, 2, 1); r(c('#57554d', '#17160f'), x - 1, 0, 10, 1); }                 // 화물차와 선로
+    if (view.zone === 4) { r(c('#d9d8cf', '#4a4a45'), x, 0, 7, 6); r(c('#2c6638', '#16321c'), x + 3, 2, 1, 3); r(c('#2c6638', '#16321c'), x + 2, 3, 3, 1); }                                   // 약제실: 녹십자
+    if (view.zone === 5) { r(c('#3f6f8f', '#162836'), x - 1, 0, 10, 1); r(c('#8a5a34', '#2a1c11'), x + 1, 1, 6, 2); r('#17180f', x + 4, 3, 1, 5); r(c('#e6e5db', '#55544c'), x + 5, 5, 2, 3); } // 나루터: 돛단배
+    if (view.zone === 6) { r(c('#4a463f', '#151512'), x, 0, 7, 4); r('#17180f', x + 6, 4, 1, 4); r(Math.floor(t * 4) % 2 ? '#f0b400' : c('#c9c2a3', '#4a4738'), x + 1, 1, 2, 2); r('#17180f', x + 4, 1, 2, 1); } // 발전기: 깜빡이는 계기등
+  }
+
+  /*
+   * 거점 건물: 거점 전체가 단계별로 다른 모습이 되고(통째로 바뀐다), 그 안이 단면으로 보인다(방마다 시설 하나).
+   *
+   *   단계(baseStage, 시설 합계 1·10·50·150·400곳에서 오른다)
+   *     0 천막뿐  1 야영지(나무 뼈대와 천막 지붕)  2 판잣집(판자벽과 양철 지붕)
+   *     3 거점(콘크리트, 옥상 난간과 깃발. 천막은 걷는다)  4 요새(철판, 총안과 탐조등)  5 도시(간판, 송신탑, 줄전등)
+   *   구조
+   *     1층은 창고(왼쪽 두 칸), 공용실(가운데 두 칸), 현관과 계단(오른쪽 한 칸). 주인공이 나른 물자는 창고에 쌓인다.
+   *     사람은 1층 안에서 오가는 것처럼 보인다(1층 높이가 사람 키와 같다).
+   *     그 위로 방이 두 층, 층마다 다섯 칸. 시설마다 정해진 방이 있고, 지으면 그 방에 불이 켜지고 설비가 들어선다.
+   *     양옆에 두꺼운 외벽, 바닥에 기초, 위에 단계마다 다른 지붕(천막 → 박공 양철 → 평지붕과 난간 → 총안)을 둔다.
+   *     같은 시설을 많이 지으면(facilityTier) 방 위쪽에 등이 하나씩 더 켜진다.
+   */
+  var BASE_STAGES = [1, 10, 50, 150, 400];
+  var ROOMS = [['radio', 'lab', 'district', 'solar', 'purifier'],     // 위층
+               ['scouts', 'garden', 'workshop', 'bunker', 'port']];   // 아래층
+  var BASE_X = 10, PILOTI = 12, ROOM_H = 9;   // PILOTI 는 1층의 높이(사람 키 11칸이 들어간다)
+  var STOCK_MAX = 12;                         // 창고에 그리는 상자 수의 상한
+  /** 시설 합계 → 거점의 단계(0~5). 잘못된 값은 0. */
+  function baseStage(total) {
+    if (!(typeof total === 'number' && total > 0)) return 0;
+    var st = 0;
+    while (st < BASE_STAGES.length && total >= BASE_STAGES[st]) st++;
+    return st;
+  }
+  /** 시설 보유 수 → 그 방의 단계(0~3). 잘못된 값은 0. */
+  function facilityTier(n) { return !(typeof n === 'number' && n > 0) ? 0 : n >= 150 ? 3 : n >= 50 ? 2 : n >= 10 ? 1 : 0; }
+  function totalFacilities(view) {
+    var b = view.buildings || {}, total = 0;
+    for (var k in b) if (Object.prototype.hasOwnProperty.call(b, k) && b[k] > 0) total += b[k];
+    return total;
+  }
+  /** 방 한 칸의 폭: 방벽 안쪽 너비를 다섯으로 나눈다(폰 12칸, 넓은 화면 22칸). */
+  function roomWidth(model) { return Math.max(11, Math.floor((model.wall - 12 - BASE_X) / 5)); }
+  /** 시설 id 의 방 자리 { x, y, w, h, row, col } (y 는 방의 위쪽 끝). 모르는 id 는 null. */
+  function roomSlot(model, id) {
+    for (var row = 0; row < ROOMS.length; row++) {
+      var col = ROOMS[row].indexOf(id);
+      if (col >= 0) { var w = roomWidth(model); return { x: BASE_X + col * w, y: GROUND - PILOTI - (ROOMS.length - row) * ROOM_H, w: w, h: ROOM_H, row: row, col: col }; }
+    }
+    return null;
+  }
+  /** 창고에 쌓아 보이는 상자 수: 거점 단계만큼 기본으로 있고, 주인공이 나른 만큼(8개까지) 더 쌓인다. */
+  function stockCrates(stage, delivered) {
+    delivered = typeof delivered === 'number' && delivered > 0 ? Math.floor(delivered) : 0;
+    return Math.min(STOCK_MAX, Math.max(0, stage) + Math.min(8, delivered));
+  }
+  function drawBaseBuilding(ctx, model, view, sky) {
+    var stage = baseStage(Math.max(totalFacilities(view), view.zoneBuilding > 0 ? 1 : 0));
+    if (!stage) return;
+    var b = view.buildings || {}, t = model.time, night = sky.dark > 0.5, rw = roomWidth(model), W5 = rw * 5, i, k;
+    var top = GROUND - PILOTI - ROOMS.length * ROOM_H, floor = GROUND - PILOTI, right = BASE_X + W5;
+    function c(day, dark) { return lerpColor(day, dark, sky.dark * 0.85); }
+    function px(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
+    // 단계별 재료: [뼈대(바닥·칸막이), 외벽, 지붕]
+    var mat = [null,
+      [c('#8a6a4a', '#2a2018'), null,                    c('#5d6b4a', '#1e241a')],
+      [c('#5b4630', '#1c160f'), c('#8a6240', '#2a1e14'), c('#8d9296', '#2c3035')],
+      [c('#6f6c63', '#1c1e24'), c('#8f8b80', '#22242b'), c('#7f7b70', '#1a1c23')],
+      [c('#4a4f55', '#15171c'), c('#6d7479', '#1e2228'), c('#5d6268', '#181b20')],
+      [c('#30343c', '#0f1116'), c('#6d7479', '#1e2228'), c('#5d6268', '#181b20')]][stage];
+    var frame = mat[0], wallCol = mat[1], roof = mat[2];
+    // 방마다 벽지 색이 조금씩 다르다(낮 / 불 켜진 밤). 모든 방이 같은 색이면 격자무늬처럼 보인다.
+    var TINT_DAY = ['#ddd4b4', '#d2d8c2', '#dcc9ae', '#ccd4d6'], TINT_NIGHT = ['#8a7340', '#77784a', '#8a683c', '#66707c'];
+    function lit(n) { return night ? TINT_NIGHT[n % 4] : c(TINT_DAY[n % 4], TINT_NIGHT[n % 4]); }
+
+    /* --- 1층: 창고(왼쪽 두 칸), 공용실(가운데 두 칸, 모닥불 자리), 현관과 계단(오른쪽 한 칸) --- */
+    if (wallCol) {
+      px(night ? '#5c4d2c' : c('#c4b894', '#5c4d2c'), BASE_X + 1, floor + 1, rw * 2 - 1, PILOTI - 1);            // 창고: 조금 어두운 벽
+      px(lit(1), BASE_X + rw * 2 + 1, floor + 1, rw * 2 - 1, PILOTI - 1);                                         // 공용실
+      px(night ? '#4a4434' : c('#b4ad98', '#4a4434'), BASE_X + rw * 4 + 1, floor + 1, rw - 1, PILOTI - 1);        // 현관
+    }
+    // 창고의 물자: 아래부터 한 줄씩 쌓는다. 상자는 5×4 칸, 줄마다 반 칸씩 들여 쌓는다
+    var crates = stockCrates(stage, model.delivered), perRow = Math.max(2, Math.floor((rw * 2 - 3) / 5)), n = 0, rowNo = 0;
+    while (n < crates && rowNo < 3) {
+      var inRow = Math.min(crates - n, Math.max(1, perRow - rowNo));
+      for (k = 0; k < inRow; k++) {
+        var cx = BASE_X + 2 + k * 5 + rowNo * 2, cy = GROUND - 4 - rowNo * 4;
+        px(c('#8a5a34', '#4a3220'), cx, cy, 4, 4); px(c('#f0b400', '#8a6a08'), cx, cy + 1, 4, 1);
+      }
+      n += inRow; rowNo++;
+    }
+    // 공용실: 선반과 식탁(모닥불은 drawBase 가 이 방 자리에 그린다)
+    if (wallCol) { px(frame, BASE_X + rw * 2 + 3, floor + 3, rw - 2, 1); px(c('#a8261b', '#5a1a14'), BASE_X + rw * 2 + 4, floor + 2, 2, 1); px(c('#3f6f8f', '#1c3446'), BASE_X + rw * 2 + 7, floor + 2, 2, 1); }
+    // 현관: 문과 위층으로 가는 계단
+    for (k = 0; k < 5; k++) px(frame, BASE_X + rw * 4 + 2 + k * 2, GROUND - 2 - k * 2, rw - 3 - k * 2 > 0 ? 2 : 1, 2);
+    if (wallCol) { px('#17180f', right - 4, GROUND - 9, 3, 9); px(night ? '#ffe9a0' : c('#c9c2a3', '#6a6654'), right - 3, GROUND - 8, 1, 2); }
+
+    /* --- 2·3층: 시설의 방 --- */
+    ROOMS.forEach(function (row, ri) {
+      row.forEach(function (id, ci) {
+        var x = BASE_X + ci * rw, y = top + ri * ROOM_H, own = b[id] > 0, tier = facilityTier(b[id]);
+        if (own) px(lit(ri * 5 + ci + ri), x + 1, y + 1, rw - 1, ROOM_H - 1);                                    // 불 켜진 방
+        else if (wallCol) px(c('#7a766c', '#16181e'), x + 1, y + 1, rw - 1, ROOM_H - 1);                          // 아직 비어 있는 어두운 방
+        if (own) { drawRoom(ctx, id, x + 1 + Math.floor((rw - 11) / 2), y + 1, t, night); for (k = 0; k < tier; k++) px('#f0b400', x + 2 + k * 2, y + 1, 1, 1); }
+        else if (wallCol) { px(c('#5f5b52', '#0f1014'), x + 3, y + ROOM_H - 3, rw - 6, 2); }                      // 빈 방에 덮어 둔 천
+      });
+    });
+
+    /* --- 뼈대와 외벽: 바닥 슬래브, 칸막이, 양옆의 두꺼운 벽, 기초 --- */
+    var slab = stage >= 3 ? 2 : 1;
+    for (i = 0; i <= ROOMS.length; i++) px(frame, BASE_X, top + i * ROOM_H, W5 + 1, i === ROOMS.length ? slab : 1);
+    for (i = 1; i < 5; i++) px(frame, BASE_X + i * rw, top, 1, ROOMS.length * ROOM_H);
+    px(frame, BASE_X + rw * 2, floor, 1, PILOTI); px(frame, BASE_X + rw * 4, floor, 1, PILOTI);                    // 1층 칸막이
+    if (wallCol) {
+      px(wallCol, BASE_X - 1, top, 2, GROUND - top); px(wallCol, right, top, 2, GROUND - top - 9);                 // 양옆 외벽(오른쪽은 문 위까지)
+      px(c('#57554d', '#17160f'), BASE_X - 2, GROUND - 1, W5 + 5, 1);                                              // 기초
+    } else { px(frame, BASE_X, top, 1, GROUND - top); px(frame, right, top, 1, GROUND - top); }                    // 야영지: 기둥뿐
+
+    /* --- 지붕: 단계마다 모양이 다르다 --- */
+    if (stage === 1) { for (i = 0; i < W5 + 2; i++) px(roof, BASE_X - 1 + i, top - 2 + (Math.floor(i / 4) % 2), 1, 2); }                              // 처진 천막
+    if (stage === 2) {                                                                                                                              // 박공 양철 지붕과 굴뚝
+      for (k = 0; k < 4; k++) px(roof, BASE_X - 2 + k * Math.ceil(W5 / 12), top - 1 - k, W5 + 5 - k * 2 * Math.ceil(W5 / 12), 1);
+      for (i = 3; i < W5; i += 5) px(c('#6d7479', '#22262b'), BASE_X + i, top - 1, 1, 1);
+      px(c('#6d2a20', '#22100c'), right - 8, top - 8, 3, 6); if (Math.floor(t * 2) % 2) px(c('#b9b6ac', '#3a3c44'), right - 8 + Math.floor(t) % 2, top - 10, 2, 1);
+    }
+    if (stage >= 3) {
+      px(roof, BASE_X - 2, top - 2, W5 + 5, 2);                                                                                                     // 평지붕
+      for (i = 0; i <= W5; i += stage >= 4 ? 3 : 4) px(frame, BASE_X + i, top - (stage >= 4 ? 5 : 4), stage >= 4 ? 2 : 1, stage >= 4 ? 3 : 2);      // 난간 / 총안
+      if (stage === 3) px(frame, BASE_X, top - 4, W5 + 1, 1);
+      px('#17180f', BASE_X + 2, top - 11, 1, 9); px(c('#f0b400', '#8a6a08'), BASE_X + 3, top - 11, 4, 3);                                           // 깃발
+      px(c('#3f6f8f', '#162836'), BASE_X + rw * 3 + 2, top - 7, 6, 5); px('#17180f', BASE_X + rw * 3 + 3, top - 2, 1, 1); px('#17180f', BASE_X + rw * 3 + 6, top - 2, 1, 1); // 옥상 물탱크
+    }
+    if (stage >= 4) { px('#30343c', right - 5, top - 8, 4, 3); if (night) for (i = 0; i < 9; i++) { px('rgba(240,220,150,' + (0.10 - i * 0.01).toFixed(2) + ')', right - 1 + i * 2, top - 8 + i, 2, 3 + Math.floor(i / 2)); } } // 탐조등
+    if (stage >= 5) {
+      var mx = BASE_X + Math.floor(W5 / 2);
+      px('#17180f', mx, top - 15, 1, 13); px('#17180f', mx - 1, top - 11, 3, 1); if (Math.floor(t * 2) % 2) px('#e0392b', mx, top - 16, 1, 1);     // 송신탑
+      px(c('#a8261b', '#7a2018'), BASE_X + rw + 1, top - 8, rw + 2, 5); px(night ? '#ffe9a0' : c('#e6e5db', '#8a887c'), BASE_X + rw + 3, top - 6, rw - 2, 1); // 옥상 간판
+      for (i = 4; i < W5 - 2; i += 5) px(night ? ['#ffe9a0', '#ffb39a', '#9ad0ff'][Math.floor(i / 5) % 3] : c('#c9c2a3', '#4a4738'), BASE_X + i, floor + 1 + (Math.floor(i / 5) % 2), 1, 1); // 줄전등
+    }
+  }
+  /** 방 안의 설비(11×8 칸 안에 그린다). x, y 는 방 안쪽의 왼쪽 위. */
+  function drawRoom(ctx, id, x, y, t, night) {
+    function r(col, dx, dy, w, h) { ctx.fillStyle = col; ctx.fillRect(x + dx, y + dy, w, h); }
+    var blink = Math.floor(t * 2) % 2;
+    if (id === 'radio')    { r('#5b4630', 1, 5, 7, 1); r('#30343c', 2, 3, 4, 2); r(blink ? '#e0392b' : '#7a2018', 3, 3, 1, 1); r('#17180f', 7, 0, 1, 5); r('#17180f', 6, 1, 3, 1); r('#5b4630', 2, 6, 1, 2); r('#5b4630', 7, 6, 1, 2); } // 무전소: 무전기와 안테나
+    if (id === 'lab')      { r('#e6e5db', 0, 5, 9, 1); r(night ? '#7dff9a' : '#4fbf6a', 1, 2, 2, 3); r(night ? '#7dff9a' : '#4fbf6a', 5, 3, 2, 2); r('#d9d8cf', 1, 1, 2, 1); r('#2c6638', 8, 1, 1, 3); r('#2c6638', 7, 2, 3, 1); r('#9a9a94', 1, 6, 1, 2); r('#9a9a94', 7, 6, 1, 2); } // 연구동: 초록 시약병과 십자
+    if (id === 'district') { r('#5b4630', 0, 2, 5, 1); r('#5b4630', 0, 5, 5, 1); r('#5b4630', 0, 2, 1, 6); r('#5b4630', 4, 2, 1, 6); r('#a8261b', 1, 1, 3, 1); r('#3f6f8f', 1, 4, 3, 1); r('#17180f', 8, 2, 1, 6); r('#ffe9a0', 7, 1, 3, 2); } // 자치구: 이층 침대와 전등
+    if (id === 'solar')    { r('#30343c', 0, 2, 4, 6); r('#30343c', 5, 2, 4, 6); r('#5a86d0', 1, 3, 2, 1); r('#5a86d0', 6, 3, 2, 1); r(blink ? '#7dff9a' : '#2c6638', 1, 6, 1, 1); r(blink ? '#2c6638' : '#7dff9a', 6, 6, 1, 1); r('#f0b400', 4, 4, 1, 1); } // 태양광: 축전지 두 대
+    if (id === 'purifier') { r('#3f6f8f', 2, 1, 6, 6); r('#9fc6d8', 2, 2, 6, 1); r('#17180f', 0, 4, 2, 1); r('#17180f', 0, 4, 1, 4); r('#9fc6d8', 9, 2 + Math.floor(t * 6) % 5, 1, 1); r('#30343c', 2, 7, 6, 1); }               // 정수기: 물탱크와 떨어지는 물
+    if (id === 'scouts')   { r('#c9c2a3', 0, 1, 5, 4); r('#a8261b', 1, 2, 1, 1); r('#2f4f8f', 3, 3, 1, 1); r('#8a5a34', 6, 4, 3, 4); r('#5d6b4a', 7, 3, 2, 1); r('#f0b400', 6, 5, 3, 1); }                                               // 수색조: 지도와 배낭
+    if (id === 'garden')   { r('#c64f9a', 0, 0, 10, 1); r('#5a4630', 0, 6, 10, 2); for (var g = 0; g < 4; g++) r('#3f8a3c', 1 + g * 2 + (g > 1 ? 1 : 0), 3 + (g + Math.floor(t)) % 2, 1, 3 - (g + Math.floor(t)) % 2); }               // 텃밭: 재배등 아래의 작물
+    if (id === 'workshop') { r('#5b4630', 0, 5, 7, 1); r('#5b4630', 1, 6, 1, 2); r('#5b4630', 5, 6, 1, 2); r('#9a9a94', 2, 3, 3, 2); r(Math.floor(t * 6) % 2 ? '#f0b400' : '#e0602b', 4, 2, 1, 1); r('#30343c', 8, 1, 2, 7); r('#e0602b', 8, 5, 2, 2); } // 작업장: 작업대의 불꽃과 화덕
+    if (id === 'bunker')   { r('#5d6b4a', 0, 5, 4, 3); r('#5d6b4a', 1, 2, 3, 3); r('#f0b400', 0, 6, 4, 1); r('#c9c2a3', 5, 6, 5, 2); r('#c9c2a3', 6, 4, 3, 2); r('#17180f', 7, 1, 2, 1); }                                               // 벙커: 탄약 상자와 모래주머니
+    if (id === 'port')     { r('#b85a36', 0, 5, 5, 3); r('#3f6f8f', 5, 5, 5, 3); r('#3f6f8f', 1, 2, 5, 3); r('#17180f', 8, 0, 1, 2 + blink); r('#8a5a34', 7, 2 + blink, 3, 2); }                                                         // 하역장: 컨테이너와 갈고리
+  }
+
+  // 누운 좀비: 선 그림을 옆으로 눕힌 것(쓰러진 뒤와 기어 오는 좀비에 쓴다)
+  var ZOMBIE_LYING = (function () {
+    var src = ZOMBIE[0], out = [];
+    for (var c = 0; c < src[0].length; c++) {
+      var row = '';
+      for (var r = 0; r < src.length; r++) row += src[r][c];
+      out.push(row);
+    }
+    return out.slice(1, 7); // 빈 가장자리를 잘라 낸 6줄
+  })();
+
+  /** 쓰러진 좀비: 죽는 방식에 따라 넘어지거나, 불타거나, 감전되거나, 흔적만 남는다. 끝에는 흐려지며 사라진다. */
+  function drawCorpses(ctx, model, view) {
+    var t = model.time;
+    model.corpses.forEach(function (cp) {
+      var k = 1 - cp.life / cp.total, x = Math.round(cp.x), sc = cp.big ? 2 : 1, look = ZOMBIE_LOOKS[cp.look];
+      ctx.globalAlpha = k > 0.7 ? Math.max(0, (1 - k) / 0.3) : 1;
+      if (cp.death === 'blast') {            // 터짐: 그을린 자국만 남는다
+        ctx.fillStyle = '#17180f'; ctx.fillRect(x - 1, GROUND - 1, 8 * sc, 1); ctx.fillRect(x + 1, GROUND - 2, 4 * sc, 1);
+      } else if (cp.death === 'burn') {      // 불탐: 선 채로 타다가 재가 된다
+        if (k < 0.45) {
+          sprite(ctx, ZOMBIE[0], x, GROUND - 11 * sc, true, sc, { g: '#e0602b', c: '#f0b400', d: '#8f3a2e', x: '#17180f' });
+          ctx.fillStyle = Math.floor(t * 12) % 2 ? '#f0b400' : '#e0602b';
+          ctx.fillRect(x + 1 + Math.floor(t * 9) % 4, GROUND - 13 * sc, 2, 2);
+        } else { ctx.fillStyle = '#2b241c'; ctx.fillRect(x, GROUND - 2, 7 * sc, 2); ctx.fillStyle = '#57554d'; ctx.fillRect(x + 2, GROUND - 3, 3 * sc, 1); }
+      } else if (cp.death === 'zap' && k < 0.2) { // 감전: 잠깐 하얗게 굳는다
+        sprite(ctx, ZOMBIE[0], x, GROUND - 11 * sc, true, sc, Math.floor(t * 20) % 2 ? { g: '#ffffff', c: '#7fe0f0', d: '#7fe0f0', x: '#17180f' } : look);
+      } else if (!cp.crawl && k < 0.12) {    // 맞은 순간: 뒤로 젖혀진다
+        sprite(ctx, ZOMBIE[1], x + 2, GROUND - 10 * sc, true, sc, look);
+      } else {                               // 바닥에 쓰러져 있다
+        sprite(ctx, ZOMBIE_LYING, x - 1, GROUND - 6 * sc, false, sc, look);
+      }
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  /** 사격 흔적: 총알 자국, 화염, 전류, 광선. 아주 짧게 보였다 사라진다. */
+  function drawShots(ctx, model) {
+    model.shots.forEach(function (sh) {
+      var n = Math.max(2, Math.round(Math.abs(sh.x1 - sh.x0) / 3)), i, px, py;
+      for (i = 0; i <= n; i++) {
+        px = sh.x0 + (sh.x1 - sh.x0) * i / n; py = sh.y0 + (sh.y1 - sh.y0) * i / n;
+        if (sh.kind === 'bullet') { if (i % 2 === 0) { ctx.fillStyle = '#ffe9a0'; ctx.fillRect(Math.round(px), Math.round(py), 2, 1); } }
+        else if (sh.kind === 'flame') { ctx.fillStyle = i % 2 ? '#f0b400' : '#e0602b'; ctx.fillRect(Math.round(px), Math.round(py) - (i % 3), 2, 2 + (i % 2)); }
+        else if (sh.kind === 'arc') { ctx.fillStyle = '#7fe0f0'; ctx.fillRect(Math.round(px), Math.round(py) + (i % 2 ? -2 : 1), 2, 1); }
+        else { ctx.fillStyle = '#d9f6ff'; ctx.fillRect(Math.round(px), Math.round(py), 3, 2); }
+      }
+      if (sh.kind === 'bullet' || sh.kind === 'beam') { ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(sh.x0), Math.round(sh.y0) - 1, 2, 3); } // 총구 불꽃
+    });
+  }
+
+  /** 주인공이 산 수색 장비: 배낭은 등에, 수색견은 뒤를 따르고, 정찰 드론은 머리 위를 맴돈다. */
+  function drawHeroKit(ctx, model, view, hx) {
+    var u = view.upgrades || {}, h = model.hero, t = model.time, back = h.face < 0 ? 6 : 0;
+    if (u.backpack) { ctx.fillStyle = '#5d6b4a'; ctx.fillRect(hx + back, GROUND - 7, 2, 4); }
+    if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 7, GROUND - 5 - Math.floor(t * 6) % 2, 1, 4); }
+    if (u.dog) {
+      var dx = Math.round(h.x) - 4 - h.face * 9, hop = h.state === 'out' || h.state === 'back' ? Math.floor(t * 8) % 2 : 0;
+      ctx.fillStyle = '#8a5a34'; ctx.fillRect(dx, GROUND - 4 - hop, 5, 2); ctx.fillRect(dx + (h.face > 0 ? 4 : -1), GROUND - 6 - hop, 2, 2);  // 몸과 머리
+      ctx.fillRect(dx, GROUND - 2, 1, 2); ctx.fillRect(dx + 4, GROUND - 2, 1, 2);                                                           // 다리
+      ctx.fillRect(dx + (h.face > 0 ? -1 : 5), GROUND - 5 - hop - Math.floor(t * 6) % 2, 1, 2);                                              // 흔드는 꼬리
+    }
+    if (u.drone) {
+      var qx = Math.round(h.x) + Math.round(Math.sin(t * 1.3) * 6) - 2, qy = GROUND - 24 + Math.round(Math.sin(t * 2.1) * 2);
+      ctx.fillStyle = '#30343c'; ctx.fillRect(qx, qy, 5, 1); ctx.fillRect(qx + 1, qy + 1, 3, 1);
+      ctx.fillStyle = Math.floor(t * 3) % 2 ? '#e0392b' : '#7fe0f0'; ctx.fillRect(qx + 2, qy + 2, 1, 1);
+    }
+  }
+
+  /** 거점 사람들: 제작으로 둔 담당자와, 시설이 늘면 함께 늘어나는 생존자. 밤에는 불가에 모인다. */
+  function drawPeople(ctx, model, view, sky) {
+    var g = view.gear || {}, b = view.buildings || {}, t = model.time, night = sky.dark > 0.5, i;
+    var total = 0;
+    for (var k in b) if (Object.prototype.hasOwnProperty.call(b, k) && b[k] > 0) total += b[k];
+    function person(x, look, hat, walking, flip) {
+      sprite(ctx, SQUAD_TOP.concat(HERO_LEGS[walking ? Math.floor(t * 6 + x) % 2 : 0]), Math.round(x) - 4, GROUND - 11, flip, 1, look);
+      if (hat) { ctx.fillStyle = hat; ctx.fillRect(Math.round(x) - (flip ? 1 : 3), GROUND - 12, 5, 1); }
+    }
+    // 생존자가 오가는 구간: 모닥불 오른쪽 ~ 방벽 안쪽
+    var left = 44, right = model.wall - 16;
+    if (g.operator) {                             // 무전병: 안테나 앞에 앉아 있다
+      sprite(ctx, SQUAD_TOP, 9, GROUND - 8, true, 1, { c: '#4f5d73', d: '#2a3140' });
+      ctx.fillStyle = view.signal && Math.floor(t * 6) % 2 ? '#f0b400' : '#17180f'; ctx.fillRect(11, GROUND - 9, 5, 1);
+    }
+    if (g.warden) {                               // 방벽 담당: 방벽 안쪽에서 보강한다(못 막는 밤에는 망치질이 빨라진다)
+      person(model.wall - 4, { c: '#8a5a34', d: '#5b4630' }, '#f0b400', false, false);
+      ctx.fillStyle = '#9a9a94'; ctx.fillRect(model.wall - 1, GROUND - 8 - Math.floor(t * (view.safe ? 2 : 7)) % 2 * 2, 2, 1);
+    }
+    if (g.builder && right > left) {              // 건설 담당: 시설 사이를 오가며 손본다
+      var span = right - left, ph = (t * 7) % (span * 2), bx = left + (ph < span ? ph : span * 2 - ph);
+      person(bx, { c: '#b85a36', d: '#6d2a20' }, '#e6e5db', true, ph >= span);
+      ctx.fillStyle = '#9a9a94'; ctx.fillRect(Math.round(bx) + (ph >= span ? -5 : 3), GROUND - 7, 2, 1);
+    }
+    // 생존자: 시설 10곳마다 한 명씩, 넓은 화면은 넷까지 좁은 화면은 둘까지
+    var folk = Math.min(model.wall > WALL_X ? 4 : 2, Math.floor(total / 10)); // 좁은 화면은 둘까지: 사람이 많으면 건물이 가려진다
+    for (i = 0; i < folk && right > left; i++) {
+      if (night) { person([33, 49, 55, 27][i], ZOMBIE_LOOKS[i % 3], null, false, i === 1 || i === 2); continue; } // 밤에는 불가에 둘러앉는다(서로 겹치지 않게 자리를 정해 둔다)
+      var sp = right - left, q = (t * (4 + i) + i * 37) % (sp * 2), fx = left + (q < sp ? q : sp * 2 - q);
+      person(fx, [{ c: '#4f5d73', d: '#2a3140' }, { c: '#6b4a3a', d: '#3a2a22' }, { c: '#5d6b4a', d: '#30343c' }, {}][i], null, true, q >= sp);
+    }
+  }
+
+  /**
+   * 끝낸 연구와 제작 장비가 거점에 남기는 것들. 연구 하나에 소품 하나, 낮에도 밤에도 보인다.
+   * 자리가 겹치면 가려지므로 넷으로 나눠 놓는다: 앞마당 줄(땅 아래쪽 띠), 땅 위 왼편, 방벽 위, 방벽 바깥.
+   */
+  function drawUpgrades(ctx, model, view, sky) {
+    var rs = view.research || {}, g = view.gear || {}, t = model.time, night = sky.dark > 0.5, wall = model.wall, i;
+    function c(day, dark) { return lerpColor(day, dark, sky.dark * 0.85); }
+    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x), GROUND - y - h, w, h); }
+    // 앞마당 줄: 좁은 화면에서도 서로 겹치지 않도록 9칸 간격의 정해진 자리에 놓는다(낮에도 밤에도 보인다)
+    var yard = H - 2 - GROUND; // 땅 선에서 이만큼 아래가 앞마당 소품의 바닥
+    function y(col, x, up, w, h) { r(col, x, up - yard, w, h); }
+    if (rs.compost) { y(c('#5a4630', '#1c160f'), 2, 0, 7, 3); y(c('#4f8a3c', '#2c5a22'), 3, 3, 5, 1); y(c('#4f8a3c', '#2c5a22'), 5, 4, 1, 2); }                      // 퇴비 순환: 싹이 난 퇴비 더미
+    if (rs.ration)  { y(c('#8a5a34', '#4a3220'), 11, 0, 4, 4); y(c('#8a5a34', '#4a3220'), 15, 0, 3, 3); y(c('#f0b400', '#8a6a08'), 11, 2, 4, 1); y(c('#8a5a34', '#4a3220'), 12, 4, 3, 3); } // 분산 창고: 나눠 쌓은 상자
+    if (rs.drill)   { y('#17180f', 23, 0, 1, 6); y(c('#c9c2a3', '#6a6654'), 21, 6, 5, 3); y(c('#a8261b', '#7a2018'), 23, 7, 1, 1); y(c('#c9c2a3', '#6a6654'), 26, 0, 3, 2); } // 야간 훈련: 사격 표적과 모래주머니
+    if (rs.serum)   { y(c('#6f6a60', '#33312c'), 31, 0, 6, 2); y(night ? '#7dff9a' : '#4fbf6a', 32, 2, 4, 5); y(c('#d9d8cf', '#6a6a62'), 32, 7, 4, 1); if (Math.floor(t * 3) % 2) y('#d9ffe2', 33 + Math.floor(t * 2) % 2, 3 + Math.floor(t * 5) % 3, 1, 1); } // 혈청 배양: 거품이 이는 배양통
+    if (rs.shift)   { y('#17180f', 41, 0, 1, 8); y('#17180f', 41, 8, 3, 1); y(night ? '#ffe9a0' : c('#c9c2a3', '#6a6654'), 43, 6, 2, 2); if (night) glow(ctx, 44, GROUND + yard - 7, 5, '255,233,160', 0.06); } // 교대 근무: 야간 작업등
+    if (rs.caravan) { y(c('#5d6b4a', '#2c3324'), 48, 1, 8, 4); y(c('#3f6f8f', '#1c3446'), 54, 3, 2, 2); y('#17180f', 49, 0, 2, 1); y('#17180f', 53, 0, 2, 1); }      // 호송대: 세워 둔 호송 트럭
+    if (view.zoneBuilding > 0) drawZoneFacility(view, sky, 62, function (col, x, up, w, h) { y(col, x, up, w, h); }, c, t); // 구역 고유 시설: 앞마당 줄의 마지막 자리
+    // 땅 위: 게시판과 전신주
+    if (rs.maps)    { r('#17180f', 2, 0, 1, 8); r(c('#c9c2a3', '#6a6654'), 0, 8, 5, 4); r(c('#a8261b', '#7a2018'), 1, 10, 2, 1); r(c('#2f4f8f', '#243c6c'), 2, 9, 2, 1); } // 구역 지도: 게시판
+    if (rs.grid)    {                                                                                                                                                 // 전력망: 방벽 안쪽의 전신주, 거점 건물로 이어진 전선, 밤에 켜지는 등
+      var gx = wall - 16, bx = BASE_X + roomWidth(model) * 5 + 1, span = Math.max(1, gx - bx);   // 건물의 방을 가로지르지 않도록 건물 오른쪽에 세운다
+      r('#17180f', gx, 0, 1, 26); r('#17180f', gx - 2, 24, 5, 1);
+      for (i = 0; i < span; i += 2) r('#17180f', bx + i, 24 - Math.round(Math.sin(i / span * Math.PI) * 2), 2, 1);
+      r(night ? '#ffe9a0' : c('#c9c2a3', '#6a6654'), gx - 1, 22, 3, 2);
+      if (night) glow(ctx, gx, GROUND - 22, 8, '255,233,160', 0.045);
+    }
+    if (rs.fortress) { var fh = 7 + ['wire', 'tower', 'turret', 'flame', 'emp', 'rail'].filter(function (k2) { return (view.def || {})[k2] > 0; }).length * 3;
+      r(c('#9aa0a6', '#4a5058'), wall - 1, fh, 6, 2); r(c('#9aa0a6', '#4a5058'), wall - 1, fh + 2, 2, 2); r(c('#9aa0a6', '#4a5058'), wall + 3, fh + 2, 2, 2); r(c('#7b8186', '#3a4048'), wall - 1, 0, 6, 2); } // 요새화: 방벽 꼭대기의 철제 총안
+    if (g.barricade > 0) { for (i = 0; i < Math.min(3, Math.ceil(g.barricade / 4)); i++) r(c('#57554d', '#17160f'), wall + 4 + i, 0, 1, 6 + i * 2); }                    // 강화 바리케이드: 덧댄 판
+    if (g.antenna > 0) { r(c('#c9c2a3', '#4a4738'), 9, 19, 3, 1); r(c('#c9c2a3', '#4a4738'), 10, 20, 2, 2); }                                                           // 지향성 안테나: 접시
+    if (g.cart > 0) { r(c('#8a5a34', '#2a1c11'), 47, 1, 5, 3); r('#17180f', 47, 0, 2, 1); r('#17180f', 50, 0, 2, 1); }                                                  // 보급 수레
+    // 방벽 바깥
+    if (rs.traps)   { for (i = 0; i < 7; i++) { r(c('#9a9a94', '#33332f'), wall + 14 + i * 4, 0, 1, 3); r(c('#9a9a94', '#33332f'), wall + 13 + i * 4, 0, 3, 1); } }      // 함정 지대: 말뚝 줄
+    if (rs.alarm)   { r('#17180f', wall + 46, 0, 1, 16); r(view.t >= DUSK && Math.floor(t * 4) % 2 ? '#e0392b' : c('#8f3a2e', '#2e1410'), wall + 45, 16, 3, 2); }       // 조기 경보망: 해 질 녘에 깜빡이는 경보등
+  }
+
+  /** 낮 하늘을 가로지르는 까마귀 한 마리(시간으로부터 위치를 계산한다. 밤에는 없다). */
+  function drawBird(ctx, model, sky) {
+    if (sky.dark > 0.4) return;
+    var span = model.W + 120, x = model.W + 10 - (model.time * 14) % span, y = 14 + Math.round(Math.sin(model.time * 0.7) * 4);
+    if (x < -6) return;
+    ctx.fillStyle = '#17180f';
+    ctx.fillRect(Math.round(x), y, 3, 1);
+    ctx.fillRect(Math.round(x) + 1, y + (Math.floor(model.time * 6) % 2 ? -1 : 1), 1, 1);
+  }
+
+  /** 원정대: 회색 옷의 대원 둘이 출발 직후 걸어 나가고, 귀환 직전 상자를 들고 걸어 들어온다. */
+  function drawSquad(ctx, model, view) {
+    var sq = squadAt(model, view.expedition);
+    if (!sq) return;
+    var legs = HERO_LEGS[Math.floor(model.time * 7) % 2];
+    for (var i = 0; i < 2; i++) {
+      var x = Math.round(sq.x) - i * 10 * sq.dir;
+      sprite(ctx, SQUAD_TOP.concat(legs), x - 4, GROUND - 11, sq.dir < 0, 1);
+      if (sq.dir < 0) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(x - 2, GROUND - 16, 5, 4); }
+    }
+    if ((view.research || {}).caravan) { // 호송대: 뒤에 수레가 따라온다
+      var cx = Math.round(sq.x) - 22 * sq.dir - 3;
+      ctx.fillStyle = '#8a5a34'; ctx.fillRect(cx, GROUND - 5, 7, 4); ctx.fillStyle = '#17180f'; ctx.fillRect(cx, GROUND - 1, 2, 1); ctx.fillRect(cx + 5, GROUND - 1, 2, 1);
+      if (sq.dir < 0) { ctx.fillStyle = '#f0b400'; ctx.fillRect(cx + 1, GROUND - 7, 5, 2); }
+    }
+  }
+
+  /** 안개의 짙기 배수: 낮 1, 밤 0.3. 범위를 벗어난 값은 잘라 낸다. */
+  function fogStrength(dark) {
+    dark = typeof dark === 'number' && isFinite(dark) ? Math.max(0, Math.min(1, dark)) : 0;
+    return 1 - 0.7 * dark;
+  }
+  /**
+   * 불빛: 네모 대신 계단식 원을 세 겹으로 겹쳐 가운데가 밝고 가장자리가 흐린 빛을 만든다.
+   * dome 이 참이면 바닥(cy) 위쪽 반원만 그린다(모닥불처럼 땅에 놓인 빛).
+   */
+  function glow(ctx, cx, cy, radius, rgb, alpha, dome) {
+    if (!(radius > 0) || !(alpha > 0)) return;
+    ctx.fillStyle = 'rgba(' + rgb + ',' + alpha + ')';
+    for (var k = 0; k < 3; k++) {
+      var rr = radius * (1 - k * 0.3);
+      for (var dy = -Math.floor(rr); dy <= (dome ? 0 : Math.floor(rr)); dy++) {
+        var half = Math.round(Math.sqrt(rr * rr - dy * dy));
+        ctx.fillRect(Math.round(cx - half), Math.round(cy + dy), half * 2 + 1, 1);
+      }
+    }
+  }
+
+  /** 날씨: 상태를 따로 두지 않고 시간으로부터 위치를 계산해 그린다. */
+  function drawWeather(ctx, model, view) {
+    var kind = weatherFor(view.day, view.zone), W = model.W, t = model.time, i, rnd;
+    if (kind === 'rain') {
+      rnd = seeded(5); ctx.fillStyle = 'rgba(190,210,225,0.55)';
+      for (i = 0; i < W / 3; i++) { var rx = (rnd() * W + t * 40) % W, ry = (rnd() * H + t * 150) % GROUND; ctx.fillRect(Math.round(rx), Math.round(ry), 1, 3); }
+    } else if (kind === 'snow') {
+      rnd = seeded(9); ctx.fillStyle = 'rgba(240,240,235,0.85)';
+      for (i = 0; i < W / 5; i++) { var sx = (rnd() * W + Math.sin(t + i) * 3 + W) % W, sy = (rnd() * H + t * 14) % (GROUND + 2); ctx.fillRect(Math.round(sx), Math.round(sy), 1, 1); }
+    } else if (kind === 'fog') {
+      // 안개: 화면 전체를 덮는 띠를 없애고, 가장자리가 가는 덩어리 몇 개만 천천히 흘려보낸다.
+      // 밤에는 어두운 바탕 위에서 회색 띠가 도드라지므로 색을 밤하늘 쪽으로 옮기고 훨씬 옅게 그린다.
+      var dark = skyAt(view.t).dark, strength = fogStrength(dark), tint = hexToRgb(lerpColor('#cdd2c8', '#46506a', dark)).join(',');
+      for (i = 0; i < 4; i++) {
+        var fw = 70 + i * 22, fx = Math.round(((t * (2 + i) + i * 90) % (W + fw)) - fw), fy = GROUND - 20 + i * 5;
+        ctx.fillStyle = 'rgba(' + tint + ',' + ((0.07 + i * 0.03) * strength).toFixed(3) + ')';
+        ctx.fillRect(fx + 10, fy, fw - 20, 2);       // 위쪽은 짧게
+        ctx.fillRect(fx, fy + 2, fw, 3);             // 가운데가 가장 길고
+        ctx.fillRect(fx + 16, fy + 5, fw - 32, 2);   // 아래쪽도 짧게: 네모난 띠로 보이지 않는다
+      }
+    }
+  }
+
+  function draw(ctx, model, view) {
+    var sky = skyAt(view.t), h = model.hero, t = model.time, i;
+    drawBackdrop(ctx, model, view, sky);
+    // 잔해 더미
+    model.piles.forEach(function (px) {
+      ctx.fillStyle = lerpColor('#6f6a60', '#1d1d19', sky.dark); ctx.fillRect(px - 3, GROUND - 3, 12, 3); ctx.fillRect(px, GROUND - 6, 6, 3);
+      ctx.fillStyle = lerpColor('#8a5a34', '#2a1c11', sky.dark); ctx.fillRect(px + 5, GROUND - 4, 3, 2);
+    });
+    drawBaseBuilding(ctx, model, view, sky);
+    drawBase(ctx, model, view, sky);
+    drawUpgrades(ctx, model, view, sky);
+    drawBird(ctx, model, sky);
+    drawSquad(ctx, model, view);
+    drawCorpses(ctx, model, view);
+    // 좀비(왼쪽을 향해 걷는다)
+    var kind = hordeFor(view.horde);
+    model.zombies.forEach(function (z, zi) {
+      var moving = z.x > z.stop, sc = z.big ? kind.bossScale : 1;
+      // 무리 성격의 색이 먼저, 그 위에 개체마다 다른 옷 색(성격이 옷 색을 정하지 않을 때만)
+      var look = kind.look ? Object.assign({}, ZOMBIE_LOOKS[z.look || 0], kind.look) : ZOMBIE_LOOKS[z.look || 0];
+      if (z.crawl) { // 기어 오는 좀비: 누운 그림을 끌면서 온다
+        sprite(ctx, ZOMBIE_LYING, z.x - 2 + (moving && Math.floor(t * 4 + z.phase) % 2 ? 1 : 0), GROUND - 5, false, 1, look);
+        return;
+      }
+      // 빠른 무리는 다리도 빨리 움직인다
+      var frame = ZOMBIE[Math.floor(t * 3 * kind.speed + z.phase) % 2];
+      // 방벽 앞에 선 맨 앞줄은, 못 막는 밤이면 방벽을 두드린다(앞뒤로 흔들린다)
+      var pound = !moving && !view.safe && zi < 2 && Math.floor(t * 6 + z.phase) % 2 ? -1 : 0;
+      var top = GROUND - 11 * sc - (!moving && Math.floor(t * 5 + z.phase) % 2 ? 1 : 0);
+      sprite(ctx, frame, z.x + pound, top, true, sc, look);
+      if (kind.hat) { ctx.fillStyle = kind.hat; ctx.fillRect(Math.round(z.x) + 1 * sc, top - sc, 5 * sc, sc); }           // 안전모
+      if (z.big) { ctx.fillStyle = PAL.e; ctx.fillRect(Math.round(z.x) + 3 * sc, top + 2 * sc, sc, sc); ctx.fillRect(Math.round(z.x) + 5 * sc, top + 2 * sc, sc, sc); } // 변이체의 붉은 눈(그림을 뒤집어 그리므로 3·5번째 칸)
+    });
+    // 거점으로 뛰어드는 무리(뚫린 밤)
+    model.raiders.forEach(function (rd) {
+      sprite(ctx, ZOMBIE[Math.floor(t * 9 + rd.phase) % 2], rd.x, GROUND - 11 * (rd.big ? 2 : 1), true, rd.big ? 2 : 1, ZOMBIE_LOOKS[rd.look]);
+    });
+    drawShots(ctx, model);
+    drawPeople(ctx, model, view, sky);
+    // 주인공
+    var hx = Math.round(h.x) - 4;
+    if (h.state === 'search') sprite(ctx, HERO_SEARCH, hx, GROUND - 11 + (Math.floor(t * 6) % 2), false, 1);
+    else {
+      var walking = h.state === 'out' || h.state === 'back';
+      sprite(ctx, HERO_TOP.concat(HERO_LEGS[walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0]), hx, GROUND - 11, h.face < 0, 1);
+    }
+    if (h.carrying) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(hx + 2, GROUND - 16, 5, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(hx + 2, GROUND - 15, 5, 1); }
+    drawHeroKit(ctx, model, view, hx);
+    // 거점에 쌓인 상자(최근에 나른 만큼, 최대 6개). 건물이 서면 상자는 건물 1층 창고에 쌓인다(drawBaseBuilding)
+    for (i = 0; i < Math.min(6, model.delivered) && baseStage(Math.max(totalFacilities(view), view.zoneBuilding > 0 ? 1 : 0)) < 1; i++) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(30 + (i % 3) * 5, GROUND - 4 - Math.floor(i / 3) * 4, 4, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(30 + (i % 3) * 5, GROUND - 3 - Math.floor(i / 3) * 4, 4, 1); }
+    model.particles.forEach(function (p) { ctx.fillStyle = p.color; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); });
+    drawForeground(ctx, model, view, sky);
+    drawWeather(ctx, model, view);
+    if (model.flash > 0) { ctx.globalAlpha = Math.min(0.6, model.flash * 1.6); ctx.fillStyle = model.flashColor; ctx.fillRect(0, 0, model.W, H); ctx.globalAlpha = 1; }
+  }
+
+  /* ---------- 캔버스에 붙이기 ---------- */
+  /**
+   * canvas 에 장면을 붙이고 그리기 루프를 시작한다. getView 는 매 프레임 호출되어 현재 view 를 돌려준다.
+   * 캔버스를 쓸 수 없는 환경이면 null 을 돌려주고 아무 일도 하지 않는다(게임은 그림 없이도 돌아간다).
+   */
+  function mount(canvas, getView) {
+    var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
+    if (!ctx) return null;
+    var model = create(256), last = 0, acc = 0;
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function fit() {
+      // 도트 한 칸이 화면에서 2~3픽셀이 되도록 저해상도 폭을 정한다
+      var css = canvas.clientWidth || 512, scale = Math.max(2, Math.round(css / 400));
+      var W = Math.max(160, Math.round(css / scale));
+      if (canvas.width !== W) { canvas.width = W; canvas.height = H; }
+      canvas.style.height = (H * css / W).toFixed(1) + 'px'; // 감싼 틀이 더 낮으면 하늘 윗부분이 잘린다
+      resize(model, W);
+    }
+    function frame(now) {
+      requestAnimationFrame(frame);
+      var dt = Math.min(0.25, (now - last) / 1000 || 0);
+      last = now; acc += dt;
+      if (acc < (still ? 1 : 1 / 15)) return; // 초당 15장이면 도트 화면에 충분하다. 동작 줄이기 설정이면 1초에 한 장.
+      try {
+        var view = getView();
+        if (!still) step(model, view, acc);
+        draw(ctx, model, view);
+      } catch (e) { /* 그림 한 장의 오류가 게임을 멈추지 않게 한다 */ }
+      acc = 0;
+    }
+    fit();
+    window.addEventListener('resize', fit);
+    requestAnimationFrame(frame);
+    return {
+      poke: function () { poke(model); },
+      night: function (defended) { night(model, defended); },
+      model: model
+    };
+  }
+
+  return { fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
+           lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
+           create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
+});
