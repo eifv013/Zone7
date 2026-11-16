@@ -31,7 +31,7 @@
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -47,10 +47,16 @@
         '지금은 ' + ready.length + '구역까지 만들어져 있어요.' + (next ? ' ' + next.no + '구역 ' + topic(next.name) + ' 문 앞까지만 갈 수 있고, 다음 버전에서 열려요.' : '') ] },
 
       { id: 'zone', title: '구역과 목표', items: [
-        '구역 화면의 탭에서 구역을 골라요. 구역마다 시설과 강화 목록이 따로 있어요.',
+        '구역 화면의 번호 탭에서 구역을 골라요. 구역 화면은 운영, 강화, 목표로 나뉘어 있어요. "구역 지도"를 누르면 구역마다 얼마를 버는지 한눈에 볼 수 있어요.',
         '구역마다 목표가 셋 있어요. 하나를 달성할 때마다 특전 ' + core.PERK_CHOICES + '장 중 하나를 골라요.',
         '목표 셋을 모두 채우고 물자를 치르면 다음 구역의 문이 열려요. 뒤 구역일수록 문 값이 훨씬 비싸요.',
         '뒤 구역을 열면 밤에 오는 무리도 커져요(구역 하나마다 3배).' ] },
+
+      { id: 'map', title: '1구역: 수색 지도', items: [
+        '동네 하나는 ' + core.SWEEP_TILES + '칸이에요. 칸을 누르면 그 칸을 뒤져서 물자를 얻어요. "잔해 수색" 단추는 다음 칸을 뒤지는 것과 같아요.',
+        '칸마다 나오는 것이 달라요. ' + core.TILE_KINDS.map(function (k) { return k.name + '(수익 ' + k.mult + '배)'; }).join(', ') + '. 뒤져 봐야 알 수 있어요.',
+        core.SWEEP_TILES + '칸을 다 뒤지면 직접 수색 ' + core.SWEEP_BONUS_CLICKS + '번치 보너스를 받고 다음 동네로 넘어가요.',
+        '시설이 하나라도 있으면 ' + span(core.SWEEP_AUTO_SECONDS) + '마다 한 칸씩 알아서 뒤져요. 가만히 있어도 동네는 넘어가요.' ] },
 
       { id: 'click', title: '직접 수색', items: [
         '"잔해 수색"을 누르면 물자를 바로 얻어요. 한 번의 기본 수익은 초당 생산의 ' + pct(core.CLICK_SHARE) + ' 에 전체 생산 배수를 더한 값이에요.',

@@ -86,14 +86,23 @@ def run_case(browser, name, size, state, mode):
         for _ in range(8):
             if page.evaluate("!document.getElementById('story').hidden"):
                 page.click('#story'); page.wait_for_timeout(250)
-    def clear():    # 화면을 덮는 창(일지, 특전 고르기)이 떠 있으면 닫는다. 특전은 첫 장을 고른다
+    def clear():    # 화면을 덮는 창(일지, 특전 고르기, 자리 비움 보상, 구역 지도)이 떠 있으면 닫는다. 특전은 첫 장을 고른다
         close_story()
+        for box, btn in [('away', '#away-ok'), ('zmap', '#zmap-close')]:
+            if page.evaluate("!document.getElementById('%s').hidden" % box): page.click(btn); page.wait_for_timeout(120)
         if page.evaluate("!document.getElementById('perk').hidden"):
             page.locator('#perk-list button').first.click(); page.wait_for_timeout(200)
             if page.evaluate("!document.getElementById('perk').hidden"): problems.append('특전을 골랐는데 창이 닫히지 않았다')
     def tap(sel):   # 넓은 화면에는 하단 메뉴가 없으므로 보이는 것만 누른다
         clear()
         loc = page.locator(sel)
+        # 구역 화면은 운영 / 강화 / 목표로 나뉘어 있다: 누르려는 것이 다른 쪽에 있으면 그쪽으로 넘어가서 누른다
+        if loc.count() and not loc.first.is_visible():
+            for p in ['play', 'up', 'goal']:
+                b = page.locator('#zone-panes [data-pane=%s]' % p)
+                if b.count() and b.first.is_visible():
+                    b.first.click(); page.wait_for_timeout(60)
+                    if loc.first.is_visible(): break
         if loc.count() and loc.first.is_visible() and loc.first.is_enabled():
             loc.first.click(); page.wait_for_timeout(120); return True
         return False
@@ -106,7 +115,20 @@ def run_case(browser, name, size, state, mode):
     if mode == 'new':
         for _ in range(60): page.click('#scavenge')
         tap('[data-mview-set=manage]')
+        # 수색 지도: 칸을 직접 눌러 뒤지고, 구역 지도를 열었다 닫는다
+        if page.locator('#search-grid .tile').count() != 20: problems.append('수색 지도가 20칸이 아니다')
+        done_before = page.locator('#search-grid .tile.done').count()
+        if not tap('#tile-19'): problems.append('수색 지도의 칸을 누를 수 없다')
+        if page.locator('#search-grid .tile.done').count() != done_before + 1 or 'done' not in page.get_attribute('#tile-19', 'class'): problems.append('칸을 눌렀는데 뒤진 칸이 되지 않았다')
+        if not tap('#zmap-open') or not page.locator('#zmap').is_visible(): problems.append('구역 지도가 열리지 않는다')
+        if '1구역 주택가' not in text('zmap-z0') or '잠김' not in text('zmap-z1'): problems.append('구역 지도 내용이 이상하다: ' + text('zmap-z0') + ' | ' + text('zmap-z1'))
+        page.click('#zmap-close')
         if not tap('#row-scouts'): problems.append('첫 수색조를 살 수 없다')
+        tap('#zone-panes [data-pane=goal]')
+        if page.locator('#goals li:visible').count() != 3 or page.locator('#row-scouts').is_visible(): problems.append('목표 화면에 목표 셋만 보여야 한다')
+        tap('#zone-panes [data-pane=up]')
+        if not page.locator('#row-crowbar').is_visible() or page.locator('#search').is_visible(): problems.append('강화 화면에 강화 목록만 보여야 한다')
+        tap('#zone-panes [data-pane=play]')
         tap('[data-tab=wall]')
         if not tap('#row-wire'): problems.append('첫 철조망을 살 수 없다')
         tap('[data-tab=z1]'); tap('[data-tab=z2]'); tap('[data-tab=z0]')

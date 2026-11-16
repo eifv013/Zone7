@@ -1109,3 +1109,87 @@ test('저장: 연구를 안전하게 읽는다', () => {
   for (const junk of [null, 'x', 7, {}]) assert.doesNotThrow(() => C.sanitizeState({ version: 2, zone: 4, research: junk, offers: junk }, 0));
   assert.doesNotThrow(() => C.mods({ upgrades: {}, perks: {}, traits: {} }), '연구 기록이 없는 상태에도 배수를 셀 수 있다');
 });
+
+/* ================= 1구역: 수색 지도 ================= */
+
+test('수색 지도: 칸의 종류는 동네 번호로 정해지고 비율이 맞는다', () => {
+  const count = { house: 0, store: 0, cache: 0 };
+  for (let seed = 1; seed <= 500; seed++) for (let i = 0; i < C.SWEEP_TILES; i++) {
+    const k = C.tileKind(seed, i);
+    assert.equal(C.tileKind(seed, i), k, '같은 입력에는 같은 답');
+    count[k.id]++;
+  }
+  const total = 500 * C.SWEEP_TILES;
+  for (const k of C.TILE_KINDS) assert.ok(Math.abs(count[k.id] / total - k.weight / 100) < 0.03, k.id + ' ' + count[k.id] / total);
+  assert.equal(C.TILE_KINDS.reduce((a, k) => a + k.weight, 0), 100);
+  for (const junk of [NaN, -5, 1e12, 'x', null]) assert.doesNotThrow(() => C.tileKind(junk, junk));
+});
+
+test('수색 지도: 직접 수색은 한 칸을 뒤지고 칸의 종류만큼 번다', () => {
+  const s = fresh();
+  const base = C.clickValue(s), kind = C.tileKind(s.sweepSeed, 7);
+  const r = C.scavenge(s, 7);
+  assert.equal(r.tile, 7);
+  assert.equal(r.kind, kind.id);
+  near(r.gain, base * kind.mult);
+  assert.ok(C.tileSearched(s, 7));
+  assert.equal(C.sweepCount(s), 1);
+  assert.equal(s.clicks, 1);
+  // 칸을 정하지 않으면 맨 앞의 안 뒤진 칸, 이미 뒤진 칸이나 잘못된 번호도 마찬가지
+  assert.equal(C.scavenge(s).tile, 0);
+  assert.equal(C.scavenge(s, 7).tile, 1);
+  for (const junk of [-1, 99, 2.5, NaN, 'x', null]) assert.ok(C.scavenge(s, junk).ok);
+  assert.equal(C.sweepCount(s), 9);
+});
+
+test('수색 지도: 동네를 다 뒤지면 보너스를 받고 다음 동네로 넘어간다', () => {
+  const s = fresh();
+  const seed = s.sweepSeed;
+  let last;
+  for (let i = 0; i < C.SWEEP_TILES; i++) last = C.scavenge(s);
+  assert.equal(last.swept, true);
+  near(last.bonus, C.clickValue(s) * C.SWEEP_BONUS_CLICKS);
+  assert.equal(s.sweeps, 1);
+  assert.equal(s.sweepMask, 0);
+  assert.equal(s.sweepSeed, seed + 1);
+  assert.equal(C.nextTile(s), 0);
+  assert.equal(C.scavenge(s).swept, false);
+});
+
+test('수색 지도: 누르기가 방치를 압도하지 않는다', () => {
+  // 생산이 큰 판에서 스무 칸을 다 누른 수익(보너스 포함)이 초당 생산의 몇 배인지 본다: 초당 5번을 눌러도 생산의 절반을 넘지 않아야 한다
+  const s = fresh(); s.buildings.workshop = 200; s.upgrades.crowbar = 12; s.traits.quick = 15;
+  const per = C.productionPerSec(s), before = s.supplies;
+  for (let i = 0; i < C.SWEEP_TILES; i++) C.scavenge(s);
+  const perTap = (s.supplies - before) / C.SWEEP_TILES;
+  assert.ok(perTap * 5 < per * 0.75, `한 번에 생산의 ${(perTap / per * 100).toFixed(1)}%`);
+});
+
+test('수색 지도: 시설이 있으면 알아서 뒤진다(칸 수익은 없고 동네 보너스만)', () => {
+  const s = fresh(); s.defenses.rail = 1e5; s.signalIn = 1e9;
+  C.tick(s, 30, half);
+  assert.equal(C.sweepCount(s), 0, '시설이 없으면 그대로다');
+  s.buildings.scouts = 1;
+  C.tick(s, C.SWEEP_AUTO_SECONDS * 4 + 0.1, half);
+  assert.equal(C.sweepCount(s), 4);
+  assert.equal(s.clicks, 0);
+  let swept = 0;
+  for (let i = 0; i < 40; i++) swept += C.tick(s, C.SWEEP_AUTO_SECONDS, half).filter(e => e.type === 'sweep').length;
+  assert.equal(swept, 2);
+  assert.equal(s.sweeps, 2);
+  assert.doesNotThrow(() => C.tick(s, 1e6, half));
+  assert.ok(s.sweepClock >= 0 && s.sweepClock <= C.SWEEP_AUTO_SECONDS);
+});
+
+test('수색 지도: 저장을 안전하게 읽고, 철수하면 처음 동네로 돌아간다', () => {
+  const s = fresh(); C.scavenge(s, 3); C.scavenge(s, 9); s.sweeps = 4; s.sweepSeed = 17;
+  assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
+  const bad = C.sanitizeState({ version: 2, sweepMask: 1e15, sweepSeed: -3, sweepClock: 99, sweeps: 2.9 }, 0);
+  assert.ok(bad.sweepMask >= 0 && bad.sweepMask < (1 << C.SWEEP_TILES));
+  assert.equal(bad.sweepSeed, 1);
+  assert.equal(bad.sweepClock, C.SWEEP_AUTO_SECONDS);
+  assert.equal(bad.sweeps, 2);
+  s.runEarned = C.RETREAT_MIN * 10;
+  const r = C.retreat(s, 0).state;
+  assert.equal(r.sweepMask, 0); assert.equal(r.sweeps, 0); assert.equal(r.sweepSeed, 1);
+});

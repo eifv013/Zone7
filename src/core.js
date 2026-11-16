@@ -47,6 +47,16 @@
   var OFFLINE_CAP = 4 * 3600;      // 자리 비움으로 인정하는 최대 시간
   var OFFLINE_RATE = 0.5;          // 자리 비움 동안의 생산 효율
   var PERK_CHOICES = 3;            // 특전을 고를 때 내미는 장수
+  // 1구역 수색 지도
+  var SWEEP_COLS = 5, SWEEP_ROWS = 4, SWEEP_TILES = SWEEP_COLS * SWEEP_ROWS;   // 동네 하나는 5×4 = 20칸
+  var SWEEP_AUTO_SECONDS = 3;      // 시설이 있으면 이 시간마다 한 칸을 알아서 뒤진다
+  var SWEEP_BONUS_CLICKS = 3;      // 동네 하나를 다 뒤졌을 때의 보너스: 직접 수색 이만큼의 몫
+  // 칸의 종류: 뒤졌을 때 직접 수색 수익에 곱하는 값과, 100칸 가운데 몇 칸쯤 나오는가
+  var TILE_KINDS = [
+    { id: 'house', name: '빈집', mult: 1,   weight: 60 },
+    { id: 'store', name: '가게', mult: 1.25, weight: 30 },
+    { id: 'cache', name: '은닉처', mult: 2, weight: 10 }
+  ];
   // 2구역 거래
   var PRICE_STEP = 10;             // 시세가 바뀌는 간격(초)
   var PRICE_FLOOR = 0.5, PRICE_CEIL = 2;  // 기본 시세의 범위
@@ -262,6 +272,8 @@
       zone: 0,               // 가장 멀리 연 구역(0 이 1구역)
       gate: false,           // 아직 만들지 않은 구역의 문 앞에 닿았는가(이번 판)
       buildings: {}, defenses: {}, upgrades: {},
+      // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
+      sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
       // 2구역 거래
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
       // 3구역 생산 라인
@@ -306,7 +318,7 @@
     var s = createState(now);
     if (!raw || typeof raw !== 'object') return s;
     ['supplies', 'runEarned', 'lifetimeEarned', 'goods', 'tradeEarned', 'lineEarned', 'steadySeconds', 'railEarned', 'points', 'playSeconds', 'awaySeconds', 'runSeconds', 'startedAt'].forEach(function (k) { s[k] = safeNum(raw[k], s[k]); });
-    ['clicks', 'stalls', 'trains', 'expressRuns', 'staff', 'projectsDone', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
+    ['clicks', 'sweeps', 'stalls', 'trains', 'expressRuns', 'staff', 'projectsDone', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
     s.zone = clamp(safeCount(raw.zone), 0, ZONES.length - 1);
     while (s.zone > 0 && ZONES[s.zone].kind === 'soon') s.zone--;     // 아직 없는 구역에 들어가 있을 수는 없다
     s.bestZone = clamp(Math.max(safeCount(raw.bestZone), s.zone), 0, ZONES.length - 1);
@@ -328,6 +340,9 @@
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
+    s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
+    s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
+    s.sweepClock = clamp(safeNum(raw.sweepClock, 0), 0, SWEEP_AUTO_SECONDS);
     s.staff = Math.min(s.staff, COUNT_MAX);
     s.research = counts(PROJECTS, raw.research, 200);
     s.offers = [];
@@ -760,7 +775,60 @@
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
   function clickPower(state) { return 1 + Math.log(Math.max(1, mods(state).click)) / Math.LN2; }
   function clickValue(state) { return (globalMult(state) + productionPerSec(state) * CLICK_SHARE) * clickPower(state); }
-  function scavenge(state) { var g = clickValue(state); earn(state, g); state.clicks++; return { ok: true, gain: g }; }
+  /*
+   * 수색 지도: 직접 수색은 동네의 한 칸을 뒤지는 일이다. 칸마다 종류(빈집·가게·은닉처)가 있어 수익이 다르고,
+   * 스무 칸을 다 뒤지면 보너스를 받고 다음 동네로 넘어간다. 시설이 있으면 몇 초마다 한 칸씩 알아서 뒤진다(자동 수색은 칸 수익 없이 진행만 시킨다).
+   * 칸의 배치는 동네 번호(sweepSeed)로 정해지므로 저장했다 불러와도 같은 동네가 나온다.
+   */
+  /** 동네 seed 의 index 번째 칸의 종류. 같은 입력에는 언제나 같은 답을 준다. */
+  function tileKind(seed, index) {
+    // 두 수를 섞어 고르게 흩는다(murmur3 의 마무리 섞기). 단순히 곱해서 더하면 종류가 한쪽으로 쏠린다.
+    var h = (Math.imul((seed | 0) + 1, 0x9E3779B1) + Math.imul((index | 0) + 1, 0x85EBCA6B)) | 0;
+    h ^= h >>> 16; h = Math.imul(h, 0x85EBCA6B); h ^= h >>> 13; h = Math.imul(h, 0xC2B2AE35); h ^= h >>> 16;
+    var roll = (h >>> 0) % 100, acc = 0;
+    for (var i = 0; i < TILE_KINDS.length; i++) { acc += TILE_KINDS[i].weight; if (roll < acc) return TILE_KINDS[i]; }
+    return TILE_KINDS[0];
+  }
+  function tileSearched(state, index) { return index >= 0 && index < SWEEP_TILES && (state.sweepMask & (1 << index)) !== 0; }
+  function sweepCount(state) { var n = 0; for (var i = 0; i < SWEEP_TILES; i++) if (state.sweepMask & (1 << i)) n++; return n; }
+  /** 아직 뒤지지 않은 칸 가운데 맨 앞의 것. 없으면 -1. */
+  function nextTile(state) { for (var i = 0; i < SWEEP_TILES; i++) if (!(state.sweepMask & (1 << i))) return i; return -1; }
+  function sweepBonus(state) { return clickValue(state) * SWEEP_BONUS_CLICKS; }
+  /** 칸 하나를 뒤진 것으로 표시한다. 동네를 다 뒤졌으면 보너스를 주고 다음 동네로 넘긴다. 돌려주는 값: 보너스(없으면 0). */
+  function markTile(state, index) {
+    state.sweepMask |= 1 << index;
+    if (sweepCount(state) < SWEEP_TILES) return 0;
+    var bonus = sweepBonus(state);
+    earn(state, bonus);
+    state.sweeps++;
+    state.sweepMask = 0;
+    state.sweepSeed = state.sweepSeed % 999999 + 1;
+    return bonus;
+  }
+  /**
+   * 직접 수색. index 를 주면 그 칸을 뒤지고(이미 뒤진 칸이거나 잘못된 번호면 다음 칸), 주지 않으면 다음 칸을 뒤진다.
+   * 돌려주는 값: { ok, gain 칸에서 얻은 물자, tile 뒤진 칸, kind 칸의 종류, swept 동네를 다 뒤졌는가, bonus 그 보너스 }
+   */
+  function scavenge(state, index) {
+    var i = typeof index === 'number' && index === Math.floor(index) && index >= 0 && index < SWEEP_TILES && !tileSearched(state, index) ? index : nextTile(state);
+    var kind = tileKind(state.sweepSeed, i), g = clickValue(state) * kind.mult;
+    earn(state, g);
+    state.clicks++;
+    var bonus = markTile(state, i);
+    return { ok: true, gain: g, tile: i, kind: kind.id, swept: bonus > 0, bonus: bonus };
+  }
+  /** 시설이 dt 초 동안 알아서 뒤진다. 동네를 다 뒤질 때마다 'sweep' 사건을 남긴다. */
+  function stepSweep(state, dt, events) {
+    if (!totalBuildings(state)) return;
+    state.sweepClock += dt;
+    var guard = 0;
+    while (state.sweepClock >= SWEEP_AUTO_SECONDS && guard++ < SWEEP_TILES * 3) {
+      state.sweepClock -= SWEEP_AUTO_SECONDS;
+      var bonus = markTile(state, nextTile(state));
+      if (bonus > 0) events.push({ type: 'sweep', bonus: bonus, auto: true });
+    }
+    if (state.sweepClock > SWEEP_AUTO_SECONDS) state.sweepClock = 0;      // 아주 긴 dt: 남은 시간은 버린다(자리 비움은 따로 계산한다)
+  }
 
   /* ---------- 구역 목표와 다음 구역 ---------- */
   /** 구역 index 의 목표 진행 [{ id, text, value, need, done }]. 아직 없는 구역은 빈 배열. */
@@ -1036,6 +1104,7 @@
     if (dt > boosted) { earn(state, searchRate(state) * (dt - boosted)); line += lineRate(state) * (dt - boosted); }
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
 
+    stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     stepLab(state, dt, rng);
@@ -1178,6 +1247,8 @@
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
+    SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
+    TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,

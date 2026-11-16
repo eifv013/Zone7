@@ -207,7 +207,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .stats-h { margin: 16px 0 4px; font: 600 14px/1.4 var(--font-body); }
 
 /* 구역 경로, 현재 위치, 일지 */
-.route { display: flex; gap: 4px; list-style: none; margin: 12px 0 0; padding: 0; }
+.route { display: flex; gap: 4px; list-style: none; margin: 12px 0 0; padding: 0; cursor: pointer; }   /* 누르면 구역 지도가 열린다 */
 .route li { width: 28px; height: 28px; display: grid; place-items: center; border: 2px solid var(--ink); font: 600 13px var(--font-mono); color: var(--ink-soft); }
 .route .past { background: var(--ink); color: var(--paper); }
 .route .here { background: var(--hazard); color: var(--on-hazard); }
@@ -306,6 +306,53 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .rail-name small { margin-left: 6px; font: 400 12px/1.4 var(--font-body); color: var(--ink-soft); }
 .rail-side { font: 500 12px/1.4 var(--font-mono); white-space: nowrap; }
 .tabbar button[hidden] { display: none; }
+/* 구역 화면 안의 전환: 운영(놀이 화면과 주된 구매) / 강화 / 목표. 한 번에 한 가지만 보여 화면을 비운다. */
+.panes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 8px 0 10px; border: 2px solid var(--ink); }
+.panes[hidden] { display: none; }
+.panes button { position: relative; padding: 6px 4px; background: transparent; color: var(--ink-soft); border: 0; font: 600 13px/1.4 var(--font-body); cursor: pointer; }
+.panes button + button { border-left: 2px solid var(--ink); }
+.panes button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.panes button.avail::after { content: ''; position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; background: var(--hazard); }
+.zmap-open { margin-right: auto; margin-left: 10px; padding: 3px 9px; background: transparent; color: var(--ink); border: 1px solid var(--ink); font: 600 12px/1.5 var(--font-body); cursor: pointer; }
+/* 1구역 수색 지도: 5×4 칸. 안 뒤진 칸은 어두운 건물, 뒤진 칸은 무엇이 나왔는지 보여 준다. */
+.search-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.search-head .num { font: 400 22px/1.1 var(--font-display); white-space: nowrap; }
+.search-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin-bottom: 8px; }
+.tile { position: relative; aspect-ratio: 2 / 1; padding: 0; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); cursor: pointer; font: 600 11px/1.2 var(--font-body); overflow: hidden; }
+.tile::before { content: ''; position: absolute; inset: 22% 18% 0; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .22) 0 3px, transparent 3px 7px); }   /* 창문 */
+.tile.next { border-color: var(--hazard); }
+.tile.done { background: transparent; color: var(--ink-soft); border-style: dashed; border-color: var(--rule); cursor: default; }
+.tile.done::before { content: none; }
+.tile.done.store { color: var(--ink); border-color: var(--ink-soft); }
+.tile.done.cache { background: var(--hazard); color: var(--on-hazard); border-style: solid; border-color: var(--ink); }
+.tile.hit { animation: tile-hit .35s ease-out; }
+@keyframes tile-hit { from { transform: scale(.82); } 60% { transform: scale(1.08); } to { transform: scale(1); } }
+.search.swept .search-grid { animation: tile-hit .5s ease-out; }
+@media (prefers-reduced-motion: reduce) { .tile.hit, .search.swept .search-grid { animation: none; } }
+/* 자리 비움 보상 창 */
+.away-card { align-items: center; text-align: center; gap: 12px; }
+.away-gain { font: 400 clamp(40px, 13vw, 60px)/1 var(--font-display); color: #f0b400; }
+.story-card .away-card .sync-q, .story-card.away-card .sync-q { font-size: 14px; color: #b9b8ab; }
+.away-list { list-style: none; margin: 0; padding: 0; font: 500 13px/1.7 var(--font-mono); color: #e6e5db; }
+.away-list:empty { display: none; }
+.story-card.away-card button { align-self: stretch; padding: 12px; font-size: 17px; }
+/* 구역 지도 */
+.zmap-card { gap: 12px; }
+.zmap-head { display: flex; align-items: center; justify-content: space-between; }
+.story-card .zmap-head button { align-self: auto; padding: 5px 14px; background: transparent; color: #e6e5db; border-color: #e6e5db; }
+.zmap-total { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #6d6d60; font-size: 13px; color: #b9b8ab; }
+.zmap-total b { font: 400 26px/1 var(--font-display); color: #f0b400; }
+.zmap-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.story-card .zmap-zone { align-self: stretch; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; width: 100%; text-align: left; padding: 8px 10px; background: transparent; color: #e6e5db; border: 2px solid #6d6d60; font: inherit; cursor: pointer; }
+.story-card .zmap-zone:disabled { opacity: .45; cursor: default; }
+.story-card .zmap-zone.here { border-color: #f0b400; }
+.zmap-no { grid-row: 1 / span 3; display: grid; place-items: center; width: 34px; height: 34px; background: #f0b400; color: #17180f; font: 400 20px/1 var(--font-display); }
+.zmap-zone:disabled .zmap-no { background: #6d6d60; }
+.zmap-name { font: 600 15px/1.3 var(--font-body); }
+.zmap-rate { font: 500 13px/1.3 var(--font-mono); color: #f0b400; white-space: nowrap; }
+.zmap-lead { grid-column: 2 / -1; font-size: 12px; line-height: 1.4; color: #b9b8ab; }
+.zmap-bar { grid-column: 2 / -1; height: 5px; background: #33342a; }
+.zmap-bar i { display: block; height: 100%; width: 0; background: #f0b400; }
 /* 구역 탭: 번호 칸은 좁게, 고른 구역과 방벽은 넓게. 일곱 구역이 다 열려도 폰 한 줄에 들어간다. */
 #zone-tabs button { flex: 1 1 0; min-width: 30px; }
 #zone-tabs button[aria-pressed="true"], #zone-tabs button[data-tab="wall"] { flex: 2.2 1 0; }
@@ -571,7 +618,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.6.7</div>
+  <div class="boot-ver">7구역 알파 0.7.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -806,6 +853,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <section class="panel" aria-labelledby="h-build">
       <div class="panel-head">
         <h2 id="h-build">구역</h2>
+        <button type="button" class="zmap-open" id="zmap-open">구역 지도</button>
         <div class="qty" id="qty" role="group" aria-label="한 번에 살 수량">
           <button type="button" data-qty="1" aria-pressed="true">×1</button>
           <button type="button" data-qty="10" aria-pressed="false">×10</button>
@@ -814,6 +862,16 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       </div>
       <div class="tabbar even" id="zone-tabs" role="group" aria-label="구역 고르기"></div>
       <p class="hint tab-hint" id="tab-hint"></p>
+      <div class="panes" id="zone-panes" role="group" aria-label="구역 화면 고르기">
+        <button type="button" data-pane="play" aria-pressed="true">운영</button>
+        <button type="button" data-pane="up" aria-pressed="false">강화</button>
+        <button type="button" data-pane="goal" aria-pressed="false">목표</button>
+      </div>
+      <div class="trade search" id="search" hidden>
+        <div class="search-head"><span class="num" id="search-count">0 / 20칸</span><span class="label" id="search-note"></span></div>
+        <div class="search-grid" id="search-grid"></div>
+        <div class="label" id="search-bonus"></div>
+      </div>
       <div class="trade" id="trade" hidden>
         <div class="trade-top">
           <div><div class="label">지금 시세</div><div class="trade-price num" id="price">×1.00</div><div class="label" id="price-range"></div></div>
@@ -847,6 +905,11 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="rows" id="rows-z2" hidden></div>
       <div class="rows" id="rows-z3" hidden></div>
       <div class="rows" id="rows-z4" hidden></div>
+      <div class="rows" id="ups-z0" hidden></div>
+      <div class="rows" id="ups-z1" hidden></div>
+      <div class="rows" id="ups-z2" hidden></div>
+      <div class="rows" id="ups-z3" hidden></div>
+      <div class="rows" id="ups-z4" hidden></div>
       <div class="rows" id="rows-wall" hidden></div>
       <p class="hint soon" id="soon" hidden></p>
     </section>
@@ -919,7 +982,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.7.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -947,6 +1010,26 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <button type="button" class="feedback-close" id="feedback-close">닫기</button>
     </div>
     <p class="feedback-msg" id="feedback-msg" role="status"></p>
+  </div>
+</div>
+
+<!-- 자리 비움 보상: 돌아왔을 때 그동안 쌓인 물자를 크게 보여 준다. 물자는 이미 들어와 있고, 이 창은 알려 주기만 한다. -->
+<div class="story-veil" id="away" role="dialog" aria-modal="true" aria-labelledby="away-title" hidden>
+  <div class="story-card feedback-card away-card">
+    <div class="label" id="away-title">자리를 비운 동안</div>
+    <div class="away-gain num" id="away-gain">+0</div>
+    <p class="sync-q" id="away-text"></p>
+    <ul class="away-list" id="away-list"></ul>
+    <button type="button" id="away-ok">받기</button>
+  </div>
+</div>
+
+<!-- 구역 지도: 구역마다 지금 무엇을 얼마나 벌고 있는지 한눈에 본다. 구역을 누르면 그 구역 화면으로 간다. -->
+<div class="story-veil" id="zmap" role="dialog" aria-modal="true" aria-labelledby="zmap-title" hidden>
+  <div class="story-card feedback-card zmap-card">
+    <div class="zmap-head"><div class="label" id="zmap-title">구역 지도</div><button type="button" class="feedback-close" id="zmap-close">닫기</button></div>
+    <div class="zmap-total"><span>초당 물자</span><b class="num" id="zmap-total">0</b></div>
+    <ol class="zmap-list" id="zmap-list"></ol>
   </div>
 </div>
 
@@ -1006,7 +1089,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
 </script>
 <script>
 /*
@@ -1025,6 +1108,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.7.0', date: '2026-11-17', at: '2026-11-17 01:20:37', title: '화면을 비우고, 1구역에 수색 지도',
+      items: [
+        '구역 화면을 셋으로 나눴다. 운영(놀이 화면과 주된 구매), 강화, 목표. 한 번에 한 가지만 보여서 화면이 훨씬 비었다. 강화나 목표에 볼 것이 생기면 단추에 점이 찍힌다.',
+        '1구역에 수색 지도가 생겼다. 동네 하나가 스무 칸이고, 칸을 눌러 뒤진다. 빈집, 가게(1.25배), 은닉처(2배)가 섞여 있다. 스무 칸을 다 뒤지면 보너스를 받고 다음 동네로 넘어간다.',
+        '수색조가 있으면 3초마다 한 칸씩 알아서 뒤진다. "잔해 수색" 단추는 지도의 다음 칸을 뒤지는 것과 같다.',
+        '구역 지도가 생겼다. 구역마다 지금 얼마를 벌고 전체에서 몇 할을 차지하는지 한눈에 본다. 구역 화면의 "구역 지도"나 맨 위의 구역 번호를 누르면 열린다.',
+        '자리를 비웠다 돌아오면 쌓인 물자를 큰 숫자로 보여 주는 창이 뜬다.',
+        '2구역부터 5구역까지의 놀이 화면은 다음 버전들에서 하나씩 새로 만든다.'
+      ] },
     { ver: '알파 0.6.7', date: '2026-11-17', at: '2026-11-17 00:19:23', title: '5구역 대학 병원: 연구',
       items: [
         '5구역 대학 병원이 열렸다. 연구원을 뽑아 연구 점수를 모으고, 점수로 연구 과제를 끝낸다.',
@@ -1424,6 +1516,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
   var OFFLINE_CAP = 4 * 3600;      // 자리 비움으로 인정하는 최대 시간
   var OFFLINE_RATE = 0.5;          // 자리 비움 동안의 생산 효율
   var PERK_CHOICES = 3;            // 특전을 고를 때 내미는 장수
+  // 1구역 수색 지도
+  var SWEEP_COLS = 5, SWEEP_ROWS = 4, SWEEP_TILES = SWEEP_COLS * SWEEP_ROWS;   // 동네 하나는 5×4 = 20칸
+  var SWEEP_AUTO_SECONDS = 3;      // 시설이 있으면 이 시간마다 한 칸을 알아서 뒤진다
+  var SWEEP_BONUS_CLICKS = 3;      // 동네 하나를 다 뒤졌을 때의 보너스: 직접 수색 이만큼의 몫
+  // 칸의 종류: 뒤졌을 때 직접 수색 수익에 곱하는 값과, 100칸 가운데 몇 칸쯤 나오는가
+  var TILE_KINDS = [
+    { id: 'house', name: '빈집', mult: 1,   weight: 60 },
+    { id: 'store', name: '가게', mult: 1.25, weight: 30 },
+    { id: 'cache', name: '은닉처', mult: 2, weight: 10 }
+  ];
   // 2구역 거래
   var PRICE_STEP = 10;             // 시세가 바뀌는 간격(초)
   var PRICE_FLOOR = 0.5, PRICE_CEIL = 2;  // 기본 시세의 범위
@@ -1639,6 +1741,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
       zone: 0,               // 가장 멀리 연 구역(0 이 1구역)
       gate: false,           // 아직 만들지 않은 구역의 문 앞에 닿았는가(이번 판)
       buildings: {}, defenses: {}, upgrades: {},
+      // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
+      sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
       // 2구역 거래
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
       // 3구역 생산 라인
@@ -1683,7 +1787,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     var s = createState(now);
     if (!raw || typeof raw !== 'object') return s;
     ['supplies', 'runEarned', 'lifetimeEarned', 'goods', 'tradeEarned', 'lineEarned', 'steadySeconds', 'railEarned', 'points', 'playSeconds', 'awaySeconds', 'runSeconds', 'startedAt'].forEach(function (k) { s[k] = safeNum(raw[k], s[k]); });
-    ['clicks', 'stalls', 'trains', 'expressRuns', 'staff', 'projectsDone', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
+    ['clicks', 'sweeps', 'stalls', 'trains', 'expressRuns', 'staff', 'projectsDone', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
     s.zone = clamp(safeCount(raw.zone), 0, ZONES.length - 1);
     while (s.zone > 0 && ZONES[s.zone].kind === 'soon') s.zone--;     // 아직 없는 구역에 들어가 있을 수는 없다
     s.bestZone = clamp(Math.max(safeCount(raw.bestZone), s.zone), 0, ZONES.length - 1);
@@ -1705,6 +1809,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
+    s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
+    s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
+    s.sweepClock = clamp(safeNum(raw.sweepClock, 0), 0, SWEEP_AUTO_SECONDS);
     s.staff = Math.min(s.staff, COUNT_MAX);
     s.research = counts(PROJECTS, raw.research, 200);
     s.offers = [];
@@ -2137,7 +2244,60 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
   function clickPower(state) { return 1 + Math.log(Math.max(1, mods(state).click)) / Math.LN2; }
   function clickValue(state) { return (globalMult(state) + productionPerSec(state) * CLICK_SHARE) * clickPower(state); }
-  function scavenge(state) { var g = clickValue(state); earn(state, g); state.clicks++; return { ok: true, gain: g }; }
+  /*
+   * 수색 지도: 직접 수색은 동네의 한 칸을 뒤지는 일이다. 칸마다 종류(빈집·가게·은닉처)가 있어 수익이 다르고,
+   * 스무 칸을 다 뒤지면 보너스를 받고 다음 동네로 넘어간다. 시설이 있으면 몇 초마다 한 칸씩 알아서 뒤진다(자동 수색은 칸 수익 없이 진행만 시킨다).
+   * 칸의 배치는 동네 번호(sweepSeed)로 정해지므로 저장했다 불러와도 같은 동네가 나온다.
+   */
+  /** 동네 seed 의 index 번째 칸의 종류. 같은 입력에는 언제나 같은 답을 준다. */
+  function tileKind(seed, index) {
+    // 두 수를 섞어 고르게 흩는다(murmur3 의 마무리 섞기). 단순히 곱해서 더하면 종류가 한쪽으로 쏠린다.
+    var h = (Math.imul((seed | 0) + 1, 0x9E3779B1) + Math.imul((index | 0) + 1, 0x85EBCA6B)) | 0;
+    h ^= h >>> 16; h = Math.imul(h, 0x85EBCA6B); h ^= h >>> 13; h = Math.imul(h, 0xC2B2AE35); h ^= h >>> 16;
+    var roll = (h >>> 0) % 100, acc = 0;
+    for (var i = 0; i < TILE_KINDS.length; i++) { acc += TILE_KINDS[i].weight; if (roll < acc) return TILE_KINDS[i]; }
+    return TILE_KINDS[0];
+  }
+  function tileSearched(state, index) { return index >= 0 && index < SWEEP_TILES && (state.sweepMask & (1 << index)) !== 0; }
+  function sweepCount(state) { var n = 0; for (var i = 0; i < SWEEP_TILES; i++) if (state.sweepMask & (1 << i)) n++; return n; }
+  /** 아직 뒤지지 않은 칸 가운데 맨 앞의 것. 없으면 -1. */
+  function nextTile(state) { for (var i = 0; i < SWEEP_TILES; i++) if (!(state.sweepMask & (1 << i))) return i; return -1; }
+  function sweepBonus(state) { return clickValue(state) * SWEEP_BONUS_CLICKS; }
+  /** 칸 하나를 뒤진 것으로 표시한다. 동네를 다 뒤졌으면 보너스를 주고 다음 동네로 넘긴다. 돌려주는 값: 보너스(없으면 0). */
+  function markTile(state, index) {
+    state.sweepMask |= 1 << index;
+    if (sweepCount(state) < SWEEP_TILES) return 0;
+    var bonus = sweepBonus(state);
+    earn(state, bonus);
+    state.sweeps++;
+    state.sweepMask = 0;
+    state.sweepSeed = state.sweepSeed % 999999 + 1;
+    return bonus;
+  }
+  /**
+   * 직접 수색. index 를 주면 그 칸을 뒤지고(이미 뒤진 칸이거나 잘못된 번호면 다음 칸), 주지 않으면 다음 칸을 뒤진다.
+   * 돌려주는 값: { ok, gain 칸에서 얻은 물자, tile 뒤진 칸, kind 칸의 종류, swept 동네를 다 뒤졌는가, bonus 그 보너스 }
+   */
+  function scavenge(state, index) {
+    var i = typeof index === 'number' && index === Math.floor(index) && index >= 0 && index < SWEEP_TILES && !tileSearched(state, index) ? index : nextTile(state);
+    var kind = tileKind(state.sweepSeed, i), g = clickValue(state) * kind.mult;
+    earn(state, g);
+    state.clicks++;
+    var bonus = markTile(state, i);
+    return { ok: true, gain: g, tile: i, kind: kind.id, swept: bonus > 0, bonus: bonus };
+  }
+  /** 시설이 dt 초 동안 알아서 뒤진다. 동네를 다 뒤질 때마다 'sweep' 사건을 남긴다. */
+  function stepSweep(state, dt, events) {
+    if (!totalBuildings(state)) return;
+    state.sweepClock += dt;
+    var guard = 0;
+    while (state.sweepClock >= SWEEP_AUTO_SECONDS && guard++ < SWEEP_TILES * 3) {
+      state.sweepClock -= SWEEP_AUTO_SECONDS;
+      var bonus = markTile(state, nextTile(state));
+      if (bonus > 0) events.push({ type: 'sweep', bonus: bonus, auto: true });
+    }
+    if (state.sweepClock > SWEEP_AUTO_SECONDS) state.sweepClock = 0;      // 아주 긴 dt: 남은 시간은 버린다(자리 비움은 따로 계산한다)
+  }
 
   /* ---------- 구역 목표와 다음 구역 ---------- */
   /** 구역 index 의 목표 진행 [{ id, text, value, need, done }]. 아직 없는 구역은 빈 배열. */
@@ -2413,6 +2573,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     if (dt > boosted) { earn(state, searchRate(state) * (dt - boosted)); line += lineRate(state) * (dt - boosted); }
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
 
+    stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     stepLab(state, dt, rng);
@@ -2555,6 +2716,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
+    SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
+    TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
@@ -2611,7 +2774,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -2627,10 +2790,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
         '지금은 ' + ready.length + '구역까지 만들어져 있어요.' + (next ? ' ' + next.no + '구역 ' + topic(next.name) + ' 문 앞까지만 갈 수 있고, 다음 버전에서 열려요.' : '') ] },
 
       { id: 'zone', title: '구역과 목표', items: [
-        '구역 화면의 탭에서 구역을 골라요. 구역마다 시설과 강화 목록이 따로 있어요.',
+        '구역 화면의 번호 탭에서 구역을 골라요. 구역 화면은 운영, 강화, 목표로 나뉘어 있어요. "구역 지도"를 누르면 구역마다 얼마를 버는지 한눈에 볼 수 있어요.',
         '구역마다 목표가 셋 있어요. 하나를 달성할 때마다 특전 ' + core.PERK_CHOICES + '장 중 하나를 골라요.',
         '목표 셋을 모두 채우고 물자를 치르면 다음 구역의 문이 열려요. 뒤 구역일수록 문 값이 훨씬 비싸요.',
         '뒤 구역을 열면 밤에 오는 무리도 커져요(구역 하나마다 3배).' ] },
+
+      { id: 'map', title: '1구역: 수색 지도', items: [
+        '동네 하나는 ' + core.SWEEP_TILES + '칸이에요. 칸을 누르면 그 칸을 뒤져서 물자를 얻어요. "잔해 수색" 단추는 다음 칸을 뒤지는 것과 같아요.',
+        '칸마다 나오는 것이 달라요. ' + core.TILE_KINDS.map(function (k) { return k.name + '(수익 ' + k.mult + '배)'; }).join(', ') + '. 뒤져 봐야 알 수 있어요.',
+        core.SWEEP_TILES + '칸을 다 뒤지면 직접 수색 ' + core.SWEEP_BONUS_CLICKS + '번치 보너스를 받고 다음 동네로 넘어가요.',
+        '시설이 하나라도 있으면 ' + span(core.SWEEP_AUTO_SECONDS) + '마다 한 칸씩 알아서 뒤져요. 가만히 있어도 동네는 넘어가요.' ] },
 
       { id: 'click', title: '직접 수색', items: [
         '"잔해 수색"을 누르면 물자를 바로 얻어요. 한 번의 기본 수익은 초당 생산의 ' + pct(core.CLICK_SHARE) + ' 에 전체 생산 배수를 더한 값이에요.',
@@ -3876,6 +4045,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
 
   var state = null;
   var qtyMode = 1;           // 1 | 10 | 'max'
+  var pane = 'play';         // 구역 화면 안에서 보고 있는 것: 'play'(운영) | 'up'(강화) | 'goal'(목표)
   var tab = 'z0';            // 구역 화면에서 보고 있는 탭: 'z0'(1구역), 'z1'(2구역), 'z2'(3구역 문 앞), 'wall'(방벽)
   var lastFrame = 0, lastSave = 0, nextFlavor = 0;
   var guideNow = null; // 지금 '다음 할 일' 칸에 보이는 안내(바로 가기 단추가 읽는다)
@@ -4366,6 +4536,38 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     });
   }
 
+  /**
+   * 직접 수색 한 번. index 를 주면 수색 지도의 그 칸을, 주지 않으면("잔해 수색" 단추) 다음 칸을 뒤진다.
+   * 뒤진 칸이 잠깐 튀고, 은닉처나 동네 완료 때는 소리와 쪽지로 알린다.
+   */
+  function search(index) {
+    var r = C.scavenge(state, index);
+    popNumber('+' + fmt(r.gain + r.bonus));
+    var tile = rows.tiles[r.tile];
+    if (tile) { tile.classList.remove('hit'); void tile.offsetWidth; tile.classList.add('hit'); }
+    if (scene) scene.poke();
+    if (r.swept) {
+      toast('동네 하나를 다 뒤졌다 · 물자 +' + fmt(r.bonus));
+      var box = $('search'); box.classList.remove('swept'); void box.offsetWidth; box.classList.add('swept');
+      sfx('defended');
+    } else sfx(r.kind === 'cache' ? 'buy' : 'click');
+    render();
+  }
+  /** 구역 지도를 채운다: 구역마다 이름, 하는 일, 지금 버는 양(전체에서 차지하는 몫을 막대로). */
+  function renderZoneMap() {
+    var rates = [C.searchRate(state), C.tradeRate(state), C.lineRate(state), C.railRate(state)], total = C.productionPerSec(state);
+    setText($('zmap-total'), '+' + fmt(total));
+    rows.zmap.forEach(function (r, zi) {
+      var z = C.ZONES[zi], open = zi <= state.zone, soon = z.kind === 'soon';
+      r.btn.disabled = !open;
+      r.btn.classList.toggle('here', zi === state.zone);
+      setText(r.name, z.no + '구역 ' + z.name);
+      setText(r.lead, soon ? '다음 버전에서 열려요' : open ? z.lead : '아직 열지 않았어요 · ' + z.lead);
+      setText(r.rate, !open ? '잠김' : zi === 4 ? '점수 +' + fmt(C.researchRate(state)) + '/초' : zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '');
+      r.fill.style.width = (open && zi < rates.length && total > 0 ? Math.min(100, rates[zi] / total * 100) : 0).toFixed(1) + '%';
+    });
+  }
+
   function confirmBox(title, text, noText, yesText, onYes) {
     setText($('confirm-title'), title);
     setText($('confirm-text'), text);
@@ -4395,7 +4597,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
 
   /* ---------- 목록 만들기(처음 한 번) ---------- */
   function build() {
-    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, routes: {}, railRows: {}, train: null, staff: null, offers: [], stall: null, goals: [], stats: {}, tabs: {} };
+    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, tiles: [], zmap: [], routes: {}, railRows: {}, train: null, staff: null, offers: [], stall: null, goals: [], stats: {}, tabs: {} };
     // 구역 탭
     for (var i = 0; i < ZONE_TABS; i++) { addTab('z' + i, String(i + 1)); rows.tabs['z' + i].setAttribute('aria-label', (i + 1) + '구역 ' + C.ZONES[i].name); rows.tabs['z' + i].title = (i + 1) + '구역 ' + C.ZONES[i].name; }
     addTab('wall', '방벽');
@@ -4403,6 +4605,21 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     C.BUILDINGS.forEach(function (b) {
       var r = buildRow(b, function () { buy(C.buyBuilding(state, b.id, qtyFor(C.maxBuildings(state, b.id), C.COUNT_MAX - state.buildings[b.id]))); });
       rows.buildings[b.id] = r; $('rows-z0').appendChild(r.btn);
+    });
+    // 1구역 수색 지도: 칸마다 단추 하나. 누르면 그 칸을 뒤진다.
+    for (var ti = 0; ti < C.SWEEP_TILES; ti++) (function (index) {
+      var b = el('button', 'tile');
+      b.type = 'button'; b.id = 'tile-' + index;
+      b.addEventListener('click', function () { search(index); });
+      rows.tiles.push(b); $('search-grid').appendChild(b);
+    })(ti);
+    // 구역 지도의 구역 줄
+    C.ZONES.forEach(function (z, zi) {
+      var li = el('li'), b = el('button', 'zmap-zone'), no = el('span', 'zmap-no', String(z.no)), name = el('span', 'zmap-name'), rate = el('span', 'zmap-rate'), lead = el('span', 'zmap-lead'), bar = el('span', 'zmap-bar'), fill = el('i');
+      b.type = 'button'; b.id = 'zmap-z' + zi;
+      bar.appendChild(fill); b.appendChild(no); b.appendChild(name); b.appendChild(rate); b.appendChild(lead); b.appendChild(bar); li.appendChild(b);
+      b.addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zi; pane = 'play'; goTo('tab'); });
+      rows.zmap.push({ btn: b, name: name, rate: rate, lead: lead, fill: fill }); $('zmap-list').appendChild(li);
     });
     // 2구역: 좌판
     rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls))); });
@@ -4444,7 +4661,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id)); });
       r.btn.classList.add('row-zone');
-      rows.upgrades[u.id] = r; $('rows-z' + u.zone).appendChild(r.btn);
+      rows.upgrades[u.id] = r; $('ups-z' + u.zone).appendChild(r.btn);
     });
     C.DEFENSES.forEach(function (d) {
       var r = buildRow(d, function () { buy(C.buyDefense(state, d.id, qtyFor(C.maxDefenses(state, d.id), 1e6))); });
@@ -4469,7 +4686,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     var b = el('button', '', label);
     b.type = 'button';
     b.setAttribute('data-tab', id);
-    b.addEventListener('click', function () { tab = id; render(); });
+    b.addEventListener('click', function () { if (tab !== id) pane = 'play'; tab = id; render(); });   // 다른 구역으로 가면 운영 화면부터
     rows.tabs[id] = b; $('zone-tabs').appendChild(b);
   }
   /** 수량 모드(×1, ×10, 최대)에서 실제로 살 개수. max 는 지금 살 수 있는 최대 수, room 은 상한까지 남은 자리. */
@@ -4623,6 +4840,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에서 물자 ' + fmt(C.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요(지금 ' + fmt(state.runEarned) + '). 철수하면 항체 샘플을 얻고, 그걸로 영구 특성을 찍어요.');
 
     renderZone(m);
+    if (!$('zmap').hidden) renderZoneMap();
     renderTraits();
     renderPerkChoice();
     if ($('record').getAttribute('data-rtab') === 'stats') renderStats();
@@ -4641,7 +4859,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     });
     var open = zi >= 0 && zi <= state.zone, soon = zi >= 0 && C.ZONES[zi].kind === 'soon';
     setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳'));
-    $('rows-z0').hidden = tab !== 'z0';
+    // 구역 화면은 한 번에 한 가지만 보인다: 운영(놀이 화면 + 주된 구매), 강화, 목표
+    var play = pane === 'play', zoneTab = zi >= 0 && open;
+    $('zone-panes').hidden = !zoneTab;
+    Array.prototype.forEach.call($('zone-panes').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.pane === pane)); });
+    for (var uz = 0; uz < 5; uz++) $('ups-z' + uz).hidden = !(tab === 'z' + uz && open && pane === 'up');
+    $('search').hidden = !(tab === 'z0' && play);
+    $('rows-z0').hidden = !(tab === 'z0' && play);
     $('rows-z1').hidden = !(tab === 'z1' && open);
     $('rows-z2').hidden = !(tab === 'z2' && open);
     $('rows-z3').hidden = !(tab === 'z3' && open);
@@ -4651,8 +4875,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     $('rows-wall').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
     $('line').hidden = !(tab === 'z2' && open);
-    $('pane-goals').hidden = !(zi >= 0);
-    $('qty').hidden = soon || (zi > state.zone);
+    ['rows-z1', 'rows-z2', 'rows-z3', 'rows-z4', 'trade', 'line', 'rail', 'lab'].forEach(function (id) { if (!play) $(id).hidden = true; });
+    $('pane-goals').hidden = !(zi >= 0) || (open && pane !== 'goal');
+    $('qty').hidden = soon || (zi > state.zone) || (zoneTab && !play);
+    // 강화나 목표에 볼 것이 생기면 전환 단추에 점을 찍는다
+    if (zoneTab) {
+      var upReady = C.UPGRADES.some(function (u) { return u.zone === zi && C.upgradeCost(state, u.id) <= state.supplies; });
+      var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.cost <= state.supplies && !(nz.soon && state.gate);
+      $('zone-panes').children[1].classList.toggle('avail', upReady && pane !== 'up');
+      $('zone-panes').children[2].classList.toggle('avail', goalReady && pane !== 'goal');
+    }
 
     // 목표와 다음 구역
     if (zi >= 0) {
@@ -4679,7 +4911,20 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
       setText($('soon'), soonText);
     } else $('soon').hidden = true;
 
-    if (tab === 'z0') {
+    if (tab === 'z0' && play) {
+      var nextIdx = C.nextTile(state), done = C.sweepCount(state);
+      rows.tiles.forEach(function (b, i) {
+        var searched = C.tileSearched(state, i), kind = C.tileKind(state.sweepSeed, i);
+        var cls = 'tile' + (searched ? ' done ' + kind.id : i === nextIdx ? ' next' : '') + (b.classList.contains('hit') ? ' hit' : '');
+        if (b.className !== cls) b.className = cls;
+        setText(b, searched ? kind.name : '');
+        b.setAttribute('aria-label', searched ? kind.name + ' · 뒤진 칸' : '아직 뒤지지 않은 칸');
+      });
+      setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
+      setText($('search-note'), (state.sweeps + 1) + '번째 동네' + (C.totalBuildings(state) ? ' · 수색조가 ' + C.SWEEP_AUTO_SECONDS + '초마다 한 칸' : ' · 칸을 눌러 뒤져요'));
+      setText($('search-bonus'), '다 뒤지면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
+    }
+    if (tab === 'z0' && play) {
       C.BUILDINGS.forEach(function (b) {
         var r = rows.buildings[b.id], n = state.buildings[b.id], q = qtyFor(C.maxBuildings(state, b.id), C.COUNT_MAX - n), cost = C.buildingCost(state, b.id, q);
         setText(r.count, n + ' / ' + C.COUNT_MAX);
@@ -4878,6 +5123,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
           break;
         case 'signal': log('무전기에 구조 신호가 잡혔다. ' + C.SIGNAL_WINDOW + '초 안에 응답하면 물자나 생산 ' + C.BUFF_MULT + '배를 얻는다.'); sfx('signal'); break;
         case 'signal-missed': log('구조 신호가 끊겼다.'); break;
+        case 'sweep': log('수색조가 동네 하나를 다 뒤졌다. 물자 ' + fmt(ev.bonus) + ' 확보.', 'good'); break;
         case 'buff-end': log('지원 물자가 바닥났다. 생산이 평소대로 돌아왔다.'); break;
         case 'goal':
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
@@ -4897,13 +5143,24 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
     if (r.nights > 0) log('자리를 비운 동안 밤 ' + r.nights + '번을 막아냈다. 물자 ' + fmt(r.nightReward) + ' 확보.', 'good');
     if (r.held) log('막을 수 없는 무리가 와서 문을 걸어 잠그고 버텼다. 방벽을 보강해야 한다.', 'bad');
     if (r.elapsed < AWAY_THRESHOLD || !(r.gain > 0)) return;
-    notice((r.capped ? '오래 자리를 비웠다. 최대치인 ' + duration(r.counted) + '치만 계산해' : '자리를 비운 ' + duration(r.elapsed) + ' 동안')
-      + ' 물자 ' + fmt(r.gain) + ' 이 쌓였다(효율 ' + Math.round(r.rate * 100) + '%).');
+    // 돌아왔을 때의 보상 창: 쌓인 물자를 크게 보여 준다. 물자는 이미 들어와 있고, "받기"는 창을 닫을 뿐이다.
+    var total = r.gain + (r.nightReward || 0), lines = [];
+    setText($('away-gain'), '+' + fmt(total));
+    setText($('away-text'), (r.capped ? '오래 비웠어요. 최대치인 ' + duration(r.counted) + '치만 계산했어요' : duration(r.elapsed) + ' 동안 거점이 돌아갔어요') + ' · 효율 ' + Math.round(r.rate * 100) + '%');
+    if (r.nights > 0) lines.push('막아낸 밤 ' + r.nights + '번 · 전리품 ' + fmt(r.nightReward));
+    if (r.trains > 0) lines.push('돌아온 열차 ' + r.trains + '편');
+    if (r.points > 0) lines.push('연구 점수 +' + fmt(r.points));
+    if (r.held) lines.push('막을 수 없는 밤이 와서 버티는 중이에요');
+    var list = $('away-list');
+    while (list.firstChild) list.removeChild(list.firstChild);
+    lines.forEach(function (t) { list.appendChild(el('li', '', t)); });
+    $('away').hidden = false;
+    try { $('away-ok').focus(); } catch (e) { /* 초점을 못 옮겨도 닫을 수 있다 */ }
   }
   /** '바로 가기': 안내가 가리키는 화면을 연다. */
   function goTo(view) {
     var target = view === 'trait' ? 'exped' : 'manage';
-    if (view === 'zone') tab = 'z' + state.zone;
+    if (view === 'zone') { tab = 'z' + state.zone; pane = C.goals(state, state.zone).some(function (g) { return !g.done; }) && state.buildings.scouts > 0 ? 'goal' : 'play'; }
     if (view === 'wall') tab = 'wall';
     var nav = document.querySelector('[data-mview-set="' + target + '"]');
     if (nav) nav.click();
@@ -4981,12 +5238,17 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.6.7";
   }
 
   function wire() {
-    $('scavenge').addEventListener('click', function () {
-      popNumber('+' + fmt(C.scavenge(state).gain));
-      sfx('click');
-      if (scene) scene.poke();
-      render();
+    $('scavenge').addEventListener('click', function () { search(); });   // 수색 지도의 다음 칸을 뒤진다
+    // 구역 화면 안의 전환(운영 / 강화 / 목표)
+    Array.prototype.forEach.call($('zone-panes').children, function (b) {
+      b.addEventListener('click', function () { pane = b.dataset.pane; render(); });
     });
+    // 구역 지도: 구역 화면의 단추나 머리띠의 구역 번호를 누르면 열린다
+    var openMap = function () { renderZoneMap(); $('zmap').hidden = false; };
+    $('zmap-open').addEventListener('click', openMap);
+    $('route').addEventListener('click', openMap);
+    $('zmap-close').addEventListener('click', function () { $('zmap').hidden = true; });
+    $('away-ok').addEventListener('click', function () { $('away').hidden = true; sfx('buy'); });
     ['goal-go', 'm-goal-go'].forEach(function (id) { $(id).addEventListener('click', function () { if (guideNow && guideNow.view) goTo(guideNow.view); }); });
     $('signal').addEventListener('click', function () {
       var r = C.answerSignal(state);
