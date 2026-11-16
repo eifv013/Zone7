@@ -21,6 +21,9 @@ test('도움말: 숫자가 규칙의 상수와 같다', () => {
   assert.ok(find('night').includes((C.DAY_SECONDS - C.BATTLE_SECONDS) + '초가 지나면'));
   assert.ok(find('trade').includes(C.PRICE_FLOOR + ' ~ ' + C.PRICE_CEIL));
   assert.ok(find('trade').includes('시세 ' + C.PEAK_PRICE + ' 이상'));
+  assert.ok(find('line').includes('가동률 ' + Math.round(C.STEADY_AT * 100) + '% 이상'));
+  assert.ok(find('line').includes('산출이 ' + Math.round(C.STEADY_BONUS * 100) + '% 늘어난다'));
+  for (const m of C.MACHINES) assert.ok(find('line').includes(m.name + ' ' + m.rate), m.id);
   assert.ok(find('retreat').includes('물자 ' + C.formatNumber(C.RETREAT_MIN)));
   assert.ok(find('away').includes('최대 ' + C.OFFLINE_CAP / 3600 + '시간치'));
   assert.ok(find('signal').includes(C.SIGNAL_WINDOW + '초 안에'));

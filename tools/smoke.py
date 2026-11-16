@@ -26,11 +26,22 @@ def market(**over):
     s.update(over)
     return s
 
+def factory(**over):
+    """3구역(공단)까지 연 판: 기계는 아직 없고 물자는 넉넉하다."""
+    s = market(zone=2, supplies=5e13, runEarned=5e13, autoSell=True, dayClock=5, signalIn=500,
+               defenses={"wire": 80, "tower": 60, "turret": 50, "flame": 40, "emp": 20},
+               goalsDone={"z1a": True, "z1b": True, "z1c": True, "z2a": True, "z2b": True, "z2c": True})
+    s["story"].update({"z2-1": True, "z2-2": True, "z3-0": True})
+    s.update(over)
+    return s
+
 # (이름, 화면 크기, 저장, 할 일)
 CASES = [
     ('폰 · 2구역, 못 막는 밤', (390, 760), market(), 'full'),
     ('PC · 2구역, 막는 밤', (1280, 900), market(defenses={"wire": 60, "tower": 40, "turret": 30, "flame": 10}, autoSell=True), 'full'),
     ('폰 · 새 게임', (390, 760), None, 'new'),
+    ('폰 · 3구역 생산 라인', (390, 760), factory(), 'line'),
+    ('PC · 3구역 생산 라인', (1280, 900), factory(), 'line'),
 ]
 
 def run_case(browser, name, size, state, mode):
@@ -83,6 +94,29 @@ def run_case(browser, name, size, state, mode):
         if not fits(): problems.append('한 화면에 들어오지 않는다')
         if '초당 +0' in text('pps') and '0.5' not in text('pps'): problems.append('수색조를 샀는데 생산이 0이다: ' + text('pps'))
         page.wait_for_timeout(6000)
+    elif mode == 'line':
+        # 3구역: 기계가 없을 때의 안내 → 병목 올리기 → 직접 사서 병목이 바뀌는지 → 한 화면에 들어오는지
+        tap('[data-mview-set=manage]'); tap('[data-tab=z2]')
+        if not page.locator('#line').is_visible(): problems.append('3구역 탭에 생산 라인 칸이 없다')
+        if '모두 있어야' not in text('line-note'): problems.append('기계가 없을 때의 안내가 없다: ' + text('line-note'))
+        for _ in range(11):
+            if not tap('#tune'): problems.append('병목 올리기를 누를 수 없다'); break
+        levels = [text('row-%s' % m) for m in ['sorter', 'press', 'assembler']]
+        if not ('Lv 2' in levels[0] and 'Lv 3' in levels[1] and 'Lv 6' in levels[2]): problems.append('병목 올리기 11번 뒤 레벨이 2·3·6 이 아니다: ' + ' | '.join(levels))
+        if text('line-load') != '가동률 100%': problems.append('맞물렸는데 가동률이 100%가 아니다: ' + text('line-load'))
+        if '정속 가동' not in text('line-note') or '초당 물자' not in text('line-note'): problems.append('정속 가동 표시가 없다: ' + text('line-note'))
+        if not tap('#row-sorter'): problems.append('선별기를 살 수 없다')
+        if page.locator('.line-cell.slow').count() != 1: problems.append('병목 표시가 정확히 하나가 아니다')
+        if text('line-load') == '가동률 100%': problems.append('선별기만 올렸는데 가동률이 그대로다')
+        tap('[data-qty="max"]'); tap('#tune'); tap('[data-qty="1"]')
+        tap('#row-lube'); tap('#row-belt')
+        if not fits(): problems.append('한 화면에 들어오지 않는다(3구역)')
+        before = text('supplies'); page.wait_for_timeout(3000)
+        if text('supplies') == before: problems.append('라인이 도는데 물자가 늘지 않는다')
+        tap('[data-tab=z3]')
+        if '다음 버전' not in text('soon'): problems.append('4구역 탭에 준비 중 안내가 없다: ' + text('soon'))
+        tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
+        if not fits(): problems.append('한 화면에 들어오지 않는다')
     else:
         # 구역 화면: 고점에 팔고, 좌판과 강화를 사고, 자동 판매를 켠다
         tap('[data-mview-set=manage]'); tap('[data-tab=z1]')
@@ -93,7 +127,9 @@ def run_case(browser, name, size, state, mode):
         if page.locator('#auto-sell').is_visible() and not page.is_checked('#auto-sell'): page.check('#auto-sell')
         tap('[data-tab=z0]'); tap('#row-garden'); tap('#row-maps')
         tap('[data-tab=z2]')
-        if '다음 버전' not in text('soon'): problems.append('3구역 탭에 준비 중 안내가 없다: ' + text('soon'))
+        if '아직 열지 않은' not in text('soon'): problems.append('잠긴 3구역 탭에 안내가 없다: ' + text('soon'))
+        tap('[data-tab=z3]')
+        if '다음 버전' not in text('soon'): problems.append('4구역 탭에 준비 중 안내가 없다: ' + text('soon'))
         tap('[data-tab=wall]'); tap('#row-wire')
         # 특성: 하나 찍고, 되돌리고, 다시 찍는다
         tap('[data-mview-set=exped]')

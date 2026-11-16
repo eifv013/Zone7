@@ -25,7 +25,7 @@
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -57,6 +57,14 @@
         '상품은 좌판이 ' + span(core.GOODS_CAP_SECONDS) + ' 동안 만드는 양까지 쌓인다. 그 뒤로는 더 쌓이지 않는다.',
         '"창고가 차면 알아서 판다"가 켜져 있으면(기본) 가만히 둬도 평균 시세만큼은 번다. 시세가 높을 때 직접 팔면 그보다 더 번다.',
         '시세 ' + core.PEAK_PRICE + ' 이상에서 판 것은 "고점 판매"로 센다. 2구역 목표 가운데 하나다.' ] },
+
+      { id: 'line', title: '3구역: 생산 라인', items: [
+        '기계 셋(' + core.MACHINES.map(function (m) { return m.name; }).join(' → ') + ')이 차례로 맞물려 돈다. 만든 완제품은 바로 물자가 된다.',
+        '라인은 가장 느린 기계(병목)의 속도로만 나온다. 빠른 기계를 더 올려도 산출은 늘지 않는다. "병목 올리기"를 누르면 그때 가장 느린 기계가 오른다.',
+        '기계마다 레벨당 처리량이 다르다(' + core.MACHINES.map(function (m) { return m.name + ' ' + m.rate; }).join(', ') + '). 처리량이 비슷해지게 맞추면 된다.',
+        '가동률은 가장 느린 기계 ÷ 가장 빠른 기계다. 가동률 ' + pct(core.STEADY_AT) + ' 이상이면 "정속 가동"이 되어 산출이 ' + pct(core.STEADY_BONUS) + ' 늘어난다.',
+        '기계 레벨의 합계가 ' + core.LINE_MILESTONES.slice(0, 4).join(', ') + '… 에 닿을 때마다 라인 전체가 2배가 된다.',
+        '자리를 비워도 라인은 나갈 때의 상태 그대로 돈다. 정속으로 맞춰 두고 나가면 그 시간도 정속 가동으로 친다.' ] },
 
       { id: 'night', title: '밤과 방벽', items: [
         '하루는 ' + span(core.DAY_SECONDS) + '이다. ' + span(core.DAY_SECONDS - core.BATTLE_SECONDS) + '가 지나면 무리가 도착하고, 남은 ' + span(core.BATTLE_SECONDS) + ' 동안 방벽에서 싸운다.',

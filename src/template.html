@@ -267,6 +267,18 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .trade-price { font: 400 34px/1 var(--font-display); }
 .trade-price.high { color: var(--safe); }
 .trade-price.low { color: var(--blood); }
+/* 3구역 생산 라인: 기계 셋이 왼쪽에서 오른쪽으로 이어진다. 병목인 기계는 붉은 테두리로 표시한다. */
+.line-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.line-cell { position: relative; padding: 6px 8px; border: 2px solid var(--ink); background: var(--panel, transparent); }
+.line-cell + .line-cell::before { content: '▶'; position: absolute; left: -9px; top: 50%; transform: translateY(-50%); font-size: 9px; line-height: 1; background: var(--paper); }
+.line-cell.slow { border-color: var(--blood); }
+.line-cell.slow .line-name::after { content: ' · 병목'; color: var(--blood); }
+.line-name { font: 600 12px/1.4 var(--font-body); white-space: nowrap; overflow: hidden; }
+.line-cap { font: 500 13px/1.4 var(--font-mono); }
+.line-stat { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; }   /* 가동률은 한 줄로, 설명은 그 아래에 */
+.line-stat .num { font: 400 22px/1.1 var(--font-display); white-space: nowrap; }
+.line-stat .num.steady { color: var(--safe); }
+#line-mile { margin-bottom: 8px; }
 .trade-goods .num { font-size: 15px; margin: 2px 0 4px; }
 .sell { margin-bottom: 8px; }
 .trait-reset { margin-top: 10px; }
@@ -505,7 +517,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.6.1</div>
+  <div class="boot-ver">7구역 알파 0.6.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -621,12 +633,19 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <button type="button" class="fortify sell" id="sell">상품이 없다</button>
         <label class="check" for="auto-sell"><input type="checkbox" id="auto-sell"> 창고가 차면 알아서 판다</label>
       </div>
+      <div class="trade line" id="line" hidden>
+        <div class="line-flow" id="line-flow"></div>
+        <div class="line-stat"><span class="num" id="line-load">가동률 0%</span><span class="label" id="line-note"></span></div>
+        <div class="label" id="line-mile"></div>
+        <button type="button" class="fortify sell" id="tune">병목 올리기</button>
+      </div>
       <div class="zone-pane" id="pane-goals">
         <ul class="goal-list" id="goals"></ul>
         <button type="button" class="fortify open-zone" id="open-zone" hidden></button>
       </div>
       <div class="rows" id="rows-z0"></div>
       <div class="rows" id="rows-z1" hidden></div>
+      <div class="rows" id="rows-z2" hidden></div>
       <div class="rows" id="rows-wall" hidden></div>
       <p class="hint soon" id="soon" hidden></p>
     </section>
@@ -698,7 +717,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.6.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.6.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

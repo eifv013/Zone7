@@ -17,6 +17,13 @@ function inMarket() {
   assert.ok(C.openZone(s).ok);
   return s;
 }
+/** 3구역(공단)까지 연 상태. 앞 구역의 목표는 채운 것으로 둔다. */
+function inFactory() {
+  const s = inMarket();
+  C.GOALS[1].forEach(g => { s.goalsDone[g.id] = true; });
+  s.zone = 2; s.bestZone = 2;
+  return s;
+}
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) <= Math.max(1e-9, Math.abs(b) * 1e-9), `${msg || ''} ${a} ≠ ${b}`);
 
 /* ================= 상태와 저장 ================= */
@@ -41,7 +48,8 @@ test('저장: 직렬화를 거쳐도 같고, 깨진 값과 모르는 항목을 �
     traits: { immune: 9999 }, pendingPerks: ['harvest', 'nothing', 42], goalsDone: { z1a: 1, fake: 1 }, story: { 'z1-0': true, fake: true },
     runLog: [null, { zone: 1, seconds: 5, antibodies: 2 }, 'x'], buff: { mult: 99, left: 1e9 } }, 0);
   assert.equal(bad.supplies, 0);
-  assert.equal(bad.zone, 1, '아직 없는 구역에는 들어가 있을 수 없다');
+  assert.equal(bad.zone, 2, '아직 없는 구역에는 들어가 있을 수 없다');
+  assert.equal(C.ZONES[3].kind, 'soon');
   assert.equal(bad.buildings.scouts, 0);
   assert.equal(bad.buildings.nothing, undefined);
   assert.equal(bad.stalls, C.COUNT_MAX);
@@ -189,16 +197,16 @@ test('다음 구역: 목표를 다 채우고 값을 치러야 열리고, 열어�
 });
 
 test('다음 구역: 아직 만들지 않은 구역은 문 앞까지만 간다', () => {
-  const s = inMarket();
-  C.GOALS[1].forEach(g => { s.goalsDone[g.id] = true; });
+  const s = inFactory();
+  C.GOALS[2].forEach(g => { s.goalsDone[g.id] = true; });
   const n = C.nextZone(s);
   assert.equal(n.soon, true);
   s.supplies = n.cost;
   const r = C.openZone(s);
   assert.ok(r.ok && r.soon);
-  assert.equal(s.zone, 1, '들어가지는 못한다');
+  assert.equal(s.zone, 2, '들어가지는 못한다');
   assert.equal(s.gate, true);
-  assert.equal(s.bestZone, 2);
+  assert.equal(s.bestZone, 3);
   assert.equal(s.supplies, 0);
   s.supplies = 1e40;
   assert.equal(C.openZone(s).reason, 'soon', '두 번 치르지 않는다');
@@ -572,4 +580,178 @@ test('정의표: id 가 겹치지 않고, 강화·특전·특성이 쓰는 항�
   for (const d of [...C.UPGRADES, ...C.PERKS, ...C.TRAITS]) assert.ok(keys.includes(d.key), `${d.id} 의 ${d.key}`);
   C.UPGRADES.forEach(u => assert.ok(u.zone >= 0 && u.zone < C.ZONES.length && C.ZONES[u.zone].kind !== 'soon', u.id));
   assert.equal(C.GOALS.length, C.ZONES.filter(z => z.kind !== 'soon').length);
+});
+
+/* ================= 3구역: 생산 라인 ================= */
+
+test('라인: 3구역을 열기 전에는 기계도 산출도 없다', () => {
+  const s = inMarket(); s.supplies = 1e30;
+  assert.equal(C.buyMachine(s, 'sorter', 1).reason, 'locked');
+  assert.equal(C.tuneLine(s, 1).reason, 'locked');
+  assert.equal(C.machineCost(s, 'sorter', 1), Infinity);
+  assert.equal(C.maxMachines(s, 'sorter'), 0);
+  assert.equal(C.tuneCost(s), Infinity);
+  s.machines.sorter = 5; s.machines.press = 5; s.machines.assembler = 5;   // 값이 남아 있어도 닫힌 구역은 돌지 않는다
+  assert.equal(C.lineRate(s), 0);
+  assert.equal(C.lineInfo(s).flow, 0);
+});
+
+test('라인: 가장 느린 기계의 속도로만 나온다', () => {
+  const s = inFactory();
+  assert.equal(C.lineRate(s), 0, '기계가 없으면 0');
+  s.machines.sorter = 10; s.machines.press = 10;
+  assert.equal(C.lineRate(s), 0, '하나라도 없으면 라인은 서 있다');
+  s.machines.assembler = 4;
+  let l = C.lineInfo(s);
+  assert.deepEqual(l.caps, { sorter: 30, press: 20, assembler: 4 });
+  assert.equal(l.flow, 4);
+  assert.equal(l.bottleneck, 'assembler');
+  near(l.load, 4 / 30);
+  const before = C.lineRate(s);
+  s.machines.sorter = 14;                         // 합계 28: 2배 구간(15) 안에서 병목이 아닌 기계를 올린다
+  assert.equal(C.lineRate(s), before, '병목이 아닌 기계를 올려도 늘지 않는다');
+  s.machines.assembler = 5;
+  near(C.lineRate(s), before * 5 / 4, '병목을 올리면 그만큼 는다');
+});
+
+test('라인: 가동률이 기준 이상이면 정속 가동 보너스가 붙는다', () => {
+  const s = inFactory();
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;      // 6, 6, 6: 완전히 맞물림
+  let l = C.lineInfo(s);
+  assert.equal(l.load, 1);
+  assert.equal(l.steady, true);
+  near(l.bonus, 1 + C.STEADY_BONUS);
+  near(C.lineRate(s), 6 * l.milestone * (1 + C.STEADY_BONUS) * C.productValue(s));
+  s.machines.sorter = 3;                                                       // 9, 6, 6 → 가동률 0.67
+  l = C.lineInfo(s);
+  assert.equal(l.steady, false);
+  assert.equal(l.bonus, 1);
+  // 강화: 컨베이어는 보너스를 키우고, 예비 부품은 기준을 낮춘다(바닥 0.5)
+  s.upgrades.belt = 2;
+  s.machines.sorter = 2;
+  near(C.lineInfo(s).bonus, 1 + C.STEADY_BONUS + 0.2);
+  s.machines.sorter = 3; s.upgrades.spare = 5;                                 // 기준 0.75. 가동률 0.67 은 아직 모자란다
+  near(C.lineInfo(s).steadyAt, 0.75);
+  assert.equal(C.lineInfo(s).steady, false);
+  s.machines.press = 4; s.machines.assembler = 8;                              // 9, 8, 8 → 0.89
+  assert.equal(C.lineInfo(s).steady, true);
+});
+
+test('라인: 기계 레벨 합계가 구간에 닿을 때마다 2배', () => {
+  assert.equal(C.lineMilestone(0), 1);
+  assert.equal(C.lineMilestone(C.LINE_MILESTONES[0] - 1), 1);
+  assert.equal(C.lineMilestone(C.LINE_MILESTONES[0]), 2);
+  assert.equal(C.lineMilestone(C.LINE_MILESTONES[2]), 8);
+  assert.equal(C.lineMilestone(1e9), Math.pow(2, C.LINE_MILESTONES.length));
+  const s = inFactory();
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
+  assert.equal(C.lineInfo(s).levels, 11);
+  assert.equal(C.lineInfo(s).nextMilestone, 15);
+  s.machines.sorter = 500; s.machines.press = 500; s.machines.assembler = 500;
+  assert.equal(C.lineInfo(s).nextMilestone, null);
+});
+
+test('라인: 기계를 사고, 값은 오르고, 할인이 적용된다', () => {
+  const s = inFactory();
+  const def = C.MACHINES.find(m => m.id === 'press');
+  assert.equal(C.machineCost(s, 'press', 1), def.baseCost);
+  s.supplies = def.baseCost - 1;
+  assert.equal(C.buyMachine(s, 'press', 1).reason, 'supplies');
+  s.supplies = def.baseCost;
+  assert.ok(C.buyMachine(s, 'press', 1).ok);
+  assert.equal(s.machines.press, 1);
+  assert.equal(s.supplies, 0);
+  assert.equal(C.machineCost(s, 'press', 1), Math.ceil(def.baseCost * C.GROWTH));
+  s.upgrades.manual = 1;
+  assert.equal(C.machineCost(s, 'press', 1), Math.ceil(def.baseCost * C.GROWTH * 0.96));
+  assert.equal(C.buyMachine(s, 'nothing', 1).reason, 'unknown');
+  assert.equal(C.buyMachine(s, 'press', 0).reason, 'unknown');
+  s.machines.press = C.COUNT_MAX;
+  assert.equal(C.machineCost(s, 'press', 1), Infinity);
+  s.supplies = 1e300;
+  assert.equal(C.buyMachine(s, 'press', 1).reason, 'max');
+});
+
+test('라인: 병목 올리기는 그때그때 가장 느린 기계를 올린다', () => {
+  const s = inFactory(); s.supplies = 1e14;      // 너무 큰 수에서 빼면 쓴 값이 반올림에 묻힌다
+  const r = C.tuneLine(s, 11);
+  assert.ok(r.ok);
+  assert.equal(r.bought, 11);
+  assert.deepEqual(s.machines, { sorter: 2, press: 3, assembler: 6 }, '처리량이 같아지는 비율(2:3:6)로 오른다');
+  near(1e14 - s.supplies, r.cost);
+  assert.equal(C.lineInfo(s).load, 1);
+  // 물자가 모자라면 살 수 있는 만큼만
+  const t = inFactory(); t.supplies = C.MACHINES[0].baseCost;
+  const one = C.tuneLine(t, 50);
+  assert.ok(one.ok); assert.equal(one.bought, 1);
+  assert.equal(C.tuneLine(t, 50).reason, 'supplies');
+  for (const junk of [NaN, -3, 'x', undefined, 1e99]) { const u = inFactory(); u.supplies = 1e13; assert.doesNotThrow(() => C.tuneLine(u, junk)); }
+});
+
+test('라인: 시간이 흐르면 물자가 들어오고 정속 가동 시간이 쌓인다', () => {
+  const s = inFactory();
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
+  s.defenses.rail = 1e5; s.signalIn = 1e9; s.autoSell = false;
+  const rate = C.lineRate(s), before = s.supplies;
+  assert.ok(rate > 0);
+  C.tick(s, 10, half);
+  near(s.lineEarned, rate * 10);
+  near(s.supplies - before, rate * 10 + C.searchRate(s) * 10);
+  assert.equal(s.steadySeconds, 10);
+  near(C.productionPerSec(s), C.searchRate(s) + C.tradeRate(s) + C.lineRate(s));
+  s.machines.sorter = 9;                           // 맞물림이 깨지면 정속 시간은 멈춘다
+  C.tick(s, 10, half);
+  assert.equal(s.steadySeconds, 10);
+  assert.ok(s.lineEarned > rate * 10);
+});
+
+test('라인: 자리를 비운 동안에도 돈다', () => {
+  const s = inFactory();
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
+  s.defenses.rail = 1e5;
+  const rate = C.lineRate(s);
+  const rep = C.applyOffline(s, 1000);
+  near(s.lineEarned, rate * 1000 * C.OFFLINE_RATE);
+  assert.ok(rep.gain >= s.lineEarned);
+  assert.equal(s.steadySeconds, 1000, '맞춰 두고 나갔으면 그 시간도 정속 가동으로 친다');
+});
+
+test('라인: 목표 셋과 일지, 그리고 철수하면 기계가 사라진다', () => {
+  const s = inFactory();
+  assert.equal(C.goals(s, 2).length, 3);
+  assert.equal(C.goals(s, 2)[1].unit, 'time');
+  s.defenses.rail = 1e5; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
+  let ev = C.tick(s, 0.1, half);
+  assert.ok(ev.some(e => e.type === 'story' && e.id === 'z3-0'), '들어서면 일지가 열린다');
+  assert.equal(C.guide(s).id, 'goal');
+  s.machines.sorter = 30; s.machines.press = 40; s.machines.assembler = 50;
+  ev = C.tick(s, 0.1, half);
+  assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z3a'));
+  s.runEarned = C.RETREAT_MIN * 10; s.pendingPerks = [];
+  const r = C.retreat(s, 0);
+  assert.ok(r.ok);
+  assert.deepEqual(r.state.machines, { sorter: 0, press: 0, assembler: 0 });
+  assert.equal(r.state.lineEarned, 0);
+  assert.equal(r.state.steadySeconds, 0);
+  assert.equal(r.state.story['z3-0'], true, '읽은 일지는 남는다');
+});
+
+test('저장: 기계와 라인 기록을 안전하게 읽고, 문 앞에 있던 저장은 열린 구역으로 들여보낸다', () => {
+  const s = inFactory();
+  s.machines.sorter = 4; s.lineEarned = 123; s.steadySeconds = 45;
+  assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
+  const bad = C.sanitizeState({ version: 2, zone: 2, machines: { sorter: 1e9, press: -2, assembler: 'x', ghost: 3 }, lineEarned: -1, steadySeconds: NaN }, 0);
+  assert.deepEqual(bad.machines, { sorter: C.COUNT_MAX, press: 0, assembler: 0 });
+  assert.equal(bad.lineEarned, 0);
+  assert.equal(bad.steadySeconds, 0);
+  // 알파 0.6.1 까지: 3구역은 '문 앞'(gate)까지만 갈 수 있었다
+  const old = C.sanitizeState({ version: 2, zone: 1, gate: true, story: { 'z3-0': true, 'z2-0': true } }, 0);
+  assert.equal(old.zone, 2);
+  assert.equal(old.gate, false);
+  assert.equal(old.bestZone, 2);
+  assert.equal(old.story['z3-0'], undefined, '들어설 때의 일지를 새로 보여 준다');
+  assert.equal(old.story['z2-0'], true);
+  // 지금의 문 앞(4구역)은 그대로 둔다
+  const now = C.sanitizeState({ version: 2, zone: 2, gate: true }, 0);
+  assert.equal(now.zone, 2); assert.equal(now.gate, true);
 });

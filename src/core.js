@@ -53,6 +53,11 @@
   var GOODS_VALUE = 60;            // 상품 하나의 기준 값(물자)
   var GOODS_CAP_SECONDS = 60;      // 창고에 쌓아 둘 수 있는 양(좌판 생산의 초 수)
   var PEAK_PRICE = 1.8;            // '고점 판매'로 치는 시세
+  // 3구역 생산 라인
+  var PRODUCT_VALUE = 2e8;          // 완제품 하나의 기준 값(물자)
+  var STEADY_AT = 0.9;             // 가동률이 이 이상이면 '정속 가동'
+  var STEADY_BONUS = 0.5;          // 정속 가동일 때 라인 산출에 더하는 비율(+50%)
+  var LINE_MILESTONES = [15, 30, 60, 100, 150, 220, 300, 400, 520, 660, 820, 1000]; // 기계 레벨 합계가 이 수에 닿을 때마다 라인 산출 2배
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
   var RETREAT_K = 2, RETREAT_POW = 0.4;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
@@ -72,9 +77,12 @@
       story: ['2구역. 셔터 내린 시장 골목은 뒤질 곳투성이다. 좌판 위에 저울이 그대로 놓여 있다. 물건이 있으면 사람이 온다.',
         '생선 가게 냉동고 안에서 쪽지를 찾았다. “먼저 갑니다. 7구역에서 만나요. 3반 일동.”',
         '시장이 다시 시끄럽다. 그런데 밤마다 무리가 불어난다. 놈들도 강 쪽으로, 우리와 같은 방향으로 걷고 있다.'] },
-    { no: 3, name: '공단', kind: 'soon', cost: 1e12, lead: '멈춘 공장을 다시 돌린다',
-      story: ['공단의 철문 앞에 섰다. 안에서 기계 소리는 나지 않는다. 문은 안쪽에서 잠겨 있다.'] },
-    { no: 4, name: '환승역', kind: 'soon', cost: 1e15, lead: '', story: [] },
+    { no: 3, name: '공단', kind: 'line', cost: 1e12, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
+      story: ['3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 문을 뜯고 들어가니 기계들이 멈춘 자리 그대로 서 있다. 컨베이어 위에는 만들다 만 것들이 줄지어 있다.',
+        '작업 일지의 마지막 장. “야간조 전원 7구역으로 이동. 설비는 두고 간다. 돌릴 줄 아는 사람이 오면 쓰라.”',
+        '라인이 돈다. 밤에도 공단에 불이 켜진다. 불빛을 보고 사람이 오고, 소리를 듣고 무리가 온다. 선로를 따라가면 환승역이다.'] },
+    { no: 4, name: '환승역', kind: 'soon', cost: 1e19, lead: '끊긴 노선을 다시 잇는다',
+      story: ['환승역 계단 아래로 선로가 네 갈래로 갈라진다. 전광판 하나가 아직 켜져 있다. 행선지: 7구역. 개찰구 셔터는 내려가 있다.'] },
     { no: 5, name: '대학 병원', kind: 'soon', cost: 1e20, lead: '', story: [] },
     { no: 6, name: '강변 검문소', kind: 'soon', cost: 1e25, lead: '', story: [] },
     { no: 7, name: '송신탑', kind: 'soon', cost: 1e30, lead: '', story: [] }
@@ -86,6 +94,15 @@
     { id: 'garden',   name: '옥상 텃밭',   desc: '감자와 콩이 자란다',          baseCost: 120,   baseRate: 4 },
     { id: 'purifier', name: '빗물 정수기', desc: '마실 물은 곧 화폐다',         baseCost: 1100,  baseRate: 22 },
     { id: 'workshop', name: '고철 작업장', desc: '잔해를 쓸모 있게 바꾼다',     baseCost: 12000, baseRate: 120 }
+  ];
+  /*
+   * 3구역의 기계: 원료 → 부품 → 완제품 순서로 맞물려 돈다. rate 는 레벨 하나당 초당 처리량.
+   * 라인 전체는 셋 중 가장 느린 기계(병목)의 속도로만 나온다.
+   */
+  var MACHINES = [
+    { id: 'sorter',    name: '선별기', desc: '고철을 골라 원료로 만든다',   baseCost: 2e10,  rate: 3 },
+    { id: 'press',     name: '가공기', desc: '원료를 눌러 부품으로 찍는다', baseCost: 4e10,  rate: 2 },
+    { id: 'assembler', name: '조립기', desc: '부품을 맞춰 완제품을 낸다',   baseCost: 8e10,  rate: 1 }
   ];
   // 방벽: 구역과 상관없이 거점 전체를 지킨다
   var DEFENSES = [
@@ -109,6 +126,10 @@
     { id: 'regular', zone: 1, name: '단골',      desc: '시세의 천장 +0.2',       key: 'ceil',    per: 0.2,  baseCost: 5e5,  growth: 3.2, max: 15 },
     { id: 'stock',   zone: 1, name: '창고 확장', desc: '쌓아 둘 수 있는 양 +100%', key: 'cap',    per: 1,    baseCost: 1e5,  growth: 3,   max: 12 },
     { id: 'scale',   zone: 1, name: '좋은 저울', desc: '상품 값 +25%',           key: 'z2',      per: 0.25, baseCost: 3e5,  growth: 2.4, max: 40 },
+    { id: 'lube',    zone: 2, name: '윤활유',    desc: '완제품 값 +25%',         key: 'z3',      per: 0.25, baseCost: 5e11, growth: 2.4, max: 40 },
+    { id: 'manual',  zone: 2, name: '정비 교범', desc: '기계 값 -4%',            key: 'z3cost',  per: -0.04, baseCost: 1e12, growth: 3,  max: 12 },
+    { id: 'belt',    zone: 2, name: '컨베이어',  desc: '정속 가동 보너스 +10%p', key: 'steady',  per: 0.1,  baseCost: 2e12, growth: 3.5, max: 10 },
+    { id: 'spare',   zone: 2, name: '예비 부품', desc: '정속 가동으로 치는 가동률 -3%p', key: 'slack', per: 0.03, baseCost: 1e12, growth: 4, max: 5 },
     { id: 'broker',  zone: 1, name: '거간꾼',    desc: '자동 판매가 평균 시세 이상일 때만 판다(창고가 차면 그냥 판다)', key: 'broker', per: 1, baseCost: 5e6, growth: 1, max: 1 }
   ];
   /*
@@ -120,6 +141,7 @@
     { id: 'watch',   name: '불침번',    desc: '방어력 +50%',     key: 'defense', per: 0.5 },
     { id: 'hands',   name: '빠른 손',   desc: '수색 배수 +200%', key: 'click',   per: 2 },
     { id: 'bargain', name: '입담',      desc: '상품 값 +40%',    key: 'z2',      per: 0.4 },
+    { id: 'foreman', name: '작업 반장', desc: '완제품 값 +40%',  key: 'z3',      per: 0.4 },
     { id: 'spoils',  name: '전리품 수거', desc: '밤 전리품 +60%', key: 'loot',    per: 0.6 },
     { id: 'frugal',  name: '알뜰함',    desc: '모든 값 -6%',     key: 'cost',    per: -0.06 }
   ];
@@ -134,6 +156,7 @@
     { id: 'thrift',  name: '절약',      desc: '모든 값 -4%',               key: 'cost',    per: -0.04, baseCost: 2, growth: 1.7, max: 12 },
     { id: 'pioneer', name: '선발대',    desc: '철수 뒤 시작 물자 10배(레벨 1: 1,000)', key: 'start', per: 1, baseCost: 2, growth: 2, max: 8 },
     { id: 'dealer',  name: '장사 수완', desc: '상품 값 +30%',              key: 'z2',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
+    { id: 'engineer', name: '기술자',   desc: '완제품 값 +30%',            key: 'z3',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 }
   ];
@@ -148,7 +171,10 @@
       { id: 'z1c', text: '밤 30번 막아내기', need: 30, value: function (s) { return s.wavesCleared; } } ],
     [ { id: 'z2a', text: '좌판 50곳', need: 50, value: function (s) { return s.stalls; } },
       { id: 'z2b', text: '시세 ' + PEAK_PRICE + ' 이상에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
-      { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ]
+      { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
+    [ { id: 'z3a', text: '기계 레벨 합계 120', need: 120, value: function (s) { return machineLevels(s); } },
+      { id: 'z3b', text: '정속 가동 누적 10분', need: 600, unit: 'time', value: function (s) { return s.steadySeconds; } },
+      { id: 'z3c', text: '완제품으로 번 물자 누적 100경', need: 1e18, value: function (s) { return s.lineEarned; } } ]
   ];
 
   /* ---------- 작은 도우미 ---------- */
@@ -171,6 +197,8 @@
       buildings: {}, defenses: {}, upgrades: {},
       // 2구역 거래
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
+      // 3구역 생산 라인
+      machines: {}, lineEarned: 0, steadySeconds: 0,
       // 밤
       day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false,
       // 구조 신호
@@ -190,6 +218,7 @@
     };
     BUILDINGS.forEach(function (b) { s.buildings[b.id] = 0; });
     DEFENSES.forEach(function (d) { s.defenses[d.id] = 0; });
+    MACHINES.forEach(function (d) { s.machines[d.id] = 0; });
     UPGRADES.forEach(function (u) { s.upgrades[u.id] = 0; });
     PERKS.forEach(function (p) { s.perks[p.id] = 0; });
     TRAITS.forEach(function (t) { s.traits[t.id] = 0; });
@@ -203,7 +232,7 @@
   function sanitizeState(raw, now) {
     var s = createState(now);
     if (!raw || typeof raw !== 'object') return s;
-    ['supplies', 'runEarned', 'lifetimeEarned', 'goods', 'tradeEarned', 'playSeconds', 'awaySeconds', 'runSeconds', 'startedAt'].forEach(function (k) { s[k] = safeNum(raw[k], s[k]); });
+    ['supplies', 'runEarned', 'lifetimeEarned', 'goods', 'tradeEarned', 'lineEarned', 'steadySeconds', 'playSeconds', 'awaySeconds', 'runSeconds', 'startedAt'].forEach(function (k) { s[k] = safeNum(raw[k], s[k]); });
     ['clicks', 'stalls', 'peakSales', 'wavesCleared', 'breaches', 'signalsAnswered', 'antibodies', 'antibodyTotal', 'retreats'].forEach(function (k) { s[k] = safeCount(raw[k]); });
     s.zone = clamp(safeCount(raw.zone), 0, ZONES.length - 1);
     while (s.zone > 0 && ZONES[s.zone].kind === 'soon') s.zone--;     // 아직 없는 구역에 들어가 있을 수는 없다
@@ -225,6 +254,7 @@
     }
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
+    s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
     s.perks = counts(PERKS, raw.perks, 999);
     s.traits = counts(TRAITS, raw.traits, function (t) { return t.max; });
@@ -233,6 +263,11 @@
     GOALS.forEach(function (list) { list.forEach(function (g) { if (gd[g.id]) s.goalsDone[g.id] = true; }); });
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
+    // 예전에는 '문 앞'까지만 갈 수 있던 구역이 그 뒤 버전에서 열린 경우: 문값은 이미 치렀으므로 들여보낸다.
+    if (s.gate && s.zone + 1 < ZONES.length && ZONES[s.zone + 1].kind !== 'soon') {
+      s.zone++; s.gate = false; s.bestZone = Math.max(s.bestZone, s.zone);
+      delete s.story['z' + ZONES[s.zone].no + '-0'];      // 그때 읽은 것은 '문 앞' 글이다. 들어설 때의 일지는 새로 보여 준다.
+    }
     s.runLog = (Array.isArray(raw.runLog) ? raw.runLog : []).filter(function (r) { return r && typeof r === 'object' && isFinite(r.seconds) && isFinite(r.antibodies) && isFinite(r.zone); })
       .slice(-10).map(function (r) { return { zone: clamp(safeCount(r.zone), 0, ZONES.length - 1), seconds: safeNum(r.seconds, 0), antibodies: safeCount(r.antibodies) }; });
     // 시세는 강화 레벨에 따라 범위가 달라지므로 마지막에 맞춘다
@@ -248,11 +283,12 @@
    * 구역 강화, 특전, 영구 특성을 모두 모아 항목별 배수로 돌려준다.
    *   prod 전체 생산, z1 / z2 구역별 생산, click 수색 배수, defense 방어력, loot 밤 전리품,
    *   cost 모든 값, z1cost 1구역 시설 값, floor / ceil 시세 범위에 더하는 값, cap 창고 배수,
-   *   offline 자리 비움 효율에 더하는 값, antibody 철수 항체 배수, start 선발대 레벨, broker 거간꾼 여부
+   *   offline 자리 비움 효율에 더하는 값, antibody 철수 항체 배수, start 선발대 레벨, broker 거간꾼 여부,
+   *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, steady: 0, slack: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -267,6 +303,7 @@
     apply(TRAITS, state.traits);
     m.cost = Math.max(0.2, m.cost);
     m.z1cost = Math.max(0.2, m.z1cost);
+    m.z3cost = Math.max(0.2, m.z3cost);
     return m;
   }
   /** 전체 생산 배수: 특성·특전 × 막아낸 밤 보너스 × 지원 효과. */
@@ -384,6 +421,77 @@
     if (full || good) { var sold = sellGoods(state); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
 
+  /* ---------- 3구역: 생산 라인 ---------- */
+  /*
+   * 기계 셋이 차례로 맞물려 돈다. 라인은 가장 느린 기계(병목)의 속도로만 나온다: 빠른 기계를 더 올려 봐야 소용없다.
+   *   가동률 = 가장 느린 기계 ÷ 가장 빠른 기계. STEADY_AT 이상이면 '정속 가동'으로 산출이 늘어난다.
+   *   기계 레벨의 합계가 LINE_MILESTONES 에 닿을 때마다 라인 전체가 2배가 된다.
+   * 상품을 쌓아 두고 파는 2구역과 달리 만든 즉시 물자가 된다. 할 일은 "어느 기계를 올릴까"다.
+   */
+  function machineLevels(s) { var n = 0; MACHINES.forEach(function (d) { n += s.machines[d.id] || 0; }); return n; }
+  function lineMilestone(levels) { var m = 1; LINE_MILESTONES.forEach(function (t) { if (levels >= t) m *= 2; }); return m; }
+  function machineBase(state, def) { var m = mods(state); return def.baseCost * m.cost * m.z3cost; }
+  function machineCost(state, id, qty) {
+    var def = findById(MACHINES, id);
+    if (!def || !zoneOpen(state, 2) || state.machines[id] + qty > COUNT_MAX) return Infinity;
+    return seriesCost(machineBase(state, def), GROWTH, state.machines[id], qty);
+  }
+  function maxMachines(state, id) {
+    var def = findById(MACHINES, id);
+    return def && zoneOpen(state, 2) ? seriesMax(machineBase(state, def), GROWTH, state.machines[id], state.supplies, COUNT_MAX) : 0;
+  }
+  function buyMachine(state, id, qty) {
+    qty = Math.floor(qty);
+    if (!findById(MACHINES, id) || !(qty >= 1)) return fail('unknown');
+    if (!zoneOpen(state, 2)) return fail('locked');
+    return pay(state, machineCost(state, id, qty), function () { state.machines[id] += qty; });
+  }
+  /**
+   * 라인의 지금 상태.
+   *   caps 기계별 초당 처리량, flow 라인의 초당 완제품(병목 기준, 배수 전), bottleneck 가장 느린 기계의 id,
+   *   load 가동률(0~1), steadyAt 정속 가동 기준, steady 정속 가동 중인가, bonus 정속 가동 배수(아니면 1),
+   *   levels 레벨 합계, milestone 레벨 합계 배수, nextMilestone 다음 2배가 되는 합계(없으면 null)
+   */
+  function lineInfo(state) {
+    var m = mods(state), caps = {}, lo = Infinity, hi = 0, bottleneck = null, open = zoneOpen(state, 2);
+    MACHINES.forEach(function (d) {
+      var c = open ? d.rate * (state.machines[d.id] || 0) : 0;
+      caps[d.id] = c;
+      if (c < lo) { lo = c; bottleneck = d.id; }
+      if (c > hi) hi = c;
+    });
+    var load = hi > 0 ? lo / hi : 0, steadyAt = Math.max(0.5, STEADY_AT - m.slack), steady = lo > 0 && load >= steadyAt - 1e-9;
+    var levels = machineLevels(state), next = null;
+    for (var i = 0; i < LINE_MILESTONES.length; i++) if (levels < LINE_MILESTONES[i]) { next = LINE_MILESTONES[i]; break; }
+    return { caps: caps, flow: lo, bottleneck: bottleneck, load: load, steadyAt: steadyAt, steady: steady,
+      bonus: steady ? 1 + STEADY_BONUS + m.steady : 1, levels: levels, milestone: lineMilestone(levels), nextMilestone: next };
+  }
+  /** 완제품 하나의 값(물자). */
+  function productValue(state) { return PRODUCT_VALUE * mods(state).z3 * globalMult(state); }
+  /** 3구역이 초당 버는 물자. */
+  function lineRate(state) {
+    if (!zoneOpen(state, 2)) return 0;
+    var l = lineInfo(state);
+    return l.flow * l.milestone * l.bonus * productValue(state);
+  }
+  /**
+   * 병목인 기계를 한 단계씩 times 번 올린다(살 수 있는 만큼만). "어느 걸 올려야 하지"를 대신해 주는 단추다.
+   * 돌려주는 값: { ok, bought: 올린 횟수, cost: 쓴 물자 }. 한 번도 못 올리면 실패.
+   */
+  function tuneLine(state, times) {
+    if (!zoneOpen(state, 2)) return fail('locked');
+    times = Math.min(2000, Math.max(1, Math.floor(safeNum(times, 1))));
+    var bought = 0, spent = 0, last = 'supplies';
+    for (var i = 0; i < times; i++) {
+      var r = buyMachine(state, lineInfo(state).bottleneck, 1);
+      if (!r.ok) { last = r.reason; break; }
+      bought++; spent += r.cost;
+    }
+    return bought ? { ok: true, bought: bought, cost: spent } : fail(last);
+  }
+  /** 병목을 한 단계 올리는 값(단추에 보일 값). */
+  function tuneCost(state) { return zoneOpen(state, 2) ? machineCost(state, lineInfo(state).bottleneck, 1) : Infinity; }
+
   /* ---------- 구역 강화 ---------- */
   function upgradeCost(state, id) {
     var def = findById(UPGRADES, id);
@@ -401,8 +509,8 @@
   }
 
   /* ---------- 생산 합계와 직접 수색 ---------- */
-  /** 가만히 둘 때의 초당 생산(1구역 시설 + 2구역 평균 판매). */
-  function productionPerSec(state) { return searchRate(state) + tradeRate(state); }
+  /** 가만히 둘 때의 초당 생산(1구역 시설 + 2구역 평균 판매 + 3구역 라인). */
+  function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
   function clickPower(state) { return 1 + Math.log(Math.max(1, mods(state).click)) / Math.LN2; }
   function clickValue(state) { return (globalMult(state) + productionPerSec(state) * CLICK_SHARE) * clickPower(state); }
@@ -414,7 +522,7 @@
     return (GOALS[index] || []).map(function (g) {
       var v = 0;
       try { v = safeNum(g.value(state), 0); } catch (e) { v = 0; }
-      return { id: g.id, text: g.text, value: Math.min(v, g.need), need: g.need, done: !!state.goalsDone[g.id] };
+      return { id: g.id, text: g.text, value: Math.min(v, g.need), need: g.need, unit: g.unit || null, done: !!state.goalsDone[g.id] };
     });
   }
   function goalsComplete(state, index) { return (GOALS[index] || []).every(function (g) { return !!state.goalsDone[g.id]; }); }
@@ -489,7 +597,7 @@
   }
   /** 오늘 밤을 막는 데 가장 싼 보강 { cost, picks: [{ id, qty }], enough }. 이미 막을 수 있으면 cost 0. */
   function defensePlan(state) {
-    var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, zone: state.zone };
+    var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, zone: state.zone };   // defensePower 가 읽는 것만 담는다
     DEFENSES.forEach(function (d) { tmp.defenses[d.id] = state.defenses[d.id]; });
     var need = nightStrength(state), cost = 0, picked = {}, guard = 0;
     while (defensePower(tmp) < need && guard++ < 3000) {
@@ -580,7 +688,7 @@
   function canRetreat(state) { return antibodiesOnRetreat(state) >= 1 && !state.pendingPerks.length; }
   /**
    * 철수: 거점을 전부 버리고 1구역에서 다시 시작한다.
-   *   사라지는 것 : 물자, 시설, 방벽, 구역 강화, 좌판과 상품, 연 구역, 특전, 막아낸 밤, 달성한 목표
+   *   사라지는 것 : 물자, 시설, 방벽, 구역 강화, 좌판과 상품, 기계, 연 구역, 특전, 막아낸 밤, 달성한 목표
    *   남는 것     : 항체 샘플과 영구 특성, 읽은 일지, 통계
    */
   function retreat(state, now) {
@@ -640,7 +748,8 @@
   var BEATS = [];
   ZONES.forEach(function (z, zi) {
     z.story.forEach(function (text, k) {
-      BEATS.push({ id: 'z' + z.no + '-' + k, zone: z.no, zoneName: z.name, text: text, when: function (s) {
+      // 아직 없는 구역의 글은 '문 앞'(gate-번호)이다. 나중에 그 구역이 열려도 들어설 때의 일지(z번호-0)와 겹치지 않는다.
+      BEATS.push({ id: (z.kind === 'soon' ? 'gate-' + z.no : 'z' + z.no + '-' + k), zone: z.no, zoneName: z.name, text: text, when: function (s) {
         if (ZONES[zi].kind === 'soon') return s.gate && s.zone === zi - 1;          // 아직 없는 구역: 문 앞에 닿았을 때
         if (s.zone < zi) return false;
         var done = (GOALS[zi] || []).filter(function (g) { return !!s.goalsDone[g.id]; }).length;
@@ -665,7 +774,7 @@
   var MAX_NIGHTS_PER_TICK = 600;
   /**
    * dt 초를 진행하고 그동안 일어난 일을 돌려준다.
-   * 순서: 지원 효과 → 생산 → 거래 → 신호 → 밤 → 목표 → 이야기.
+   * 순서: 지원 효과 → 생산(1구역 시설, 3구역 라인) → 거래 → 신호 → 밤 → 목표 → 이야기.
    */
   function tick(state, dt, rng) {
     var events = [];
@@ -674,10 +783,11 @@
     state.playSeconds += dt; state.runSeconds += dt;
 
     // 지원 효과가 dt 도중에 끝나면 끝나기 전과 뒤를 나눠 계산한다
-    var boosted = state.buff ? Math.min(dt, state.buff.left) : 0;
-    if (boosted > 0) earn(state, searchRate(state) * boosted);
+    var boosted = state.buff ? Math.min(dt, state.buff.left) : 0, line = 0;
+    if (boosted > 0) { earn(state, searchRate(state) * boosted); line += lineRate(state) * boosted; }
     if (state.buff) { state.buff.left -= dt; if (state.buff.left <= 0) { state.buff = null; events.push({ type: 'buff-end' }); } }
-    if (dt > boosted) earn(state, searchRate(state) * (dt - boosted));
+    if (dt > boosted) { earn(state, searchRate(state) * (dt - boosted)); line += lineRate(state) * (dt - boosted); }
+    if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
 
     stepTrade(state, dt, rng, events);
 
@@ -705,7 +815,7 @@
   function offlineRate(state) { return Math.min(1, OFFLINE_RATE + mods(state).offline); }
   /**
    * 게임을 꺼 둔 동안의 진행. 최대 OFFLINE_CAP 초를 offlineRate 효율로 계산한다.
-   * 2구역은 평균 시세로 판 것으로 친다. 밤은 막을 수 있는 동안만 막고, 못 막는 밤부터는 잃는 것 없이 버틴다.
+   * 2구역은 평균 시세로 판 것으로 친다. 3구역 라인은 나갈 때의 상태 그대로 돈 것으로 친다. 밤은 막을 수 있는 동안만 막고, 못 막는 밤부터는 잃는 것 없이 버틴다.
    */
   function applyOffline(state, elapsed) {
     elapsed = safeNum(elapsed, 0);
@@ -714,10 +824,12 @@
     if (!(counted > 0)) return report;
     state.buff = null;
     state.signalLeft = 0;
-    var trade = tradeRate(state) * counted * rate;
-    report.gain = searchRate(state) * counted * rate + trade;
+    var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
+    report.gain = searchRate(state) * counted * rate + trade + line;
     earn(state, report.gain);
     state.tradeEarned += trade;
+    state.lineEarned += line;
+    if (line > 0 && lineInfo(state).steady) state.steadySeconds += counted;     // 정속으로 맞춰 두고 나갔으면 그 시간도 친다
     state.awaySeconds += counted; state.runSeconds += counted;
     var clock = state.dayClock + counted, nights = Math.floor(clock / DAY_SECONDS);
     state.dayClock = clock - nights * DAY_SECONDS;
@@ -797,6 +909,9 @@
     SIGNAL_FIRST: SIGNAL_FIRST, SIGNAL_MIN: SIGNAL_MIN, SIGNAL_SPREAD: SIGNAL_SPREAD, SIGNAL_WINDOW: SIGNAL_WINDOW,
     SIGNAL_SUPPLY_SECONDS: SIGNAL_SUPPLY_SECONDS, SIGNAL_SUPPLY_MIN: SIGNAL_SUPPLY_MIN, BUFF_MULT: BUFF_MULT, BUFF_SECONDS: BUFF_SECONDS,
     OFFLINE_CAP: OFFLINE_CAP, OFFLINE_RATE: OFFLINE_RATE, PERK_CHOICES: PERK_CHOICES,
+    PRODUCT_VALUE: PRODUCT_VALUE, STEADY_AT: STEADY_AT, STEADY_BONUS: STEADY_BONUS, LINE_MILESTONES: LINE_MILESTONES, MACHINES: MACHINES,
+    machineLevels: machineLevels, lineMilestone: lineMilestone, machineCost: machineCost, maxMachines: maxMachines, buyMachine: buyMachine,
+    lineInfo: lineInfo, productValue: productValue, lineRate: lineRate, tuneLine: tuneLine, tuneCost: tuneCost,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,

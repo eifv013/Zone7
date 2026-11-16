@@ -478,14 +478,15 @@
   var HINTS = {
     z0: '1구역 주택가 · 수색. 시설은 가만히 있어도 물자를 만든다.',
     z1: '2구역 재래시장 · 거래. 좌판이 상품을 만들고, 시세가 좋을 때 팔수록 많이 번다.',
+    z2: '3구역 공단 · 생산 라인. 기계 셋이 맞물려 돌고, 가장 느린 기계만큼만 나온다.',
     wall: '방벽은 거점 전체를 지킨다. 방어력이 오늘 밤 무리 규모보다 커야 한다.'
   };
   var perkShown = '', journalShown = '', statsShown = '';
-  var ZONE_TABS = 3;   // 탭으로 보여 줄 구역 수: 만든 구역 둘 + 문 앞까지 갈 수 있는 다음 구역 하나
+  var ZONE_TABS = 4;   // 탭으로 보여 줄 구역 수: 만든 구역 셋 + 문 앞까지 갈 수 있는 다음 구역 하나
 
   /* ---------- 목록 만들기(처음 한 번) ---------- */
   function build() {
-    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, stall: null, goals: [], stats: {}, tabs: {} };
+    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, stall: null, goals: [], stats: {}, tabs: {} };
     // 구역 탭
     for (var i = 0; i < ZONE_TABS; i++) addTab('z' + i, (i + 1) + '구역');
     addTab('wall', '방벽');
@@ -497,6 +498,14 @@
     // 2구역: 좌판
     rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls))); });
     $('rows-z1').appendChild(rows.stall.btn);
+    // 3구역: 기계 셋(위쪽의 흐름 칸과 아래쪽의 구매 줄)
+    C.MACHINES.forEach(function (d) {
+      var cell = el('div', 'line-cell'), name = el('div', 'line-name', d.name), cap = el('div', 'line-cap', '0'), track = el('div', 'track'), bar = el('i');
+      track.appendChild(bar); cell.appendChild(name); cell.appendChild(cap); cell.appendChild(track);
+      rows.cells[d.id] = { cell: cell, cap: cap, bar: bar }; $('line-flow').appendChild(cell);
+      var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - state.machines[d.id]))); });
+      rows.machines[d.id] = r; $('rows-z2').appendChild(r.btn);
+    });
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id)); });
       r.btn.classList.add('row-zone');
@@ -696,8 +705,10 @@
     setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳'));
     $('rows-z0').hidden = tab !== 'z0';
     $('rows-z1').hidden = !(tab === 'z1' && open);
+    $('rows-z2').hidden = !(tab === 'z2' && open);
     $('rows-wall').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
+    $('line').hidden = !(tab === 'z2' && open);
     $('pane-goals').hidden = !(zi >= 0);
     $('qty').hidden = soon || (zi > state.zone);
 
@@ -710,7 +721,8 @@
         if (!g) return;
         r.li.className = g.done ? 'done' : '';
         setText(r.text, (g.done ? '■ ' : '□ ') + g.text);
-        setText(r.num, g.done ? '달성' : fmt(g.value) + ' / ' + fmt(g.need));
+        // 시간으로 재는 목표(정속 가동 등)는 분:초로 보여 준다
+        setText(r.num, g.done ? '달성' : g.unit === 'time' ? clock(g.value) + ' / ' + clock(g.need) : fmt(g.value) + ' / ' + fmt(g.need));
         r.bar.style.width = (g.done ? 100 : Math.min(100, g.value / g.need * 100)).toFixed(1) + '%';
       });
       var n = C.nextZone(state), ob = $('open-zone'), showOpen = !!n && (zi === state.zone || zi === n.index) && !(n.soon && state.gate);
@@ -751,6 +763,31 @@
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
       setText(rows.stall.cost, isFinite(sc) ? '×' + q2 + ' ' + fmt(sc) : '최대');
       rows.stall.btn.disabled = !(sc <= state.supplies);
+    }
+    if (tab === 'z2' && open) {
+      var line = C.lineInfo(state), top = 0, names = {};
+      C.MACHINES.forEach(function (d) { top = Math.max(top, line.caps[d.id]); names[d.id] = d.name; });
+      C.MACHINES.forEach(function (d) {
+        var c = rows.cells[d.id], r = rows.machines[d.id], lv = state.machines[d.id];
+        setText(c.cap, '초당 ' + fmt(line.caps[d.id]));
+        c.bar.style.width = (top > 0 ? line.caps[d.id] / top * 100 : 0).toFixed(1) + '%';
+        c.cell.classList.toggle('slow', d.id === line.bottleneck);      // 가장 느린 기계: 이것을 올려야 라인이 빨라진다
+        var q = qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - lv), cost = C.machineCost(state, d.id, q);
+        setText(r.count, 'Lv ' + lv);
+        setText(r.info, '레벨당 초당 ' + d.rate + (d.id === line.bottleneck ? ' · 지금 병목' : ''));
+        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
+        r.btn.disabled = !(cost <= state.supplies);
+      });
+      var ld = $('line-load');
+      setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '%');
+      ld.className = 'num' + (line.steady ? ' steady' : '');
+      setText($('line-note'), line.flow > 0
+        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : Math.round(line.steadyAt * 100) + '% 이상이면 정속 가동') + ' · 초당 물자 ' + fmt(C.lineRate(state))
+        : '기계 셋이 모두 있어야 라인이 돈다');
+      setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
+      var tb = $('tune'), tc = C.tuneCost(state);
+      tb.disabled = !(tc <= state.supplies);
+      setText(tb, isFinite(tc) ? '병목 올리기 · ' + names[line.bottleneck] + ' · 물자 ' + fmt(tc) + (qtyMode === 1 ? '' : qtyMode === 'max' ? ' · 되는 만큼' : ' · ' + qtyMode + '번') : '기계가 모두 최대다');
     }
     if (tab === 'wall') {
       C.DEFENSES.forEach(function (d) {
@@ -978,6 +1015,12 @@
       if (r.soon) log(r.zone.no + '구역 ' + r.zone.name + '의 문 앞에 닿았다. 문은 아직 열리지 않는다.', 'good');
       else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; }
       sfx('relocate'); Store.save(); Cloud.flush(); render();
+    });
+    // 3구역: 병목인 기계를 올린다. 수량 모드를 따른다(×1 한 번, ×10 열 번, 최대는 물자가 되는 만큼).
+    $('tune').addEventListener('click', function () {
+      var r = C.tuneLine(state, qtyMode === 'max' ? 2000 : qtyMode);
+      if (!r.ok) return;
+      sfx('buy'); render();
     });
     $('sell').addEventListener('click', function () {
       var r = C.sellGoods(state);
