@@ -31,7 +31,7 @@
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'STREAK_MAX', 'STREAK_BONUS', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -68,6 +68,8 @@
         '시세는 ' + span(core.PRICE_STEP) + '마다 ' + core.PRICE_FLOOR + ' ~ ' + core.PRICE_CEIL + ' 사이에서 바뀌어요. 강화(흥정, 단골)로 범위를 올릴 수 있어요.',
         '상품은 좌판이 ' + span(core.GOODS_CAP_SECONDS) + ' 동안 만드는 양까지만 쌓여요.',
         '"창고가 차면 알아서 판다"가 켜져 있으면(기본) 가만히 둬도 평균 시세만큼은 벌어요. 시세가 높을 때 직접 팔면 그보다 더 벌고요.',
+        '시세판에는 지난 시세가 막대로 남아요. 맨 오른쪽이 지금 시세고, 점선이 평균, 굵은 선이 고점이에요.',
+        '연속 호가: 평균 이상의 시세에서 직접 팔면 한 단계씩 쌓여요(시세 하나에 한 번, 최대 ' + core.STREAK_MAX + '단계). 단계마다 직접 판매 값이 ' + pct(core.STREAK_BONUS) + ' 늘어요. 평균 아래에서 직접 팔면 끊겨요. 자동 판매는 단계에 영향을 주지 않아요.',
         '시세 ' + core.PEAK_PRICE + ' 이상에서 판 것은 "고점 판매"로 세요. 2구역 목표 가운데 하나예요.' ] },
 
       { id: 'line', title: '3구역: 생산 라인', items: [

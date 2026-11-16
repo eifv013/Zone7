@@ -582,7 +582,7 @@
 
   /* ---------- 목록 만들기(처음 한 번) ---------- */
   function build() {
-    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, tiles: [], zmap: [], routes: {}, railRows: {}, train: null, staff: null, offers: [], stall: null, goals: [], stats: {}, tabs: {} };
+    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, tiles: [], zmap: [], bars: [], pips: [], routes: {}, railRows: {}, train: null, staff: null, offers: [], stall: null, goals: [], stats: {}, tabs: {} };
     // 구역 탭
     for (var i = 0; i < ZONE_TABS; i++) { addTab('z' + i, String(i + 1)); rows.tabs['z' + i].setAttribute('aria-label', (i + 1) + '구역 ' + C.ZONES[i].name); rows.tabs['z' + i].title = (i + 1) + '구역 ' + C.ZONES[i].name; }
     addTab('wall', '방벽');
@@ -606,6 +606,9 @@
       b.addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zi; pane = 'play'; goTo('tab'); });
       rows.zmap.push({ btn: b, name: name, rate: rate, lead: lead, fill: fill }); $('zmap-list').appendChild(li);
     });
+    // 2구역 시세판: 지난 시세 막대들 + 지금 시세 막대 하나, 그리고 연속 호가 칸
+    for (var bi = 0; bi <= C.PRICE_HISTORY; bi++) { var bar = el('i'); rows.bars.push(bar); $('board-bars').appendChild(bar); }
+    for (var pi = 0; pi < C.STREAK_MAX; pi++) { var pip = el('i'); rows.pips.push(pip); $('streak-pips').appendChild(pip); }
     // 2구역: 좌판
     rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls))); });
     $('rows-z1').appendChild(rows.stall.btn);
@@ -923,10 +926,31 @@
       setText(pr, '×' + state.price.toFixed(2));
       pr.className = 'trade-price num' + (state.price >= C.PEAK_PRICE ? ' high' : state.price < range.mean * 0.8 ? ' low' : '');
       setText($('price-range'), '범위 ' + range.floor.toFixed(1) + ' ~ ' + range.ceil.toFixed(1) + ' · 평균 ' + range.mean.toFixed(2));
-      setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀐다');
+      setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀌어요');
       setText($('goods'), fmt(state.goods) + ' / ' + fmt(cap));
       $('goods-bar').style.width = (cap > 0 ? Math.min(100, state.goods / cap * 100) : 0).toFixed(1) + '%';
-      var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state);
+      // 시세판: 막대의 높이는 시세 범위 안에서의 위치(바닥 8% ~ 천장 100%). 맨 오른쪽이 지금 시세다.
+      var span = Math.max(0.01, range.ceil - range.floor);
+      var height = function (p) { return (8 + 92 * Math.max(0, Math.min(1, (p - range.floor) / span))).toFixed(1) + '%'; };
+      var tone = function (p) { return p >= C.PEAK_PRICE ? ' high' : p < range.mean ? ' low' : ''; };
+      var hist = state.priceHistory, pad = C.PRICE_HISTORY - hist.length;
+      rows.bars.forEach(function (b, i) {
+        var now = i === C.PRICE_HISTORY, p = now ? state.price : hist[i - pad];
+        var has = typeof p === 'number';
+        b.style.height = has ? height(p) : '0';
+        var cls = has ? (now ? 'now' : '') + tone(p) : '';
+        if (b.className !== cls) b.className = cls;
+      });
+      $('board-mean').style.bottom = height(range.mean);
+      $('board-peak').style.bottom = height(C.PEAK_PRICE);
+      $('board-peak').hidden = C.PEAK_PRICE > range.ceil;
+      // 연속 호가
+      rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
+      var mult = C.streakMult(state);
+      setText($('streak-note'), state.streak
+        ? '연속 호가 ' + state.streak + ' · 직접 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 지금 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
+        : '평균 이상에서 직접 팔면 연속 호가가 쌓여요');
+      var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
       setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
@@ -1270,7 +1294,9 @@
       if (!r.ok) return;
       popNumber('+' + fmt(r.gain));
       if (r.peak) log('고점(×' + r.price.toFixed(2) + ')에 팔았다. 물자 ' + fmt(r.gain) + '.', 'good');
-      sfx('buy'); render();
+      if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 직접 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
+      var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
+      sfx(r.peak ? 'defended' : 'buy'); render();
     });
     $('auto-sell').addEventListener('change', function () { C.setAutoSell(state, $('auto-sell').checked); Store.save(); render(); });
     twoStep($('retreat'), '한 번 더 누르면 거점을 버리고 철수한다', function () {

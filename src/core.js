@@ -62,6 +62,9 @@
   var PRICE_FLOOR = 0.5, PRICE_CEIL = 2;  // 기본 시세의 범위
   var GOODS_VALUE = 60;            // 상품 하나의 기준 값(물자)
   var GOODS_CAP_SECONDS = 60;      // 창고에 쌓아 둘 수 있는 양(좌판 생산의 초 수)
+  var PRICE_HISTORY = 14;          // 시세판에 남겨 두는 지난 시세의 수
+  var STREAK_MAX = 5;              // 연속 호가의 최대 단계
+  var STREAK_BONUS = 0.1;          // 연속 호가 한 단계마다 직접 판매에 붙는 비율(+10%)
   var PEAK_PRICE = 1.8;            // '고점 판매'로 치는 시세
   // 3구역 생산 라인
   var PRODUCT_VALUE = 2e8;          // 완제품 하나의 기준 값(물자)
@@ -276,6 +279,8 @@
       sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
       // 2구역 거래
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
+      // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
+      priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
@@ -328,6 +333,9 @@
     s.dayClock = clamp(safeNum(raw.dayClock, 0), 0, DAY_SECONDS);
     s.siege = !!raw.siege;
     s.autoSell = raw.autoSell !== false;
+    s.streak = Math.min(STREAK_MAX, safeCount(raw.streak));
+    s.streakUsed = raw.streakUsed === true;
+    s.priceHistory = (Array.isArray(raw.priceHistory) ? raw.priceHistory : []).slice(-PRICE_HISTORY).map(function (v) { return clamp(safeNum(v, 1), 0, 10); });
     s.priceClock = clamp(safeNum(raw.priceClock, 0), 0, PRICE_STEP);
     s.signalIn = clamp(safeNum(raw.signalIn, SIGNAL_FIRST), 0, SIGNAL_MIN + SIGNAL_SPREAD);
     s.signalLeft = clamp(safeNum(raw.signalLeft, 0), 0, SIGNAL_WINDOW);
@@ -497,16 +505,28 @@
   function goodsCap(state) { return goodsRate(state) * GOODS_CAP_SECONDS * mods(state).cap; }
   /** 상품 하나를 시세 1 에 팔았을 때의 물자. */
   function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state); }
-  /** 가진 상품을 지금 시세에 모두 판다. */
-  function sellGoods(state) {
+  /** 연속 호가로 직접 판매에 붙는 배수(1 ~ 1.5). */
+  function streakMult(state) { return 1 + Math.min(STREAK_MAX, state.streak || 0) * STREAK_BONUS; }
+  /**
+   * 가진 상품을 지금 시세에 모두 판다. auto 가 참이면 자동 판매다.
+   * 연속 호가: 직접 팔 때 시세가 평균 이상이면 단계가 하나 오르고(시세 하나에 한 번만), 평균 아래에서 팔면 0 으로 돌아간다.
+   *   단계마다 직접 판매 값이 STREAK_BONUS 만큼 는다(이번 판매에는 오르기 전의 단계가 적용된다).
+   *   자동 판매는 단계를 건드리지 않고 보너스도 받지 않는다: 지켜보다 좋은 때를 골라 파는 사람의 몫이다.
+   */
+  function sellGoods(state, auto) {
     if (!zoneOpen(state, 1)) return fail('locked');
     if (!(state.goods > 0)) return fail('empty');
-    var gain = state.goods * state.price * goodsValue(state), price = state.price;
+    var price = state.price, bonus = auto ? 1 : streakMult(state);
+    var gain = state.goods * price * goodsValue(state) * bonus;
     earn(state, gain);
     state.tradeEarned += gain;
     if (price >= PEAK_PRICE) state.peakSales++;
     state.goods = 0;
-    return { ok: true, gain: gain, price: price, peak: price >= PEAK_PRICE };
+    if (!auto) {
+      if (price < priceRange(state).mean) state.streak = 0;
+      else if (!state.streakUsed) { state.streak = Math.min(STREAK_MAX, state.streak + 1); state.streakUsed = true; }
+    }
+    return { ok: true, gain: gain, price: price, peak: price >= PEAK_PRICE, bonus: bonus, streak: state.streak };
   }
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
   /** 2구역이 가만히 둘 때 초당 버는 물자(평균 시세 기준). 화면의 '초당' 표시와 자리 비움 계산에 쓴다. */
@@ -516,6 +536,9 @@
     state.priceClock += dt;
     while (state.priceClock >= PRICE_STEP) {
       state.priceClock -= PRICE_STEP;
+      state.priceHistory.push(state.price);                       // 시세판에 지난 시세를 남긴다
+      if (state.priceHistory.length > PRICE_HISTORY) state.priceHistory.splice(0, state.priceHistory.length - PRICE_HISTORY);
+      state.streakUsed = false;                                   // 새 시세에서는 다시 단계를 올릴 수 있다
       var r = priceRange(state);
       state.price = Math.round((r.floor + rng() * (r.ceil - r.floor)) * 100) / 100;
     }
@@ -524,7 +547,7 @@
     if (!state.autoSell || !(state.goods > 0)) return;
     // 자동 판매: 창고가 차면 판다. 거간꾼이 있으면 평균 시세 이상일 때 미리 팔고, 차기 전의 낮은 시세는 기다린다.
     var full = state.goods >= cap, good = mods(state).broker > 0 && state.price >= priceRange(state).mean && state.goods >= cap * 0.25;
-    if (full || good) { var sold = sellGoods(state); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
+    if (full || good) { var sold = sellGoods(state, true); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
 
   /* ---------- 3구역: 생산 라인 ---------- */
@@ -1249,6 +1272,7 @@
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
+    PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,

@@ -1193,3 +1193,72 @@ test('수색 지도: 저장을 안전하게 읽고, 철수하면 처음 동네�
   const r = C.retreat(s, 0).state;
   assert.equal(r.sweepMask, 0); assert.equal(r.sweeps, 0); assert.equal(r.sweepSeed, 1);
 });
+
+/* ================= 2구역: 시세판과 연속 호가 ================= */
+
+test('시세판: 지난 시세가 정해진 수만큼 남는다', () => {
+  const s = inMarket(); s.defenses.rail = 1e5; s.signalIn = 1e9; s.autoSell = false;
+  assert.deepEqual(s.priceHistory, []);
+  const first = s.price;
+  C.tick(s, C.PRICE_STEP, half);
+  assert.deepEqual(s.priceHistory, [first]);
+  for (let i = 0; i < 40; i++) C.tick(s, C.PRICE_STEP, () => (i % 10) / 10);
+  assert.equal(s.priceHistory.length, C.PRICE_HISTORY);
+  const r = C.priceRange(s);
+  for (const p of s.priceHistory) assert.ok(p >= r.floor && p <= r.ceil);
+});
+
+test('연속 호가: 평균 이상에서 직접 팔면 단계가 오르고 다음 판매가 커진다', () => {
+  const s = inMarket(); s.stalls = 10;
+  const mean = C.priceRange(s).mean, value = C.goodsValue(s);
+  s.price = mean + 0.3; s.goods = 100;
+  let r = C.sellGoods(s);
+  near(r.gain, 100 * s.price * value, '첫 판매에는 보너스가 없다');
+  assert.equal(s.streak, 1);
+  s.goods = 100;
+  r = C.sellGoods(s);
+  near(r.gain, 100 * s.price * value * (1 + C.STREAK_BONUS), '오른 단계는 다음 판매부터 적용된다');
+  assert.equal(s.streak, 1, '시세 하나에서는 한 번만 오른다');
+  for (let i = 0; i < 10; i++) { s.streakUsed = false; s.goods = 1; C.sellGoods(s); }
+  assert.equal(s.streak, C.STREAK_MAX);
+  near(C.streakMult(s), 1 + C.STREAK_MAX * C.STREAK_BONUS);
+});
+
+test('연속 호가: 평균 아래에서 팔면 끊기고, 시세가 바뀌면 다시 올릴 수 있다', () => {
+  const s = inMarket(); s.stalls = 10; s.defenses.rail = 1e5; s.signalIn = 1e9; s.autoSell = false;
+  const mean = C.priceRange(s).mean;
+  s.price = mean; s.goods = 5; C.sellGoods(s);
+  assert.equal(s.streak, 1); assert.equal(s.streakUsed, true);
+  C.tick(s, C.PRICE_STEP, () => 0.99);
+  assert.equal(s.streakUsed, false);
+  C.sellGoods(s);
+  assert.equal(s.streak, 2);
+  s.price = mean - 0.01; s.goods = 5; C.sellGoods(s);
+  assert.equal(s.streak, 0);
+});
+
+test('연속 호가: 자동 판매는 단계를 건드리지 않고 보너스도 받지 않는다', () => {
+  const s = inMarket(); s.stalls = 10; s.streak = 3;
+  const value = C.goodsValue(s);
+  s.price = 0.6; s.goods = 100;
+  const r = C.sellGoods(s, true);
+  near(r.gain, 100 * 0.6 * value);
+  assert.equal(s.streak, 3);
+  // tick 의 자동 판매도 마찬가지다
+  s.defenses.rail = 1e5; s.signalIn = 1e9; s.autoSell = true; s.goods = C.goodsCap(s);
+  const ev = C.tick(s, 0.1, half).find(e => e.type === 'sold');
+  assert.ok(ev && ev.auto); assert.equal(ev.bonus, 1); assert.equal(s.streak, 3);
+});
+
+test('시세판: 저장을 안전하게 읽고, 철수하면 비워진다', () => {
+  const s = inMarket(); s.priceHistory = [0.7, 1.2, 1.9]; s.streak = 2; s.streakUsed = true;
+  assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
+  const bad = C.sanitizeState({ version: 2, zone: 1, streak: 99, streakUsed: 'yes', priceHistory: Array.from({ length: 50 }, (_, i) => i % 2 ? 'x' : 1e9) }, 0);
+  assert.equal(bad.streak, C.STREAK_MAX); assert.equal(bad.streakUsed, false);
+  assert.equal(bad.priceHistory.length, C.PRICE_HISTORY);
+  for (const p of bad.priceHistory) assert.ok(p >= 0 && p <= 10);
+  for (const junk of [null, 'x', 5, {}]) assert.deepEqual(C.sanitizeState({ version: 2, priceHistory: junk }, 0).priceHistory, []);
+  s.runEarned = C.RETREAT_MIN * 10; s.pendingPerks = [];
+  const r = C.retreat(s, 0).state;
+  assert.deepEqual(r.priceHistory, []); assert.equal(r.streak, 0);
+});

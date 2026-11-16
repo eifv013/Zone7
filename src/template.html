@@ -271,6 +271,26 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .trade { margin: 4px 0 12px; padding: 10px; border: 2px solid var(--ink); background: var(--paper); }
 .trade-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; margin-bottom: 10px; }
 .trade-price { font: 400 34px/1 var(--font-display); }
+/* 2구역 시세판 */
+.board { position: relative; height: 84px; margin-bottom: 8px; border: 2px solid var(--ink); background: var(--concrete); overflow: hidden; }
+.board-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 3px; padding: 0 4px; }
+.board-bars i { flex: 1 1 0; min-width: 0; background: var(--ink-soft); transition: height .3s ease-out; }
+.board-bars i.low { background: var(--blood); opacity: .7; }
+.board-bars i.high { background: var(--safe); }
+.board-bars i.now { background: var(--ink); outline: 2px solid var(--hazard); outline-offset: -2px; }
+.board-bars i.now.high { background: var(--safe); }
+.board-bars i.now.low { background: var(--blood); opacity: 1; }
+.board-line { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed var(--ink); opacity: .55; pointer-events: none; }
+.board-line.peak { border-top: 2px solid var(--hazard); opacity: 1; }
+.board-line::after { position: absolute; left: 3px; top: 3px; padding: 1px 2px; background: var(--concrete); font: 600 9px/1 var(--font-mono); color: var(--ink); }
+.board-line.mean::after { content: '평균'; }
+.board-line.peak::after { content: '고점'; }
+.streak { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.streak-pips { display: flex; gap: 3px; }
+.streak-pips i { width: 16px; height: 10px; border: 2px solid var(--ink); }
+.streak-pips i.on { background: var(--hazard); }
+.sell.flash { animation: tile-hit .3s ease-out; }
+@media (prefers-reduced-motion: reduce) { .board-bars i { transition: none; } .sell.flash { animation: none; } }
 .trade-price.high { color: var(--safe); }
 .trade-price.low { color: var(--blood); }
 /* 3구역 생산 라인: 기계 셋이 왼쪽에서 오른쪽으로 이어진다. 병목인 기계는 붉은 테두리로 표시한다. */
@@ -606,7 +626,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.7.0</div>
+  <div class="boot-ver">7구역 알파 0.7.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -730,6 +750,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
           <div><div class="label">지금 시세</div><div class="trade-price num" id="price">×1.00</div><div class="label" id="price-range"></div></div>
           <div class="trade-goods"><div class="label">쌓인 상품</div><div class="num" id="goods">0 / 0</div><div class="track"><i id="goods-bar"></i></div><div class="label" id="price-next"></div></div>
         </div>
+        <!-- 시세판: 지난 시세가 막대로 흘러가고 맨 오른쪽이 지금 시세다. 가로줄은 평균(점선)과 고점(실선). -->
+        <div class="board" id="board" aria-hidden="true"><div class="board-bars" id="board-bars"></div><i class="board-line mean" id="board-mean"></i><i class="board-line peak" id="board-peak"></i></div>
+        <div class="streak" id="streak"><span class="streak-pips" id="streak-pips"></span><span class="label" id="streak-note"></span></div>
         <button type="button" class="fortify sell" id="sell">상품이 없다</button>
         <label class="check" for="auto-sell"><input type="checkbox" id="auto-sell"> 창고가 차면 알아서 판다</label>
       </div>
@@ -835,7 +858,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.7.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.7.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

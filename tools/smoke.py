@@ -227,6 +227,11 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
     else:
+        # 시세판: 막대가 보이고(지금 시세 하나는 반드시), 연속 호가 칸이 다섯 개다
+        tap('[data-mview-set=manage]'); tap('[data-tab=z1]')
+        if page.locator('#board-bars i.now').count() != 1: problems.append('시세판에 지금 시세 막대가 없다')
+        if page.locator('#streak-pips i').count() != 5: problems.append('연속 호가 칸이 다섯 개가 아니다')
+        if not text('streak-note'): problems.append('연속 호가 안내가 없다')
         # 구역 화면: 고점에 팔고, 좌판과 강화를 사고, 자동 판매를 켠다
         tap('[data-mview-set=manage]'); tap('[data-tab=z1]')
         if not tap('#sell'): problems.append('팔기 단추를 누를 수 없다')

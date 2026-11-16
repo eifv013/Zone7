@@ -283,6 +283,26 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .trade { margin: 4px 0 12px; padding: 10px; border: 2px solid var(--ink); background: var(--paper); }
 .trade-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; margin-bottom: 10px; }
 .trade-price { font: 400 34px/1 var(--font-display); }
+/* 2구역 시세판 */
+.board { position: relative; height: 84px; margin-bottom: 8px; border: 2px solid var(--ink); background: var(--concrete); overflow: hidden; }
+.board-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 3px; padding: 0 4px; }
+.board-bars i { flex: 1 1 0; min-width: 0; background: var(--ink-soft); transition: height .3s ease-out; }
+.board-bars i.low { background: var(--blood); opacity: .7; }
+.board-bars i.high { background: var(--safe); }
+.board-bars i.now { background: var(--ink); outline: 2px solid var(--hazard); outline-offset: -2px; }
+.board-bars i.now.high { background: var(--safe); }
+.board-bars i.now.low { background: var(--blood); opacity: 1; }
+.board-line { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed var(--ink); opacity: .55; pointer-events: none; }
+.board-line.peak { border-top: 2px solid var(--hazard); opacity: 1; }
+.board-line::after { position: absolute; left: 3px; top: 3px; padding: 1px 2px; background: var(--concrete); font: 600 9px/1 var(--font-mono); color: var(--ink); }
+.board-line.mean::after { content: '평균'; }
+.board-line.peak::after { content: '고점'; }
+.streak { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.streak-pips { display: flex; gap: 3px; }
+.streak-pips i { width: 16px; height: 10px; border: 2px solid var(--ink); }
+.streak-pips i.on { background: var(--hazard); }
+.sell.flash { animation: tile-hit .3s ease-out; }
+@media (prefers-reduced-motion: reduce) { .board-bars i { transition: none; } .sell.flash { animation: none; } }
 .trade-price.high { color: var(--safe); }
 .trade-price.low { color: var(--blood); }
 /* 3구역 생산 라인: 기계 셋이 왼쪽에서 오른쪽으로 이어진다. 병목인 기계는 붉은 테두리로 표시한다. */
@@ -618,7 +638,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.7.0</div>
+  <div class="boot-ver">7구역 알파 0.7.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -877,6 +897,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
           <div><div class="label">지금 시세</div><div class="trade-price num" id="price">×1.00</div><div class="label" id="price-range"></div></div>
           <div class="trade-goods"><div class="label">쌓인 상품</div><div class="num" id="goods">0 / 0</div><div class="track"><i id="goods-bar"></i></div><div class="label" id="price-next"></div></div>
         </div>
+        <!-- 시세판: 지난 시세가 막대로 흘러가고 맨 오른쪽이 지금 시세다. 가로줄은 평균(점선)과 고점(실선). -->
+        <div class="board" id="board" aria-hidden="true"><div class="board-bars" id="board-bars"></div><i class="board-line mean" id="board-mean"></i><i class="board-line peak" id="board-peak"></i></div>
+        <div class="streak" id="streak"><span class="streak-pips" id="streak-pips"></span><span class="label" id="streak-note"></span></div>
         <button type="button" class="fortify sell" id="sell">상품이 없다</button>
         <label class="check" for="auto-sell"><input type="checkbox" id="auto-sell"> 창고가 차면 알아서 판다</label>
       </div>
@@ -982,7 +1005,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.7.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.7.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1089,7 +1112,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.1";
 </script>
 <script>
 /*
@@ -1108,6 +1131,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.7.1', date: '2026-11-17', at: '2026-11-17 08:01:03', title: '2구역 재래시장: 시세판과 연속 호가',
+      items: [
+        '2구역에 시세판이 생겼다. 지난 시세가 막대로 흘러가고 맨 오른쪽이 지금 시세다. 평균과 고점이 선으로 그어져 있어 지금이 팔 때인지 한눈에 보인다.',
+        '연속 호가가 생겼다. 평균 이상의 시세에서 직접 팔면 한 단계씩 쌓이고(시세 하나에 한 번, 최대 5단계), 단계마다 직접 판매 값이 10% 늘어난다. 평균 아래에서 직접 팔면 끊긴다.',
+        '자동 판매는 연속 호가를 올리지도 끊지도 않는다. 가만히 둘 때의 수입은 예전과 같다.',
+        '고점에 팔면 소리가 달라진다.'
+      ] },
     { ver: '알파 0.7.0', date: '2026-11-17', at: '2026-11-17 01:20:37', title: '화면을 비우고, 1구역에 수색 지도',
       items: [
         '구역 화면을 셋으로 나눴다. 운영(놀이 화면과 주된 구매), 강화, 목표. 한 번에 한 가지만 보여서 화면이 훨씬 비었다. 강화나 목표에 볼 것이 생기면 단추에 점이 찍힌다.',
@@ -1531,6 +1561,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
   var PRICE_FLOOR = 0.5, PRICE_CEIL = 2;  // 기본 시세의 범위
   var GOODS_VALUE = 60;            // 상품 하나의 기준 값(물자)
   var GOODS_CAP_SECONDS = 60;      // 창고에 쌓아 둘 수 있는 양(좌판 생산의 초 수)
+  var PRICE_HISTORY = 14;          // 시세판에 남겨 두는 지난 시세의 수
+  var STREAK_MAX = 5;              // 연속 호가의 최대 단계
+  var STREAK_BONUS = 0.1;          // 연속 호가 한 단계마다 직접 판매에 붙는 비율(+10%)
   var PEAK_PRICE = 1.8;            // '고점 판매'로 치는 시세
   // 3구역 생산 라인
   var PRODUCT_VALUE = 2e8;          // 완제품 하나의 기준 값(물자)
@@ -1745,6 +1778,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
       sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
       // 2구역 거래
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
+      // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
+      priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
@@ -1797,6 +1832,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
     s.dayClock = clamp(safeNum(raw.dayClock, 0), 0, DAY_SECONDS);
     s.siege = !!raw.siege;
     s.autoSell = raw.autoSell !== false;
+    s.streak = Math.min(STREAK_MAX, safeCount(raw.streak));
+    s.streakUsed = raw.streakUsed === true;
+    s.priceHistory = (Array.isArray(raw.priceHistory) ? raw.priceHistory : []).slice(-PRICE_HISTORY).map(function (v) { return clamp(safeNum(v, 1), 0, 10); });
     s.priceClock = clamp(safeNum(raw.priceClock, 0), 0, PRICE_STEP);
     s.signalIn = clamp(safeNum(raw.signalIn, SIGNAL_FIRST), 0, SIGNAL_MIN + SIGNAL_SPREAD);
     s.signalLeft = clamp(safeNum(raw.signalLeft, 0), 0, SIGNAL_WINDOW);
@@ -1966,16 +2004,28 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
   function goodsCap(state) { return goodsRate(state) * GOODS_CAP_SECONDS * mods(state).cap; }
   /** 상품 하나를 시세 1 에 팔았을 때의 물자. */
   function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state); }
-  /** 가진 상품을 지금 시세에 모두 판다. */
-  function sellGoods(state) {
+  /** 연속 호가로 직접 판매에 붙는 배수(1 ~ 1.5). */
+  function streakMult(state) { return 1 + Math.min(STREAK_MAX, state.streak || 0) * STREAK_BONUS; }
+  /**
+   * 가진 상품을 지금 시세에 모두 판다. auto 가 참이면 자동 판매다.
+   * 연속 호가: 직접 팔 때 시세가 평균 이상이면 단계가 하나 오르고(시세 하나에 한 번만), 평균 아래에서 팔면 0 으로 돌아간다.
+   *   단계마다 직접 판매 값이 STREAK_BONUS 만큼 는다(이번 판매에는 오르기 전의 단계가 적용된다).
+   *   자동 판매는 단계를 건드리지 않고 보너스도 받지 않는다: 지켜보다 좋은 때를 골라 파는 사람의 몫이다.
+   */
+  function sellGoods(state, auto) {
     if (!zoneOpen(state, 1)) return fail('locked');
     if (!(state.goods > 0)) return fail('empty');
-    var gain = state.goods * state.price * goodsValue(state), price = state.price;
+    var price = state.price, bonus = auto ? 1 : streakMult(state);
+    var gain = state.goods * price * goodsValue(state) * bonus;
     earn(state, gain);
     state.tradeEarned += gain;
     if (price >= PEAK_PRICE) state.peakSales++;
     state.goods = 0;
-    return { ok: true, gain: gain, price: price, peak: price >= PEAK_PRICE };
+    if (!auto) {
+      if (price < priceRange(state).mean) state.streak = 0;
+      else if (!state.streakUsed) { state.streak = Math.min(STREAK_MAX, state.streak + 1); state.streakUsed = true; }
+    }
+    return { ok: true, gain: gain, price: price, peak: price >= PEAK_PRICE, bonus: bonus, streak: state.streak };
   }
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
   /** 2구역이 가만히 둘 때 초당 버는 물자(평균 시세 기준). 화면의 '초당' 표시와 자리 비움 계산에 쓴다. */
@@ -1985,6 +2035,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
     state.priceClock += dt;
     while (state.priceClock >= PRICE_STEP) {
       state.priceClock -= PRICE_STEP;
+      state.priceHistory.push(state.price);                       // 시세판에 지난 시세를 남긴다
+      if (state.priceHistory.length > PRICE_HISTORY) state.priceHistory.splice(0, state.priceHistory.length - PRICE_HISTORY);
+      state.streakUsed = false;                                   // 새 시세에서는 다시 단계를 올릴 수 있다
       var r = priceRange(state);
       state.price = Math.round((r.floor + rng() * (r.ceil - r.floor)) * 100) / 100;
     }
@@ -1993,7 +2046,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
     if (!state.autoSell || !(state.goods > 0)) return;
     // 자동 판매: 창고가 차면 판다. 거간꾼이 있으면 평균 시세 이상일 때 미리 팔고, 차기 전의 낮은 시세는 기다린다.
     var full = state.goods >= cap, good = mods(state).broker > 0 && state.price >= priceRange(state).mean && state.goods >= cap * 0.25;
-    if (full || good) { var sold = sellGoods(state); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
+    if (full || good) { var sold = sellGoods(state, true); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
 
   /* ---------- 3구역: 생산 라인 ---------- */
@@ -2718,6 +2771,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
+    PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
@@ -2774,7 +2828,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'STREAK_MAX', 'STREAK_BONUS', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -2811,6 +2865,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
         '시세는 ' + span(core.PRICE_STEP) + '마다 ' + core.PRICE_FLOOR + ' ~ ' + core.PRICE_CEIL + ' 사이에서 바뀌어요. 강화(흥정, 단골)로 범위를 올릴 수 있어요.',
         '상품은 좌판이 ' + span(core.GOODS_CAP_SECONDS) + ' 동안 만드는 양까지만 쌓여요.',
         '"창고가 차면 알아서 판다"가 켜져 있으면(기본) 가만히 둬도 평균 시세만큼은 벌어요. 시세가 높을 때 직접 팔면 그보다 더 벌고요.',
+        '시세판에는 지난 시세가 막대로 남아요. 맨 오른쪽이 지금 시세고, 점선이 평균, 굵은 선이 고점이에요.',
+        '연속 호가: 평균 이상의 시세에서 직접 팔면 한 단계씩 쌓여요(시세 하나에 한 번, 최대 ' + core.STREAK_MAX + '단계). 단계마다 직접 판매 값이 ' + pct(core.STREAK_BONUS) + ' 늘어요. 평균 아래에서 직접 팔면 끊겨요. 자동 판매는 단계에 영향을 주지 않아요.',
         '시세 ' + core.PEAK_PRICE + ' 이상에서 판 것은 "고점 판매"로 세요. 2구역 목표 가운데 하나예요.' ] },
 
       { id: 'line', title: '3구역: 생산 라인', items: [
@@ -4597,7 +4653,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
 
   /* ---------- 목록 만들기(처음 한 번) ---------- */
   function build() {
-    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, tiles: [], zmap: [], routes: {}, railRows: {}, train: null, staff: null, offers: [], stall: null, goals: [], stats: {}, tabs: {} };
+    rows = { buildings: {}, defenses: {}, upgrades: {}, traits: {}, machines: {}, cells: {}, tiles: [], zmap: [], bars: [], pips: [], routes: {}, railRows: {}, train: null, staff: null, offers: [], stall: null, goals: [], stats: {}, tabs: {} };
     // 구역 탭
     for (var i = 0; i < ZONE_TABS; i++) { addTab('z' + i, String(i + 1)); rows.tabs['z' + i].setAttribute('aria-label', (i + 1) + '구역 ' + C.ZONES[i].name); rows.tabs['z' + i].title = (i + 1) + '구역 ' + C.ZONES[i].name; }
     addTab('wall', '방벽');
@@ -4621,6 +4677,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
       b.addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zi; pane = 'play'; goTo('tab'); });
       rows.zmap.push({ btn: b, name: name, rate: rate, lead: lead, fill: fill }); $('zmap-list').appendChild(li);
     });
+    // 2구역 시세판: 지난 시세 막대들 + 지금 시세 막대 하나, 그리고 연속 호가 칸
+    for (var bi = 0; bi <= C.PRICE_HISTORY; bi++) { var bar = el('i'); rows.bars.push(bar); $('board-bars').appendChild(bar); }
+    for (var pi = 0; pi < C.STREAK_MAX; pi++) { var pip = el('i'); rows.pips.push(pip); $('streak-pips').appendChild(pip); }
     // 2구역: 좌판
     rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls))); });
     $('rows-z1').appendChild(rows.stall.btn);
@@ -4938,10 +4997,31 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
       setText(pr, '×' + state.price.toFixed(2));
       pr.className = 'trade-price num' + (state.price >= C.PEAK_PRICE ? ' high' : state.price < range.mean * 0.8 ? ' low' : '');
       setText($('price-range'), '범위 ' + range.floor.toFixed(1) + ' ~ ' + range.ceil.toFixed(1) + ' · 평균 ' + range.mean.toFixed(2));
-      setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀐다');
+      setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀌어요');
       setText($('goods'), fmt(state.goods) + ' / ' + fmt(cap));
       $('goods-bar').style.width = (cap > 0 ? Math.min(100, state.goods / cap * 100) : 0).toFixed(1) + '%';
-      var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state);
+      // 시세판: 막대의 높이는 시세 범위 안에서의 위치(바닥 8% ~ 천장 100%). 맨 오른쪽이 지금 시세다.
+      var span = Math.max(0.01, range.ceil - range.floor);
+      var height = function (p) { return (8 + 92 * Math.max(0, Math.min(1, (p - range.floor) / span))).toFixed(1) + '%'; };
+      var tone = function (p) { return p >= C.PEAK_PRICE ? ' high' : p < range.mean ? ' low' : ''; };
+      var hist = state.priceHistory, pad = C.PRICE_HISTORY - hist.length;
+      rows.bars.forEach(function (b, i) {
+        var now = i === C.PRICE_HISTORY, p = now ? state.price : hist[i - pad];
+        var has = typeof p === 'number';
+        b.style.height = has ? height(p) : '0';
+        var cls = has ? (now ? 'now' : '') + tone(p) : '';
+        if (b.className !== cls) b.className = cls;
+      });
+      $('board-mean').style.bottom = height(range.mean);
+      $('board-peak').style.bottom = height(C.PEAK_PRICE);
+      $('board-peak').hidden = C.PEAK_PRICE > range.ceil;
+      // 연속 호가
+      rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
+      var mult = C.streakMult(state);
+      setText($('streak-note'), state.streak
+        ? '연속 호가 ' + state.streak + ' · 직접 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 지금 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
+        : '평균 이상에서 직접 팔면 연속 호가가 쌓여요');
+      var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
       setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
@@ -5285,7 +5365,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.0";
       if (!r.ok) return;
       popNumber('+' + fmt(r.gain));
       if (r.peak) log('고점(×' + r.price.toFixed(2) + ')에 팔았다. 물자 ' + fmt(r.gain) + '.', 'good');
-      sfx('buy'); render();
+      if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 직접 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
+      var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
+      sfx(r.peak ? 'defended' : 'buy'); render();
     });
     $('auto-sell').addEventListener('change', function () { C.setAutoSell(state, $('auto-sell').checked); Store.save(); render(); });
     twoStep($('retreat'), '한 번 더 누르면 거점을 버리고 철수한다', function () {
