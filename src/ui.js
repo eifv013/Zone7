@@ -583,6 +583,8 @@
     if (back) { el.style.transition = 'none'; el.style.setProperty('--p', v); void el.offsetWidth; el.style.transition = ''; }   // 처음으로 돌아갈 때는 되감기지 않게 바로 바꾼다
     else el.style.setProperty('--p', v);
   }
+  /** 글을 줄 단위로 나눈다: 문장이 끝나는 곳과 괄호 앞에서 줄을 바꾼다. (CSS 의 white-space: pre-line 과 함께 쓴다) */
+  function lines(text) { return String(text).replace(/([.!?요다]\.?) (?=[^\s(])/g, function (m, a) { return /[.!?]$/.test(a) ? a + '\n' : m; }).replace(/ \(/g, '\n('); }
   function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -1455,7 +1457,9 @@
 
     // 다음 할 일
     guideNow = C.guide(state);
-    ['', 'm-'].forEach(function (pre) { setText($(pre + 'goal'), guideNow.text); $(pre + 'goal-go').hidden = !guideNow.view; });
+    // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
+    var guideText = lines(guideNow.text);
+    ['', 'm-'].forEach(function (pre) { setText($(pre + 'goal'), guideText); $(pre + 'goal-go').hidden = !guideNow.view; });
 
     // 구조 신호
     $('signal').hidden = !(state.signalLeft > 0);
@@ -1481,7 +1485,7 @@
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
     setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
-      : sieging ? '농성 중이에요. 보강하면 풀리고, 버틸수록 무리가 줄어요.' : '방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
+      : sieging ? '방어력이 모자라요.\n방벽을 보강해 주세요.' : '방어력이 모자라요.\n방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
     setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;

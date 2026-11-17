@@ -194,6 +194,8 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .row-mile .st.on { opacity: 1; }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
+/* 줄 정렬: 글에 넣은 줄바꿈을 그대로 지키고, 낱말 중간에서는 꺾지 않는다 */
+#goal, #m-goal, #night-hint, .hint, .row-desc, .oz-main { white-space: pre-line; word-break: keep-all; }
 #search-bar { margin-bottom: 8px; }      /* 자동 수색 막대와 동네 칸 사이 */
 .row-mile[hidden] { display: none; }      /* 2배가 없는 줄(짐꾼, 호객꾼 등)에서는 딱지를 숨긴다. inline-flex 가 hidden 을 덮어써서 빈 테두리가 보였다 */
 /* 누름 표시: 터치에서는 직접 켠 .pressed 만 쓴다(:active 는 들쭉날쭉했다) */
@@ -959,7 +961,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.20</div>
+  <div class="boot-ver">7구역 알파 0.9.21</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1268,7 +1270,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.20 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.21 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

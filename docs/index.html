@@ -206,6 +206,8 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .row-mile .st.on { opacity: 1; }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
+/* 줄 정렬: 글에 넣은 줄바꿈을 그대로 지키고, 낱말 중간에서는 꺾지 않는다 */
+#goal, #m-goal, #night-hint, .hint, .row-desc, .oz-main { white-space: pre-line; word-break: keep-all; }
 #search-bar { margin-bottom: 8px; }      /* 자동 수색 막대와 동네 칸 사이 */
 .row-mile[hidden] { display: none; }      /* 2배가 없는 줄(짐꾼, 호객꾼 등)에서는 딱지를 숨긴다. inline-flex 가 hidden 을 덮어써서 빈 테두리가 보였다 */
 /* 누름 표시: 터치에서는 직접 켠 .pressed 만 쓴다(:active 는 들쭉날쭉했다) */
@@ -971,7 +973,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.20</div>
+  <div class="boot-ver">7구역 알파 0.9.21</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1415,7 +1417,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.20 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.21 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1540,7 +1542,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.20";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.21";
 </script>
 <script>
 /*
@@ -1559,6 +1561,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.20";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.21', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '줄 정렬',
+      items: [
+        '"다음 할 일"과 오늘 밤 칸의 글이 문장 끝에서 줄을 바꿔요. "방어력이 모자라요." 한 줄, "방벽을 보강해 주세요." 한 줄로 나와요. 목표의 진행 숫자는 아랫줄로 내려가요.',
+        '설명 글이 낱말 중간에서 꺾이지 않아요.'
+      ] },
     { ver: '알파 0.9.20', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '최근 무전 고침',
       items: [
         '폰의 상황 화면에서 최근 무전 자리에 이상한 문자가 나오던 것을 고쳤어요. 0.9.18에서는 다른 곳을 고쳐서 그대로 남아 있었어요.'
@@ -6453,6 +6460,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.20";
     if (back) { el.style.transition = 'none'; el.style.setProperty('--p', v); void el.offsetWidth; el.style.transition = ''; }   // 처음으로 돌아갈 때는 되감기지 않게 바로 바꾼다
     else el.style.setProperty('--p', v);
   }
+  /** 글을 줄 단위로 나눈다: 문장이 끝나는 곳과 괄호 앞에서 줄을 바꾼다. (CSS 의 white-space: pre-line 과 함께 쓴다) */
+  function lines(text) { return String(text).replace(/([.!?요다]\.?) (?=[^\s(])/g, function (m, a) { return /[.!?]$/.test(a) ? a + '\n' : m; }).replace(/ \(/g, '\n('); }
   function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -7325,7 +7334,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.20";
 
     // 다음 할 일
     guideNow = C.guide(state);
-    ['', 'm-'].forEach(function (pre) { setText($(pre + 'goal'), guideNow.text); $(pre + 'goal-go').hidden = !guideNow.view; });
+    // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
+    var guideText = lines(guideNow.text);
+    ['', 'm-'].forEach(function (pre) { setText($(pre + 'goal'), guideText); $(pre + 'goal-go').hidden = !guideNow.view; });
 
     // 구조 신호
     $('signal').hidden = !(state.signalLeft > 0);
@@ -7351,7 +7362,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.20";
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
     setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
-      : sieging ? '농성 중이에요. 보강하면 풀리고, 버틸수록 무리가 줄어요.' : '방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
+      : sieging ? '방어력이 모자라요.\n방벽을 보강해 주세요.' : '방어력이 모자라요.\n방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
     setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;
