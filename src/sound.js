@@ -15,7 +15,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var MAX_GAIN = 0.4;  // 어떤 소리도 이보다 크게 내지 않는다
+  var MAX_GAIN = 0.7;  // 어떤 소리도 이보다 크게 내지 않는다(음량 100 에서도)
   var VOLUME = 2.6;    // 전체 음량 배수(0.8.6: 소리가 작다는 의견에 따라 전체를 키웠다). 소리마다의 g 에 곱한다
 
   /*
@@ -27,7 +27,17 @@
   var SOUNDS = {
     // 누르는 소리: 음이 위로 미끄러져 올라가는 '뽁' 소리(to 는 끝날 때의 주파수)
     click:      [{ f: 520, to: 840, d: 0.09, type: 'sine', g: 0.05 }],
-    buy:        [{ f: 560, to: 860, d: 0.08, type: 'sine', g: 0.045 }, { f: 720, to: 1080, d: 0.11, at: 0.08, type: 'sine', g: 0.045 }],
+    buy:        [{ f: 523, d: 0.07, type: 'sine', g: 0.045 }, { f: 659, d: 0.1, at: 0.06, type: 'sine', g: 0.045 }],
+    // 0.8.10: 하는 일마다 소리가 다르다
+    sell:       [{ f: 784, d: 0.05, type: 'sine', g: 0.045 }, { f: 988, d: 0.13, at: 0.05, type: 'sine', g: 0.045 }],                                   // 동전 소리
+    peak:       [{ f: 784, d: 0.05, type: 'sine', g: 0.045 }, { f: 988, d: 0.08, at: 0.05, type: 'sine', g: 0.045 }, { f: 880, to: 1175, d: 0.2, at: 0.13, type: 'sine', g: 0.045 }],
+    surge:      [{ f: 196, to: 392, d: 0.18, type: 'triangle', g: 0.05 }, { f: 392, to: 784, d: 0.22, at: 0.14, type: 'sine', g: 0.04 }],                // 전력이 차오르는 소리
+    green:      [{ f: 880, d: 0.28, type: 'sine', g: 0.045 }, { f: 660, d: 0.34, at: 0.14, type: 'sine', g: 0.035 }],                                    // 역의 종소리
+    answer:     [{ f: 659, d: 0.08, type: 'sine', g: 0.045 }, { f: 784, d: 0.16, at: 0.08, type: 'sine', g: 0.045 }],                                    // 무전 응답
+    fortify:    [{ noise: true, cut: 300, d: 0.12, g: 0.07 }, { f: 147, d: 0.16, type: 'triangle', g: 0.06 }],                                           // 망치질
+    goal:       [{ f: 523, d: 0.09, type: 'sine', g: 0.05 }, { f: 659, d: 0.09, at: 0.09, type: 'sine', g: 0.05 }, { f: 784, d: 0.09, at: 0.18, type: 'sine', g: 0.05 }, { f: 988, d: 0.3, at: 0.27, type: 'sine', g: 0.05 }],
+    feed:       [{ f: 440, to: 660, d: 0.08, type: 'sine', g: 0.045 }, { f: 520, to: 780, d: 0.08, at: 0.09, type: 'sine', g: 0.045 }, { f: 660, to: 990, d: 0.13, at: 0.18, type: 'sine', g: 0.045 }],  // 냠냠
+    tab:        [{ f: 330, to: 440, d: 0.05, type: 'sine', g: 0.025 }],
     dusk:       [{ f: 294, d: 0.35, type: 'triangle', g: 0.03 }, { f: 233, d: 0.5, at: 0.3, type: 'triangle', g: 0.03 }],
     defended:   [{ f: 392, d: 0.1, type: 'sine', g: 0.05 }, { f: 494, d: 0.1, at: 0.1, type: 'sine', g: 0.05 }, { f: 587, d: 0.24, at: 0.2, type: 'sine', g: 0.05 }],
     breached:   [{ noise: true, cut: 260, d: 0.55, g: 0.12 }, { f: 82, d: 0.55, type: 'triangle', g: 0.07 }],
@@ -39,6 +49,16 @@
   };
 
   var enabled = true, ctx = null, unlocked = false;
+  /*
+   * 음량: 0 ~ 100, 기본 50. 50 이 기준 크기이고 100 이면 두 배, 0 이면 소리가 나지 않는다. 잘못된 값은 기본으로 본다.
+   */
+  var VOLUME_DEFAULT = 50, volume = VOLUME_DEFAULT;
+  function setVolume(v) {
+    var n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+    volume = typeof n === 'number' && isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : VOLUME_DEFAULT;
+    return volume;
+  }
+  function getVolume() { return volume; }
 
   function hasAudio() {
     return typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
@@ -64,7 +84,7 @@
   }
 
   function playNote(n, t0) {
-    var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.min(MAX_GAIN, (n.g || 0.05) * VOLUME), src;
+    var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.max(0.0002, Math.min(MAX_GAIN, (n.g || 0.05) * VOLUME * volume / VOLUME_DEFAULT)), src;
     // 딸깍거리는 잡음을 막으려고 음량을 짧게 올렸다가 서서히 내린다
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(ATTACK, n.d / 2));
@@ -92,7 +112,7 @@
    */
   function play(name) {
     var notes = SOUNDS[name];
-    if (!notes || !enabled || !unlocked || !ctx) return false;
+    if (!notes || !enabled || !unlocked || !ctx || volume <= 0) return false;
     if (typeof document !== 'undefined' && document.hidden) return false; // 안 보는 탭에서 혼자 울리지 않는다
     try {
       if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
@@ -102,5 +122,5 @@
     } catch (e) { return false; }
   }
 
-  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
+  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, VOLUME_DEFAULT: VOLUME_DEFAULT, setVolume: setVolume, getVolume: getVolume, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
 });

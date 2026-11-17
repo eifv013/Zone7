@@ -946,21 +946,105 @@
   function secs(v) { return (Math.round(v * 10) / 10).toFixed(1).replace('.0', '') + '초'; }
   function qtyFor(max, room) { return Math.max(1, Math.min(Math.max(1, room), qtyMode === 'max' ? Math.max(1, max) : qtyMode)); }
   function buy(result) { if (result && result.ok) { sfx('buy'); render(); } }
+  /*
+   * 패치노트: 버전마다 한 줄(버전, 날짜, 제목)만 보이고, 누르면 내용이 펼쳐진다.
+   * 맨 위(최신 버전)는 처음부터 펼쳐져 있고 버전 옆에 노란 NEW 딱지가 붙는다.
+   */
   function buildNotes() {
     if (!PATCH_NOTES.length) $('notes').appendChild(el('p', 'hint', '패치노트를 불러오지 못했다.'));
     PATCH_NOTES.forEach(function (n, i) {
-      var box = el('div', 'note' + (i === 0 ? ' note-now' : '')), head = el('div');
-      head.appendChild(el('div', 'note-ver', n.ver));
-      head.appendChild(el('div', 'note-date', n.at || n.date));
+      var box = el('div', 'note' + (i === 0 ? ' note-now open' : '')), head = el('button', 'note-head');
+      head.type = 'button';
+      head.setAttribute('aria-expanded', i === 0 ? 'true' : 'false');
+      var ver = el('span', 'note-ver', n.ver);
+      if (i === 0) ver.appendChild(el('b', 'note-new', 'NEW'));
+      head.appendChild(ver);
+      head.appendChild(el('span', 'note-title', n.title));
+      head.appendChild(el('span', 'note-date', (n.at || n.date).slice(0, 10)));
       box.appendChild(head);
-      box.appendChild(el('p', 'note-title', n.title));
       var ul = el('ul');
       n.items.forEach(function (text) { ul.appendChild(el('li', '', text)); });
       box.appendChild(ul);
+      head.addEventListener('click', function () {
+        var open = !box.classList.contains('open');
+        box.classList.toggle('open', open);
+        head.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
       $('notes').appendChild(box);
     });
     setText($('notes-current'), PATCH_NOTES.length ? '현재 ' + PATCH_NOTES[0].ver : '');
   }
+
+  /* ---------- 도감 ---------- */
+  /*
+   * 도감: 동물 친구(만난 아이만 모습이 보인다), 좀비, 방어 수단. 기록 화면의 '도감' 탭에서 본다.
+   *   그림은 도트를 SVG 로 옮긴다(pixSvg). 좀비는 도트 화면의 그림(Scene.zombieFrames)을 그대로 쓴다.
+   */
+  var DOG_PIX = ['..........pp..', '.........bbbb.', '.........bkbbn', 'b........bbbb.', 'bb.bbbbbbbbb..', '.bbbbppbbbbb..', '..bbbbppbbbb..', '..bbbbbbbbbb..', '..bb.b..bb.b..', '..bb.b..bb.b..'];
+  var CAT_PIX = ['.........b..b.', '.........bbbb.', 'b........bkbk.', 'b........bbnb.', 'b..bbbbbbbbb..', 'bb.bppbbbbbb..', '.bbbbppbbbbb..', '..bbbbbbbbbb..', '..b.b...b.b...', '..b.b...b.b...'];
+  var ZOMBIE_PAL = { g: '#7da35a', x: '#17180f', c: '#5a5f6a', d: '#3a3f4a', h: '#3a2a22' };
+  var ZOMBIE_DEX = [
+    { id: 'walker', name: '배회자', text: '가장 흔해요. 느리지만 끝없이 와요.' },
+    { id: 'hair', name: '긴 머리', text: '머리카락에 얼굴이 가려져 있어요. 조금 느려요.' },
+    { id: 'runner', name: '달리는 것', text: '몸을 숙이고 뛰어와요. 가장 빨라요.' },
+    { id: 'brute', name: '덩치', text: '어깨가 넓고 한 발을 더 버텨요.' },
+    { id: 'boss', name: '변이체', text: '몇 밤에 한 번 무리를 이끌고 와요. 여러 발을 맞아야 쓰러져요.', frames: 'walker', big: true }
+  ];
+  var LEAD_TEXT = { wire: '무리를 느리게 해요. 주역으로 나오지는 않아요.', tower: '주역일 때: 저격 한 발.', turret: '주역일 때: 세 발 연사.',
+    flame: '주역일 때: 불길을 깔아 가까운 좀비를 모두 태워요.', emp: '주역일 때: 번개가 셋까지 옮겨 붙어요.', rail: '주역일 때: 화면 끝까지 꿰뚫어요.' };
+  /** 도트 그림(글자 줄)을 SVG 로. pal 에 없는 글자는 비운다. */
+  function pixSvg(rowsPix, pal, cls) {
+    var h = rowsPix.length, w = 0;
+    rowsPix.forEach(function (r) { w = Math.max(w, r.length); });
+    var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, 'class': 'pix ' + (cls || ''), 'aria-hidden': 'true' });
+    rowsPix.forEach(function (row, y) {
+      for (var x = 0; x < row.length; x++) if (pal[row[x]]) svg.appendChild(svgEl('rect', { x: x, y: y, width: 1, height: 1, fill: pal[row[x]] }));
+    });
+    return svg;
+  }
+  var dexTab = 'pet', dexShown = '';
+  function renderDex() {
+    var owned = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; });
+    var key = dexTab + '|' + owned.map(function (b) { return b.id + ':' + state.kennel[b.id] + ':' + C.petLevel(state, b.id); }).join(',') + '|' + JSON.stringify(state.defenses) + '|' + (state.pet ? state.pet.breed : '');
+    if (key === dexShown) return;
+    dexShown = key;
+    var tabs = $('dex-tabs'), box = $('dex');
+    tabs.textContent = ''; box.textContent = '';
+    [['pet', '동물 친구 ' + owned.length + '/' + C.PET_BREEDS.length], ['zombie', '좀비 ' + ZOMBIE_DEX.length], ['wall', '방어 수단 ' + C.DEFENSES.length]].forEach(function (t) {
+      var b = el('button', '', t[1]);
+      b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
+      b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
+      tabs.appendChild(b);
+    });
+    function card(art, name, sub, text, locked) {
+      var c = el('div', 'dex-card' + (locked ? ' locked' : '')), body = el('div');
+      var frame = el('div', 'dex-art'); frame.appendChild(art);
+      body.appendChild(el('b', '', name)); body.appendChild(el('span', 'label', sub)); body.appendChild(el('p', '', text));
+      c.appendChild(frame); c.appendChild(body); box.appendChild(c);
+    }
+    if (dexTab === 'pet') {
+      C.PET_BREEDS.forEach(function (b) {
+        var have = !!state.kennel[b.id], kind = C.PET_KINDS[b.kind], rar = null;
+        C.PET_RARITIES.forEach(function (r) { if (r.id === b.rarity) rar = r; });
+        var pal = have ? { b: b.body, p: b.patch || b.body, k: '#17180f', n: '#17180f' } : { b: '#4a4b40', p: '#4a4b40', k: '#4a4b40', n: '#4a4b40' };
+        var art = pixSvg(b.kind === 'cat' ? CAT_PIX : DOG_PIX, pal);
+        if (!have) { card(art, '???', kind.name + ' · 아직 만나지 못했어요', '데려오기에서 만날 수 있어요.', true); return; }
+        var lv = C.petLevel(state, b.id), with_ = state.pet && state.pet.breed === b.id;
+        card(art, state.kennel[b.id] + (with_ ? ' · 함께 다니는 중' : ''), (rar ? rar.name : '') + ' · ' + b.name + ' · Lv ' + lv, C.breedDesc(b) + (lv ? ' (레벨로 ×' + (1 + C.PET_LEVEL_STEP * lv).toFixed(1) + ')' : ''), false);
+      });
+    } else if (dexTab === 'zombie') {
+      ZOMBIE_DEX.forEach(function (z) {
+        var frames = window.Scene && window.Scene.zombieFrames ? window.Scene.zombieFrames(z.frames || z.id)[0] : ['g'];
+        card(pixSvg(frames, ZOMBIE_PAL, z.big ? 'big' : ''), z.name, z.id === 'boss' ? C.BOSS_EVERY + '번째 밤마다' : '밤마다 섞여서 와요', z.text, false);
+      });
+    } else {
+      C.DEFENSES.forEach(function (d) {
+        var n = state.defenses[d.id] || 0, art = el('i', 'dex-wall dex-' + d.id);
+        card(art, d.name, n ? '가진 수 ' + fmt(n) : '아직 없어요', d.desc + '. ' + (LEAD_TEXT[d.id] || ''), !n);
+      });
+    }
+  }
+
   /** 도움말은 부가 요소라, 모듈이 빠졌거나 글을 만들다 오류가 나도 게임은 그대로 진행한다. */
   function buildHelp() {
     var list = [];
@@ -1131,6 +1215,7 @@
     renderTraits();
     renderPerkChoice();
     if ($('record').getAttribute('data-rtab') === 'stats') renderStats();
+    if ($('record').getAttribute('data-rtab') === 'dex') renderDex();
   }
 
   /** 구역 화면: 고른 탭에 따라 목표, 거래 칸, 목록을 바꿔 보여 준다. */
@@ -1559,9 +1644,9 @@
           break;
         case 'goal':
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
-          toast('목표 달성 · ' + ev.text); sfx('buy');
+          toast('목표 달성 · ' + ev.text); sfx('goal');
           break;
-        case 'surge': if (tab === 'z2' && pane === 'play') sfx('defended'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
+        case 'surge': if (tab === 'z2' && pane === 'play') sfx('surge'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
@@ -1690,6 +1775,16 @@
     });
   }
 
+  /*
+   * 저장 코드: 저장 글(JSON)을 base64 로 바꾼 것.
+   *   btoa 는 한글을 그대로 넣으면 오류를 낸다(주인공·친구 이름에 한글이 들어가면서 코드가 안 만들어지던 원인, 0.8.10 에서 고침).
+   *   그래서 먼저 UTF-8 로 바꾼 뒤 base64 로 만든다. 읽을 때는 거꾸로 하되, 예전 코드(한글이 없던 때의 것)도 읽을 수 있게 한다.
+   */
+  function encodeSave(json) { return btoa(unescape(encodeURIComponent(json))); }
+  function decodeSave(code) {
+    var raw = atob(code);
+    try { return decodeURIComponent(escape(raw)); } catch (e) { return raw; }
+  }
   function saveMsg(text, bad) {
     var m = $('save-msg');
     m.textContent = text;
@@ -1712,12 +1807,12 @@
     $('signal').addEventListener('click', function () {
       var r = C.answerSignal(state);
       if (!r.ok) return; // 누르는 순간 신호가 끊긴 경우
-      sfx('buy'); render();
+      sfx('answer'); render();
     });
     $('fortify').addEventListener('click', function () {
       var r = C.fortify(state);
       if (!r.ok) return; // 그사이 물자가 모자라졌거나 이미 충분해진 경우
-      sfx('buy'); render();
+      sfx('fortify'); render();
     });
     $('open-zone').addEventListener('click', function () {
       var r = C.openZone(state);
@@ -1738,7 +1833,7 @@
       var gain = 0; r.arrivals.forEach(function (ev) { gain += ev.gain; });
       if (gain > 0) popNumber('+' + fmt(gain));
       handleEvents(r.arrivals);
-      sfx('click'); render();
+      sfx('green'); render();
     });
     // 일행: 데려오기(등급 뽑기), 친구 이름, 주인공 이름
     ['dog', 'cat'].forEach(function (kind) {
@@ -1772,7 +1867,7 @@
     // 3구역: 전력 투입
     $('surge').addEventListener('click', function () {
       if (!C.surge(state).ok) return;
-      sfx('defended'); render();
+      sfx('surge'); render();
     });
     // 3구역: 병목인 기계를 올린다. 수량 모드를 따른다(×1 한 번, ×10 열 번, 최대는 물자가 되는 만큼).
     $('tune').addEventListener('click', function () {
@@ -1786,7 +1881,7 @@
       popNumber('+' + fmt(r.gain));
       if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
       var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
-      sfx(r.peak ? 'defended' : 'buy'); render();
+      sfx(r.peak ? 'peak' : 'sell'); render();
     });
     $('auto-sell').addEventListener('change', function () { C.setAutoSell(state, $('auto-sell').checked); Store.save(); render(); });
     twoStep($('retreat'), '한 번 더 누르면 거점을 버리고 철수한다', function () {
@@ -1843,7 +1938,9 @@
       b.addEventListener('click', function () {
         $('record').setAttribute('data-rtab', b.dataset.rtabSet);
         if (b.dataset.rtabSet === 'stats') renderStats(); // 다음 갱신을 기다리지 않고 바로 채운다
+        if (b.dataset.rtabSet === 'dex') renderDex();
         document.querySelectorAll('[data-rtab-set]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+        sfx('tab');
       });
     });
 
@@ -1876,7 +1973,20 @@
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
     wirePrefs();
-    $('pet-feed').addEventListener('click', function () { var r = C.feedPet(state); if (r.ok) { sfx('buy'); toast('Lv ' + r.level + ' · ' + C.petEffectText(state)); Store.save(); render(); } });
+    // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
+    (function () {
+      var bar = $('volume'), label = $('volume-num');
+      function apply(v, keep) {
+        var n = 50;
+        try { if (window.Sound) n = window.Sound.setVolume(v); } catch (e) { /* 소리는 없어도 된다 */ }
+        bar.value = n; setText(label, String(n));
+        if (keep) remember('zone7-volume', n);
+      }
+      apply(recall('zone7-volume'), false);
+      bar.addEventListener('input', function () { apply(bar.value, true); });
+      bar.addEventListener('change', function () { sfx('buy'); });
+    })();
+    $('pet-feed').addEventListener('click', function () { var r = C.feedPet(state); if (r.ok) { sfx('feed'); toast('Lv ' + r.level + ' · ' + C.petEffectText(state)); Store.save(); render(); } });
     // 주인공의 성별: 고르면 일지의 호칭이 바뀐다(설정 안 함이면 중립)
     document.querySelectorAll('[data-gender]').forEach(function (b) {
       b.addEventListener('click', function () { if (C.setHeroGender(state, b.getAttribute('data-gender')).ok) { Store.save(); render(); renderJournal(); } });
@@ -1884,7 +1994,7 @@
     wireFeedback();
     $('export').addEventListener('click', function () {
       var code;
-      try { code = btoa(C.serialize(state)); }
+      try { code = encodeSave(C.serialize(state)); }
       catch (e) { saveMsg('저장 코드를 만들지 못했습니다.', true); return; }
       $('save-code').value = code;
       var done = function () { saveMsg('저장 코드를 복사했습니다. 메모장에 붙여 두세요.', false); };
@@ -1898,7 +2008,7 @@
       if (!text) { saveMsg('불러올 저장 코드를 아래 칸에 붙여 넣으세요.', true); return; }
       try {
         var json;
-        try { json = atob(text); } catch (e) { throw new Error('저장 코드 형식이 아닙니다. 처음부터 끝까지 복사했는지 확인하세요.'); }
+        try { json = decodeSave(text); } catch (e) { throw new Error('저장 코드 형식이 아닙니다. 처음부터 끝까지 복사했는지 확인하세요.'); }
         state = C.deserialize(json, Date.now());
         Store.save();
         saveMsg('불러왔습니다.', false);

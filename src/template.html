@@ -832,6 +832,36 @@ body { font-size: 15.5px; line-height: 1.55; }
 .gender-row { border-top: 0; padding: 0 0 6px; }
 .pet-feed { width: 100%; margin: 0 0 12px; padding: 10px; border: 0; border-radius: var(--r-s); background: var(--hazard); color: var(--on-hazard); font: 700 14px/1.4 var(--font-body); cursor: pointer; }
 .pet-feed:disabled { background: var(--soft); color: var(--ink-soft); cursor: default; }
+/* 도감 탭도 다른 기록 탭처럼 고른 것만 보인다 */
+.foot[data-rtab="dex"] [data-rpane="dex"] { display: block; }
+.dex { display: grid; gap: 8px; }
+.dex-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px; border-radius: 10px; background: var(--soft); }
+.dex-card b { display: block; font: 600 15px/1.4 var(--font-body); }
+.dex-card .label { display: block; }
+.dex-card p { margin: 3px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+.dex-card.locked b { color: var(--ink-soft); }
+.dex-art { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.pix { width: 52px; height: auto; shape-rendering: crispEdges; }
+.pix.big { width: 60px; }
+.dex-art .pix[viewBox="0 0 8 11"], .dex-art .pix[viewBox="0 0 10 13"] { width: auto; height: 52px; }
+/* 방어 수단의 작은 표지: 색 띠로만 구분한다 */
+.dex-wall { display: block; width: 40px; height: 40px; border-radius: 6px; background: repeating-linear-gradient(-45deg, var(--hazard) 0 6px, #17180f 6px 12px); }
+.dex-card.locked .dex-wall { background: color-mix(in srgb, var(--ink) 20%, transparent); }
+/* 패치노트: 접힌 줄을 누르면 펼쳐진다. 최신 버전에는 노란 NEW 딱지 */
+.note { display: block; padding: 0; border-top: 1px solid var(--rule); }
+.note:first-child { border-top: 1px solid var(--edge); }
+.note-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; width: 100%; padding: 12px 2px; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.note-ver { font: 400 18px/1.2 var(--font-display); white-space: nowrap; }
+.note-title { grid-column: auto; grid-row: auto; font: 500 14px/1.4 var(--font-body); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note.open .note-title { color: var(--ink); font-weight: 600; white-space: normal; }
+.note-date { font: 500 11px/1.6 var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
+.note-new { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--hazard); color: var(--on-hazard); font: 700 10px/1.6 var(--font-body); vertical-align: 3px; }
+.note-now .note-ver::after { content: none; }
+.note ul { display: none; margin: 0 0 14px; padding-left: 18px; }
+.note.open ul { display: block; }
+.vol { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; max-width: 210px; }
+.vol input { flex: 1 1 auto; min-width: 0; accent-color: var(--hazard); }
+.vol b { width: 28px; text-align: right; font-size: 13px; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -847,7 +877,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.9</div>
+  <div class="boot-ver">7구역 알파 0.8.10</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1053,6 +1083,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 <footer class="foot" id="record" data-view="record" data-rtab="journal">
   <div class="tabbar record-tabs" role="group" aria-label="기록 항목">
     <button type="button" data-rtab-set="journal" aria-pressed="true">일지</button>
+    <button type="button" data-rtab-set="dex" aria-pressed="false">도감</button>
     <button type="button" data-rtab-set="radio" aria-pressed="false">무전</button>
     <button type="button" data-rtab-set="stats" aria-pressed="false">통계</button>
     <button type="button" data-rtab-set="notes" aria-pressed="false">패치</button>
@@ -1063,6 +1094,11 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="panel-head"><h2 id="h-journal">생존 일지</h2><span class="label" id="journal-count">0 / 0</span></div>
     <div class="subtabs" id="journal-tabs" role="group" aria-label="장 고르기"></div>
     <ol class="journal" id="journal"></ol>
+  </section>
+  <section class="panel" data-rpane="dex" aria-labelledby="h-dex">
+    <div class="panel-head"><h2 id="h-dex">도감</h2></div>
+    <div class="subtabs" id="dex-tabs" role="group" aria-label="도감 항목"></div>
+    <div class="dex" id="dex"></div>
   </section>
   <section class="panel" data-rpane="radio" aria-labelledby="h-log">
     <div class="panel-head"><h2 id="h-log">무전 로그</h2></div>
@@ -1090,6 +1126,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="qty" role="group" aria-label="화면 테마"><button type="button" data-skin-set="light" aria-pressed="true">라이트</button><button type="button" data-skin-set="dark" aria-pressed="false">다크</button></div></div>
       <div class="set-row"><span class="label">효과음</span>
         <div class="qty"><button type="button" data-sound-toggle aria-pressed="true">소리 켬</button></div></div>
+      <div class="set-row"><label class="label" for="volume">음량</label>
+        <div class="vol"><input type="range" id="volume" min="0" max="100" step="5" value="50"><b class="num" id="volume-num">50</b></div></div>
       <div class="set-row"><span class="label">진동</span>
         <div class="qty" role="group" aria-label="진동"><button type="button" data-pref="vibrate" data-value="on">켬</button><button type="button" data-pref="vibrate" data-value="off">끔</button></div></div>
       <div class="set-row"><span class="label">숫자 표기</span>
@@ -1112,7 +1150,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.10 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

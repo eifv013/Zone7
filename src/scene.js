@@ -396,11 +396,12 @@
 
   /* ---------- 도트 그림 ---------- */
   // 한 글자가 한 픽셀. '.' 은 투명.
-  var PAL = { h: '#2b241c', s: '#e2b48c', j: '#f0b400', k: '#6b4a2b', p: '#30343c', b: '#17180f',
+  var PAL = { y: '#f0b400', h: '#2b241c', s: '#e2b48c', j: '#f0b400', k: '#6b4a2b', p: '#30343c', b: '#17180f',
               g: '#7da35a', x: '#1b2414', c: '#6f6a60', d: '#3c3a34', e: '#c0392b' };
-  var HERO_TOP = ['..hhh...', '.hhhhh..', '.hsss...', '..sss...', 'kjjjj...', 'kjjjjs..', 'kjjjj...', '.jjjj...'];
+  // 주인공은 노란 우비의 모자(y)를 쓰고 있다. 원정대원은 같은 몸에 모자 대신 머리카락을 그린다(SQUAD_TOP)
+  var HERO_TOP = ['..yyy...', '.yyyyy..', '.ysssy..', '.ysss...', 'kjjjj...', 'kjjjjs..', 'kjjjj...', '.jjjj...'];
   var HERO_LEGS = [['.pp.pp..', '.pp.pp..', '.bb.bb..'], ['..ppp...', '.pp.pp..', 'bb...bb.']];
-  var HERO_SEARCH = ['........', '........', '..hhh...', '.hhhhh..', 'kjhsss..', 'kjjjjss.', 'kjjjj...', '.jjjjj..', '.pp.pp..', '.bb.bb..', '........'];
+  var HERO_SEARCH = ['........', '........', '..yyy...', '.yyyyy..', 'kjysss..', 'kjjjjss.', 'kjjjj...', '.jjjjj..', '.pp.pp..', '.bb.bb..', '........'];
   var ZOMBIE = [
     ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.ccccgg.', '.cccc...', '.cccc...', '.cccc...', '.dd.dd..', '.dd.dd..', '.dd.dd..'],
     ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.cccc...', '.ccccgg.', '.cccc...', '.cccc...', '..ddd...', '.dd.dd..', 'dd...dd.']
@@ -423,7 +424,7 @@
   // 쓰러진 것: 서 있는 그림을 눕혀 쓰지 않고, 바닥에 무너진 더미를 따로 그린다(머리가 방벽 반대쪽)
   var ZOMBIE_DOWN = ['...cc.gg', '.ddcccgg', 'dddccccg'];
   // 원정대원: 주인공과 같은 몸에 회색 옷(주인공의 노란 우비와 구별된다)
-  var SQUAD_TOP = HERO_TOP.map(function (row) { return row.replace(/j/g, 'c').replace(/k/g, 'd'); });
+  var SQUAD_TOP = HERO_TOP.map(function (row) { return row.replace(/j/g, 'c').replace(/k/g, 'd').replace(/y/g, 'h'); });
   // 좀비 옷 색 세 가지(같은 무리가 복제된 것처럼 보이지 않게). 각 항목은 PAL 의 일부만 바꾼다.
   var ZOMBIE_LOOKS = [{}, { c: '#4f5d73', d: '#2a3140' }, { c: '#6b4a3a', d: '#3a2a22' }];
   /** rows 의 글자를 색으로 바꿔 찍는다. look 을 주면 그 글자들만 다른 색으로 그린다. */

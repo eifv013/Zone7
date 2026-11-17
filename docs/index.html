@@ -844,6 +844,36 @@ body { font-size: 15.5px; line-height: 1.55; }
 .gender-row { border-top: 0; padding: 0 0 6px; }
 .pet-feed { width: 100%; margin: 0 0 12px; padding: 10px; border: 0; border-radius: var(--r-s); background: var(--hazard); color: var(--on-hazard); font: 700 14px/1.4 var(--font-body); cursor: pointer; }
 .pet-feed:disabled { background: var(--soft); color: var(--ink-soft); cursor: default; }
+/* 도감 탭도 다른 기록 탭처럼 고른 것만 보인다 */
+.foot[data-rtab="dex"] [data-rpane="dex"] { display: block; }
+.dex { display: grid; gap: 8px; }
+.dex-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px; border-radius: 10px; background: var(--soft); }
+.dex-card b { display: block; font: 600 15px/1.4 var(--font-body); }
+.dex-card .label { display: block; }
+.dex-card p { margin: 3px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+.dex-card.locked b { color: var(--ink-soft); }
+.dex-art { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.pix { width: 52px; height: auto; shape-rendering: crispEdges; }
+.pix.big { width: 60px; }
+.dex-art .pix[viewBox="0 0 8 11"], .dex-art .pix[viewBox="0 0 10 13"] { width: auto; height: 52px; }
+/* 방어 수단의 작은 표지: 색 띠로만 구분한다 */
+.dex-wall { display: block; width: 40px; height: 40px; border-radius: 6px; background: repeating-linear-gradient(-45deg, var(--hazard) 0 6px, #17180f 6px 12px); }
+.dex-card.locked .dex-wall { background: color-mix(in srgb, var(--ink) 20%, transparent); }
+/* 패치노트: 접힌 줄을 누르면 펼쳐진다. 최신 버전에는 노란 NEW 딱지 */
+.note { display: block; padding: 0; border-top: 1px solid var(--rule); }
+.note:first-child { border-top: 1px solid var(--edge); }
+.note-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; width: 100%; padding: 12px 2px; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.note-ver { font: 400 18px/1.2 var(--font-display); white-space: nowrap; }
+.note-title { grid-column: auto; grid-row: auto; font: 500 14px/1.4 var(--font-body); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note.open .note-title { color: var(--ink); font-weight: 600; white-space: normal; }
+.note-date { font: 500 11px/1.6 var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
+.note-new { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--hazard); color: var(--on-hazard); font: 700 10px/1.6 var(--font-body); vertical-align: 3px; }
+.note-now .note-ver::after { content: none; }
+.note ul { display: none; margin: 0 0 14px; padding-left: 18px; }
+.note.open ul { display: block; }
+.vol { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; max-width: 210px; }
+.vol input { flex: 1 1 auto; min-width: 0; accent-color: var(--hazard); }
+.vol b { width: 28px; text-align: right; font-size: 13px; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -859,7 +889,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.9</div>
+  <div class="boot-ver">7구역 알파 0.8.10</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1200,6 +1230,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 <footer class="foot" id="record" data-view="record" data-rtab="journal">
   <div class="tabbar record-tabs" role="group" aria-label="기록 항목">
     <button type="button" data-rtab-set="journal" aria-pressed="true">일지</button>
+    <button type="button" data-rtab-set="dex" aria-pressed="false">도감</button>
     <button type="button" data-rtab-set="radio" aria-pressed="false">무전</button>
     <button type="button" data-rtab-set="stats" aria-pressed="false">통계</button>
     <button type="button" data-rtab-set="notes" aria-pressed="false">패치</button>
@@ -1210,6 +1241,11 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="panel-head"><h2 id="h-journal">생존 일지</h2><span class="label" id="journal-count">0 / 0</span></div>
     <div class="subtabs" id="journal-tabs" role="group" aria-label="장 고르기"></div>
     <ol class="journal" id="journal"></ol>
+  </section>
+  <section class="panel" data-rpane="dex" aria-labelledby="h-dex">
+    <div class="panel-head"><h2 id="h-dex">도감</h2></div>
+    <div class="subtabs" id="dex-tabs" role="group" aria-label="도감 항목"></div>
+    <div class="dex" id="dex"></div>
   </section>
   <section class="panel" data-rpane="radio" aria-labelledby="h-log">
     <div class="panel-head"><h2 id="h-log">무전 로그</h2></div>
@@ -1237,6 +1273,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="qty" role="group" aria-label="화면 테마"><button type="button" data-skin-set="light" aria-pressed="true">라이트</button><button type="button" data-skin-set="dark" aria-pressed="false">다크</button></div></div>
       <div class="set-row"><span class="label">효과음</span>
         <div class="qty"><button type="button" data-sound-toggle aria-pressed="true">소리 켬</button></div></div>
+      <div class="set-row"><label class="label" for="volume">음량</label>
+        <div class="vol"><input type="range" id="volume" min="0" max="100" step="5" value="50"><b class="num" id="volume-num">50</b></div></div>
       <div class="set-row"><span class="label">진동</span>
         <div class="qty" role="group" aria-label="진동"><button type="button" data-pref="vibrate" data-value="on">켬</button><button type="button" data-pref="vibrate" data-value="off">끔</button></div></div>
       <div class="set-row"><span class="label">숫자 표기</span>
@@ -1259,7 +1297,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.10 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1383,7 +1421,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.10";
 </script>
 <script>
 /*
@@ -1402,6 +1440,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.10', date: '2026-11-17', at: '2026-11-17 17:20:00', title: '저장 코드 고침, 도감, 접히는 패치노트',
+      items: [
+        '저장 코드가 만들어지지 않던 문제를 고쳤어요. 주인공이나 친구 이름에 한글이 있으면 코드가 안 나왔어요. 자동 저장은 정상이었고, 진행은 그대로예요.',
+        '기록에 도감이 생겼어요. 동물 친구 12종(만난 아이만 모습이 보여요), 좀비 5종, 방어 수단 6종이 있어요.',
+        '패치노트가 접혀요. 최신 버전만 펼쳐져 있고 NEW 딱지가 붙어요. 지난 버전은 줄을 누르면 펼쳐져요.',
+        '설정에 음량 조절이 생겼어요. 0부터 100까지이고 기본은 50이에요.',
+        '소리가 다양해졌어요. 판매(동전), 고점 판매, 전력 투입, 청신호(종), 신호 응답, 방벽 보강(망치), 목표 달성, 간식 주기, 탭 전환이 저마다 다른 소리예요. 구매 소리는 전의 것으로 되돌렸어요.',
+        '도트 화면의 주인공이 노란 우비 모자를 써요.'
+      ] },
     { ver: '알파 0.8.9', date: '2026-11-17', at: '2026-11-17 16:50:00', title: '간식으로 친구를 키워요',
       items: [
         '새 재화 "간식"이 생겼어요. 밤을 막으면 1개(변이체는 5개), 구조 신호에 응답하면 1개를 얻어요. 자리를 비운 동안 막은 밤도 쳐 줘요.',
@@ -4188,11 +4235,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
 
   /* ---------- 도트 그림 ---------- */
   // 한 글자가 한 픽셀. '.' 은 투명.
-  var PAL = { h: '#2b241c', s: '#e2b48c', j: '#f0b400', k: '#6b4a2b', p: '#30343c', b: '#17180f',
+  var PAL = { y: '#f0b400', h: '#2b241c', s: '#e2b48c', j: '#f0b400', k: '#6b4a2b', p: '#30343c', b: '#17180f',
               g: '#7da35a', x: '#1b2414', c: '#6f6a60', d: '#3c3a34', e: '#c0392b' };
-  var HERO_TOP = ['..hhh...', '.hhhhh..', '.hsss...', '..sss...', 'kjjjj...', 'kjjjjs..', 'kjjjj...', '.jjjj...'];
+  // 주인공은 노란 우비의 모자(y)를 쓰고 있다. 원정대원은 같은 몸에 모자 대신 머리카락을 그린다(SQUAD_TOP)
+  var HERO_TOP = ['..yyy...', '.yyyyy..', '.ysssy..', '.ysss...', 'kjjjj...', 'kjjjjs..', 'kjjjj...', '.jjjj...'];
   var HERO_LEGS = [['.pp.pp..', '.pp.pp..', '.bb.bb..'], ['..ppp...', '.pp.pp..', 'bb...bb.']];
-  var HERO_SEARCH = ['........', '........', '..hhh...', '.hhhhh..', 'kjhsss..', 'kjjjjss.', 'kjjjj...', '.jjjjj..', '.pp.pp..', '.bb.bb..', '........'];
+  var HERO_SEARCH = ['........', '........', '..yyy...', '.yyyyy..', 'kjysss..', 'kjjjjss.', 'kjjjj...', '.jjjjj..', '.pp.pp..', '.bb.bb..', '........'];
   var ZOMBIE = [
     ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.ccccgg.', '.cccc...', '.cccc...', '.cccc...', '.dd.dd..', '.dd.dd..', '.dd.dd..'],
     ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.cccc...', '.ccccgg.', '.cccc...', '.cccc...', '..ddd...', '.dd.dd..', 'dd...dd.']
@@ -4215,7 +4263,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
   // 쓰러진 것: 서 있는 그림을 눕혀 쓰지 않고, 바닥에 무너진 더미를 따로 그린다(머리가 방벽 반대쪽)
   var ZOMBIE_DOWN = ['...cc.gg', '.ddcccgg', 'dddccccg'];
   // 원정대원: 주인공과 같은 몸에 회색 옷(주인공의 노란 우비와 구별된다)
-  var SQUAD_TOP = HERO_TOP.map(function (row) { return row.replace(/j/g, 'c').replace(/k/g, 'd'); });
+  var SQUAD_TOP = HERO_TOP.map(function (row) { return row.replace(/j/g, 'c').replace(/k/g, 'd').replace(/y/g, 'h'); });
   // 좀비 옷 색 세 가지(같은 무리가 복제된 것처럼 보이지 않게). 각 항목은 PAL 의 일부만 바꾼다.
   var ZOMBIE_LOOKS = [{}, { c: '#4f5d73', d: '#2a3140' }, { c: '#6b4a3a', d: '#3a2a22' }];
   /** rows 의 글자를 색으로 바꿔 찍는다. look 을 주면 그 글자들만 다른 색으로 그린다. */
@@ -5060,7 +5108,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var MAX_GAIN = 0.4;  // 어떤 소리도 이보다 크게 내지 않는다
+  var MAX_GAIN = 0.7;  // 어떤 소리도 이보다 크게 내지 않는다(음량 100 에서도)
   var VOLUME = 2.6;    // 전체 음량 배수(0.8.6: 소리가 작다는 의견에 따라 전체를 키웠다). 소리마다의 g 에 곱한다
 
   /*
@@ -5072,7 +5120,17 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
   var SOUNDS = {
     // 누르는 소리: 음이 위로 미끄러져 올라가는 '뽁' 소리(to 는 끝날 때의 주파수)
     click:      [{ f: 520, to: 840, d: 0.09, type: 'sine', g: 0.05 }],
-    buy:        [{ f: 560, to: 860, d: 0.08, type: 'sine', g: 0.045 }, { f: 720, to: 1080, d: 0.11, at: 0.08, type: 'sine', g: 0.045 }],
+    buy:        [{ f: 523, d: 0.07, type: 'sine', g: 0.045 }, { f: 659, d: 0.1, at: 0.06, type: 'sine', g: 0.045 }],
+    // 0.8.10: 하는 일마다 소리가 다르다
+    sell:       [{ f: 784, d: 0.05, type: 'sine', g: 0.045 }, { f: 988, d: 0.13, at: 0.05, type: 'sine', g: 0.045 }],                                   // 동전 소리
+    peak:       [{ f: 784, d: 0.05, type: 'sine', g: 0.045 }, { f: 988, d: 0.08, at: 0.05, type: 'sine', g: 0.045 }, { f: 880, to: 1175, d: 0.2, at: 0.13, type: 'sine', g: 0.045 }],
+    surge:      [{ f: 196, to: 392, d: 0.18, type: 'triangle', g: 0.05 }, { f: 392, to: 784, d: 0.22, at: 0.14, type: 'sine', g: 0.04 }],                // 전력이 차오르는 소리
+    green:      [{ f: 880, d: 0.28, type: 'sine', g: 0.045 }, { f: 660, d: 0.34, at: 0.14, type: 'sine', g: 0.035 }],                                    // 역의 종소리
+    answer:     [{ f: 659, d: 0.08, type: 'sine', g: 0.045 }, { f: 784, d: 0.16, at: 0.08, type: 'sine', g: 0.045 }],                                    // 무전 응답
+    fortify:    [{ noise: true, cut: 300, d: 0.12, g: 0.07 }, { f: 147, d: 0.16, type: 'triangle', g: 0.06 }],                                           // 망치질
+    goal:       [{ f: 523, d: 0.09, type: 'sine', g: 0.05 }, { f: 659, d: 0.09, at: 0.09, type: 'sine', g: 0.05 }, { f: 784, d: 0.09, at: 0.18, type: 'sine', g: 0.05 }, { f: 988, d: 0.3, at: 0.27, type: 'sine', g: 0.05 }],
+    feed:       [{ f: 440, to: 660, d: 0.08, type: 'sine', g: 0.045 }, { f: 520, to: 780, d: 0.08, at: 0.09, type: 'sine', g: 0.045 }, { f: 660, to: 990, d: 0.13, at: 0.18, type: 'sine', g: 0.045 }],  // 냠냠
+    tab:        [{ f: 330, to: 440, d: 0.05, type: 'sine', g: 0.025 }],
     dusk:       [{ f: 294, d: 0.35, type: 'triangle', g: 0.03 }, { f: 233, d: 0.5, at: 0.3, type: 'triangle', g: 0.03 }],
     defended:   [{ f: 392, d: 0.1, type: 'sine', g: 0.05 }, { f: 494, d: 0.1, at: 0.1, type: 'sine', g: 0.05 }, { f: 587, d: 0.24, at: 0.2, type: 'sine', g: 0.05 }],
     breached:   [{ noise: true, cut: 260, d: 0.55, g: 0.12 }, { f: 82, d: 0.55, type: 'triangle', g: 0.07 }],
@@ -5084,6 +5142,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
   };
 
   var enabled = true, ctx = null, unlocked = false;
+  /*
+   * 음량: 0 ~ 100, 기본 50. 50 이 기준 크기이고 100 이면 두 배, 0 이면 소리가 나지 않는다. 잘못된 값은 기본으로 본다.
+   */
+  var VOLUME_DEFAULT = 50, volume = VOLUME_DEFAULT;
+  function setVolume(v) {
+    var n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+    volume = typeof n === 'number' && isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : VOLUME_DEFAULT;
+    return volume;
+  }
+  function getVolume() { return volume; }
 
   function hasAudio() {
     return typeof window !== 'undefined' && !!(window.AudioContext || window.webkitAudioContext);
@@ -5109,7 +5177,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
   }
 
   function playNote(n, t0) {
-    var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.min(MAX_GAIN, (n.g || 0.05) * VOLUME), src;
+    var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.max(0.0002, Math.min(MAX_GAIN, (n.g || 0.05) * VOLUME * volume / VOLUME_DEFAULT)), src;
     // 딸깍거리는 잡음을 막으려고 음량을 짧게 올렸다가 서서히 내린다
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(ATTACK, n.d / 2));
@@ -5137,7 +5205,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
    */
   function play(name) {
     var notes = SOUNDS[name];
-    if (!notes || !enabled || !unlocked || !ctx) return false;
+    if (!notes || !enabled || !unlocked || !ctx || volume <= 0) return false;
     if (typeof document !== 'undefined' && document.hidden) return false; // 안 보는 탭에서 혼자 울리지 않는다
     try {
       if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
@@ -5147,7 +5215,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
     } catch (e) { return false; }
   }
 
-  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
+  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, VOLUME_DEFAULT: VOLUME_DEFAULT, setVolume: setVolume, getVolume: getVolume, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
 });
 
 </script>
@@ -6100,21 +6168,105 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
   function secs(v) { return (Math.round(v * 10) / 10).toFixed(1).replace('.0', '') + '초'; }
   function qtyFor(max, room) { return Math.max(1, Math.min(Math.max(1, room), qtyMode === 'max' ? Math.max(1, max) : qtyMode)); }
   function buy(result) { if (result && result.ok) { sfx('buy'); render(); } }
+  /*
+   * 패치노트: 버전마다 한 줄(버전, 날짜, 제목)만 보이고, 누르면 내용이 펼쳐진다.
+   * 맨 위(최신 버전)는 처음부터 펼쳐져 있고 버전 옆에 노란 NEW 딱지가 붙는다.
+   */
   function buildNotes() {
     if (!PATCH_NOTES.length) $('notes').appendChild(el('p', 'hint', '패치노트를 불러오지 못했다.'));
     PATCH_NOTES.forEach(function (n, i) {
-      var box = el('div', 'note' + (i === 0 ? ' note-now' : '')), head = el('div');
-      head.appendChild(el('div', 'note-ver', n.ver));
-      head.appendChild(el('div', 'note-date', n.at || n.date));
+      var box = el('div', 'note' + (i === 0 ? ' note-now open' : '')), head = el('button', 'note-head');
+      head.type = 'button';
+      head.setAttribute('aria-expanded', i === 0 ? 'true' : 'false');
+      var ver = el('span', 'note-ver', n.ver);
+      if (i === 0) ver.appendChild(el('b', 'note-new', 'NEW'));
+      head.appendChild(ver);
+      head.appendChild(el('span', 'note-title', n.title));
+      head.appendChild(el('span', 'note-date', (n.at || n.date).slice(0, 10)));
       box.appendChild(head);
-      box.appendChild(el('p', 'note-title', n.title));
       var ul = el('ul');
       n.items.forEach(function (text) { ul.appendChild(el('li', '', text)); });
       box.appendChild(ul);
+      head.addEventListener('click', function () {
+        var open = !box.classList.contains('open');
+        box.classList.toggle('open', open);
+        head.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
       $('notes').appendChild(box);
     });
     setText($('notes-current'), PATCH_NOTES.length ? '현재 ' + PATCH_NOTES[0].ver : '');
   }
+
+  /* ---------- 도감 ---------- */
+  /*
+   * 도감: 동물 친구(만난 아이만 모습이 보인다), 좀비, 방어 수단. 기록 화면의 '도감' 탭에서 본다.
+   *   그림은 도트를 SVG 로 옮긴다(pixSvg). 좀비는 도트 화면의 그림(Scene.zombieFrames)을 그대로 쓴다.
+   */
+  var DOG_PIX = ['..........pp..', '.........bbbb.', '.........bkbbn', 'b........bbbb.', 'bb.bbbbbbbbb..', '.bbbbppbbbbb..', '..bbbbppbbbb..', '..bbbbbbbbbb..', '..bb.b..bb.b..', '..bb.b..bb.b..'];
+  var CAT_PIX = ['.........b..b.', '.........bbbb.', 'b........bkbk.', 'b........bbnb.', 'b..bbbbbbbbb..', 'bb.bppbbbbbb..', '.bbbbppbbbbb..', '..bbbbbbbbbb..', '..b.b...b.b...', '..b.b...b.b...'];
+  var ZOMBIE_PAL = { g: '#7da35a', x: '#17180f', c: '#5a5f6a', d: '#3a3f4a', h: '#3a2a22' };
+  var ZOMBIE_DEX = [
+    { id: 'walker', name: '배회자', text: '가장 흔해요. 느리지만 끝없이 와요.' },
+    { id: 'hair', name: '긴 머리', text: '머리카락에 얼굴이 가려져 있어요. 조금 느려요.' },
+    { id: 'runner', name: '달리는 것', text: '몸을 숙이고 뛰어와요. 가장 빨라요.' },
+    { id: 'brute', name: '덩치', text: '어깨가 넓고 한 발을 더 버텨요.' },
+    { id: 'boss', name: '변이체', text: '몇 밤에 한 번 무리를 이끌고 와요. 여러 발을 맞아야 쓰러져요.', frames: 'walker', big: true }
+  ];
+  var LEAD_TEXT = { wire: '무리를 느리게 해요. 주역으로 나오지는 않아요.', tower: '주역일 때: 저격 한 발.', turret: '주역일 때: 세 발 연사.',
+    flame: '주역일 때: 불길을 깔아 가까운 좀비를 모두 태워요.', emp: '주역일 때: 번개가 셋까지 옮겨 붙어요.', rail: '주역일 때: 화면 끝까지 꿰뚫어요.' };
+  /** 도트 그림(글자 줄)을 SVG 로. pal 에 없는 글자는 비운다. */
+  function pixSvg(rowsPix, pal, cls) {
+    var h = rowsPix.length, w = 0;
+    rowsPix.forEach(function (r) { w = Math.max(w, r.length); });
+    var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, 'class': 'pix ' + (cls || ''), 'aria-hidden': 'true' });
+    rowsPix.forEach(function (row, y) {
+      for (var x = 0; x < row.length; x++) if (pal[row[x]]) svg.appendChild(svgEl('rect', { x: x, y: y, width: 1, height: 1, fill: pal[row[x]] }));
+    });
+    return svg;
+  }
+  var dexTab = 'pet', dexShown = '';
+  function renderDex() {
+    var owned = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; });
+    var key = dexTab + '|' + owned.map(function (b) { return b.id + ':' + state.kennel[b.id] + ':' + C.petLevel(state, b.id); }).join(',') + '|' + JSON.stringify(state.defenses) + '|' + (state.pet ? state.pet.breed : '');
+    if (key === dexShown) return;
+    dexShown = key;
+    var tabs = $('dex-tabs'), box = $('dex');
+    tabs.textContent = ''; box.textContent = '';
+    [['pet', '동물 친구 ' + owned.length + '/' + C.PET_BREEDS.length], ['zombie', '좀비 ' + ZOMBIE_DEX.length], ['wall', '방어 수단 ' + C.DEFENSES.length]].forEach(function (t) {
+      var b = el('button', '', t[1]);
+      b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
+      b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
+      tabs.appendChild(b);
+    });
+    function card(art, name, sub, text, locked) {
+      var c = el('div', 'dex-card' + (locked ? ' locked' : '')), body = el('div');
+      var frame = el('div', 'dex-art'); frame.appendChild(art);
+      body.appendChild(el('b', '', name)); body.appendChild(el('span', 'label', sub)); body.appendChild(el('p', '', text));
+      c.appendChild(frame); c.appendChild(body); box.appendChild(c);
+    }
+    if (dexTab === 'pet') {
+      C.PET_BREEDS.forEach(function (b) {
+        var have = !!state.kennel[b.id], kind = C.PET_KINDS[b.kind], rar = null;
+        C.PET_RARITIES.forEach(function (r) { if (r.id === b.rarity) rar = r; });
+        var pal = have ? { b: b.body, p: b.patch || b.body, k: '#17180f', n: '#17180f' } : { b: '#4a4b40', p: '#4a4b40', k: '#4a4b40', n: '#4a4b40' };
+        var art = pixSvg(b.kind === 'cat' ? CAT_PIX : DOG_PIX, pal);
+        if (!have) { card(art, '???', kind.name + ' · 아직 만나지 못했어요', '데려오기에서 만날 수 있어요.', true); return; }
+        var lv = C.petLevel(state, b.id), with_ = state.pet && state.pet.breed === b.id;
+        card(art, state.kennel[b.id] + (with_ ? ' · 함께 다니는 중' : ''), (rar ? rar.name : '') + ' · ' + b.name + ' · Lv ' + lv, C.breedDesc(b) + (lv ? ' (레벨로 ×' + (1 + C.PET_LEVEL_STEP * lv).toFixed(1) + ')' : ''), false);
+      });
+    } else if (dexTab === 'zombie') {
+      ZOMBIE_DEX.forEach(function (z) {
+        var frames = window.Scene && window.Scene.zombieFrames ? window.Scene.zombieFrames(z.frames || z.id)[0] : ['g'];
+        card(pixSvg(frames, ZOMBIE_PAL, z.big ? 'big' : ''), z.name, z.id === 'boss' ? C.BOSS_EVERY + '번째 밤마다' : '밤마다 섞여서 와요', z.text, false);
+      });
+    } else {
+      C.DEFENSES.forEach(function (d) {
+        var n = state.defenses[d.id] || 0, art = el('i', 'dex-wall dex-' + d.id);
+        card(art, d.name, n ? '가진 수 ' + fmt(n) : '아직 없어요', d.desc + '. ' + (LEAD_TEXT[d.id] || ''), !n);
+      });
+    }
+  }
+
   /** 도움말은 부가 요소라, 모듈이 빠졌거나 글을 만들다 오류가 나도 게임은 그대로 진행한다. */
   function buildHelp() {
     var list = [];
@@ -6285,6 +6437,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
     renderTraits();
     renderPerkChoice();
     if ($('record').getAttribute('data-rtab') === 'stats') renderStats();
+    if ($('record').getAttribute('data-rtab') === 'dex') renderDex();
   }
 
   /** 구역 화면: 고른 탭에 따라 목표, 거래 칸, 목록을 바꿔 보여 준다. */
@@ -6713,9 +6866,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
           break;
         case 'goal':
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
-          toast('목표 달성 · ' + ev.text); sfx('buy');
+          toast('목표 달성 · ' + ev.text); sfx('goal');
           break;
-        case 'surge': if (tab === 'z2' && pane === 'play') sfx('defended'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
+        case 'surge': if (tab === 'z2' && pane === 'play') sfx('surge'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
@@ -6844,6 +6997,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
     });
   }
 
+  /*
+   * 저장 코드: 저장 글(JSON)을 base64 로 바꾼 것.
+   *   btoa 는 한글을 그대로 넣으면 오류를 낸다(주인공·친구 이름에 한글이 들어가면서 코드가 안 만들어지던 원인, 0.8.10 에서 고침).
+   *   그래서 먼저 UTF-8 로 바꾼 뒤 base64 로 만든다. 읽을 때는 거꾸로 하되, 예전 코드(한글이 없던 때의 것)도 읽을 수 있게 한다.
+   */
+  function encodeSave(json) { return btoa(unescape(encodeURIComponent(json))); }
+  function decodeSave(code) {
+    var raw = atob(code);
+    try { return decodeURIComponent(escape(raw)); } catch (e) { return raw; }
+  }
   function saveMsg(text, bad) {
     var m = $('save-msg');
     m.textContent = text;
@@ -6866,12 +7029,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
     $('signal').addEventListener('click', function () {
       var r = C.answerSignal(state);
       if (!r.ok) return; // 누르는 순간 신호가 끊긴 경우
-      sfx('buy'); render();
+      sfx('answer'); render();
     });
     $('fortify').addEventListener('click', function () {
       var r = C.fortify(state);
       if (!r.ok) return; // 그사이 물자가 모자라졌거나 이미 충분해진 경우
-      sfx('buy'); render();
+      sfx('fortify'); render();
     });
     $('open-zone').addEventListener('click', function () {
       var r = C.openZone(state);
@@ -6892,7 +7055,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
       var gain = 0; r.arrivals.forEach(function (ev) { gain += ev.gain; });
       if (gain > 0) popNumber('+' + fmt(gain));
       handleEvents(r.arrivals);
-      sfx('click'); render();
+      sfx('green'); render();
     });
     // 일행: 데려오기(등급 뽑기), 친구 이름, 주인공 이름
     ['dog', 'cat'].forEach(function (kind) {
@@ -6926,7 +7089,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
     // 3구역: 전력 투입
     $('surge').addEventListener('click', function () {
       if (!C.surge(state).ok) return;
-      sfx('defended'); render();
+      sfx('surge'); render();
     });
     // 3구역: 병목인 기계를 올린다. 수량 모드를 따른다(×1 한 번, ×10 열 번, 최대는 물자가 되는 만큼).
     $('tune').addEventListener('click', function () {
@@ -6940,7 +7103,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
       popNumber('+' + fmt(r.gain));
       if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
       var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
-      sfx(r.peak ? 'defended' : 'buy'); render();
+      sfx(r.peak ? 'peak' : 'sell'); render();
     });
     $('auto-sell').addEventListener('change', function () { C.setAutoSell(state, $('auto-sell').checked); Store.save(); render(); });
     twoStep($('retreat'), '한 번 더 누르면 거점을 버리고 철수한다', function () {
@@ -6997,7 +7160,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
       b.addEventListener('click', function () {
         $('record').setAttribute('data-rtab', b.dataset.rtabSet);
         if (b.dataset.rtabSet === 'stats') renderStats(); // 다음 갱신을 기다리지 않고 바로 채운다
+        if (b.dataset.rtabSet === 'dex') renderDex();
         document.querySelectorAll('[data-rtab-set]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+        sfx('tab');
       });
     });
 
@@ -7030,7 +7195,20 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
     wirePrefs();
-    $('pet-feed').addEventListener('click', function () { var r = C.feedPet(state); if (r.ok) { sfx('buy'); toast('Lv ' + r.level + ' · ' + C.petEffectText(state)); Store.save(); render(); } });
+    // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
+    (function () {
+      var bar = $('volume'), label = $('volume-num');
+      function apply(v, keep) {
+        var n = 50;
+        try { if (window.Sound) n = window.Sound.setVolume(v); } catch (e) { /* 소리는 없어도 된다 */ }
+        bar.value = n; setText(label, String(n));
+        if (keep) remember('zone7-volume', n);
+      }
+      apply(recall('zone7-volume'), false);
+      bar.addEventListener('input', function () { apply(bar.value, true); });
+      bar.addEventListener('change', function () { sfx('buy'); });
+    })();
+    $('pet-feed').addEventListener('click', function () { var r = C.feedPet(state); if (r.ok) { sfx('feed'); toast('Lv ' + r.level + ' · ' + C.petEffectText(state)); Store.save(); render(); } });
     // 주인공의 성별: 고르면 일지의 호칭이 바뀐다(설정 안 함이면 중립)
     document.querySelectorAll('[data-gender]').forEach(function (b) {
       b.addEventListener('click', function () { if (C.setHeroGender(state, b.getAttribute('data-gender')).ok) { Store.save(); render(); renderJournal(); } });
@@ -7038,7 +7216,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
     wireFeedback();
     $('export').addEventListener('click', function () {
       var code;
-      try { code = btoa(C.serialize(state)); }
+      try { code = encodeSave(C.serialize(state)); }
       catch (e) { saveMsg('저장 코드를 만들지 못했습니다.', true); return; }
       $('save-code').value = code;
       var done = function () { saveMsg('저장 코드를 복사했습니다. 메모장에 붙여 두세요.', false); };
@@ -7052,7 +7230,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.9";
       if (!text) { saveMsg('불러올 저장 코드를 아래 칸에 붙여 넣으세요.', true); return; }
       try {
         var json;
-        try { json = atob(text); } catch (e) { throw new Error('저장 코드 형식이 아닙니다. 처음부터 끝까지 복사했는지 확인하세요.'); }
+        try { json = decodeSave(text); } catch (e) { throw new Error('저장 코드 형식이 아닙니다. 처음부터 끝까지 복사했는지 확인하세요.'); }
         state = C.deserialize(json, Date.now());
         Store.save();
         saveMsg('불러왔습니다.', false);

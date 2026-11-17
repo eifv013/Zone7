@@ -53,3 +53,12 @@ test('소리는 부드러운 파형만 쓰고, 높은 음은 거름막 아래에
     assert.ok(n.g <= S.MAX_GAIN, name);
   }
 });
+
+test('음량: 0 ~ 100 으로 맞추고 기본은 50, 잘못된 값은 기본으로 본다. 0 이면 소리를 내지 않는다', () => {
+  const S = require('../src/sound.js');
+  assert.equal(S.getVolume(), 50);
+  assert.deepEqual([0, 100, 73.4, -5, 250, '30', NaN, null, undefined, 'x', ''].map(S.setVolume), [0, 100, 73, 0, 100, 30, 50, 50, 50, 50, 50]);
+  S.setVolume(0); assert.equal(S.play('click'), false);
+  S.setVolume(50);
+  for (const name of ['sell', 'peak', 'surge', 'green', 'answer', 'fortify', 'goal', 'feed', 'tab']) assert.ok(S.duration(name) > 0, name);
+});
