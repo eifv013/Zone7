@@ -880,6 +880,14 @@ body { font-size: 15.5px; line-height: 1.55; }
 #help .note { padding: 14px 0 4px; border-top: 0; }
 #help .help-title { margin-bottom: 10px; }
 .subtabs + .notes, .subtabs + .dex, .subtabs + .journal { margin-top: 4px; }
+/* 도감: 글을 한 줄에 맞추고, 등급마다 왼쪽 띠의 색이 다르다 */
+.dex-card { border-left: 4px solid color-mix(in srgb, var(--ink) 22%, transparent); }
+.dex-card b, .dex-card .label, .dex-card p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dex-card p { font-size: 12.5px; }
+.dex-card.r-fine, .dex-card.z-uncommon { border-left-color: #6fa8c9; }
+.dex-card.r-rare, .dex-card.z-rare { border-left-color: var(--hazard); }
+.dex-card.z-epic { border-left-color: #c05ad8; }
+.dex-card.locked { border-left-style: dashed; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -895,7 +903,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.0</div>
+  <div class="boot-ver">7구역 알파 0.9.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1192,7 +1200,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

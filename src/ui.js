@@ -469,6 +469,12 @@
     '떠돌이 상인이 건전지와 소문을 두고 갔다.',
     '방벽 너머에서 긁는 소리가 밤새 이어졌다.'
   ];
+  /** 잡담 한 줄: 주머니에서 하나씩 꺼내 쓰고, 다 쓰면 다시 채운다(같은 줄이 연달아 나오지 않게). */
+  var chatterBag = [];
+  function nextChatter() {
+    if (!chatterBag.length) chatterBag = FLAVOR.slice();
+    return chatterBag.splice(Math.floor(Math.random() * chatterBag.length), 1)[0];
+  }
   function log(text, kind) {
     var list = $('log');
     var li = el('li', kind ? 'log-' + kind : '');
@@ -1060,44 +1066,57 @@
     rail:   ['............', '............', 'yyyyyy......', 'ssssssllllll', 'sbbsss.s.s.s', 'sbbsss.s.s.s', 'ssssssllllll', 'ssssss......', '..kkkk......', '..kkkk......', '.kkkkkk.....', 'kkkkkkkk....']
   };
   var dexTab = 'pet', dexShown = '';
+  var LEAD_SHORT = { wire: '무리를 느리게 해요.', tower: '주역일 때 저격 한 발.', turret: '주역일 때 세 발 연사.', flame: '주역일 때 불길을 깔아요.', emp: '주역일 때 번개가 옮겨 붙어요.', rail: '주역일 때 끝까지 꿰뚫어요.' };
+  /*
+   * 도감 화면: 강아지 / 고양이 / 좀비 / 방어 수단 네 탭. 카드의 글은 한 줄에 들어가게 짧게 쓴다.
+   *   아직 만나지 못한 것은 회색 그림자와 '???' 로 보이고, 어디서 만날 수 있는지만 알려 준다.
+   */
   function renderDex() {
-    var owned = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; });
-    var key = dexTab + '|' + owned.map(function (b) { return b.id + ':' + state.kennel[b.id] + ':' + C.petLevel(state, b.id); }).join(',') + '|' + JSON.stringify(state.defenses) + '|' + (state.pet ? state.pet.breed : '');
+    if (dexTab === 'pet') dexTab = 'dog';
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
-    [['pet', '동물 친구 ' + owned.length + '/' + C.PET_BREEDS.length], ['zombie', '좀비 ' + ZOMBIE_DEX.length], ['wall', '방어 수단 ' + C.DEFENSES.length]].forEach(function (t) {
+    function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
+    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
       tabs.appendChild(b);
     });
-    function card(art, name, sub, text, locked) {
-      var c = el('div', 'dex-card' + (locked ? ' locked' : '')), body = el('div');
+    function card(art, name, sub, text, locked, cls) {
+      var c = el('div', 'dex-card' + (locked ? ' locked' : '') + (cls ? ' ' + cls : '')), body = el('div');
       var frame = el('div', 'dex-art'); frame.appendChild(art);
       body.appendChild(el('b', '', name)); body.appendChild(el('span', 'label', sub)); body.appendChild(el('p', '', text));
       c.appendChild(frame); c.appendChild(body); box.appendChild(c);
     }
-    if (dexTab === 'pet') {
-      C.PET_BREEDS.forEach(function (b) {
-        var have = !!state.kennel[b.id], kind = C.PET_KINDS[b.kind], rar = null;
+    if (dexTab === 'dog' || dexTab === 'cat') {
+      // 등급 순(기본 → 고급 → 희귀)으로 늘어놓는다
+      var order = { common: 0, fine: 1, rare: 2 };
+      C.PET_BREEDS.filter(function (b) { return b.kind === dexTab; }).sort(function (x, y) { return order[x.rarity] - order[y.rarity]; }).forEach(function (b) {
+        var got = !!state.kennel[b.id], kind = C.PET_KINDS[b.kind], rar = null;
         C.PET_RARITIES.forEach(function (r) { if (r.id === b.rarity) rar = r; });
-        var pal = have ? { b: b.body, p: b.patch || b.body, k: '#17180f', n: '#17180f' } : { b: '#4a4b40', p: '#4a4b40', k: '#4a4b40', n: '#4a4b40' };
-        var art = pixSvg(b.kind === 'cat' ? CAT_PIX : DOG_PIX, pal);
-        if (!have) { card(art, '???', kind.name + ' · 아직 만나지 못했어요', '데려오기에서 만날 수 있어요.', true); return; }
+        var pal = got ? { b: b.body, p: b.patch || b.body, k: '#17180f', n: '#17180f' } : { b: '#4a4b40', p: '#4a4b40', k: '#4a4b40', n: '#4a4b40' };
+        var art = pixSvg(b.kind === 'cat' ? CAT_PIX : DOG_PIX, pal), rname = rar ? rar.name : '';
+        if (!got) { card(art, '???', rname + ' 등급', '데려오기에서 만날 수 있어요.', true, 'r-' + b.rarity); return; }
         var lv = C.petLevel(state, b.id), with_ = state.pet && state.pet.breed === b.id;
-        card(art, state.kennel[b.id] + (with_ ? ' · 함께 다니는 중' : ''), (rar ? rar.name : '') + ' · ' + b.name + ' · Lv ' + lv, C.breedDesc(b) + (lv ? ' (레벨로 ×' + (1 + C.PET_LEVEL_STEP * lv).toFixed(1) + ')' : ''), false);
+        var bonus = Math.round((rar ? rar[b.kind] : 0) * (1 + C.PET_LEVEL_STEP * lv) * 100);
+        card(art, state.kennel[b.id] + (with_ ? ' ★' : ''), rname + ' · ' + b.name + ' · Lv ' + lv, kind.label + ' +' + bonus + '%', false, 'r-' + b.rarity);
       });
     } else if (dexTab === 'zombie') {
-      ZOMBIE_DEX.forEach(function (z) {
-        var frames = window.Scene && window.Scene.zombieFrames ? window.Scene.zombieFrames(z.frames || z.id)[0] : ['g'];
-        card(pixSvg(frames, ZOMBIE_PAL, z.big ? 'big' : ''), z.name, z.id === 'boss' ? C.BOSS_EVERY + '번째 밤마다' : '밤마다 섞여서 와요', z.text, false);
+      C.ZOMBIE_KINDS.forEach(function (z) {
+        var n = state.zdex[z.id] || 0, rows = window.Scene && window.Scene.zombieFrames ? window.Scene.zombieFrames(z.frames)[0] : ['g'];
+        var pal = {}, k;
+        for (k in ZOMBIE_PAL) pal[k] = n ? (z.pal[k] || ZOMBIE_PAL[k]) : '#4a4b40';
+        var rname = C.ZOMBIE_RARITIES[z.rarity];
+        if (!n) { card(pixSvg(rows, pal, z.big ? 'big' : ''), '???', rname, z.zone > state.zone ? (z.zone + 1) + '구역을 열면 나와요.' : z.boss ? '변이체가 오는 밤에 나와요.' : '밤을 넘기다 보면 만나요.', true, 'z-' + z.rarity); return; }
+        card(pixSvg(rows, pal, z.big ? 'big' : ''), z.name, rname + ' · 만난 밤 ' + fmt(n), z.text, false, 'z-' + z.rarity);
       });
     } else {
       C.DEFENSES.forEach(function (d) {
         var n = state.defenses[d.id] || 0, art = pixSvg(WALL_PIX[d.id] || ['k'], n ? WALL_PAL : WALL_PAL_OFF);
-        card(art, d.name, n ? '가진 수 ' + fmt(n) : '아직 없어요', d.desc + '. ' + (LEAD_TEXT[d.id] || ''), !n);
+        card(art, d.name, n ? '가진 수 ' + fmt(n) : '아직 없어요', LEAD_SHORT[d.id] || d.desc, !n);
       });
     }
   }
@@ -1681,6 +1700,10 @@
   /* ---------- 일어난 일 알리기 ---------- */
   function handleEvents(events) {
     events.forEach(function (ev) {
+      if (ev.found) ev.found.forEach(function (f) {      // 도감에 새로 적힌 좀비
+        toast('도감 · 새 좀비 〈' + f.name + '〉'); log('처음 보는 것이 무리에 섞여 있었다. 〈' + f.name + '〉 ' + C.ZOMBIE_RARITIES[f.rarity] + '.', 'story');
+        if (f.rarity === 'rare' || f.rarity === 'epic') sfx('goal');
+      });
       switch (ev.type) {
         case 'defended':
           heldLogged = false;
@@ -1792,8 +1815,8 @@
     else handleEvents(C.tick(state, dt));
 
     if (now >= nextFlavor) {
-      if (nextFlavor) log(FLAVOR[Math.floor(Math.random() * FLAVOR.length)]);
-      nextFlavor = now + 25000 + Math.random() * 20000;
+      if (nextFlavor) log(nextChatter());
+      nextFlavor = now + 120000 + Math.random() * 120000;      // 2~4분에 한 줄(전에는 30초쯤마다라 로그를 뒤덮었다)
     }
     if (!document.hidden) {
       if (now - lastSave >= AUTOSAVE_MS) { lastSave = now; Store.save(); }

@@ -1715,3 +1715,43 @@ test('업적: 조건을 채우면 달성되어 알림이 오고, 하나마다 �
   assert.ok(back.ach['z1click-1']); assert.equal(back.ach.fake, undefined);
   raw.ach = 'x'; assert.equal(C.achCount(C.sanitizeState(raw)), 0);
 });
+
+/* ---------- 알파 0.9.1: 동물 친구 24종, 좀비 도감 15종 ---------- */
+test('동물 친구는 강아지 12종, 고양이 12종이고 등급마다 넷씩 있다', () => {
+  for (const kind of ['dog', 'cat']) {
+    const list = C.PET_BREEDS.filter(b => b.kind === kind);
+    assert.equal(list.length, 12, kind);
+    for (const r of C.PET_RARITIES) assert.equal(list.filter(b => b.rarity === r.id).length, 4, kind + ' ' + r.id);
+  }
+  assert.equal(new Set(C.PET_BREEDS.map(b => b.id)).size, 24);
+  assert.equal(new Set(C.PET_BREEDS.map(b => b.name)).size, 24);
+});
+
+test('좀비 도감: 15종. 밤이 지나면 만난 것이 적히고, 처음 만난 것은 사건에 실린다. 구역을 열어야 나오는 것이 있다', () => {
+  assert.equal(C.ZOMBIE_KINDS.length, 15);
+  assert.equal(new Set(C.ZOMBIE_KINDS.map(z => z.id)).size, 15);
+  for (const z of C.ZOMBIE_KINDS) { assert.ok(C.ZOMBIE_RARITIES[z.rarity], z.id); assert.ok(z.text.length <= 22, z.id + ' 설명이 한 줄을 넘는다'); }
+  assert.deepEqual(['common', 'uncommon', 'rare', 'epic'].map(r => C.ZOMBIE_KINDS.filter(z => z.rarity === r).length), [4, 5, 4, 2]);
+  for (let d = 1; d < 50; d++) { const r = C.sightRoll(d, 3); assert.ok(r >= 0 && r < 1); assert.equal(r, C.sightRoll(d, 3)); }
+  const s = C.createState();
+  const first = C.sightZombies(s, 1, false);
+  assert.ok(first.some(f => f.id === 'walker'), '배회자는 늘 온다');
+  assert.equal(C.sightZombies(s, 1, false).some(f => f.id === 'walker'), false, '두 번째부터는 처음이 아니다');
+  assert.equal(s.zdex.walker, 2);
+  assert.ok(!s.zdex.boss); C.sightZombies(s, 2, true); assert.equal(s.zdex.boss, 1);
+  for (let d = 3; d < 3000; d++) C.sightZombies(s, d, false);
+  assert.ok(!s.zdex.vendor && !s.zdex.nurse, '구역을 열기 전에는 그 구역의 좀비가 나오지 않는다');
+  assert.ok(s.zdex.glow > 0, '아주 희귀한 것도 오래 하면 만난다');
+  assert.ok(s.zdex.glow < s.zdex.hair / 10);
+  s.zone = 4; for (let d = 3000; d < 4000; d++) C.sightZombies(s, d, false);
+  assert.ok(s.zdex.vendor > 0 && s.zdex.patient > 0 && s.zdex.nurse > 0);
+  // 실제 밤: 사건에 found 가 실린다. 철수해도 저장해도 남는다
+  const n = inMarket(); n.defenses.rail = 1e6; n.signalIn = 1e9; n.dayClock = C.DAY_SECONDS - 0.05;
+  const ev = C.tick(n, 0.1, () => 0.5).find(e => e.type === 'defended');
+  assert.ok(ev.found && ev.found.some(f => f.id === 'walker'));
+  assert.ok(C.zdexCount(n) >= 1);
+  n.runEarned = 1e30;
+  assert.ok(C.retreat(n).state.zdex.walker >= 1);
+  const raw = JSON.parse(C.serialize(n)); raw.zdex = { walker: -3, fake: 9, hair: 2 };
+  assert.deepEqual(C.sanitizeState(raw).zdex, { hair: 2 });
+});

@@ -131,8 +131,61 @@
     { id: 'tuxedo',  kind: 'cat', rarity: 'fine',   name: '턱시도', body: '#26262a', patch: '#f1efe8' },
     { id: 'calico',  kind: 'cat', rarity: 'fine',   name: '삼색이', body: '#f1efe8', patch: '#d0782e' },
     { id: 'siam',    kind: 'cat', rarity: 'rare',   name: '샴',     body: '#e8dcc4', patch: '#4a3628' },
-    { id: 'nero',    kind: 'cat', rarity: 'rare',   name: '네로',   body: '#17171a', patch: '#f0b400' }
+    { id: 'nero',    kind: 'cat', rarity: 'rare',   name: '네로',   body: '#17171a', patch: '#f0b400' },
+    // 0.9.1: 강아지 여섯, 고양이 여섯을 더해 모두 24종
+    { id: 'shiba',   kind: 'dog', rarity: 'common', name: '시바',   body: '#d9903d', patch: '#f3e3c3' },
+    { id: 'poodle',  kind: 'dog', rarity: 'common', name: '푸들',   body: '#c9a27a', patch: '#b08a62' },
+    { id: 'husky',   kind: 'dog', rarity: 'fine',   name: '허스키', body: '#8d95a3', patch: '#f1efe8' },
+    { id: 'corgi',   kind: 'dog', rarity: 'fine',   name: '코기',   body: '#e0a04a', patch: '#f1efe8' },
+    { id: 'pungsan', kind: 'dog', rarity: 'rare',   name: '풍산이', body: '#f4f1ea', patch: '#cfd6dd' },
+    { id: 'dalma',   kind: 'dog', rarity: 'rare',   name: '달마',   body: '#f1efe8', patch: '#17171a' },
+    { id: 'white',   kind: 'cat', rarity: 'common', name: '흰냥이', body: '#f1efe8', patch: '#e2ddd0' },
+    { id: 'gray',    kind: 'cat', rarity: 'common', name: '회색이', body: '#9a9da3', patch: '#c9ccd1' },
+    { id: 'bengal',  kind: 'cat', rarity: 'fine',   name: '벵갈',   body: '#c98a3c', patch: '#4a3628' },
+    { id: 'russian', kind: 'cat', rarity: 'fine',   name: '러블',   body: '#6f7f95', patch: '#8a98ab' },
+    { id: 'ragdoll', kind: 'cat', rarity: 'rare',   name: '랙돌',   body: '#f1efe8', patch: '#7a6a5c' },
+    { id: 'golden',  kind: 'cat', rarity: 'rare',   name: '금냥이', body: '#f0b400', patch: '#fff3c4' }
   ];
+  /*
+   * 좀비 도감: 15종. 밤이 지날 때마다 그날 무리에 섞여 있던 것을 만난 것으로 적는다(zdex 에 만난 횟수).
+   *   rarity : common 흔함, uncommon 드묾, rare 희귀, epic 아주 희귀
+   *   zone   : 이 구역(0부터)을 열어야 나온다,  chance : 밤마다 나올 확률,  boss : 변이체가 오는 밤에만 나온다
+   *   frames : 도감 그림의 몸(도트 화면의 walker·hair·runner·brute 가운데 하나),  pal : 옷 색(c 윗옷, d 바지, g 살, h 머리)
+   * 만남은 날짜로 정해지는 수(sightRoll)로 가린다: 같은 날은 늘 같은 결과라서 저장했다 불러와도 달라지지 않는다.
+   */
+  var ZOMBIE_RARITIES = { common: '흔함', uncommon: '드묾', rare: '희귀', epic: '아주 희귀' };
+  var ZOMBIE_KINDS = [
+    { id: 'walker',    name: '배회자',     rarity: 'common',   zone: 0, chance: 1,     frames: 'walker', pal: {}, text: '가장 흔해요. 느리지만 끝없이 와요.' },
+    { id: 'hair',      name: '긴 머리',    rarity: 'common',   zone: 0, chance: 0.6,   frames: 'hair',   pal: {}, text: '머리카락에 얼굴이 가려져 있어요.' },
+    { id: 'runner',    name: '달리는 것',  rarity: 'common',   zone: 0, chance: 0.4,   frames: 'runner', pal: {}, text: '몸을 숙이고 뛰어와요. 가장 빨라요.' },
+    { id: 'brute',     name: '덩치',       rarity: 'common',   zone: 0, chance: 0.3,   frames: 'brute',  pal: {}, text: '어깨가 넓고 한 발을 더 버텨요.' },
+    { id: 'vendor',    name: '좌판 상인',  rarity: 'uncommon', zone: 1, chance: 0.2,   frames: 'walker', pal: { c: '#b8402e', d: '#4a3a2a' }, text: '앞치마를 아직 두르고 있어요.' },
+    { id: 'worker',    name: '작업복',     rarity: 'uncommon', zone: 2, chance: 0.2,   frames: 'brute',  pal: { c: '#3f6f8f', d: '#2a4a60' }, text: '공단의 푸른 작업복을 입었어요.' },
+    { id: 'commuter',  name: '통근객',     rarity: 'uncommon', zone: 3, chance: 0.2,   frames: 'walker', pal: { c: '#2b2d38', d: '#1c1d26' }, text: '양복을 입고 가방을 놓지 않아요.' },
+    { id: 'patient',   name: '환자복',     rarity: 'uncommon', zone: 4, chance: 0.2,   frames: 'hair',   pal: { c: '#cfe0ea', d: '#cfe0ea' }, text: '병원에서 걸어 나왔어요.' },
+    { id: 'boss',      name: '변이체',     rarity: 'uncommon', zone: 0, chance: 1,     frames: 'walker', pal: { g: '#9a5ac8', c: '#3a2a4a' }, boss: true, big: true, text: '몇 밤에 한 번 무리를 이끌고 와요.' },
+    { id: 'student',   name: '체육복',     rarity: 'rare',     zone: 1, chance: 0.04,  frames: 'runner', pal: { c: '#2f4f8f', d: '#2f4f8f' }, text: '가슴에 이름표가 달려 있어요.' },
+    { id: 'guard',     name: '경비원',     rarity: 'rare',     zone: 2, chance: 0.04,  frames: 'brute',  pal: { c: '#30343c', d: '#17180f', h: '#17180f' }, text: '손전등을 아직 쥐고 있어요.' },
+    { id: 'conductor', name: '역무원',     rarity: 'rare',     zone: 3, chance: 0.04,  frames: 'walker', pal: { c: '#1f3a5a', d: '#17180f', h: '#b8402e' }, text: '붉은 모자를 쓰고 승강장을 돌아요.' },
+    { id: 'nurse',     name: '간호사',     rarity: 'rare',     zone: 4, chance: 0.04,  frames: 'hair',   pal: { c: '#f1efe8', d: '#f1efe8', h: '#4a3628' }, text: '주머니에 체온계가 꽂혀 있어요.' },
+    { id: 'glow',      name: '야광',       rarity: 'epic',     zone: 0, chance: 0.01,  frames: 'walker', pal: { g: '#b8ff7a', c: '#3a5a2a' }, text: '어둠 속에서 희미하게 빛나요.' },
+    { id: 'raincoat',  name: '노란 우비',  rarity: 'epic',     zone: 0, chance: 0.004, frames: 'hair',   pal: { c: '#f0b400', d: '#c98f00', h: '#f0b400' }, text: '누구일까요. 멀리서만 보여요.' }
+  ];
+  /** 날짜와 차례로 정해지는 0 이상 1 미만의 수(같은 입력에는 늘 같은 값). */
+  function sightRoll(day, k) { var v = Math.sin(day * 12.9898 + (k + 1) * 78.233) * 43758.5453; return v - Math.floor(v); }
+  /** 그날 밤 무리에 섞여 있던 좀비를 도감에 적는다. 처음 만난 종류의 목록을 돌려준다. */
+  function sightZombies(state, day, boss) {
+    var found = [];
+    ZOMBIE_KINDS.forEach(function (z, k) {
+      if (z.zone > state.zone) return;
+      var hit = z.boss ? !!boss : sightRoll(day, k) < z.chance;
+      if (!hit) return;
+      if (!state.zdex[z.id]) found.push({ id: z.id, name: z.name, rarity: z.rarity });
+      state.zdex[z.id] = Math.min(1e9, (state.zdex[z.id] || 0) + 1);
+    });
+    return found;
+  }
+  function zdexCount(state) { var n = 0; ZOMBIE_KINDS.forEach(function (z) { if (state.zdex[z.id] > 0) n++; }); return n; }
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
   var RETREAT_K = 2, RETREAT_POW = 0.4;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
@@ -451,6 +504,7 @@
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      zdex: {},              // 좀비 도감: 종류마다 만난 횟수. 철수해도 남는다
       ach: {},               // 달성한 업적 { id: true }. 철수해도 남는다
       achClock: 0,           // 업적을 마지막으로 확인한 뒤 흐른 시간(초)
       startedAt: safeNum(now, 0), playSeconds: 0, awaySeconds: 0, runSeconds: 0,
@@ -547,6 +601,8 @@
     GOALS.forEach(function (list) { list.forEach(function (g) { if (gd[g.id]) s.goalsDone[g.id] = true; }); });
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
+    var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
+    ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
     var ra = raw.ach && typeof raw.ach === 'object' ? raw.ach : {};
     ACHIEVEMENTS.forEach(function (a) { if (ra[a.id]) s.ach[a.id] = true; });
     // 예전에는 '문 앞'까지만 갈 수 있던 구역이 그 뒤 버전에서 열린 경우: 문값은 이미 치렀으므로 들여보낸다.
@@ -1346,7 +1402,14 @@
    *   처음 뚫리면 : 물자의 15% 를 잃고 농성에 들어간다
    *   농성 중     : 못 막는 밤은 잃지도 얻지도 않고 버틴다. 한 번 막아내면 농성이 풀린다
    */
+  /** 밤을 넘긴다. 결과 사건에 그날 처음 만난 좀비(found)를 붙인다. */
   function resolveNight(state) {
+    var day = state.day, boss = isBossWave(currentWave(state)), ev = resolveNightCore(state);
+    var found = sightZombies(state, day, boss);
+    if (found.length) ev.found = found;
+    return ev;
+  }
+  function resolveNightCore(state) {
     var w = currentWave(state), strength = nightStrength(state), defense = defensePower(state), boss = isBossWave(w);
     state.day++;
     if (defense >= strength) {
@@ -1427,7 +1490,7 @@
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach;
+    next.ach = state.ach; next.zdex = state.zdex;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -1601,12 +1664,12 @@
     { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 판에 밤 ' + n + '번 막기'; } },
     { id: 'retreat', group: 'all', name: '다시, 1구역', needs: [1, 5, 20, 50], value: function (s) { return s.retreats; }, text: function (n) { return '철수 ' + n + '번 하기'; } },
     { id: 'antibody', group: 'all', name: '항체 수집가', needs: [10, 100, 10000, 1000000], value: function (s) { return s.antibodyTotal; }, text: function (n) { return '항체 샘플을 모두 합쳐 ' + formatNumber(n) + '개 얻기'; } },
-    { id: 'kennel', group: 'all', name: '동물 친구들', needs: [1, 4, 8, 12], value: function (s) { return kennelCount(s); }, text: function (n) { return '동물 친구 ' + n + '마리 만나기'; } },
+    { id: 'kennel', group: 'all', name: '동물 친구들', needs: [1, 6, 12, 24], value: function (s) { return kennelCount(s); }, text: function (n) { return '동물 친구 ' + n + '마리 만나기'; } },
     { id: 'petlv', group: 'all', name: '잘 먹고 잘 크는', needs: [5, 10], value: function (s) { return maxOf(s.petLv); }, text: function (n) { return '친구 하나를 ' + n + '레벨까지 키우기'; } },
     { id: 'story', group: 'all', name: '일지를 쓰는 아이', needs: [5, 10, 17], value: function (s) { return storyRead(s); }, text: function (n) { return '생존 일지 ' + n + '편 적기'; } },
     { id: 'reach', group: 'all', name: '더 멀리', needs: [1, 2, 3, 4], value: function (s) { return s.bestZone; }, text: function (n) { return (n + 1) + '구역 열기'; } },
     { id: 'time', group: 'all', name: '오래 버틴 거점', needs: [3600, 36000, 360000], value: function (s) { return s.playSeconds + s.awaySeconds; }, text: function (n) { return '진행 시간 ' + formatDuration(n) + ' 채우기'; } },
-    { id: 'signal', group: 'all', name: '무전병', tier: 2, needs: [10], value: function (s) { return s.signalsAnswered; }, text: function (n) { return '한 판에 구조 신호 ' + n + '번 응답하기'; } },
+    { id: 'zdex', group: 'all', name: '좀비 박사', tier: 4, needs: [ZOMBIE_KINDS.length], value: function (s) { return zdexCount(s); }, text: function (n) { return '좀비 도감 ' + n + '종을 모두 채우기'; } },
     { id: 'arsenal', group: 'all', name: '빈틈없는 방벽', tier: 3, needs: [DEFENSES.length], value: function (s) { return defenseKinds(s); }, text: function () { return '방어 수단 여섯 가지를 모두 갖추기'; } }
   ];
   var ROMAN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
@@ -1818,7 +1881,7 @@
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

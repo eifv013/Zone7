@@ -892,6 +892,14 @@ body { font-size: 15.5px; line-height: 1.55; }
 #help .note { padding: 14px 0 4px; border-top: 0; }
 #help .help-title { margin-bottom: 10px; }
 .subtabs + .notes, .subtabs + .dex, .subtabs + .journal { margin-top: 4px; }
+/* 도감: 글을 한 줄에 맞추고, 등급마다 왼쪽 띠의 색이 다르다 */
+.dex-card { border-left: 4px solid color-mix(in srgb, var(--ink) 22%, transparent); }
+.dex-card b, .dex-card .label, .dex-card p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dex-card p { font-size: 12.5px; }
+.dex-card.r-fine, .dex-card.z-uncommon { border-left-color: #6fa8c9; }
+.dex-card.r-rare, .dex-card.z-rare { border-left-color: var(--hazard); }
+.dex-card.z-epic { border-left-color: #c05ad8; }
+.dex-card.locked { border-left-style: dashed; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -907,7 +915,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.0</div>
+  <div class="boot-ver">7구역 알파 0.9.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1339,7 +1347,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1463,7 +1471,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.1";
 </script>
 <script>
 /*
@@ -1482,6 +1490,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.1', date: '2026-11-17', at: '2026-11-17 21:30:00', title: '채우는 도감',
+      items: [
+        '좀비 도감이 15종이 됐어요. 흔함, 드묾, 희귀, 아주 희귀 네 등급이 있고, 밤을 넘길 때 무리에 섞여 있던 것이 도감에 적혀요. 구역을 열어야 나오는 것도 있어요.',
+        '처음 만난 좀비는 알림으로 알려 줘요. 아직 못 만난 칸에는 어디서 만날 수 있는지가 적혀 있어요.',
+        '동물 친구가 24종이 됐어요. 강아지 12종, 고양이 12종이고 도감의 탭도 둘로 나눴어요.',
+        '도감의 글을 한 줄에 들어가게 줄이고, 등급마다 색 띠를 달았어요.',
+        '무전의 잡담을 크게 줄였어요. 2~4분에 한 줄만 나오고, 같은 말이 연달아 나오지 않아요.',
+        '업적 "동물 친구들"의 문턱을 24종에 맞췄고, "무전병" 대신 좀비 도감을 다 채우는 "좀비 박사"가 들어갔어요.'
+      ] },
     { ver: '알파 0.9.0', date: '2026-11-17', at: '2026-11-17 20:40:00', title: '업적 105개',
       items: [
         '기록에 업적이 생겼어요. 구역마다 15개, 공통 30개, 모두 105개예요.',
@@ -2176,8 +2193,61 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
     { id: 'tuxedo',  kind: 'cat', rarity: 'fine',   name: '턱시도', body: '#26262a', patch: '#f1efe8' },
     { id: 'calico',  kind: 'cat', rarity: 'fine',   name: '삼색이', body: '#f1efe8', patch: '#d0782e' },
     { id: 'siam',    kind: 'cat', rarity: 'rare',   name: '샴',     body: '#e8dcc4', patch: '#4a3628' },
-    { id: 'nero',    kind: 'cat', rarity: 'rare',   name: '네로',   body: '#17171a', patch: '#f0b400' }
+    { id: 'nero',    kind: 'cat', rarity: 'rare',   name: '네로',   body: '#17171a', patch: '#f0b400' },
+    // 0.9.1: 강아지 여섯, 고양이 여섯을 더해 모두 24종
+    { id: 'shiba',   kind: 'dog', rarity: 'common', name: '시바',   body: '#d9903d', patch: '#f3e3c3' },
+    { id: 'poodle',  kind: 'dog', rarity: 'common', name: '푸들',   body: '#c9a27a', patch: '#b08a62' },
+    { id: 'husky',   kind: 'dog', rarity: 'fine',   name: '허스키', body: '#8d95a3', patch: '#f1efe8' },
+    { id: 'corgi',   kind: 'dog', rarity: 'fine',   name: '코기',   body: '#e0a04a', patch: '#f1efe8' },
+    { id: 'pungsan', kind: 'dog', rarity: 'rare',   name: '풍산이', body: '#f4f1ea', patch: '#cfd6dd' },
+    { id: 'dalma',   kind: 'dog', rarity: 'rare',   name: '달마',   body: '#f1efe8', patch: '#17171a' },
+    { id: 'white',   kind: 'cat', rarity: 'common', name: '흰냥이', body: '#f1efe8', patch: '#e2ddd0' },
+    { id: 'gray',    kind: 'cat', rarity: 'common', name: '회색이', body: '#9a9da3', patch: '#c9ccd1' },
+    { id: 'bengal',  kind: 'cat', rarity: 'fine',   name: '벵갈',   body: '#c98a3c', patch: '#4a3628' },
+    { id: 'russian', kind: 'cat', rarity: 'fine',   name: '러블',   body: '#6f7f95', patch: '#8a98ab' },
+    { id: 'ragdoll', kind: 'cat', rarity: 'rare',   name: '랙돌',   body: '#f1efe8', patch: '#7a6a5c' },
+    { id: 'golden',  kind: 'cat', rarity: 'rare',   name: '금냥이', body: '#f0b400', patch: '#fff3c4' }
   ];
+  /*
+   * 좀비 도감: 15종. 밤이 지날 때마다 그날 무리에 섞여 있던 것을 만난 것으로 적는다(zdex 에 만난 횟수).
+   *   rarity : common 흔함, uncommon 드묾, rare 희귀, epic 아주 희귀
+   *   zone   : 이 구역(0부터)을 열어야 나온다,  chance : 밤마다 나올 확률,  boss : 변이체가 오는 밤에만 나온다
+   *   frames : 도감 그림의 몸(도트 화면의 walker·hair·runner·brute 가운데 하나),  pal : 옷 색(c 윗옷, d 바지, g 살, h 머리)
+   * 만남은 날짜로 정해지는 수(sightRoll)로 가린다: 같은 날은 늘 같은 결과라서 저장했다 불러와도 달라지지 않는다.
+   */
+  var ZOMBIE_RARITIES = { common: '흔함', uncommon: '드묾', rare: '희귀', epic: '아주 희귀' };
+  var ZOMBIE_KINDS = [
+    { id: 'walker',    name: '배회자',     rarity: 'common',   zone: 0, chance: 1,     frames: 'walker', pal: {}, text: '가장 흔해요. 느리지만 끝없이 와요.' },
+    { id: 'hair',      name: '긴 머리',    rarity: 'common',   zone: 0, chance: 0.6,   frames: 'hair',   pal: {}, text: '머리카락에 얼굴이 가려져 있어요.' },
+    { id: 'runner',    name: '달리는 것',  rarity: 'common',   zone: 0, chance: 0.4,   frames: 'runner', pal: {}, text: '몸을 숙이고 뛰어와요. 가장 빨라요.' },
+    { id: 'brute',     name: '덩치',       rarity: 'common',   zone: 0, chance: 0.3,   frames: 'brute',  pal: {}, text: '어깨가 넓고 한 발을 더 버텨요.' },
+    { id: 'vendor',    name: '좌판 상인',  rarity: 'uncommon', zone: 1, chance: 0.2,   frames: 'walker', pal: { c: '#b8402e', d: '#4a3a2a' }, text: '앞치마를 아직 두르고 있어요.' },
+    { id: 'worker',    name: '작업복',     rarity: 'uncommon', zone: 2, chance: 0.2,   frames: 'brute',  pal: { c: '#3f6f8f', d: '#2a4a60' }, text: '공단의 푸른 작업복을 입었어요.' },
+    { id: 'commuter',  name: '통근객',     rarity: 'uncommon', zone: 3, chance: 0.2,   frames: 'walker', pal: { c: '#2b2d38', d: '#1c1d26' }, text: '양복을 입고 가방을 놓지 않아요.' },
+    { id: 'patient',   name: '환자복',     rarity: 'uncommon', zone: 4, chance: 0.2,   frames: 'hair',   pal: { c: '#cfe0ea', d: '#cfe0ea' }, text: '병원에서 걸어 나왔어요.' },
+    { id: 'boss',      name: '변이체',     rarity: 'uncommon', zone: 0, chance: 1,     frames: 'walker', pal: { g: '#9a5ac8', c: '#3a2a4a' }, boss: true, big: true, text: '몇 밤에 한 번 무리를 이끌고 와요.' },
+    { id: 'student',   name: '체육복',     rarity: 'rare',     zone: 1, chance: 0.04,  frames: 'runner', pal: { c: '#2f4f8f', d: '#2f4f8f' }, text: '가슴에 이름표가 달려 있어요.' },
+    { id: 'guard',     name: '경비원',     rarity: 'rare',     zone: 2, chance: 0.04,  frames: 'brute',  pal: { c: '#30343c', d: '#17180f', h: '#17180f' }, text: '손전등을 아직 쥐고 있어요.' },
+    { id: 'conductor', name: '역무원',     rarity: 'rare',     zone: 3, chance: 0.04,  frames: 'walker', pal: { c: '#1f3a5a', d: '#17180f', h: '#b8402e' }, text: '붉은 모자를 쓰고 승강장을 돌아요.' },
+    { id: 'nurse',     name: '간호사',     rarity: 'rare',     zone: 4, chance: 0.04,  frames: 'hair',   pal: { c: '#f1efe8', d: '#f1efe8', h: '#4a3628' }, text: '주머니에 체온계가 꽂혀 있어요.' },
+    { id: 'glow',      name: '야광',       rarity: 'epic',     zone: 0, chance: 0.01,  frames: 'walker', pal: { g: '#b8ff7a', c: '#3a5a2a' }, text: '어둠 속에서 희미하게 빛나요.' },
+    { id: 'raincoat',  name: '노란 우비',  rarity: 'epic',     zone: 0, chance: 0.004, frames: 'hair',   pal: { c: '#f0b400', d: '#c98f00', h: '#f0b400' }, text: '누구일까요. 멀리서만 보여요.' }
+  ];
+  /** 날짜와 차례로 정해지는 0 이상 1 미만의 수(같은 입력에는 늘 같은 값). */
+  function sightRoll(day, k) { var v = Math.sin(day * 12.9898 + (k + 1) * 78.233) * 43758.5453; return v - Math.floor(v); }
+  /** 그날 밤 무리에 섞여 있던 좀비를 도감에 적는다. 처음 만난 종류의 목록을 돌려준다. */
+  function sightZombies(state, day, boss) {
+    var found = [];
+    ZOMBIE_KINDS.forEach(function (z, k) {
+      if (z.zone > state.zone) return;
+      var hit = z.boss ? !!boss : sightRoll(day, k) < z.chance;
+      if (!hit) return;
+      if (!state.zdex[z.id]) found.push({ id: z.id, name: z.name, rarity: z.rarity });
+      state.zdex[z.id] = Math.min(1e9, (state.zdex[z.id] || 0) + 1);
+    });
+    return found;
+  }
+  function zdexCount(state) { var n = 0; ZOMBIE_KINDS.forEach(function (z) { if (state.zdex[z.id] > 0) n++; }); return n; }
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
   var RETREAT_K = 2, RETREAT_POW = 0.4;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
@@ -2496,6 +2566,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      zdex: {},              // 좀비 도감: 종류마다 만난 횟수. 철수해도 남는다
       ach: {},               // 달성한 업적 { id: true }. 철수해도 남는다
       achClock: 0,           // 업적을 마지막으로 확인한 뒤 흐른 시간(초)
       startedAt: safeNum(now, 0), playSeconds: 0, awaySeconds: 0, runSeconds: 0,
@@ -2592,6 +2663,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
     GOALS.forEach(function (list) { list.forEach(function (g) { if (gd[g.id]) s.goalsDone[g.id] = true; }); });
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
+    var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
+    ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
     var ra = raw.ach && typeof raw.ach === 'object' ? raw.ach : {};
     ACHIEVEMENTS.forEach(function (a) { if (ra[a.id]) s.ach[a.id] = true; });
     // 예전에는 '문 앞'까지만 갈 수 있던 구역이 그 뒤 버전에서 열린 경우: 문값은 이미 치렀으므로 들여보낸다.
@@ -3391,7 +3464,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
    *   처음 뚫리면 : 물자의 15% 를 잃고 농성에 들어간다
    *   농성 중     : 못 막는 밤은 잃지도 얻지도 않고 버틴다. 한 번 막아내면 농성이 풀린다
    */
+  /** 밤을 넘긴다. 결과 사건에 그날 처음 만난 좀비(found)를 붙인다. */
   function resolveNight(state) {
+    var day = state.day, boss = isBossWave(currentWave(state)), ev = resolveNightCore(state);
+    var found = sightZombies(state, day, boss);
+    if (found.length) ev.found = found;
+    return ev;
+  }
+  function resolveNightCore(state) {
     var w = currentWave(state), strength = nightStrength(state), defense = defensePower(state), boss = isBossWave(w);
     state.day++;
     if (defense >= strength) {
@@ -3472,7 +3552,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach;
+    next.ach = state.ach; next.zdex = state.zdex;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -3646,12 +3726,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
     { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 판에 밤 ' + n + '번 막기'; } },
     { id: 'retreat', group: 'all', name: '다시, 1구역', needs: [1, 5, 20, 50], value: function (s) { return s.retreats; }, text: function (n) { return '철수 ' + n + '번 하기'; } },
     { id: 'antibody', group: 'all', name: '항체 수집가', needs: [10, 100, 10000, 1000000], value: function (s) { return s.antibodyTotal; }, text: function (n) { return '항체 샘플을 모두 합쳐 ' + formatNumber(n) + '개 얻기'; } },
-    { id: 'kennel', group: 'all', name: '동물 친구들', needs: [1, 4, 8, 12], value: function (s) { return kennelCount(s); }, text: function (n) { return '동물 친구 ' + n + '마리 만나기'; } },
+    { id: 'kennel', group: 'all', name: '동물 친구들', needs: [1, 6, 12, 24], value: function (s) { return kennelCount(s); }, text: function (n) { return '동물 친구 ' + n + '마리 만나기'; } },
     { id: 'petlv', group: 'all', name: '잘 먹고 잘 크는', needs: [5, 10], value: function (s) { return maxOf(s.petLv); }, text: function (n) { return '친구 하나를 ' + n + '레벨까지 키우기'; } },
     { id: 'story', group: 'all', name: '일지를 쓰는 아이', needs: [5, 10, 17], value: function (s) { return storyRead(s); }, text: function (n) { return '생존 일지 ' + n + '편 적기'; } },
     { id: 'reach', group: 'all', name: '더 멀리', needs: [1, 2, 3, 4], value: function (s) { return s.bestZone; }, text: function (n) { return (n + 1) + '구역 열기'; } },
     { id: 'time', group: 'all', name: '오래 버틴 거점', needs: [3600, 36000, 360000], value: function (s) { return s.playSeconds + s.awaySeconds; }, text: function (n) { return '진행 시간 ' + formatDuration(n) + ' 채우기'; } },
-    { id: 'signal', group: 'all', name: '무전병', tier: 2, needs: [10], value: function (s) { return s.signalsAnswered; }, text: function (n) { return '한 판에 구조 신호 ' + n + '번 응답하기'; } },
+    { id: 'zdex', group: 'all', name: '좀비 박사', tier: 4, needs: [ZOMBIE_KINDS.length], value: function (s) { return zdexCount(s); }, text: function (n) { return '좀비 도감 ' + n + '종을 모두 채우기'; } },
     { id: 'arsenal', group: 'all', name: '빈틈없는 방벽', tier: 3, needs: [DEFENSES.length], value: function (s) { return defenseKinds(s); }, text: function () { return '방어 수단 여섯 가지를 모두 갖추기'; } }
   ];
   var ROMAN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
@@ -3863,7 +3943,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
@@ -4035,7 +4115,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
         '진행은 10초마다 자동으로 저장돼요. 기록 > 설정에서 저장 코드를 복사해 두면 백업이 돼요.',
         '설정에서 테마, 음량, 진동, 숫자 표기, 새 일지를 바로 띄울지, 화면 흔들림, 이름표를 바꿀 수 있어요.',
         '기록 > 업적에 구역마다, 그리고 공통으로 도달할 목표가 있어요. 하나를 달성할 때마다 전체 생산이 조금씩 늘고, 철수해도 남아요.',
-        '기록 > 도감에서 만난 동물 친구, 좀비, 방어 수단을 볼 수 있어요.' ] }
+        '기록 > 도감에 강아지 12종, 고양이 12종, 좀비 15종이 있어요. 좀비는 밤을 넘기다 보면 채워지고, 드문 것일수록 오래 걸려요.' ] }
     ];
   }
 
@@ -5898,6 +5978,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
     '떠돌이 상인이 건전지와 소문을 두고 갔다.',
     '방벽 너머에서 긁는 소리가 밤새 이어졌다.'
   ];
+  /** 잡담 한 줄: 주머니에서 하나씩 꺼내 쓰고, 다 쓰면 다시 채운다(같은 줄이 연달아 나오지 않게). */
+  var chatterBag = [];
+  function nextChatter() {
+    if (!chatterBag.length) chatterBag = FLAVOR.slice();
+    return chatterBag.splice(Math.floor(Math.random() * chatterBag.length), 1)[0];
+  }
   function log(text, kind) {
     var list = $('log');
     var li = el('li', kind ? 'log-' + kind : '');
@@ -6489,44 +6575,57 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
     rail:   ['............', '............', 'yyyyyy......', 'ssssssllllll', 'sbbsss.s.s.s', 'sbbsss.s.s.s', 'ssssssllllll', 'ssssss......', '..kkkk......', '..kkkk......', '.kkkkkk.....', 'kkkkkkkk....']
   };
   var dexTab = 'pet', dexShown = '';
+  var LEAD_SHORT = { wire: '무리를 느리게 해요.', tower: '주역일 때 저격 한 발.', turret: '주역일 때 세 발 연사.', flame: '주역일 때 불길을 깔아요.', emp: '주역일 때 번개가 옮겨 붙어요.', rail: '주역일 때 끝까지 꿰뚫어요.' };
+  /*
+   * 도감 화면: 강아지 / 고양이 / 좀비 / 방어 수단 네 탭. 카드의 글은 한 줄에 들어가게 짧게 쓴다.
+   *   아직 만나지 못한 것은 회색 그림자와 '???' 로 보이고, 어디서 만날 수 있는지만 알려 준다.
+   */
   function renderDex() {
-    var owned = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; });
-    var key = dexTab + '|' + owned.map(function (b) { return b.id + ':' + state.kennel[b.id] + ':' + C.petLevel(state, b.id); }).join(',') + '|' + JSON.stringify(state.defenses) + '|' + (state.pet ? state.pet.breed : '');
+    if (dexTab === 'pet') dexTab = 'dog';
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
-    [['pet', '동물 친구 ' + owned.length + '/' + C.PET_BREEDS.length], ['zombie', '좀비 ' + ZOMBIE_DEX.length], ['wall', '방어 수단 ' + C.DEFENSES.length]].forEach(function (t) {
+    function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
+    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
       tabs.appendChild(b);
     });
-    function card(art, name, sub, text, locked) {
-      var c = el('div', 'dex-card' + (locked ? ' locked' : '')), body = el('div');
+    function card(art, name, sub, text, locked, cls) {
+      var c = el('div', 'dex-card' + (locked ? ' locked' : '') + (cls ? ' ' + cls : '')), body = el('div');
       var frame = el('div', 'dex-art'); frame.appendChild(art);
       body.appendChild(el('b', '', name)); body.appendChild(el('span', 'label', sub)); body.appendChild(el('p', '', text));
       c.appendChild(frame); c.appendChild(body); box.appendChild(c);
     }
-    if (dexTab === 'pet') {
-      C.PET_BREEDS.forEach(function (b) {
-        var have = !!state.kennel[b.id], kind = C.PET_KINDS[b.kind], rar = null;
+    if (dexTab === 'dog' || dexTab === 'cat') {
+      // 등급 순(기본 → 고급 → 희귀)으로 늘어놓는다
+      var order = { common: 0, fine: 1, rare: 2 };
+      C.PET_BREEDS.filter(function (b) { return b.kind === dexTab; }).sort(function (x, y) { return order[x.rarity] - order[y.rarity]; }).forEach(function (b) {
+        var got = !!state.kennel[b.id], kind = C.PET_KINDS[b.kind], rar = null;
         C.PET_RARITIES.forEach(function (r) { if (r.id === b.rarity) rar = r; });
-        var pal = have ? { b: b.body, p: b.patch || b.body, k: '#17180f', n: '#17180f' } : { b: '#4a4b40', p: '#4a4b40', k: '#4a4b40', n: '#4a4b40' };
-        var art = pixSvg(b.kind === 'cat' ? CAT_PIX : DOG_PIX, pal);
-        if (!have) { card(art, '???', kind.name + ' · 아직 만나지 못했어요', '데려오기에서 만날 수 있어요.', true); return; }
+        var pal = got ? { b: b.body, p: b.patch || b.body, k: '#17180f', n: '#17180f' } : { b: '#4a4b40', p: '#4a4b40', k: '#4a4b40', n: '#4a4b40' };
+        var art = pixSvg(b.kind === 'cat' ? CAT_PIX : DOG_PIX, pal), rname = rar ? rar.name : '';
+        if (!got) { card(art, '???', rname + ' 등급', '데려오기에서 만날 수 있어요.', true, 'r-' + b.rarity); return; }
         var lv = C.petLevel(state, b.id), with_ = state.pet && state.pet.breed === b.id;
-        card(art, state.kennel[b.id] + (with_ ? ' · 함께 다니는 중' : ''), (rar ? rar.name : '') + ' · ' + b.name + ' · Lv ' + lv, C.breedDesc(b) + (lv ? ' (레벨로 ×' + (1 + C.PET_LEVEL_STEP * lv).toFixed(1) + ')' : ''), false);
+        var bonus = Math.round((rar ? rar[b.kind] : 0) * (1 + C.PET_LEVEL_STEP * lv) * 100);
+        card(art, state.kennel[b.id] + (with_ ? ' ★' : ''), rname + ' · ' + b.name + ' · Lv ' + lv, kind.label + ' +' + bonus + '%', false, 'r-' + b.rarity);
       });
     } else if (dexTab === 'zombie') {
-      ZOMBIE_DEX.forEach(function (z) {
-        var frames = window.Scene && window.Scene.zombieFrames ? window.Scene.zombieFrames(z.frames || z.id)[0] : ['g'];
-        card(pixSvg(frames, ZOMBIE_PAL, z.big ? 'big' : ''), z.name, z.id === 'boss' ? C.BOSS_EVERY + '번째 밤마다' : '밤마다 섞여서 와요', z.text, false);
+      C.ZOMBIE_KINDS.forEach(function (z) {
+        var n = state.zdex[z.id] || 0, rows = window.Scene && window.Scene.zombieFrames ? window.Scene.zombieFrames(z.frames)[0] : ['g'];
+        var pal = {}, k;
+        for (k in ZOMBIE_PAL) pal[k] = n ? (z.pal[k] || ZOMBIE_PAL[k]) : '#4a4b40';
+        var rname = C.ZOMBIE_RARITIES[z.rarity];
+        if (!n) { card(pixSvg(rows, pal, z.big ? 'big' : ''), '???', rname, z.zone > state.zone ? (z.zone + 1) + '구역을 열면 나와요.' : z.boss ? '변이체가 오는 밤에 나와요.' : '밤을 넘기다 보면 만나요.', true, 'z-' + z.rarity); return; }
+        card(pixSvg(rows, pal, z.big ? 'big' : ''), z.name, rname + ' · 만난 밤 ' + fmt(n), z.text, false, 'z-' + z.rarity);
       });
     } else {
       C.DEFENSES.forEach(function (d) {
         var n = state.defenses[d.id] || 0, art = pixSvg(WALL_PIX[d.id] || ['k'], n ? WALL_PAL : WALL_PAL_OFF);
-        card(art, d.name, n ? '가진 수 ' + fmt(n) : '아직 없어요', d.desc + '. ' + (LEAD_TEXT[d.id] || ''), !n);
+        card(art, d.name, n ? '가진 수 ' + fmt(n) : '아직 없어요', LEAD_SHORT[d.id] || d.desc, !n);
       });
     }
   }
@@ -7110,6 +7209,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
   /* ---------- 일어난 일 알리기 ---------- */
   function handleEvents(events) {
     events.forEach(function (ev) {
+      if (ev.found) ev.found.forEach(function (f) {      // 도감에 새로 적힌 좀비
+        toast('도감 · 새 좀비 〈' + f.name + '〉'); log('처음 보는 것이 무리에 섞여 있었다. 〈' + f.name + '〉 ' + C.ZOMBIE_RARITIES[f.rarity] + '.', 'story');
+        if (f.rarity === 'rare' || f.rarity === 'epic') sfx('goal');
+      });
       switch (ev.type) {
         case 'defended':
           heldLogged = false;
@@ -7221,8 +7324,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.0";
     else handleEvents(C.tick(state, dt));
 
     if (now >= nextFlavor) {
-      if (nextFlavor) log(FLAVOR[Math.floor(Math.random() * FLAVOR.length)]);
-      nextFlavor = now + 25000 + Math.random() * 20000;
+      if (nextFlavor) log(nextChatter());
+      nextFlavor = now + 120000 + Math.random() * 120000;      // 2~4분에 한 줄(전에는 30초쯤마다라 로그를 뒤덮었다)
     }
     if (!document.hidden) {
       if (now - lastSave >= AUTOSAVE_MS) { lastSave = now; Store.save(); }
