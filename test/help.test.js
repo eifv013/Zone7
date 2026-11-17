@@ -15,27 +15,22 @@ test('도움말: 모든 항목에 제목과 글이 있고 빈 값이 섞이지 �
   }
 });
 
-test('도움말: 숫자가 규칙의 상수와 같다', () => {
-  assert.ok(find('night').includes('물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%'));
+test('도움말: 효과의 크기(몇 %, 몇 배)는 적지 않고, 시간과 이름은 규칙에서 읽어 적는다', () => {
+  for (const s of H.sections(C)) for (const line of s.items) {
+    assert.ok(!/%/.test(line), s.id + ': ' + line);
+    assert.ok(!/[0-9.]+배/.test(line), s.id + ': ' + line);
+    assert.ok(!/×/.test(line), s.id + ': ' + line);
+  }
+  for (const s of H.sections(C)) assert.ok(s.items.length <= 5, s.id + ' 항목이 너무 길다');
   assert.ok(find('night').includes(C.BOSS_EVERY + '번째 밤마다'));
-  assert.ok(find('night').includes((C.DAY_SECONDS - C.BATTLE_SECONDS) + '초가 지나면'));
-  assert.ok(find('trade').includes(C.PRICE_FLOOR + ' ~ ' + C.PRICE_CEIL));
-  assert.ok(find('trade').includes('시세 ' + C.PEAK_PRICE + ' 이상'));
-  assert.ok(find('line').includes('가동률 ' + Math.round(C.STEADY_AT * 100) + '% 이상'));
-  assert.ok(find('line').includes('산출이 ' + Math.round(C.STEADY_BONUS * 100) + '% 늘어나요'));
-  for (const m of C.MACHINES) assert.ok(find('line').includes(m.name + ' ' + m.rate), m.id);
-  for (const r of C.ROUTES) assert.ok(find('rail').includes(r.name + '(') && find('rail').includes('화물 ×' + r.mult), r.id);
-  assert.ok(find('rail').includes('열차 ' + C.ROUTE_SLOTS + '대가'));
-  for (const p of C.PROJECTS) assert.ok(find('lab').includes(p.name + '(' + p.desc + ')'), p.id);
-  assert.ok(find('lab').includes('점수가 ' + C.PROJECT_GROWTH + '배가'));
-  assert.ok(find('lab').includes('과제 값의 ' + Math.round(C.REROLL_SHARE * 100) + '%'));
-  for (const k of C.TILE_KINDS) assert.ok(find('map').includes(k.name + '(수익 ' + k.mult + '배)'), k.id);
-  assert.ok(find('map').includes(C.SWEEP_TILES + '칸을 다 뒤지면 직접 수색 ' + C.SWEEP_BONUS_CLICKS + '번치'));
+  assert.ok(find('night').includes('하루의 길이는 ' + H.span(C.DAY_SECONDS)));
+  assert.ok(find('map').includes(C.SWEEP_TILES + '칸'));
   assert.ok(find('retreat').includes('물자 ' + C.formatNumber(C.RETREAT_MIN)));
   assert.ok(find('away').includes('최대 ' + C.OFFLINE_CAP / 3600 + '시간치'));
   assert.ok(find('signal').includes(C.SIGNAL_WINDOW + '초 안에'));
+  for (const m of C.MACHINES) assert.ok(find('line').includes(m.name), m.id);
+  for (const r of C.ROUTES) assert.ok(find('rail').includes(r.name), r.id);
   for (const t of C.TRAITS) assert.ok(find('trait').includes(t.name), t.id);
-  for (const p of C.PERKS) assert.ok(find('trait').includes(p.name), p.id);
 });
 
 test('도움말: 만들어진 구역과 다음 구역을 정의표에서 읽어 적는다', () => {
@@ -48,7 +43,7 @@ test('도움말: 만들어진 구역과 다음 구역을 정의표에서 읽어 
 test('도움말: 규칙 모듈이 없거나 상수가 빠지면 오류를 낸다', () => {
   assert.throws(() => H.sections(null), /GameCore/);
   assert.throws(() => H.sections({}), /상수/);
-  assert.throws(() => H.sections(Object.assign({}, C, { PRICE_STEP: undefined })), /PRICE_STEP/);
+  assert.throws(() => H.sections(Object.assign({}, C, { DAY_SECONDS: undefined })), /DAY_SECONDS/);
   assert.equal(H.pct(0.15), '15%');
   assert.equal(H.span(14400), '4시간');
   assert.equal(H.span(90), '90초');

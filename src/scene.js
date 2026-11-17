@@ -617,10 +617,7 @@
     // 방벽: 방어 수단의 종류가 늘수록 높아지고 철판으로 바뀐다
     var wh = 7 + kinds * 3, wx = model.wall + (model.shake > 0 ? (Math.floor(t * 30) % 2 ? 1 : -1) : 0);
     var tw = model.wall - 10; // 감시탑 기둥 위치
-    ctx.fillStyle = kinds >= 3 ? lerpColor('#7b8186', '#2c3035', sky.dark) : lerpColor('#7a5a36', '#2a1f14', sky.dark);
-    ctx.fillRect(wx, GROUND - wh, 4, wh);
-    ctx.fillStyle = '#17180f';
-    for (i = 3; i < wh; i += 4) ctx.fillRect(wx, GROUND - i, 4, 1);
+    drawWall(ctx, view, sky, wx, wh, kinds);
     if (d.wire > 0) { ctx.fillStyle = '#c9c2a3'; for (i = 0; i < 6; i++) ctx.fillRect(wx - 1 + i, GROUND - wh - 1 - (i % 2), 1, 1); }
     if (d.tower > 0) {
       ctx.fillStyle = lerpColor('#5b4630', '#1c160f', sky.dark);
@@ -633,6 +630,50 @@
     drawZoneDefense(ctx, model, view, sky, wx, wh);
     drawLead(ctx, model, view, sky, wx, wh);
     if (d.emp > 0 && Math.floor(t * 5) % 3 === 0) { ctx.fillStyle = '#7fe0f0'; ctx.fillRect(wx + 1 + Math.floor(t * 13) % 4, GROUND - wh - 6 - Math.floor(t * 17) % 4, 1, 2); }
+  }
+
+  /*
+   * 방벽의 생김새: 가장 멀리 연 구역에 따라 재료가 달라진다(높이는 전과 같이 방어 수단의 종류 수로 정한다).
+   *   0 주택가 판자 울타리, 1 시장 좌판 상자와 천막, 2 공단 철판과 경고 띠, 3 환승역 콘크리트와 침목,
+   *   4 병원 흰 격리 패널과 모래주머니, 5 이후 콘크리트 차단벽. 모르는 구역은 마지막 것.
+   */
+  var WALL_STYLES = ['plank', 'crate', 'steel', 'tie', 'panel', 'concrete'];
+  function wallStyle(zone) {
+    var z = typeof zone === 'number' && isFinite(zone) && zone > 0 ? Math.floor(zone) : 0;
+    return WALL_STYLES[Math.min(z, WALL_STYLES.length - 1)];
+  }
+  function drawWall(ctx, view, sky, wx, wh, kinds) {
+    var style = wallStyle(view.zone), top = GROUND - wh, i;
+    function c(day, night) { return lerpColor(day, night, sky.dark * 0.85); }
+    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
+    var dark = c('#17180f', '#0b0c08');
+    if (style === 'plank') {                 // 판자: 높이가 들쭉날쭉한 널빤지 넷, 가로 버팀목, 못
+      for (i = 0; i < 4; i++) r(c(i % 2 ? '#8a6a44' : '#7a5a36', i % 2 ? '#332618' : '#2a1f14'), wx + i, top - (i % 2 ? 1 : 0) - (i === 2 ? 1 : 0), 1, wh + (i % 2 ? 1 : 0) + (i === 2 ? 1 : 0));
+      r(c('#5b4630', '#1c160f'), wx - 1, top + 2, 6, 1); r(c('#5b4630', '#1c160f'), wx - 1, GROUND - 3, 6, 1);
+      r(c('#c9c2a3', '#5a5648'), wx + 1, top + 2, 1, 1); r(c('#c9c2a3', '#5a5648'), wx + 3, GROUND - 3, 1, 1);
+      r(c('#5b4630', '#1c160f'), wx - 3, GROUND - 4, 1, 4); r(c('#5b4630', '#1c160f'), wx - 2, GROUND - 5, 1, 2);        // 안쪽 버팀목
+    } else if (style === 'crate') {          // 좌판 상자: 쌓은 궤짝, 맨 위에 줄무늬 천막
+      for (i = 0; i < wh; i += 4) { r(c(i % 8 ? '#9a6a3a' : '#8a5a34', '#35241a'), wx - 1, GROUND - i - 4, 6, 4); r(c('#5b3d22', '#1c130b'), wx - 1, GROUND - i - 4, 6, 1); r(c('#5b3d22', '#1c130b'), wx + 2, GROUND - i - 4, 1, 4); }
+      for (i = 0; i < 4; i++) r(i % 2 ? c('#e6e5db', '#6a6960') : c('#b8402e', '#4a1a14'), wx - 2 + i * 2, top - 2, 2, 2);
+    } else if (style === 'steel') {          // 철판: 리벳과 노랑·검정 경고 띠
+      r(c('#7b8186', '#2c3035'), wx, top, 4, wh); r(c('#5d6266', '#1c1f23'), wx + 3, top, 1, wh);
+      for (i = 2; i < wh - 2; i += 3) { r(dark, wx, GROUND - i, 1, 1); r(dark, wx + 2, GROUND - i - 1, 1, 1); }
+      for (i = 0; i < 4; i++) r(i % 2 ? dark : c('#f0b400', '#8a6a08'), wx + i, top, 1, 2);
+      r(c('#5d6266', '#1c1f23'), wx - 2, GROUND - 6, 2, 6);                                                              // 안쪽 지지대
+    } else if (style === 'tie') {            // 환승역: 콘크리트 기둥에 침목을 가로로 덧대고, 위에 역 표지
+      r(c('#8f8b80', '#2a2925'), wx, top, 4, wh);
+      for (i = 2; i < wh; i += 3) r(c('#4a3a2a', '#17120c'), wx - 1, GROUND - i - 1, 6, 1);
+      r(c('#f0b400', '#8a6a08'), wx - 1, top - 3, 6, 3); r(dark, wx, top - 2, 4, 1);
+    } else if (style === 'panel') {          // 병원: 흰 격리 패널과 붉은 십자, 발치의 모래주머니
+      r(c('#d9d8cf', '#55554e'), wx, top, 4, wh); r(c('#b9b8ab', '#3c3c36'), wx, top, 4, 1);
+      for (i = 5; i < wh; i += 5) r(c('#9a9a94', '#2e2e2a'), wx, GROUND - i, 4, 1);
+      if (wh >= 9) { r(c('#a8261b', '#5a1a14'), wx + 1, top + 2, 2, 4); r(c('#a8261b', '#5a1a14'), wx, top + 3, 4, 2); }
+      r(c('#a89a72', '#3a3526'), wx - 3, GROUND - 2, 3, 2); r(c('#a89a72', '#3a3526'), wx + 4, GROUND - 2, 3, 2); r(c('#8a7d58', '#2a2619'), wx - 2, GROUND - 4, 3, 2);
+    } else {                                 // 콘크리트 차단벽: 아래가 넓고 붉은 띠
+      r(c('#8d8a80', '#2a2925'), wx, top, 4, wh); r(c('#6f6c63', '#1f1e1b'), wx - 1, GROUND - 3, 6, 3);
+      r(c('#a8261b', '#3a1310'), wx, top + 2, 4, 1); r(c('#e6e5db', '#55544c'), wx, top + 3, 4, 1);
+    }
+    if (kinds >= 3 && style !== 'steel') { r(c('#7b8186', '#2c3035'), wx + 3, top + 1, 1, wh - 1); }                       // 방어 수단이 많으면 바깥쪽에 철판을 덧댄다
   }
 
   /**
@@ -1203,7 +1244,7 @@
     };
   }
 
-  return { leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
+  return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });

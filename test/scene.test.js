@@ -617,3 +617,15 @@ test('주 무기를 그릴 때 오류가 없다: 무기마다, 낮과 싸움 중
   }
   assert.doesNotThrow(() => S.draw(recorder(), S.create(195), { ...full, def: null }));
 });
+
+test('방벽의 생김새는 구역마다 다르고, 어느 구역이든 그릴 때 오류가 없다', () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 99].map(S.wallStyle), ['plank', 'crate', 'steel', 'tie', 'panel', 'concrete', 'concrete', 'concrete']);
+  for (const bad of [-1, NaN, undefined, null, 'x']) assert.equal(S.wallStyle(bad), 'plank');
+  const shapes = new Set();
+  for (let zone = 0; zone <= 6; zone++) for (const def of [{}, { wire: 1, tower: 1, turret: 1, flame: 1 }]) {
+    const ctx = recorder(), m = S.create(195);
+    assert.doesNotThrow(() => S.draw(ctx, m, { ...full, zone, def }));
+    if (!def.wire) shapes.add(JSON.stringify(ctx.calls.filter(c => c.x >= m.wall - 3 && c.x <= m.wall + 6 && c.y > 50 && c.w <= 6).map(c => [c.x, c.y, c.w, c.h])));
+  }
+  assert.ok(shapes.size >= 6, '구역마다 방벽 모양이 달라야 한다: ' + shapes.size);
+});

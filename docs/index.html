@@ -676,6 +676,62 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 @media (prefers-reduced-motion: reduce) { .shake, .pop, .signal, .story-veil, .story-card p::after { animation: none; }
   .toast { animation: toast-still 4.2s forwards; }
   @keyframes toast-still { 0%, 95% { opacity: 1; } 100% { opacity: 0; } } .scavenge { transition: none; } }
+
+/* ====== 새 얼굴 시작 ====== */
+/* 알파 0.8.1: 각진 검은 테두리를 걷어 내고, 모서리를 굴리고, 면과 여백으로 구획을 나눈다.
+ *   위의 규칙을 고치지 않고 여기서 덮어쓴다(되돌리기 쉽게). 그림은 도트를 SVG 로 옮긴 것이다.
+ *   --art-boy 우비 소년, --art-zombie 담 너머의 좀비, --art-vine 모서리의 덩굴 */
+:root {
+  --r: 12px; --r-s: 8px;
+  --edge: color-mix(in srgb, var(--ink) 22%, transparent);
+  --soft: color-mix(in srgb, var(--ink) 6%, transparent);
+  --ink-soft: #484a3e;
+  --art-boy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='1' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='2' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='5' y='2' width='4' height='1' fill='%23f1c9a0'/%3E%3Crect x='9' y='2' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='3' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='5' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='6' y='3' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='8' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='9' y='3' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='4' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='4' width='6' height='1' fill='%23f1c9a0'/%3E%3Crect x='10' y='4' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='5' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='5' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='6' y='5' width='2' height='1' fill='%23b8402e'/%3E%3Crect x='8' y='5' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='10' y='5' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='6' width='10' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='7' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='7' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='7' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='8' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='8' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='8' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='9' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='9' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='3' y='9' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='9' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='9' width='4' height='1' fill='%23f0b400'/%3E%3Crect x='11' y='9' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%233f6f8f'/%3E%3Crect x='1' y='10' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='10' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='10' width='4' height='1' fill='%233f6f8f'/%3E%3Crect x='2' y='11' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='11' width='1' height='1' fill='%233f6f8f'/%3E%3Crect x='11' y='11' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='12' y='11' width='2' height='1' fill='%233f6f8f'/%3E%3Crect x='2' y='12' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='12' width='4' height='1' fill='%233f6f8f'/%3E%3Crect x='3' y='13' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='7' y='13' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='3' y='14' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='7' y='14' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='2' y='15' width='3' height='1' fill='%23b8402e'/%3E%3Crect x='7' y='15' width='3' height='1' fill='%23b8402e'/%3E%3C/svg%3E"); --art-zombie: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 9' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='6' height='1' fill='%237da35a'/%3E%3Crect x='3' y='1' width='8' height='1' fill='%237da35a'/%3E%3Crect x='2' y='2' width='10' height='1' fill='%237da35a'/%3E%3Crect x='2' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='5' y='3' width='4' height='1' fill='%237da35a'/%3E%3Crect x='9' y='3' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='10' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='11' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='2' y='4' width='10' height='1' fill='%237da35a'/%3E%3Crect x='2' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='5' width='6' height='1' fill='%2317180f'/%3E%3Crect x='10' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='0' y='6' width='1' height='1' fill='%237da35a'/%3E%3Crect x='3' y='6' width='8' height='1' fill='%237da35a'/%3E%3Crect x='13' y='6' width='1' height='1' fill='%237da35a'/%3E%3Crect x='0' y='7' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='7' width='6' height='1' fill='%237da35a'/%3E%3Crect x='12' y='7' width='2' height='1' fill='%237da35a'/%3E%3Crect x='0' y='8' width='2' height='1' fill='%237da35a'/%3E%3Crect x='3' y='8' width='8' height='1' fill='%235a5f6a'/%3E%3Crect x='12' y='8' width='2' height='1' fill='%237da35a'/%3E%3C/svg%3E"); --art-vine: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 13' shape-rendering='crispEdges'%3E%3Crect x='10' y='0' width='1' height='1' fill='%237da35a'/%3E%3Crect x='14' y='0' width='12' height='1' fill='%234f6b33'/%3E%3Crect x='9' y='1' width='2' height='1' fill='%237da35a'/%3E%3Crect x='13' y='1' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='18' y='1' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='1' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='25' y='1' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%237da35a'/%3E%3Crect x='12' y='2' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='17' y='2' width='2' height='1' fill='%237da35a'/%3E%3Crect x='23' y='2' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='3' y='3' width='2' height='1' fill='%237da35a'/%3E%3Crect x='7' y='3' width='6' height='1' fill='%234f6b33'/%3E%3Crect x='23' y='3' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='24' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='6' y='4' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='4' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='4' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='4' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='5' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='5' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='13' y='5' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='5' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='23' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='24' y='6' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='7' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='7' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='11' y='7' width='1' height='1' fill='%237da35a'/%3E%3Crect x='12' y='7' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='7' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='3' y='8' width='2' height='1' fill='%237da35a'/%3E%3Crect x='5' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='13' y='9' width='1' height='1' fill='%237da35a'/%3E%3Crect x='21' y='9' width='1' height='1' fill='%237da35a'/%3E%3Crect x='22' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='10' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='11' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='4' y='12' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='12' width='1' height='1' fill='%234f6b33'/%3E%3C/svg%3E");
+}
+:root[data-skin="dark"] { --ink-soft: #b9b8a6; --paper: #20211a; --edge: color-mix(in srgb, var(--ink) 18%, transparent); }
+body { font-size: 15.5px; line-height: 1.55; }
+.label { letter-spacing: .02em; }
+/* 면: 얇은 테두리, 둥근 모서리, 아래로 살짝 눌린 그림자 */
+.panel, .brief, .trade, .scene-wrap { border: 1px solid var(--edge); border-radius: var(--r); box-shadow: 0 2px 0 color-mix(in srgb, var(--ink) 9%, transparent); }
+.brief, .scene-wrap { overflow: hidden; }
+.trade { background: var(--soft); box-shadow: none; }
+.panel { position: relative; }
+/* 덩굴: 면의 오른쪽 위 모서리와 도트 화면 틀 */
+/* 글자를 가리지 않게 작고 옅게, 테두리 위로 조금 걸쳐서 둔다 */
+.panel::before { content: ''; position: absolute; top: -5px; right: 6px; width: 48px; height: 24px; background: var(--art-vine) no-repeat right top / contain; image-rendering: pixelated; pointer-events: none; opacity: .5; }
+.panel > * { position: relative; }
+.scene-wrap { position: relative; }
+.scene-wrap::after { content: ''; position: absolute; top: 0; left: 0; width: 104px; height: 52px; background: var(--art-vine) no-repeat left top / contain; transform: scaleX(-1); image-rendering: pixelated; pointer-events: none; opacity: .9; }
+/* 마스코트: 머리띠의 우비 소년, 오늘 밤 패널의 담 너머 좀비, 시작 화면 */
+.mast h1::before { content: ''; display: inline-block; width: .62em; height: .71em; margin-right: .18em; background: var(--art-boy) no-repeat center / contain; image-rendering: pixelated; vertical-align: -.06em; }
+#night .panel-head h2::after { content: ''; display: inline-block; width: 28px; height: 18px; margin-left: 8px; background: var(--art-zombie) no-repeat center bottom / contain; image-rendering: pixelated; vertical-align: -3px; }
+.boot-title::before { content: ''; display: block; width: 84px; height: 96px; margin: 0 auto 10px; background: var(--art-boy) no-repeat center / contain; image-rendering: pixelated; }
+/* 단추와 입력 */
+.scavenge { border-radius: 10px; }
+.fortify, .surge, .save-actions button, .pet-pick button, .pet-rename input, .pet-rename button, .zmap-open, .sync-pick, .story-card button, #save-code { border-radius: var(--r-s); }
+.save-actions button, .pet-pick button, .zmap-open { border-width: 1px; }
+.qty, .panes { border-width: 1px; border-color: var(--edge); border-radius: 999px; overflow: hidden; background: var(--soft); }
+.qty button + button, .panes button + button { border-left: 1px solid var(--edge); }
+.panes button { padding: 7px 4px; font-size: 13.5px; }
+.tabbar { gap: 4px; border-bottom: 1px solid var(--edge); }
+.tabbar button { border-radius: 9px 9px 0 0; }
+.tile { border-radius: 6px; border-width: 1px; }
+.pet-face { border-radius: 8px; border-width: 1px; }
+.row { border-radius: var(--r-s); }
+.row:first-child { border-top: 1px solid var(--edge); }
+.row-bar, .track { border-radius: 99px; overflow: hidden; }
+.row-bar { height: 4px; }
+/* 자동 진행 바: 노랑은 '누를 수 있음'의 색이므로, 기다리는 중에는 초록으로 차오른다 */
+.surge:disabled { background: linear-gradient(to right, color-mix(in srgb, var(--safe) 55%, transparent) calc(var(--p, 0) * 100%), var(--soft) 0); color: var(--ink); border-color: var(--edge); }
+.autobar { height: 5px; border-radius: 99px; background: linear-gradient(to right, var(--safe) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--ink) 14%, transparent) 0); }
+/* 도움말·패치노트: 줄 사이를 띄운다 */
+.notes .note li { margin: 0 0 .7em; line-height: 1.75; }
+@media (max-width: 720px) {
+  .mnav { border-top: 1px solid var(--edge); }
+  .mnav button + button { border-left: 0; }
+  .mnav button[aria-pressed="true"] { background: var(--soft); }
+}
+/* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
 <body data-mview="base">
@@ -689,7 +745,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.0</div>
+  <div class="boot-ver">7구역 알파 0.8.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1082,7 +1138,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
-    <p class="ver">7구역 알파 0.8.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1190,7 +1246,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.0";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
 </script>
 <script>
 /*
@@ -1209,6 +1265,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.0";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.1', date: '2026-11-17', at: '2026-11-17 12:20:00', title: '화면을 새로 단장했어요',
+      items: [
+        '각진 검은 테두리를 걷어 냈어요. 모서리를 굴리고, 테두리를 얇게 하고, 흐린 글자를 더 진하게 했어요.',
+        '도트 화면 틀과 패널 모서리에 덩굴이 자라요. 제목 옆에는 우비 소년이, 오늘 밤 패널에는 담 너머의 좀비가, 시작 화면에도 우비 소년이 나와요.',
+        '방벽이 구역마다 달라요. 주택가는 판자, 시장은 좌판 상자와 천막, 공단은 철판, 환승역은 침목을 덧댄 콘크리트, 병원은 흰 격리 패널이에요.',
+        '도움말을 짧게 줄였어요. 몇 %, 몇 배 같은 수치를 빼고 무엇을 하는 곳인지만 적었어요. 탭 순서는 처음, 구역, 수색, 1구역 순이에요.',
+        '전력 투입, 청신호, 수색조의 진행 바를 초록색으로 바꿨어요. 노랑은 누를 수 있는 단추에만 써요.'
+      ] },
     { ver: '알파 0.8.0', date: '2026-11-17', at: '2026-11-17 11:40:00', title: '일지가 소설이 됐어요',
       items: [
         '생존 일지를 처음부터 다시 썼어요. 노란 우비를 입은 아이가 냉장 상자를 들고 7구역으로 가는 이야기예요. 한 편마다 제목이 있고 길이가 훨씬 길어졌어요. 지금 17편이에요.',
@@ -3297,123 +3361,96 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.0";
   /** 도움말 항목을 만든다. 필요한 상수가 없으면(모듈이 어긋난 빌드) 조용히 "undefined" 를 적는 대신 오류를 낸다. */
   function sections(core) {
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
-    ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
-      'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'STREAK_MAX', 'STREAK_BONUS', 'SURGE_MULT', 'SURGE_SECONDS', 'SURGE_COOLDOWN', 'GREEN_SECONDS', 'GREEN_COOLDOWN', 'ASSIST_STEP', 'PET_PULL_SHARE', 'PET_PULL_MIN', 'PET_DUP_REFUND', 'PET_NAME_MAX', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
+    // 도움말에는 효과의 크기(몇 %, 몇 배)를 적지 않는다. 수치는 화면의 단추와 설명에 이미 나오고, 하다 보면 알게 된다.
+    // 여기에는 '무엇을 하는 곳인지'와 '시간'만 적는다. 그래서 필요한 상수도 시간 몇 개뿐이다.
+    ['DAY_SECONDS', 'BATTLE_SECONDS', 'BOSS_EVERY', 'SIGNAL_WINDOW', 'OFFLINE_CAP', 'RETREAT_MIN', 'SWEEP_TILES', 'PET_NAME_MAX'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
     var fmt = core.formatNumber;
     var ready = core.ZONES.filter(function (z) { return z.kind !== 'soon'; });
     var next = core.ZONES[ready.length];
+    function names(list) { return list.map(function (x) { return x.name; }).join(', '); }
 
     return [
       { id: 'flow', tab: '처음', title: '어떤 게임인가요', items: [
-        '1구역에서 시작해 ' + core.ZONES.length + '구역까지 거점을 쌓아 올리는 게임이에요. 다음 구역으로 넘어가도 앞 구역은 남아서 계속 물자를 보내 줘요.',
-        '구역마다 하는 일이 달라요. ' + ready.map(function (z) { return z.no + '구역 ' + z.name + '(' + z.lead + ')'; }).join(', ') + ' 순서예요.',
-        '방치형이라 꺼 두었다 켜도 그동안의 몫을 받아요. 뭘 해야 할지 모르겠으면 화면의 "다음 할 일"을 따라가면 돼요.',
+        '1구역에서 시작해 ' + core.ZONES.length + '구역까지 거점을 넓혀 가는 게임이에요. 다음 구역으로 넘어가도 앞 구역은 남아서 계속 물자를 보내 줘요.',
+        '구역마다 하는 일이 달라요. ' + ready.map(function (z) { return z.no + '구역 ' + z.name; }).join(', ') + ' 순서예요.',
+        '꺼 두었다 켜도 그동안의 몫을 받아요. 뭘 해야 할지 모르겠으면 상황 화면의 "다음 할 일"을 따라가면 돼요.',
         '지금은 ' + ready.length + '구역까지 만들어져 있어요.' + (next ? ' ' + next.no + '구역 ' + topic(next.name) + ' 문 앞까지만 갈 수 있고, 다음 버전에서 열려요.' : '') ] },
 
       { id: 'zone', tab: '구역', title: '구역과 목표', items: [
-        '구역 화면의 번호 탭에서 구역을 골라요. 구역 화면은 운영, 개조, 목표로 나뉘어 있어요. "구역 지도"를 누르면 구역마다 얼마를 버는지 한눈에 볼 수 있어요.',
-        '구역마다 목표가 셋 있어요. 하나를 달성할 때마다 특전 ' + core.PERK_CHOICES + '장 중 하나를 골라요.',
-        '목표 셋을 모두 채우고 물자를 치르면 다음 구역의 문이 열려요. 뒤 구역일수록 문 값이 훨씬 비싸요.',
-        '뒤 구역을 열면 밤에 오는 무리도 커져요(구역 하나마다 3배).' ] },
-
-      { id: 'map', tab: '1구역', title: '1구역: 수색 지도', items: [
-        '동네 하나는 ' + core.SWEEP_TILES + '칸이에요. 칸을 누르면 그 칸을 뒤져서 물자를 얻어요. "잔해 수색" 단추는 다음 칸을 뒤지는 것과 같아요.',
-        '칸마다 나오는 것이 달라요. ' + core.TILE_KINDS.map(function (k) { return k.name + '(수익 ' + k.mult + '배)'; }).join(', ') + '. 뒤져 봐야 알 수 있어요.',
-        core.SWEEP_TILES + '칸을 다 뒤지면 직접 수색 ' + core.SWEEP_BONUS_CLICKS + '번치 보너스를 받고 다음 동네로 넘어가요.',
-        '시설이 하나라도 있으면 ' + span(core.SWEEP_AUTO_SECONDS) + '마다 한 칸씩 알아서 뒤져요. 가만히 있어도 동네는 넘어가요.' ] },
+        '구역 화면의 번호 탭에서 구역을 골라요. 구역마다 운영, 개조, 목표 세 화면이 있어요.',
+        '구역마다 목표가 셋 있어요. 하나를 채울 때마다 특전을 하나 골라요.',
+        '목표를 모두 채우고 물자를 치르면 다음 구역의 문이 열려요. 뒤 구역을 열수록 밤에 오는 무리도 커져요.' ] },
 
       { id: 'click', tab: '수색', title: '직접 수색', items: [
-        '"잔해 수색"을 누르면 물자를 바로 얻어요. 한 번의 기본 수익은 초당 생산의 ' + pct(core.CLICK_SHARE) + ' 에 전체 생산 배수를 더한 값이에요.',
-        '수색 배수가 두 배가 될 때마다 수익이 기본의 1배씩 늘어요(2배 → 2배, 4배 → 3배, 8배 → 4배).',
-        '거점이 비어 있는 판 초반에 첫 물자를 모으기 좋아요. 열심히 눌러도 가만히 둘 때보다 조금 빠른 정도라, 누르지 않아도 뒤처지지 않아요.' ] },
+        '"잔해 수색"을 누르면 물자를 바로 얻어요. 판 초반에 첫 물자를 모으기 좋아요.',
+        '누르지 않아도 뒤처지지 않아요. 열심히 눌러도 가만히 둘 때보다 조금 빠른 정도예요.' ] },
+
+      { id: 'map', tab: '1구역', title: '1구역: 수색 지도', items: [
+        '동네 하나는 ' + core.SWEEP_TILES + '칸이에요. 칸을 누르면 그 칸을 뒤져요. 빈집, 가게, 은닉처 가운데 무엇이 나올지는 뒤져 봐야 알아요.',
+        '다 뒤지면 보너스를 받고 다음 동네로 넘어가요.',
+        '시설이 하나라도 있으면 수색조가 알아서 한 칸씩 뒤져요.' ] },
 
       { id: 'trade', tab: '2구역', title: '2구역: 거래', items: [
-        '좌판이 상품을 만들어요. 상품은 시세를 곱한 값에 팔려요.',
-        '시세는 ' + span(core.PRICE_STEP) + '마다 ' + core.PRICE_FLOOR + ' ~ ' + core.PRICE_CEIL + ' 사이에서 바뀌어요. 개조(흥정, 단골)로 범위를 올릴 수 있어요.',
-        '상품은 좌판이 ' + span(core.GOODS_CAP_SECONDS) + ' 동안 만드는 양까지만 쌓여요.',
-        '"창고가 차면 알아서 판다"가 켜져 있으면(기본) 가만히 둬도 평균 시세만큼은 벌어요. 시세가 높을 때 직접 팔면 그보다 더 벌고요.',
-        '시세판에는 지난 시세가 막대로 남아요. 맨 오른쪽이 지금 시세고, 점선이 평균, 굵은 선이 고점이에요.',
-        '연속 호가: 평균 이상의 시세에서 팔리면 한 단계씩 쌓여요(시세 하나에 한 번, 최대 ' + core.STREAK_MAX + '단계). 단계마다 판매 값이 ' + pct(core.STREAK_BONUS) + ' 늘어요. 자동 판매로도 쌓여요. 평균 아래에서 직접 팔 때만 끊겨요.',
-        '시세 ' + core.PEAK_PRICE + ' 이상에서 판 것은 "고점 판매"로 세요. 2구역 목표 가운데 하나예요.' ] },
+        '좌판이 상품을 만들고, 상품은 그때의 시세로 팔려요. 시세는 계속 오르내려요.',
+        '자동 판매가 켜져 있으면 가만히 둬도 평균만큼은 벌어요. 시세가 높을 때 직접 팔면 더 벌어요.',
+        '평균보다 높은 시세에서 팔리면 "연속 호가"가 쌓여서 판매 값이 올라요. 평균 아래에서 직접 팔면 끊겨요.',
+        '시세판의 점선이 평균, 굵은 선이 고점이에요.' ] },
 
       { id: 'line', tab: '3구역', title: '3구역: 생산 라인', items: [
-        '기계 셋(' + core.MACHINES.map(function (m) { return m.name; }).join(' → ') + ')이 차례로 맞물려 돌아요. 만든 완제품은 바로 물자가 돼요.',
-        '라인은 가장 느린 기계(병목)의 속도로만 나와요. 빠른 기계를 더 올려도 산출은 늘지 않아요. "병목 올리기"를 누르면 그때 가장 느린 기계가 올라요.',
-        '기계마다 레벨당 처리량이 달라요(' + core.MACHINES.map(function (m) { return m.name + ' ' + m.rate; }).join(', ') + '). 처리량이 비슷해지게 맞추면 돼요.',
-        '가동률은 가장 느린 기계 ÷ 가장 빠른 기계예요. 가동률 ' + pct(core.STEADY_AT) + ' 이상이면 "정속 가동"이 되어 산출이 ' + pct(core.STEADY_BONUS) + ' 늘어나요.',
-        '기계 레벨의 합계가 ' + core.LINE_MILESTONES.slice(0, 4).join(', ') + '… 에 닿을 때마다 라인 전체가 2배가 돼요.',
-        '"전력 투입"을 누르면 ' + span(core.SURGE_SECONDS) + ' 동안 라인이 ' + core.SURGE_MULT + '배로 돌아요. ' + span(core.SURGE_COOLDOWN) + ' 뒤에 다시 쓸 수 있어요. 영구 특성 "자동화"를 찍으면 알아서 들어가요.',
-        '자리를 비워도 라인은 나갈 때의 상태 그대로 돌아요. 정속으로 맞춰 두고 나가면 그 시간도 정속 가동으로 쳐 줘요.' ] },
+        '기계 셋(' + core.MACHINES.map(function (m) { return m.name; }).join(' → ') + ')이 차례로 맞물려 돌아요.',
+        '라인은 가장 느린 기계의 속도로만 나와요. "병목 올리기"를 누르면 그때 가장 느린 기계가 올라요.',
+        '세 기계의 속도가 비슷해지면 "정속 가동"이 되어 더 많이 나와요.',
+        '"전력 투입"을 누르면 잠깐 동안 라인이 빨라져요.' ] },
 
       { id: 'rail', tab: '4구역', title: '4구역: 노선', items: [
-        '노선을 복구하고 열차를 사면 운행이 시작돼요. 열차는 달리는 동안 화물을 싣고, 돌아왔을 때 한꺼번에 물자로 바뀌어요.',
-        '노선은 넷이에요. ' + core.ROUTES.map(function (r) { return r.name + '(' + span(r.seconds) + ', 화물 ×' + r.mult + ')'; }).join(', ') + '. 멀리 가는 노선일수록 같은 시간에 더 많이 실어요.',
-        '열차는 화물 배수가 높은 노선부터 알아서 타요. 노선 한 단계마다 열차 ' + core.ROUTE_SLOTS + '대가 다닐 수 있고, 자리가 없는 열차는 쉬어요.',
-        '그래서 고를 것은 열차를 살지, 노선을 늘릴지, 어느 노선을 늘릴지예요. 먼 노선은 비싸지만 열차 한 대가 버는 양이 커요.',
-        '열차가 ' + core.FLEET_MILESTONES.slice(0, 4).join(', ') + '… 대에 닿을 때마다 화물이 2배가 돼요.',
-        '"청신호"를 누르면 달리는 열차들이 ' + span(core.GREEN_SECONDS) + '만큼 앞서 달려요. ' + span(core.GREEN_COOLDOWN) + ' 뒤에 다시 켤 수 있어요. 영구 특성 "자동화"를 찍으면 알아서 켜져요.',
-        '자리를 비운 동안에도 열차는 다녀요. 돌아온 화물은 자리 비움 효율로 받아요.' ] },
+        '노선을 복구하고 열차를 사면 운행이 시작돼요. 열차가 돌아올 때 화물이 물자로 바뀌어요.',
+        '노선은 ' + names(core.ROUTES) + ' 넷이에요. 멀리 가는 노선일수록 오래 걸리지만 더 많이 실어 와요.',
+        '열차는 좋은 노선부터 알아서 타요. 고를 것은 열차를 살지, 어느 노선을 늘릴지예요.',
+        '"청신호"를 누르면 달리는 열차들이 앞당겨 도착해요.' ] },
 
       { id: 'lab', tab: '5구역', title: '5구역: 연구', items: [
-        '연구원을 뽑으면 연구 점수가 모여요. 이 구역은 물자를 직접 만들지 않고, 대신 이번 판의 다른 구역들을 강하게 만들어요.',
-        '과제는 한 번에 ' + core.OFFER_COUNT + '개가 나와요. 점수를 써서 하나를 끝내면 효과를 얻고, 과제 ' + core.OFFER_COUNT + '개가 모두 새로 바뀌어요.',
-        '과제: ' + core.PROJECTS.map(function (p) { return p.name + '(' + p.desc + ')'; }).join(', ') + '.',
-        '같은 과제를 또 끝내면 효과가 곱으로 쌓여요. 대신 과제를 하나 끝낼 때마다 다음 과제에 드는 점수가 ' + core.PROJECT_GROWTH + '배가 돼요. 그래서 무엇을 먼저 키울지가 중요해요.',
-        '마음에 드는 과제가 없으면 "다른 과제 보기"로 다시 뽑을 수 있어요. 과제 값의 ' + pct(core.REROLL_SHARE) + ' 만큼 점수가 들어요.',
-        '자리를 비운 동안에도 점수는 모여요. 철수하면 끝낸 과제의 효과는 사라져요.' ] },
+        '연구원을 뽑으면 연구 점수가 모여요. 이 구역은 물자를 만들지 않고, 다른 구역들을 강하게 만들어요.',
+        '나온 과제 가운데 하나를 골라 점수를 쓰면 효과를 얻고, 과제가 새로 바뀌어요.',
+        '과제를 끝낼수록 다음 과제가 비싸져요. 무엇을 먼저 키울지가 중요해요. 마음에 드는 것이 없으면 다시 뽑을 수 있어요.' ] },
 
       { id: 'night', tab: '밤', title: '밤과 방벽', items: [
-        '하루는 ' + span(core.DAY_SECONDS) + '예요. ' + span(core.DAY_SECONDS - core.BATTLE_SECONDS) + '가 지나면 무리가 도착하고, 남은 ' + span(core.BATTLE_SECONDS) + ' 동안 방벽에서 싸워요.',
-        '승패는 그 ' + span(core.BATTLE_SECONDS) + '가 끝날 때의 방어력으로 갈려요. 싸우는 중에도 보강할 수 있어요.',
-        '막으면 생산 ' + span(core.NIGHT_REWARD_SECONDS) + '치 물자를 얻어요. 이번 판에서 막아낸 밤 한 번마다 생산도 ' + pct(core.WAVE_BONUS) + ' 씩 늘어나요.',
-        '못 막으면 물자의 ' + pct(core.BREACH_LOSS) + ' 를 잃고 농성에 들어가요. 농성 중에는 더 잃지 않지만 얻는 것도 없어요. 한 번 막아내면 풀려요.',
-        core.BOSS_EVERY + '번째 밤마다 변이체가 와요. 규모가 ' + core.BOSS_STRENGTH + '배지만, 막으면 전리품도 ' + core.BOSS_REWARD + '배예요.',
-        '무리는 밤마다 커져서 언젠가는 막을 수 없게 돼요. 그때가 철수를 생각할 때예요.',
-        '가진 방어 수단 가운데 하나가 밤마다 주역으로 뽑혀 방벽 위에 크게 올라와요. 주역마다 싸우는 모습이 달라요. 많이 산 것일수록 자주 나와요. 보이는 모습만 다르고 승패는 방어력으로 정해져요.'
-      ] },
+        '하루의 길이는 ' + span(core.DAY_SECONDS) + ', 그 끝의 ' + span(core.BATTLE_SECONDS) + ' 동안 무리가 와서 방벽에서 싸워요. 싸우는 중에도 보강할 수 있어요.',
+        '방어력이 무리 규모보다 크면 막아요. 막으면 물자를 얻고, 못 막으면 물자를 조금 잃고 다음에 막을 때까지 버티기만 해요.',
+        core.BOSS_EVERY + '번째 밤마다 훨씬 큰 변이체가 와요. 막으면 전리품도 커요.',
+        '가진 방어 수단 가운데 하나가 밤마다 주역으로 뽑혀 방벽 위에 올라와요. 주역마다 싸우는 모습이 달라요.',
+        '무리는 밤마다 커져서 언젠가는 막을 수 없게 돼요. 그때가 철수를 생각할 때예요.' ] },
 
       { id: 'retreat', tab: '철수', title: '철수와 항체 샘플', items: [
-        '이번 판에서 물자 ' + fmt(core.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요(상황 > 철수).',
-        '철수하면 거점을 전부 버리고 1구역에서 다시 시작해요. 물자, 시설, 방벽, 구역 개조, 연 구역, 특전이 사라져요.',
-        '대신 항체 샘플을 얻어요. 이번 판에서 물자를 많이 모았을수록 많이 받아요. 물자를 100배 더 모으면 샘플은 6배쯤이에요.',
-        '벽에 막혀 진행이 느려졌을 때 철수하는 게 좋아요. 너무 일찍 하면 샘플이 적고, 너무 늦으면 시간이 아까워요.',
-        '읽은 일지와 통계는 그대로 남아요.' ] },
+        '이번 판에서 물자 ' + fmt(core.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요.',
+        '철수하면 거점을 버리고 1구역에서 다시 시작해요. 대신 항체 샘플을 얻어요. 많이 모았을수록 많이 받아요.',
+        '진행이 벽에 막혀 느려졌을 때 하는 게 좋아요. 일지, 통계, 영구 특성, 일행은 그대로 남아요.' ] },
 
       { id: 'trait', tab: '특성', title: '특성과 특전', items: [
-        '영구 특성은 항체 샘플로 찍어요(특성 화면). 철수해도 남아요.',
-        '영구 특성: ' + core.TRAITS.map(function (t) { return t.name + '(' + t.desc + ')'; }).join(', ') + '.',
-        '"자동화"는 전력 투입과 청신호를 알아서 써 주는 특성이에요. 2레벨부터는 레벨마다 대기 시간이 ' + pct(core.ASSIST_STEP) + ' 씩 줄어요(절반까지).',
+        '영구 특성은 항체 샘플로 찍고, 철수해도 남아요. ' + names(core.TRAITS) + '이 있어요.',
+        '"자동화"는 전력 투입과 청신호를 알아서 써 줘요. 올릴수록 더 자주 써요.',
         '"특성 되돌리기"를 누르면 쓴 샘플을 모두 돌려받아요. 값이 들지 않으니 판마다 다르게 찍어 봐도 좋아요.',
-        '특전은 이번 판에만 쓰여요. 같은 특전을 또 고르면 레벨이 올라요.',
-        '특전: ' + core.PERKS.map(function (p) { return p.name + '(' + p.desc + ')'; }).join(', ') + '.' ] },
+        '특전은 목표를 채울 때 고르고, 이번 판에만 쓰여요. 같은 것을 또 고르면 레벨이 올라요.' ] },
 
       { id: 'pet', tab: '일행', title: '일행과 동물 친구', items: [
-        '특성 화면의 "일행"에서 강아지나 고양이를 데려올 수 있어요. 첫 친구는 그냥 와요.',
-        '등급이 있어요. ' + core.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%(강아지 방어력 +' + Math.round(r.dog * 100) + '%, 고양이 전체 생산 +' + Math.round(r.cat * 100) + '%)'; }).join(', ') + '.',
-        '다시 데려오려면 항체 샘플이 들어요. 값은 지금까지 얻은 항체 샘플 총량의 ' + pct(core.PET_PULL_SHARE) + ' 예요(최소 ' + core.PET_PULL_MIN + '개). 이미 함께 있는 아이가 또 나오면 ' + pct(core.PET_DUP_REFUND) + ' 를 돌려받아요.',
-        '한 번 데려온 아이는 계속 일행에 남아요. 그중 누구를 데리고 다닐지 고를 수 있고, 효과는 데리고 다니는 아이 것만 적용돼요.',
-        '친구들: ' + core.PET_BREEDS.map(function (b) { return b.name; }).join(', ') + '.',
-        '친구와 주인공의 이름은 언제든 바꿀 수 있어요(' + core.PET_NAME_MAX + '글자까지). 철수해도 모두 함께 가요.' ] },
+        '특성 화면의 "일행"에서 강아지나 고양이를 데려올 수 있어요. 첫 친구는 그냥 와요. 강아지는 방어를, 고양이는 생산을 도와요.',
+        '기본, 고급, 희귀 등급이 있고 등급이 높을수록 효과가 좋아요. 다시 데려오려면 항체 샘플이 들어요.',
+        '한 번 데려온 아이는 계속 남아요. 그중 누구를 데리고 다닐지 고를 수 있어요.',
+        '친구와 주인공의 이름은 언제든 바꿀 수 있어요(' + core.PET_NAME_MAX + '글자까지).' ] },
 
       { id: 'signal', tab: '신호', title: '구조 신호', items: [
-        '가끔 무전기에 구조 신호가 잡혀요. 보유 물자 아래에 단추가 뜨는데, ' + span(core.SIGNAL_WINDOW) + ' 안에 누르면 응답할 수 있어요.',
-        '응답하면 둘 중 하나를 얻어요(반반). 생산 ' + span(core.SIGNAL_SUPPLY_SECONDS) + '치 물자, 또는 ' + span(core.BUFF_SECONDS) + ' 동안 생산 ' + core.BUFF_MULT + '배예요. 놓쳐도 잃는 것은 없어요.' ] },
+        '가끔 무전기에 구조 신호가 잡혀요. ' + span(core.SIGNAL_WINDOW) + ' 안에 단추를 누르면 응답할 수 있어요.',
+        '응답하면 물자를 받거나 잠깐 동안 생산이 늘어요. 놓쳐도 잃는 것은 없어요.' ] },
 
       { id: 'away', tab: '자리 비움', title: '자리 비움', items: [
-        '게임을 꺼 둔 동안에도 물자가 쌓여요. 최대 ' + span(core.OFFLINE_CAP) + '치를, 평소 생산의 ' + pct(core.OFFLINE_RATE) + ' 효율로 받아요.',
-        '2구역은 평균 시세로 판 것으로 쳐요. 3구역 라인은 나갈 때의 상태 그대로 돈 것으로 쳐요. 4구역 열차는 그동안 다녀온 만큼 화물을 내려요.',
-        '자리를 비운 동안에도 밤은 지나가요. 막을 수 있는 밤은 막아서 전리품을 얻고, 못 막는 밤부터는 잃는 것 없이 버티기만 해요.' ] },
+        '게임을 꺼 둔 동안에도 물자가 쌓여요. 최대 ' + span(core.OFFLINE_CAP) + '치까지 받아요. 켜 둘 때보다는 적게 쌓여요.',
+        '그동안에도 밤은 지나가요. 막을 수 있는 밤은 막고, 못 막는 밤부터는 잃는 것 없이 버텨요.' ] },
 
       { id: 'etc', tab: '그 밖에', title: '그 밖에', items: [
         '진행은 10초마다 자동으로 저장돼요. 기록 > 설정에서 저장 코드를 복사해 두면 백업이 돼요.',
-        '알파 0.5 까지의 저장은 구조가 달라서 이어지지 않아요.',
-        '사건, 생존자 배치, 원정은 뒤 구역을 만들면서 다시 넣을 예정이에요.',
-        '기록 > 설정에서 테마, 효과음, 진동, 숫자 표기(1.23억 / 1.23e8), 새 일지를 바로 띄울지, 화면 흔들림을 바꿀 수 있어요.'
-      ] }
+        '설정에서 테마, 효과음, 진동, 숫자 표기, 새 일지를 바로 띄울지, 화면 흔들림을 바꿀 수 있어요.' ] }
     ];
   }
 
@@ -4041,10 +4078,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.0";
     // 방벽: 방어 수단의 종류가 늘수록 높아지고 철판으로 바뀐다
     var wh = 7 + kinds * 3, wx = model.wall + (model.shake > 0 ? (Math.floor(t * 30) % 2 ? 1 : -1) : 0);
     var tw = model.wall - 10; // 감시탑 기둥 위치
-    ctx.fillStyle = kinds >= 3 ? lerpColor('#7b8186', '#2c3035', sky.dark) : lerpColor('#7a5a36', '#2a1f14', sky.dark);
-    ctx.fillRect(wx, GROUND - wh, 4, wh);
-    ctx.fillStyle = '#17180f';
-    for (i = 3; i < wh; i += 4) ctx.fillRect(wx, GROUND - i, 4, 1);
+    drawWall(ctx, view, sky, wx, wh, kinds);
     if (d.wire > 0) { ctx.fillStyle = '#c9c2a3'; for (i = 0; i < 6; i++) ctx.fillRect(wx - 1 + i, GROUND - wh - 1 - (i % 2), 1, 1); }
     if (d.tower > 0) {
       ctx.fillStyle = lerpColor('#5b4630', '#1c160f', sky.dark);
@@ -4057,6 +4091,50 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.0";
     drawZoneDefense(ctx, model, view, sky, wx, wh);
     drawLead(ctx, model, view, sky, wx, wh);
     if (d.emp > 0 && Math.floor(t * 5) % 3 === 0) { ctx.fillStyle = '#7fe0f0'; ctx.fillRect(wx + 1 + Math.floor(t * 13) % 4, GROUND - wh - 6 - Math.floor(t * 17) % 4, 1, 2); }
+  }
+
+  /*
+   * 방벽의 생김새: 가장 멀리 연 구역에 따라 재료가 달라진다(높이는 전과 같이 방어 수단의 종류 수로 정한다).
+   *   0 주택가 판자 울타리, 1 시장 좌판 상자와 천막, 2 공단 철판과 경고 띠, 3 환승역 콘크리트와 침목,
+   *   4 병원 흰 격리 패널과 모래주머니, 5 이후 콘크리트 차단벽. 모르는 구역은 마지막 것.
+   */
+  var WALL_STYLES = ['plank', 'crate', 'steel', 'tie', 'panel', 'concrete'];
+  function wallStyle(zone) {
+    var z = typeof zone === 'number' && isFinite(zone) && zone > 0 ? Math.floor(zone) : 0;
+    return WALL_STYLES[Math.min(z, WALL_STYLES.length - 1)];
+  }
+  function drawWall(ctx, view, sky, wx, wh, kinds) {
+    var style = wallStyle(view.zone), top = GROUND - wh, i;
+    function c(day, night) { return lerpColor(day, night, sky.dark * 0.85); }
+    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
+    var dark = c('#17180f', '#0b0c08');
+    if (style === 'plank') {                 // 판자: 높이가 들쭉날쭉한 널빤지 넷, 가로 버팀목, 못
+      for (i = 0; i < 4; i++) r(c(i % 2 ? '#8a6a44' : '#7a5a36', i % 2 ? '#332618' : '#2a1f14'), wx + i, top - (i % 2 ? 1 : 0) - (i === 2 ? 1 : 0), 1, wh + (i % 2 ? 1 : 0) + (i === 2 ? 1 : 0));
+      r(c('#5b4630', '#1c160f'), wx - 1, top + 2, 6, 1); r(c('#5b4630', '#1c160f'), wx - 1, GROUND - 3, 6, 1);
+      r(c('#c9c2a3', '#5a5648'), wx + 1, top + 2, 1, 1); r(c('#c9c2a3', '#5a5648'), wx + 3, GROUND - 3, 1, 1);
+      r(c('#5b4630', '#1c160f'), wx - 3, GROUND - 4, 1, 4); r(c('#5b4630', '#1c160f'), wx - 2, GROUND - 5, 1, 2);        // 안쪽 버팀목
+    } else if (style === 'crate') {          // 좌판 상자: 쌓은 궤짝, 맨 위에 줄무늬 천막
+      for (i = 0; i < wh; i += 4) { r(c(i % 8 ? '#9a6a3a' : '#8a5a34', '#35241a'), wx - 1, GROUND - i - 4, 6, 4); r(c('#5b3d22', '#1c130b'), wx - 1, GROUND - i - 4, 6, 1); r(c('#5b3d22', '#1c130b'), wx + 2, GROUND - i - 4, 1, 4); }
+      for (i = 0; i < 4; i++) r(i % 2 ? c('#e6e5db', '#6a6960') : c('#b8402e', '#4a1a14'), wx - 2 + i * 2, top - 2, 2, 2);
+    } else if (style === 'steel') {          // 철판: 리벳과 노랑·검정 경고 띠
+      r(c('#7b8186', '#2c3035'), wx, top, 4, wh); r(c('#5d6266', '#1c1f23'), wx + 3, top, 1, wh);
+      for (i = 2; i < wh - 2; i += 3) { r(dark, wx, GROUND - i, 1, 1); r(dark, wx + 2, GROUND - i - 1, 1, 1); }
+      for (i = 0; i < 4; i++) r(i % 2 ? dark : c('#f0b400', '#8a6a08'), wx + i, top, 1, 2);
+      r(c('#5d6266', '#1c1f23'), wx - 2, GROUND - 6, 2, 6);                                                              // 안쪽 지지대
+    } else if (style === 'tie') {            // 환승역: 콘크리트 기둥에 침목을 가로로 덧대고, 위에 역 표지
+      r(c('#8f8b80', '#2a2925'), wx, top, 4, wh);
+      for (i = 2; i < wh; i += 3) r(c('#4a3a2a', '#17120c'), wx - 1, GROUND - i - 1, 6, 1);
+      r(c('#f0b400', '#8a6a08'), wx - 1, top - 3, 6, 3); r(dark, wx, top - 2, 4, 1);
+    } else if (style === 'panel') {          // 병원: 흰 격리 패널과 붉은 십자, 발치의 모래주머니
+      r(c('#d9d8cf', '#55554e'), wx, top, 4, wh); r(c('#b9b8ab', '#3c3c36'), wx, top, 4, 1);
+      for (i = 5; i < wh; i += 5) r(c('#9a9a94', '#2e2e2a'), wx, GROUND - i, 4, 1);
+      if (wh >= 9) { r(c('#a8261b', '#5a1a14'), wx + 1, top + 2, 2, 4); r(c('#a8261b', '#5a1a14'), wx, top + 3, 4, 2); }
+      r(c('#a89a72', '#3a3526'), wx - 3, GROUND - 2, 3, 2); r(c('#a89a72', '#3a3526'), wx + 4, GROUND - 2, 3, 2); r(c('#8a7d58', '#2a2619'), wx - 2, GROUND - 4, 3, 2);
+    } else {                                 // 콘크리트 차단벽: 아래가 넓고 붉은 띠
+      r(c('#8d8a80', '#2a2925'), wx, top, 4, wh); r(c('#6f6c63', '#1f1e1b'), wx - 1, GROUND - 3, 6, 3);
+      r(c('#a8261b', '#3a1310'), wx, top + 2, 4, 1); r(c('#e6e5db', '#55544c'), wx, top + 3, 4, 1);
+    }
+    if (kinds >= 3 && style !== 'steel') { r(c('#7b8186', '#2c3035'), wx + 3, top + 1, 1, wh - 1); }                       // 방어 수단이 많으면 바깥쪽에 철판을 덧댄다
   }
 
   /**
@@ -4627,7 +4705,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.0";
     };
   }
 
-  return { leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
+  return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });

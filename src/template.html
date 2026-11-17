@@ -664,6 +664,62 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 @media (prefers-reduced-motion: reduce) { .shake, .pop, .signal, .story-veil, .story-card p::after { animation: none; }
   .toast { animation: toast-still 4.2s forwards; }
   @keyframes toast-still { 0%, 95% { opacity: 1; } 100% { opacity: 0; } } .scavenge { transition: none; } }
+
+/* ====== 새 얼굴 시작 ====== */
+/* 알파 0.8.1: 각진 검은 테두리를 걷어 내고, 모서리를 굴리고, 면과 여백으로 구획을 나눈다.
+ *   위의 규칙을 고치지 않고 여기서 덮어쓴다(되돌리기 쉽게). 그림은 도트를 SVG 로 옮긴 것이다.
+ *   --art-boy 우비 소년, --art-zombie 담 너머의 좀비, --art-vine 모서리의 덩굴 */
+:root {
+  --r: 12px; --r-s: 8px;
+  --edge: color-mix(in srgb, var(--ink) 22%, transparent);
+  --soft: color-mix(in srgb, var(--ink) 6%, transparent);
+  --ink-soft: #484a3e;
+  --art-boy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='1' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='2' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='5' y='2' width='4' height='1' fill='%23f1c9a0'/%3E%3Crect x='9' y='2' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='3' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='5' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='6' y='3' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='8' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='9' y='3' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='4' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='4' width='6' height='1' fill='%23f1c9a0'/%3E%3Crect x='10' y='4' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='5' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='5' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='6' y='5' width='2' height='1' fill='%23b8402e'/%3E%3Crect x='8' y='5' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='10' y='5' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='6' width='10' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='7' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='7' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='7' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='8' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='8' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='8' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='9' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='9' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='3' y='9' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='9' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='9' width='4' height='1' fill='%23f0b400'/%3E%3Crect x='11' y='9' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%233f6f8f'/%3E%3Crect x='1' y='10' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='10' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='10' width='4' height='1' fill='%233f6f8f'/%3E%3Crect x='2' y='11' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='11' width='1' height='1' fill='%233f6f8f'/%3E%3Crect x='11' y='11' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='12' y='11' width='2' height='1' fill='%233f6f8f'/%3E%3Crect x='2' y='12' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='12' width='4' height='1' fill='%233f6f8f'/%3E%3Crect x='3' y='13' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='7' y='13' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='3' y='14' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='7' y='14' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='2' y='15' width='3' height='1' fill='%23b8402e'/%3E%3Crect x='7' y='15' width='3' height='1' fill='%23b8402e'/%3E%3C/svg%3E"); --art-zombie: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 9' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='6' height='1' fill='%237da35a'/%3E%3Crect x='3' y='1' width='8' height='1' fill='%237da35a'/%3E%3Crect x='2' y='2' width='10' height='1' fill='%237da35a'/%3E%3Crect x='2' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='5' y='3' width='4' height='1' fill='%237da35a'/%3E%3Crect x='9' y='3' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='10' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='11' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='2' y='4' width='10' height='1' fill='%237da35a'/%3E%3Crect x='2' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='5' width='6' height='1' fill='%2317180f'/%3E%3Crect x='10' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='0' y='6' width='1' height='1' fill='%237da35a'/%3E%3Crect x='3' y='6' width='8' height='1' fill='%237da35a'/%3E%3Crect x='13' y='6' width='1' height='1' fill='%237da35a'/%3E%3Crect x='0' y='7' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='7' width='6' height='1' fill='%237da35a'/%3E%3Crect x='12' y='7' width='2' height='1' fill='%237da35a'/%3E%3Crect x='0' y='8' width='2' height='1' fill='%237da35a'/%3E%3Crect x='3' y='8' width='8' height='1' fill='%235a5f6a'/%3E%3Crect x='12' y='8' width='2' height='1' fill='%237da35a'/%3E%3C/svg%3E"); --art-vine: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 13' shape-rendering='crispEdges'%3E%3Crect x='10' y='0' width='1' height='1' fill='%237da35a'/%3E%3Crect x='14' y='0' width='12' height='1' fill='%234f6b33'/%3E%3Crect x='9' y='1' width='2' height='1' fill='%237da35a'/%3E%3Crect x='13' y='1' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='18' y='1' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='1' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='25' y='1' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%237da35a'/%3E%3Crect x='12' y='2' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='17' y='2' width='2' height='1' fill='%237da35a'/%3E%3Crect x='23' y='2' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='3' y='3' width='2' height='1' fill='%237da35a'/%3E%3Crect x='7' y='3' width='6' height='1' fill='%234f6b33'/%3E%3Crect x='23' y='3' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='24' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='6' y='4' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='4' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='4' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='4' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='5' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='5' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='13' y='5' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='5' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='23' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='24' y='6' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='7' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='7' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='11' y='7' width='1' height='1' fill='%237da35a'/%3E%3Crect x='12' y='7' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='7' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='3' y='8' width='2' height='1' fill='%237da35a'/%3E%3Crect x='5' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='13' y='9' width='1' height='1' fill='%237da35a'/%3E%3Crect x='21' y='9' width='1' height='1' fill='%237da35a'/%3E%3Crect x='22' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='10' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='11' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='4' y='12' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='12' width='1' height='1' fill='%234f6b33'/%3E%3C/svg%3E");
+}
+:root[data-skin="dark"] { --ink-soft: #b9b8a6; --paper: #20211a; --edge: color-mix(in srgb, var(--ink) 18%, transparent); }
+body { font-size: 15.5px; line-height: 1.55; }
+.label { letter-spacing: .02em; }
+/* 면: 얇은 테두리, 둥근 모서리, 아래로 살짝 눌린 그림자 */
+.panel, .brief, .trade, .scene-wrap { border: 1px solid var(--edge); border-radius: var(--r); box-shadow: 0 2px 0 color-mix(in srgb, var(--ink) 9%, transparent); }
+.brief, .scene-wrap { overflow: hidden; }
+.trade { background: var(--soft); box-shadow: none; }
+.panel { position: relative; }
+/* 덩굴: 면의 오른쪽 위 모서리와 도트 화면 틀 */
+/* 글자를 가리지 않게 작고 옅게, 테두리 위로 조금 걸쳐서 둔다 */
+.panel::before { content: ''; position: absolute; top: -5px; right: 6px; width: 48px; height: 24px; background: var(--art-vine) no-repeat right top / contain; image-rendering: pixelated; pointer-events: none; opacity: .5; }
+.panel > * { position: relative; }
+.scene-wrap { position: relative; }
+.scene-wrap::after { content: ''; position: absolute; top: 0; left: 0; width: 104px; height: 52px; background: var(--art-vine) no-repeat left top / contain; transform: scaleX(-1); image-rendering: pixelated; pointer-events: none; opacity: .9; }
+/* 마스코트: 머리띠의 우비 소년, 오늘 밤 패널의 담 너머 좀비, 시작 화면 */
+.mast h1::before { content: ''; display: inline-block; width: .62em; height: .71em; margin-right: .18em; background: var(--art-boy) no-repeat center / contain; image-rendering: pixelated; vertical-align: -.06em; }
+#night .panel-head h2::after { content: ''; display: inline-block; width: 28px; height: 18px; margin-left: 8px; background: var(--art-zombie) no-repeat center bottom / contain; image-rendering: pixelated; vertical-align: -3px; }
+.boot-title::before { content: ''; display: block; width: 84px; height: 96px; margin: 0 auto 10px; background: var(--art-boy) no-repeat center / contain; image-rendering: pixelated; }
+/* 단추와 입력 */
+.scavenge { border-radius: 10px; }
+.fortify, .surge, .save-actions button, .pet-pick button, .pet-rename input, .pet-rename button, .zmap-open, .sync-pick, .story-card button, #save-code { border-radius: var(--r-s); }
+.save-actions button, .pet-pick button, .zmap-open { border-width: 1px; }
+.qty, .panes { border-width: 1px; border-color: var(--edge); border-radius: 999px; overflow: hidden; background: var(--soft); }
+.qty button + button, .panes button + button { border-left: 1px solid var(--edge); }
+.panes button { padding: 7px 4px; font-size: 13.5px; }
+.tabbar { gap: 4px; border-bottom: 1px solid var(--edge); }
+.tabbar button { border-radius: 9px 9px 0 0; }
+.tile { border-radius: 6px; border-width: 1px; }
+.pet-face { border-radius: 8px; border-width: 1px; }
+.row { border-radius: var(--r-s); }
+.row:first-child { border-top: 1px solid var(--edge); }
+.row-bar, .track { border-radius: 99px; overflow: hidden; }
+.row-bar { height: 4px; }
+/* 자동 진행 바: 노랑은 '누를 수 있음'의 색이므로, 기다리는 중에는 초록으로 차오른다 */
+.surge:disabled { background: linear-gradient(to right, color-mix(in srgb, var(--safe) 55%, transparent) calc(var(--p, 0) * 100%), var(--soft) 0); color: var(--ink); border-color: var(--edge); }
+.autobar { height: 5px; border-radius: 99px; background: linear-gradient(to right, var(--safe) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--ink) 14%, transparent) 0); }
+/* 도움말·패치노트: 줄 사이를 띄운다 */
+.notes .note li { margin: 0 0 .7em; line-height: 1.75; }
+@media (max-width: 720px) {
+  .mnav { border-top: 1px solid var(--edge); }
+  .mnav button + button { border-left: 0; }
+  .mnav button[aria-pressed="true"] { background: var(--soft); }
+}
+/* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
 <body data-mview="base">
@@ -677,7 +733,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.0</div>
+  <div class="boot-ver">7구역 알파 0.8.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -935,7 +991,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
-    <p class="ver">7구역 알파 0.8.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
