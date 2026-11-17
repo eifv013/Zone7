@@ -30,6 +30,7 @@
 
   var state = null;
   var qtyMode = 1;           // 1 | 10 | 'max'
+  var railFlash = {};        // 노선별로 마지막 열차가 도착한 시각(ms): 노선도에서 도착 불빛을 잠깐 켠다
   var pane = 'play';         // 구역 화면 안에서 보고 있는 것: 'play'(운영) | 'up'(강화) | 'goal'(목표)
   var tab = 'z0';            // 구역 화면에서 보고 있는 탭: 'z0'(1구역), 'z1'(2구역), 'z2'(3구역 문 앞), 'wall'(방벽)
   var lastFrame = 0, lastSave = 0, nextFlavor = 0;
@@ -605,6 +606,47 @@
     } catch (e) { /* 그림이 없어도 숫자로 다 보인다 */ }
   }
 
+  /**
+   * 4구역 노선도를 그린다(320×92 도트). 왼쪽이 환승역이고, 노선 넷이 위에서 아래로 놓인다(먼 노선일수록 길다).
+   *   - 복구한 노선은 실선, 끊긴 노선은 점선이다. 열차는 종점까지 갔다가 돌아온다(운행 시계의 절반이 가는 길).
+   *   - 방금 도착한 노선은 역 쪽에 불빛이 잠깐 켜진다.
+   * 그리다 실패해도 게임은 계속된다: 같은 정보가 아래 목록에 글로 있다.
+   */
+  function drawRail(plan) {
+    try {
+      var cv = $('railmap'), g = cv.getContext('2d'), css = getComputedStyle(document.body);
+      var ink = css.getPropertyValue('--ink').trim() || '#17180f', hazard = css.getPropertyValue('--hazard').trim() || '#f0b400', soft = css.getPropertyValue('--ink-soft').trim() || '#666';
+      var W = cv.width, H = cv.height, x0 = 30, ends = [110, 170, 240, 306], now = Date.now();
+      g.clearRect(0, 0, W, H);
+      C.ROUTES.forEach(function (d, i) {
+        var y = 12 + i * 22, x1 = ends[i], lv = state.routes[d.id], n = plan.riders[d.id];
+        // 선로와 침목
+        g.fillStyle = lv ? ink : soft;
+        if (lv) { g.fillRect(x0, y, x1 - x0, 2); for (var tx = x0 + 4; tx < x1; tx += 8) g.fillRect(tx, y - 2, 2, 6); }
+        else for (var dx = x0; dx < x1; dx += 8) g.fillRect(dx, y, 4, 2);
+        // 종점
+        g.fillStyle = lv ? ink : soft; g.fillRect(x1 - 2, y - 5, 8, 12);
+        if (!lv) return;
+        // 열차: 운행 시계의 앞 절반은 가는 길, 뒤 절반은 오는 길. 여러 대는 조금씩 뒤따른다(세 대까지만 그린다).
+        var trip = C.tripSeconds(state, d.id), p = Math.max(0, Math.min(1, state.routeClock[d.id] / trip));
+        for (var k = 0; k < Math.min(3, n); k++) {
+          var q = Math.max(0, Math.min(1, p - k * 0.04)), pos = q < 0.5 ? q * 2 : 2 - q * 2, back = q >= 0.5;
+          var x = Math.round(x0 + 4 + pos * (x1 - x0 - 16));
+          g.fillStyle = hazard; g.fillRect(x, y - 5, 10, 7);
+          g.fillStyle = ink; g.fillRect(back ? x : x + 8, y - 5, 2, 7); g.fillRect(x + 1, y + 2, 2, 2); g.fillRect(x + 7, y + 2, 2, 2);
+          if (back) { g.fillStyle = soft; g.fillRect(x + 3, y - 8, 5, 3); }      // 돌아오는 열차는 화물을 실었다
+        }
+        // 도착 불빛(0.7초)
+        if (railFlash[d.id] && now - railFlash[d.id] < 700) { g.fillStyle = hazard; g.fillRect(x0 - 2, y - 7, 6, 16); g.fillRect(x0 + 6, y - 9, 3, 3); g.fillRect(x0 + 8, y + 6, 3, 3); }
+      });
+      // 환승역
+      g.fillStyle = ink; g.fillRect(4, 4, 24, H - 8);
+      g.fillStyle = css.getPropertyValue('--concrete').trim() || '#cfcfc4';
+      for (var wy = 10; wy < H - 12; wy += 12) { g.fillRect(8, wy, 6, 6); g.fillRect(18, wy, 6, 6); }
+      g.fillStyle = hazard; g.fillRect(4, 4, 24, 3);
+    } catch (e) { /* 그림이 없어도 아래 목록으로 다 보인다 */ }
+  }
+
   function confirmBox(title, text, noText, yesText, onYes) {
     setText($('confirm-title'), title);
     setText($('confirm-text'), text);
@@ -1056,6 +1098,11 @@
         setText(r.cost, isFinite(cost) ? (lv ? '증편 ' : '복구 ') + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies);
       });
+      drawRail(plan);
+      var gb = $('green'), running = 0;
+      C.ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
+      gb.disabled = state.greenCool > 0 || !running;
+      setText(gb, state.greenCool > 0 ? '청신호 충전 ' + clock(state.greenCool) : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
       setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
         : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
@@ -1195,7 +1242,11 @@
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
           toast('목표 달성 · ' + ev.text); sfx('buy');
           break;
-        case 'train': if (ev.long) { log(ev.name + '이 돌아왔다. 화물 ' + fmt(ev.gain) + '.', 'good'); toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); } break;   // 짧은 노선은 너무 자주 오므로 적지 않는다
+        case 'train':
+          railFlash[ev.route] = Date.now();
+          if (ev.long) { log(ev.name + '이 돌아왔다. 화물 ' + fmt(ev.gain) + '.', 'good'); toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
+          else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
+          break;
         case 'sold': if (ev.peak) log('좋은 시세(×' + ev.price.toFixed(2) + ')에 상품이 팔렸다. 물자 ' + fmt(ev.gain) + '.', 'good'); break;
         case 'story':
           log('일지에 새 기록을 남겼다. ' + ev.text, 'story');
@@ -1339,6 +1390,15 @@
     $('lab-reroll').addEventListener('click', function () {
       if (!C.rerollOffers(state).ok) return;
       sfx('buy'); render();
+    });
+    // 4구역: 청신호. 이 신호로 도착한 열차가 있으면 평소의 도착 알림을 그대로 낸다.
+    $('green').addEventListener('click', function () {
+      var r = C.greenSignal(state);
+      if (!r.ok) return;
+      var gain = 0; r.arrivals.forEach(function (ev) { gain += ev.gain; });
+      if (gain > 0) popNumber('+' + fmt(gain));
+      handleEvents(r.arrivals);
+      sfx('click'); render();
     });
     // 3구역: 전력 투입
     $('surge').addEventListener('click', function () {

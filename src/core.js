@@ -82,6 +82,8 @@
   var ROUTE_GROWTH = 2.2;          // 노선을 한 단계 늘릴 때마다 값이 오르는 배수
   var ROUTE_SLOTS = 2;             // 노선 한 단계마다 다닐 수 있는 열차 수
   var ROUTE_MAX = 25;              // 노선의 최대 단계
+  var GREEN_SECONDS = 30;          // 청신호 한 번에 열차들이 앞서 달리는 시간
+  var GREEN_COOLDOWN = 120;        // 청신호를 다시 켤 수 있을 때까지의 시간
   var FLEET_MILESTONES = [4, 8, 12, 16, 24, 32, 48, 64, 80, 100]; // 열차가 이 수에 닿을 때마다 화물 2배
   // 5구역 연구
   var STAFF_COST = 5e23;           // 첫 연구원의 값
@@ -289,6 +291,7 @@
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
+      greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
       // 밤
@@ -362,6 +365,7 @@
     s.offers = [];
     (Array.isArray(raw.offers) ? raw.offers : []).forEach(function (id) { if (findById(PROJECTS, id) && s.offers.indexOf(id) < 0 && s.offers.length < OFFER_COUNT) s.offers.push(id); });
     s.trains = Math.min(s.trains, TRAIN_MAX);
+    s.greenCool = clamp(safeNum(raw.greenCool, 0), 0, GREEN_COOLDOWN);
     s.routes = counts(ROUTES, raw.routes, ROUTE_MAX);
     ROUTES.forEach(function (d) {
       var rc = raw.routeClock && typeof raw.routeClock === 'object' ? raw.routeClock[d.id] : 0, rl = raw.routeLoad && typeof raw.routeLoad === 'object' ? raw.routeLoad[d.id] : 0;
@@ -795,6 +799,23 @@
     state.points += researchRate(state) * dt;
   }
 
+  /**
+   * 청신호: 달리고 있는 열차들이 GREEN_SECONDS 초만큼 앞서 달린다(그만큼 화물도 싣는다). GREEN_COOLDOWN 초 뒤에 다시 켤 수 있다.
+   * 늘 챙겨 켜도 평균 +25% 정도다. 도착 직전의 열차를 당겨 바로 들어오게 하는 손맛이 쓸모다. 달리는 열차가 없으면 켤 수 없다.
+   * 돌려주는 값: { ok, arrivals: 이 신호로 도착한 열차의 'train' 사건들 }
+   */
+  function greenSignal(state) {
+    if (!zoneOpen(state, 3)) return fail('locked');
+    if (state.greenCool > 0) return fail('cooldown');
+    var plan = railPlan(state), running = 0;
+    ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
+    if (!running) return fail('stopped');
+    var events = [];
+    stepRail(state, GREEN_SECONDS, events);
+    state.greenCool = GREEN_COOLDOWN;
+    return { ok: true, arrivals: events };
+  }
+
   /* ---------- 구역 강화 ---------- */
   function upgradeCost(state, id) {
     var def = findById(UPGRADES, id);
@@ -1156,6 +1177,7 @@
     stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
+    if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
     stepLab(state, dt, rng);
 
     if (state.signalLeft > 0) {
@@ -1191,6 +1213,7 @@
     if (!(counted > 0)) return report;
     state.buff = null;
     state.signalLeft = 0;
+    state.greenCool = Math.max(0, state.greenCool - elapsed);
     state.surgeLeft = 0; state.surgeCool = Math.max(0, state.surgeCool - elapsed);      // 전력 투입은 자리를 비우면 끝난 것으로 친다
     var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
     report.gain = searchRate(state) * counted * rate + trade + line;
@@ -1300,6 +1323,7 @@
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
+    GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,

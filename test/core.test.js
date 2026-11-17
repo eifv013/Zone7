@@ -1303,3 +1303,39 @@ test('전력 투입: 잠긴 구역, 자리 비움, 저장', () => {
   const bad = C.sanitizeState({ version: 2, zone: 2, surgeLeft: 1e9, surgeCool: -5 }, 0);
   assert.equal(bad.surgeLeft, C.SURGE_SECONDS); assert.equal(bad.surgeCool, 0);
 });
+
+/* ================= 4구역: 청신호 ================= */
+
+test('청신호: 달리는 열차가 정해진 시간만큼 앞서 달리고 화물도 그만큼 싣는다', () => {
+  const s = inStation(); s.defenses.rail = 1e5; s.signalIn = 1e9;
+  assert.equal(C.greenSignal(s).reason, 'stopped', '달리는 열차가 없으면 켤 수 없다');
+  s.trains = 2; s.routes.river = 1;
+  const river = C.ROUTES.find(r => r.id === 'river');
+  let r = C.greenSignal(s);
+  assert.ok(r.ok); assert.deepEqual(r.arrivals, []);
+  near(s.routeClock.river, C.GREEN_SECONDS);
+  near(s.routeLoad.river, 2 * C.GREEN_SECONDS);
+  assert.equal(C.greenSignal(s).reason, 'cooldown');
+  // 도착 직전의 열차는 청신호로 바로 들어온다
+  C.tick(s, river.seconds - C.GREEN_SECONDS - 10, half);
+  assert.equal(s.railEarned, 0);
+  s.greenCool = 0;
+  r = C.greenSignal(s);
+  assert.equal(r.arrivals.length, 1);
+  assert.equal(r.arrivals[0].route, 'river');
+  assert.ok(s.railEarned > 0);
+  near(s.routeClock.river, C.GREEN_SECONDS - 10);
+  C.tick(s, C.GREEN_COOLDOWN, half);
+  assert.equal(s.greenCool, 0);
+});
+
+test('청신호: 잠긴 구역, 자리 비움, 저장', () => {
+  assert.equal(C.greenSignal(inFactory()).reason, 'locked');
+  const s = inStation(); s.defenses.rail = 1e5; s.trains = 1; s.routes.loop = 1;
+  C.greenSignal(s);
+  assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
+  C.applyOffline(s, 1000);
+  assert.equal(s.greenCool, 0);
+  const bad = C.sanitizeState({ version: 2, zone: 3, greenCool: 1e9 }, 0);
+  assert.equal(bad.greenCool, C.GREEN_COOLDOWN);
+});
