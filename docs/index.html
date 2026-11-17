@@ -971,7 +971,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.19</div>
+  <div class="boot-ver">7구역 알파 0.9.20</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1192,7 +1192,7 @@ setTimeout(function () {
     </section>
 
     <div class="mv" data-view="base">
-    <section class="panel m-only" aria-label="현재 위치와 최근 일지">
+    <section class="panel m-only" aria-label="현재 위치와 최근 무전">
       <div class="label" id="m-zone-trait"></div>
       <p class="m-story" id="m-story"></p>
       <div class="goal"><span class="label">다음 할 일</span><span id="m-goal"></span><button type="button" class="goal-go" id="m-goal-go" hidden>바로 가기</button></div>
@@ -1415,7 +1415,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.19 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.20 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1540,7 +1540,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.19";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.20";
 </script>
 <script>
 /*
@@ -1559,6 +1559,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.19";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.20', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '최근 무전 고침',
+      items: [
+        '폰의 상황 화면에서 최근 무전 자리에 이상한 문자가 나오던 것을 고쳤어요. 0.9.18에서는 다른 곳을 고쳐서 그대로 남아 있었어요.'
+      ] },
     { ver: '알파 0.9.19', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '글씨체 통일',
       items: [
         '제목 글씨체를 본문과 같은 글꼴의 굵은 것으로 바꿨어요. 한 낱말 안에서 글자마다 글씨체가 달라 보이던 것("생존", "번째" 등)이 사라져요. 두꺼운 글씨체는 "7구역" 로고에만 남겼어요.',
@@ -6491,6 +6495,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.19";
     li.appendChild(el('span', 'log-day', 'D+' + pad3(state ? state.day : 1)));
     li.appendChild(el('span', 'log-text', text));
     list.insertBefore(li, list.firstChild);
+    setText($('m-story'), li.lastChild.textContent);      // 폰 화면의 상황 칸에도 같은 줄을 적는다
     setText($('story-latest'), li.lastChild.textContent);      // 상황 화면의 '최근 무전' 한 줄(글 대신 요소가 넘어오는 로그도 있어서, 화면에 찍힌 글을 읽는다)
     while (list.children.length > LOG_MAX) list.removeChild(list.lastChild);
   }
@@ -7774,7 +7779,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.19";
       list.appendChild(li);
     });
     setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
-    setText($('m-story'), line);
   }
 
   /** 도트 화면에 넘길 값. 장면은 예전 구조의 이름(시설 열 종, 연구, 장비)을 쓰므로 지금 상태를 거기에 맞춰 옮긴다. */

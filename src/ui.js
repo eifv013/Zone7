@@ -625,6 +625,7 @@
     li.appendChild(el('span', 'log-day', 'D+' + pad3(state ? state.day : 1)));
     li.appendChild(el('span', 'log-text', text));
     list.insertBefore(li, list.firstChild);
+    setText($('m-story'), li.lastChild.textContent);      // 폰 화면의 상황 칸에도 같은 줄을 적는다
     setText($('story-latest'), li.lastChild.textContent);      // 상황 화면의 '최근 무전' 한 줄(글 대신 요소가 넘어오는 로그도 있어서, 화면에 찍힌 글을 읽는다)
     while (list.children.length > LOG_MAX) list.removeChild(list.lastChild);
   }
@@ -1908,7 +1909,6 @@
       list.appendChild(li);
     });
     setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
-    setText($('m-story'), line);
   }
 
   /** 도트 화면에 넘길 값. 장면은 예전 구조의 이름(시설 열 종, 연구, 장비)을 쓰므로 지금 상태를 거기에 맞춰 옮긴다. */

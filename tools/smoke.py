@@ -218,6 +218,7 @@ def run_case(browser, name, size, state, mode):
         if page.locator('#feedback').is_visible(): problems.append('의견 창이 닫히지 않았다')
         tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
+        if '[object' in page.inner_text('body'): problems.append('화면에 [object …] 가 찍혀 있다')
         if '초당 +0' in text('pps') and '0.5' not in text('pps'): problems.append('수색조를 샀는데 생산이 0이다: ' + text('pps'))
         page.wait_for_timeout(6000)
     elif mode == 'line':
@@ -333,6 +334,7 @@ def run_case(browser, name, size, state, mode):
         for t in ['radio', 'stats', 'notes', 'help', 'save', 'journal']: tap('[data-rtab-set=%s]' % t)
         tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
+        if '[object' in page.inner_text('body'): problems.append('화면에 [object …] 가 찍혀 있다')
         page.wait_for_timeout(5000)
         tap('#signal')
         page.wait_for_timeout(65000)     # 무리 도착(50초)과 밤 결과(60초)를 지나간다
