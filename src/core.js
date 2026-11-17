@@ -569,6 +569,7 @@
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      passers: {}, passersRun: 0,      // 6구역 통행인: 사람마다 건넌 수(철수해도 남는다), 이번 회차에 건넌 수
       records: {}, recordsRun: 0,      // 5구역 병원 서류: 종류마다 찾은 수(철수해도 남는다), 이번 회차에 찾은 수
       cargos: {}, salvage: null, salvageIn: 150, salvagesRun: 0,      // 4구역 표류 화물: 종류마다 끌어온 수(철수해도 남는다), 지금 발견된 화물, 다음 발견까지(초), 이번 회차에 끌어온 수
       clients: {}, contract: null, contractIn: 120, contractsRun: 0,      // 3구역 거래처: 종류마다 채운 의뢰 수(철수해도 남는다), 지금 온 의뢰, 다음 의뢰까지(초), 이번 회차에 채운 수
@@ -685,6 +686,9 @@
     var rd = raw.records && typeof raw.records === 'object' ? raw.records : {};
     RECORDS.forEach(function (r) { var n = clamp(safeCount(rd[r.id]), 0, 1e9); if (n > 0) s.records[r.id] = n; });
     s.recordsRun = clamp(safeCount(raw.recordsRun), 0, 1e6);
+    var pd = raw.passers && typeof raw.passers === 'object' ? raw.passers : {};
+    PASSERS.forEach(function (r) { var n = clamp(safeCount(pd[r.id]), 0, 1e9); if (n > 0) s.passers[r.id] = n; });
+    s.passersRun = clamp(safeCount(raw.passersRun), 0, 1e6);
     var rg = raw.cargos && typeof raw.cargos === 'object' ? raw.cargos : {};
     CARGOS.forEach(function (c) { var n = clamp(safeCount(rg[c.id]), 0, 1e9); if (n > 0) s.cargos[c.id] = n; });
     s.salvagesRun = clamp(safeCount(raw.salvagesRun), 0, 1e6);
@@ -1607,9 +1611,42 @@
     if (!(qty >= 1)) return fail('unknown');
     return pay(state, postCost(state, qty), function () { state.posts += qty; });
   }
+  /*
+   * 통행인(1.2.1, 6구역): 무리의 SAFE_NIGHT 배가 넘는 방어력으로 밤을 막으면 PASSER_CHANCE 의 확률로 누군가 다리를 건넌다.
+   *   건너면 간식을 받고, 그 사람이 도감에 적힌다(철수해도 남는다). 이번 회차에 건넌 한 사람마다 통행 물자가 PASSER_BONUS 씩 오른다(PASSER_BONUS_MAX 까지).
+   *   이 구역의 할 일은 "넉넉하게 막는 것"이므로, 통행인도 넉넉하게 막은 밤에만 온다. 초소가 하나도 없으면 오지 않는다.
+   */
+  var PASSERS = [
+    { id: 'porter',  name: '짐꾼',           color: '#8a6a3a', text: '제 몸만 한 배낭을 메고 건넜어요.' },
+    { id: 'cyclist', name: '자전거 탄 사람', color: '#3a7a8a', text: '바퀴에 바람이 없는데도 타고 갔어요.' },
+    { id: 'sisters', name: '자매',           color: '#c85a7a', text: '손을 한 번도 놓지 않았어요.' },
+    { id: 'guardm',  name: '경비원',         color: '#3a4a6a', text: '차단기 앞에서 경례를 하고 갔어요.' },
+    { id: 'cook',    name: '급식 조리사',    color: '#e6e5db', text: '국자를 허리에 차고 있었어요.' },
+    { id: 'oldman',  name: '지팡이 짚은 노인', color: '#7a7a6a', text: '쉬었다 가라니까 고개를 저었어요.' },
+    { id: 'mail',    name: '집배원',         color: '#c8482a', text: '가방에 아직 편지가 들어 있었어요.' },
+    { id: 'busker',  name: '기타 멘 사람',   color: '#5a3a7a', text: '다리 위에서는 한 줄도 튕기지 않았어요.' },
+    { id: 'welder',  name: '용접공',         color: '#4a5a3a', text: '차단기 경첩을 고쳐 주고 갔어요.' },
+    { id: 'teacher', name: '선생님',         color: '#3a6a4a', text: '출석부를 품에 안고 있었어요.' },
+    { id: 'angler',  name: '낚시꾼',         color: '#6a8a3a', text: '강을 한참 내려다보다 건넜어요.' },
+    { id: 'runner',  name: '맨발의 아이',    color: '#f0b400', text: '뒤도 안 돌아보고 뛰어서 건넜어요.' }
+  ];
+  var PASSER_CHANCE = 0.5, PASSER_BONUS = 0.01, PASSER_BONUS_MAX = 0.5, PASSER_TREATS = 2;
+  function passerMult(state) { return 1 + Math.min(PASSER_BONUS_MAX, (state.passersRun || 0) * PASSER_BONUS); }
+  function passerCount(state) { var n = 0; PASSERS.forEach(function (r) { if (state.passers[r.id] > 0) n++; }); return n; }
+  /** 넉넉하게 막은 밤 뒤에 부른다. 누가 건넜으면 { id, name, first } 를, 아니면 null 을 돌려준다. */
+  function passBridge(state, rng) {
+    rng = typeof rng === 'function' ? rng : Math.random;
+    if (!zoneOpen(state, 5) || !(state.posts > 0)) return null;
+    if (!(rng() < PASSER_CHANCE)) return null;
+    var who = PASSERS[Math.floor(rng() * PASSERS.length) % PASSERS.length], first = !(state.passers[who.id] > 0);
+    state.passers[who.id] = Math.min(1e9, (state.passers[who.id] || 0) + 1);
+    state.passersRun = (state.passersRun || 0) + 1;
+    state.treats = Math.min(1e9, state.treats + PASSER_TREATS);
+    return { id: who.id, name: who.name, first: first };
+  }
   function guardRate(state) {
     if (!zoneOpen(state, 5) || !(state.posts > 0)) return 0;
-    return state.posts * milestoneMult(state.posts) * GUARD_VALUE * mods(state).z6 * globalMult(state) * bridgeSafety(state);
+    return state.posts * milestoneMult(state.posts) * GUARD_VALUE * mods(state).z6 * globalMult(state) * bridgeSafety(state) * passerMult(state);
   }
   function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + guardRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
@@ -1848,24 +1885,25 @@
    *   농성 중     : 못 막는 밤은 잃지도 얻지도 않고 버틴다. 한 번 막아내면 농성이 풀린다
    */
   /** 밤을 넘긴다. 결과 사건에 그날 처음 만난 좀비(found)를 붙인다. */
-  function resolveNight(state) {
-    var day = state.day, boss = isBossWave(currentWave(state)), ev = resolveNightCore(state);
+  function resolveNight(state, rng) {
+    var day = state.day, boss = isBossWave(currentWave(state)), ev = resolveNightCore(state, rng);
     var found = sightZombies(state, day, boss);
     if (found.length) ev.found = found;
     return ev;
   }
-  function resolveNightCore(state) {
+  function resolveNightCore(state, rng) {
     var w = currentWave(state), strength = nightStrength(state), defense = defensePower(state), boss = isBossWave(w);
     state.day++;
     if (defense >= strength) {
       var reward = nightReward(state);
       earn(state, reward);
       state.wavesCleared++;
-      if (zoneOpen(state, 5) && defense >= strength * SAFE_NIGHT) state.safeNights++;      // 6구역 목표: 무리의 두 배가 넘는 방어력으로 막은 밤
+      var passer = null;
+      if (zoneOpen(state, 5) && defense >= strength * SAFE_NIGHT) { state.safeNights++; passer = passBridge(state, rng); }      // 6구역: 넉넉하게 막은 밤(목표)에는 가끔 누가 다리를 건넌다
       state.siege = false; state.siegeNights = 0;
       var treat = boss ? TREAT_BOSS : TREAT_NIGHT;
       state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
-      return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat };
+      return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat, passer: passer };
     }
     if (state.siege) { state.siegeNights = Math.min(99, (state.siegeNights || 0) + 1); return      /* 버틴 밤을 센다: 다음 밤의 무리가 그만큼 흩어진다 */ { type: 'held', wave: w, strength: strength, defense: defense, boss: boss }; }
     var lost = state.supplies * BREACH_LOSS;
@@ -1967,7 +2005,7 @@
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos; next.records = state.records; next.ended = state.ended; next.endedAt = state.endedAt;
+    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos; next.records = state.records; next.passers = state.passers; next.ended = state.ended; next.endedAt = state.endedAt;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -2283,7 +2321,7 @@
 
     var before = state.dayClock, arriveAt = DAY_SECONDS - BATTLE_SECONDS, guard = 0;
     state.dayClock += dt;
-    while (state.dayClock >= DAY_SECONDS && guard++ < MAX_NIGHTS_PER_TICK) { state.dayClock -= DAY_SECONDS; before = 0; events.push(resolveNight(state)); }
+    while (state.dayClock >= DAY_SECONDS && guard++ < MAX_NIGHTS_PER_TICK) { state.dayClock -= DAY_SECONDS; before = 0; events.push(resolveNight(state, rng)); }
     if (before < arriveAt && state.dayClock >= arriveAt) {
       events.push({ type: 'arrive', strength: nightStrength(state), defense: defensePower(state), siege: state.siege, boss: isBossWave(currentWave(state)) });
     }
@@ -2451,7 +2489,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

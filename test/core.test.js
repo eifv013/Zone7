@@ -2156,3 +2156,26 @@ test('일지의 신호는 처음부터 끝까지 같다: 길게, 짧게, 길게'
   assert.ok(!/길게 한 번, 짧게 두 번/.test(texts), '6장에서 신호가 달라져 있었다');
   ['z4-2', 'z5-2', 'z6-1', 'z7-0', 'z7-2'].forEach((id) => assert.ok(C.BEATS.find((b) => b.id === id).text.includes('길게, 짧게, 길게'), id));
 });
+
+test('6구역 통행인: 넉넉하게 막은 밤에만 건너고, 건넌 만큼 통행 물자가 늘고, 도감은 철수해도 남는다', () => {
+  const s = inLab(); s.zone = 5; s.posts = 5;
+  assert.equal(C.passBridge(s, () => 0.9), null, '확률을 넘으면 아무도 안 온다');
+  const p = C.passBridge(s, () => 0);
+  assert.ok(p && p.first && p.id === C.PASSERS[0].id);
+  assert.equal(s.passers[p.id], 1); assert.equal(C.passerCount(s), 1); assert.equal(s.passersRun, 1);
+  assert.equal(C.passBridge(s, () => 0).first, false);
+  const before = C.guardRate(s); s.passersRun = 10; near(C.guardRate(s) / before, 1.10 / 1.02);
+  s.passersRun = 1000; near(C.passerMult(s), 1 + C.PASSER_BONUS_MAX);
+  const none = inLab(); none.zone = 5; assert.equal(C.passBridge(none, () => 0), null, '초소가 없으면 오지 않는다');
+  const closed = inLab(); closed.posts = 5; assert.equal(C.passBridge(closed, () => 0), null);
+  // 밤 판정과 이어진다: 방어력이 무리의 2배를 넘으면 건넌다. rng 를 안 줘도 돌아간다
+  const n = inLab(); n.zone = 5; n.posts = 1; n.defenses.rail = 1e6;
+  assert.ok(C.defensePower(n) >= C.nightStrength(n) * C.SAFE_NIGHT);
+  assert.ok(C.resolveNight(n, () => 0).passer);
+  assert.equal(C.resolveNight(n).type, 'defended');
+  s.runEarned = 1e30; const back = C.retreat(s, 1).state;
+  assert.equal(back.passers[p.id], 2); assert.equal(back.passersRun, 0);
+  const bad = C.sanitizeState({ version: 2, passers: { porter: -1, 가짜: 2 }, passersRun: 'x' }, 0);
+  assert.equal(bad.passers.porter, undefined); assert.equal(bad.passers['가짜'], undefined); assert.equal(bad.passersRun, 0);
+  assert.equal(C.PASSERS.length, 12); assert.equal(new Set(C.PASSERS.map((x) => x.id)).size, 12);
+});

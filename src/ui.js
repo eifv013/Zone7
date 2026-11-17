@@ -1332,13 +1332,13 @@
   var REG_PIX = ['..hhh...', '.hhhhh..', '.hsssh..', '..sss...', '.ccccc..', 'scccccs.', '.ccccc..', '.ccccc..', '.dd.dd..', '.dd.dd..'];      // 단골의 모습(머리 h, 살 s, 옷 c, 바지 d)
   function renderDex() {
     if (dexTab === 'pet') dexTab = 'dog';
-    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + JSON.stringify(state.records) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + JSON.stringify(state.records) + '|' + JSON.stringify(state.passers) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
     function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
-    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['cargo', '화물 ' + C.cargoCount(state) + '/' + C.CARGOS.length], ['record', '서류 ' + C.recordCount(state) + '/' + C.RECORDS.length], ['wall', '방어 수단']].forEach(function (t) {
+    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['cargo', '화물 ' + C.cargoCount(state) + '/' + C.CARGOS.length], ['record', '서류 ' + C.recordCount(state) + '/' + C.RECORDS.length], ['passer', '통행인 ' + C.passerCount(state) + '/' + C.PASSERS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
@@ -1373,6 +1373,14 @@
         var rname = C.ZOMBIE_RARITIES[z.rarity];
         if (!n) { card(pixSvg(rows, pal, z.big ? 'big' : ''), '???', rname, z.zone > state.zone ? (z.zone + 1) + '구역을 열면 나와요.' : z.boss ? '변이체가 오는 밤에 나와요.' : '밤을 넘기다 보면 만나요.', true, 'z-' + z.rarity); return; }
         card(pixSvg(rows, pal, z.big ? 'big' : ''), z.name, rname + ' · 만난 밤 ' + fmt(n), z.text, false, 'z-' + z.rarity);
+      });
+    } else if (dexTab === 'passer') {
+      // 통행인: 6구역에서 넉넉하게 막은 밤에 다리를 건넌 사람들
+      C.PASSERS.forEach(function (r) {
+        var n = state.passers[r.id] || 0;
+        var pal = n ? { h: '#3a2e22', s: '#e8c39a', c: r.color, d: '#3b3f4a' } : { h: '#4a4b40', s: '#4a4b40', c: '#4a4b40', d: '#4a4b40' };
+        if (!n) { card(pixSvg(REG_PIX, pal), '???', '아직 못 만났어요', '6구역에서 무리의 ' + C.SAFE_NIGHT + '배 방어력으로 밤을 막으면 건너와요.', true); return; }
+        card(pixSvg(REG_PIX, pal), r.name, '건넌 수 ' + fmt(n) + '번', r.text, false);
       });
     } else if (dexTab === 'record') {
       // 서류: 5구역에서 과제를 끝내다 찾은 병원 서류들
@@ -1942,7 +1950,7 @@
       setText($('guard-safety'), '×' + safety.toFixed(2));
       setText($('guard-rate'), '통행 물자 초당 +' + fmt(gRate));
       $('guard-bar').style.width = Math.min(100, safety / safeMax * 100).toFixed(1) + '%';
-      setText($('guard-note'), '방어력이 오늘 밤 무리의 몇 배인지예요. 최대 ×' + safeMax.toFixed(1) + '까지 쳐 줘요.\n무리의 ' + C.SAFE_NIGHT + '배 방어력으로 막은 밤 ' + state.safeNights + '번');
+      setText($('guard-note'), '방어력이 오늘 밤 무리의 몇 배인지예요. 최대 ×' + safeMax.toFixed(1) + '까지 쳐 줘요.\n무리의 ' + C.SAFE_NIGHT + '배 방어력으로 막은 밤 ' + state.safeNights + '번\n통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length + ' · 이번 회차 ' + state.passersRun + '명 · 통행 물자 +' + Math.round((C.passerMult(state) - 1) * 100) + '%');
       var pq = qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts), pcost = C.postCost(state, pq);
       setText(rows.post.count, state.posts + ' / ' + C.COUNT_MAX);
       setMile(rows.post, state.posts, pq, pcost <= state.supplies);
@@ -2163,6 +2171,10 @@
           heldLogged = false;
           // 무전 로그에는 굵직한 일만 남긴다: 변이체를 막은 밤과 10번째마다의 밤
           if (ev.boss || ev.wave % 10 === 0) log((ev.boss ? '변이체가 이끈 무리를 막아냈다. ' : ev.wave + '번째 밤을 막아냈다. ') + '물자 ' + fmt(ev.reward) + ' 확보.', 'good');
+          if (ev.passer) {      // 6구역: 넉넉하게 막은 밤에 누가 다리를 건넜다
+            toast((ev.passer.first ? '새 통행인 · ' : '통행인 · ') + ev.passer.name);
+            log(ev.passer.name + (C.hasBatchim(ev.passer.name) ? '이' : '가') + ' 다리를 건넜다.' + (ev.passer.first ? ' 도감에 적었다.' : ''), 'good');
+          }
           sfx('defended'); buzz(20); if (scene) scene.night(true);
           break;
         case 'breached':
