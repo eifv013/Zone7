@@ -450,12 +450,13 @@
   var GOALS = [
     [ { id: 'z1a', text: '잔해 수색조 50곳', need: 50, value: function (s) { return s.buildings.scouts; } },
       { id: 'z1b', text: '1구역 시설 합계 200곳', need: 200, value: function (s) { return totalBuildings(s); } },
-      { id: 'z1c', text: '밤 30번 막아내기', need: 30, value: function (s) { return s.wavesCleared; } } ],
+      // 기다리기만 하면 되는 목표(밤 30번)는 뺐다: 손을 움직이는 만큼 빨리 끝나는 것으로 바꿨다
+      { id: 'z1c', text: '동네 5곳 다 수색하기', need: 5, value: function (s) { return s.sweeps; } } ],
     [ { id: 'z2a', text: '좌판 50곳', need: 50, value: function (s) { return s.stalls; } },
       { id: 'z2b', text: '시세 ' + PEAK_PRICE + ' 이상에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
       { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
     [ { id: 'z3a', text: '기계 레벨 합계 120', need: 120, value: function (s) { return machineLevels(s); } },
-      { id: 'z3b', text: '정속 가동 누적 10분', need: 600, unit: 'time', value: function (s) { return s.steadySeconds; } },
+      { id: 'z3b', text: '정속 가동 누적 3분', need: 180, unit: 'time', value: function (s) { return s.steadySeconds; } },
       { id: 'z3c', text: '완제품으로 번 물자 누적 100경', need: 1e18, value: function (s) { return s.lineEarned; } } ],
     [ { id: 'z4a', text: '열차 16대', need: 16, value: function (s) { return s.trains; } },
       { id: 'z4b', text: '심야 급행 3번 도착', need: 3, value: function (s) { return s.expressRuns; } },
@@ -706,6 +707,16 @@
 
   /* ---------- 1구역: 수색 ---------- */
   function totalBuildings(s) { var n = 0; BUILDINGS.forEach(function (b) { n += s.buildings[b.id] || 0; }); return n; }
+  /**
+   * 다음에 2배가 되는 수(문턱). 더 없으면 null.
+   *   count 지금 수,  list 문턱 목록(기본은 시설의 MILESTONES)
+   */
+  function nextMilestone(count, list) {
+    var marks = Array.isArray(list) ? list : MILESTONES, n = Number(count);
+    if (!isFinite(n)) n = 0;
+    for (var i = 0; i < marks.length; i++) if (n < marks[i]) return marks[i];
+    return null;
+  }
   function milestoneMult(count) { var m = 1; MILESTONES.forEach(function (t) { if (count >= t) m *= 2; }); return m; }
   function buildingCost(state, id, qty) {
     var def = findById(BUILDINGS, id);
@@ -1264,6 +1275,13 @@
   /** 아직 뒤지지 않은 칸 가운데 맨 앞의 것. 없으면 -1. */
   function nextTile(state) { for (var i = 0; i < SWEEP_TILES; i++) if (!(state.sweepMask & (1 << i))) return i; return -1; }
   function sweepBonus(state) { return clickValue(state) * SWEEP_BONUS_CLICKS; }
+  /**
+   * 순찰조(자동 수색)가 벌어 오는 초당 물자: 동네 하나의 보너스 ÷ (스무 칸 × 한 칸에 걸리는 시간).
+   * 순찰조가 빨라지면(개조) 그만큼 커진다. 자동 수색이 꺼져 있으면 0.
+   */
+  function sweepRate(state) { return autoOn(state, 0) ? sweepBonus(state) / (SWEEP_TILES * sweepInterval(state)) : 0; }
+  /** 화면에 보여 주는 초당 물자: 시설·거래·라인·열차에 순찰조의 몫을 더한 것. (직접 수색 값은 productionPerSec 만 본다 — 서로 물고 돌지 않게) */
+  function incomePerSec(state) { return productionPerSec(state) + sweepRate(state); }
   /** 칸 하나를 뒤진 것으로 표시한다. 동네를 다 뒤졌으면 보너스를 주고 다음 동네로 넘긴다. 돌려주는 값: 보너스(없으면 0). */
   function markTile(state, index) {
     state.sweepMask |= 1 << index;
@@ -1821,7 +1839,7 @@
     state.greenCool = Math.max(0, state.greenCool - elapsed);
     state.surgeLeft = 0; state.surgeCool = Math.max(0, state.surgeCool - elapsed);      // 전력 투입은 자리를 비우면 끝난 것으로 친다
     var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
-    report.gain = searchRate(state) * counted * rate + trade + line;
+    report.gain = (searchRate(state) + sweepRate(state)) * counted * rate + trade + line;      // 순찰조는 자리를 비운 동안에도 돈다
     earn(state, report.gain);
     state.tradeEarned += trade;
     state.lineEarned += line;
@@ -1957,7 +1975,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, milestoneMult: milestoneMult, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, milestoneMult: milestoneMult, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

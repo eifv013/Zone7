@@ -1804,3 +1804,34 @@ test('오늘 밤의 특별한 좀비: 도감에 적히는 것과 같고, 흔한 
   assert.deepEqual(C.nightSpecials(null, 1), []);
   assert.deepEqual(C.nightSpecials(s, NaN), []);
 });
+
+test('다음 2배 문턱: 시설·열차 목록에서 다음 수를 찾고, 끝나면 null', () => {
+  assert.equal(C.nextMilestone(0), 10);
+  assert.equal(C.nextMilestone(10), 25);
+  assert.equal(C.nextMilestone(399), 400);
+  assert.equal(C.nextMilestone(400), null);
+  assert.equal(C.nextMilestone(3, C.FLEET_MILESTONES), 4);
+  assert.equal(C.nextMilestone(100, C.FLEET_MILESTONES), null);
+  assert.equal(C.nextMilestone('엉뚱'), 10);
+  assert.equal(C.nextMilestone(5, '엉뚱'), 10);
+});
+
+test('1구역 셋째 목표는 수색으로 채운다(기다리기만 하는 목표가 아니다)', () => {
+  const s = fresh(), g = C.GOALS[0][2];
+  assert.equal(g.id, 'z1c');
+  s.wavesCleared = 100; assert.equal(g.value(s), 0);
+  s.sweeps = 5; assert.ok(g.value(s) >= g.need);
+});
+
+test('순찰조의 초당 물자: 없으면 0, 사면 생기고, 빨라질수록 커진다', () => {
+  const s = fresh(); s.buildings.scouts = 30;
+  assert.equal(C.sweepRate(s), 0);
+  assert.equal(C.incomePerSec(s), C.productionPerSec(s));
+  s.upgrades.patrol = 1;
+  const r1 = C.sweepRate(s);
+  assert.ok(r1 > 0);
+  near(r1, C.sweepBonus(s) / (C.SWEEP_TILES * C.sweepInterval(s)));
+  near(C.incomePerSec(s), C.productionPerSec(s) + r1);
+  s.upgrades.patrol = 5;
+  assert.ok(C.sweepRate(s) > r1, '한 칸에 걸리는 시간이 줄면 초당 물자가 오른다');
+});

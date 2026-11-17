@@ -603,7 +603,9 @@
     var head = el('span', 'row-head');
     var name = el('span', 'row-name', def.name);
     var count = el('span', 'row-count', '0');
-    head.appendChild(name); head.appendChild(count);
+    // 2배 표시: 다음에 생산이 2배가 되는 수를 이름 옆에 적는다. 쓰지 않는 줄에서는 숨겨 둔다
+    var mile = el('span', 'row-mile'); mile.hidden = true;
+    head.appendChild(name); head.appendChild(mile); head.appendChild(count);
     var desc = el('span', 'row-desc', def.desc);
     var foot = el('span', 'row-foot');
     var info = el('span', 'row-info');
@@ -611,7 +613,22 @@
     foot.appendChild(info); foot.appendChild(cost);
     btn.appendChild(head); btn.appendChild(desc); btn.appendChild(foot);
     btn.addEventListener('click', onBuy);
-    return { btn: btn, count: count, info: info, cost: cost };
+    return { btn: btn, count: count, info: info, cost: cost, mile: mile };
+  }
+  /**
+   * 2배 표시를 고친다.
+   *   n 지금 수,  q 이번에 살 수,  can 살 수 있는지,  list 문턱 목록(없으면 시설의 것)
+   * 이번 구매로 문턱에 닿으면 "지금 2배"로 바꿔 눈에 띄게 한다.
+   */
+  function setMile(r, n, q, can, list) {
+    if (!r || !r.mile) return;
+    var next = C.nextMilestone(n, list);
+    r.mile.hidden = next === null;
+    if (next === null) return;
+    var hit = !!can && q > 0 && n + q >= next;
+    setText(r.mile, hit ? '★ 지금 2배' : '★ ' + next);
+    r.mile.classList.toggle('hit', hit);
+    r.mile.title = next + '에 닿으면 2배가 돼요';
   }
 
 
@@ -1332,7 +1349,7 @@
   function render() {
     renderNames();
     syncNative();
-    var m = C.mods(state), per = C.productionPerSec(state);
+    var m = C.mods(state), per = C.incomePerSec(state);      // 순찰조가 벌어 오는 몫까지 더해서 보여 준다
     setText($('supplies'), fmt(state.supplies));
     setText($('pps'), '초당 +' + fmt(per) + (state.buff ? ' · 지원 ×' + state.buff.mult + ' (' + Math.ceil(state.buff.left) + '초)' : ''));
     setText($('antibodies'), fmt(state.antibodies));
@@ -1483,6 +1500,7 @@
       C.BUILDINGS.forEach(function (b) {
         var r = rows.buildings[b.id], n = state.buildings[b.id], q = qtyFor(C.maxBuildings(state, b.id), C.COUNT_MAX - n), cost = C.buildingCost(state, b.id, q);
         setText(r.count, n + ' / ' + C.COUNT_MAX);
+        setMile(r, n, q, cost <= state.supplies);
         setText(r.info, n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state)));
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies);
@@ -1533,6 +1551,7 @@
         : goodPrice ? '시세가 좋아요 · 거간꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
+      setMile(rows.stall, state.stalls, q2, sc <= state.supplies);
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
       setText(rows.stall.cost, isFinite(sc) ? '×' + q2 + ' ' + fmt(sc) : '최대');
       rows.stall.btn.disabled = !(sc <= state.supplies);
@@ -1600,6 +1619,7 @@
         : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
       setText(rows.train.count, state.trains + ' / ' + C.TRAIN_MAX);
+      setMile(rows.train, state.trains, tq, tcost <= state.supplies, C.FLEET_MILESTONES);
       setText(rows.train.info, '대당 초당 화물 ' + fmt(cargo) + (plan.idle ? ' · 탈 노선이 없음' : ''));
       setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + fmt(tcost) : '최대');
       rows.train.btn.disabled = !(tcost <= state.supplies);
@@ -1626,6 +1646,7 @@
       setText($('lab-done'), '끝낸 과제 ' + state.projectsDone + '개' + (doneList.length ? ' · ' + doneList.join(', ') : '') + ' · 과제를 끝낼수록 다음 과제가 비싸져요');
       var sq = qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff), scost = C.staffCost(state, sq);
       setText(rows.staff.count, state.staff + ' / ' + C.COUNT_MAX);
+      setMile(rows.staff, state.staff, sq, scost <= state.supplies);
       setText(rows.staff.info, '초당 연구 점수 ' + fmt(rate));
       setText(rows.staff.cost, isFinite(scost) ? '×' + sq + ' ' + fmt(scost) : '최대');
       rows.staff.btn.disabled = !(scost <= state.supplies);
