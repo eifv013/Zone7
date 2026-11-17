@@ -394,7 +394,8 @@
     check: function () {
       if (!Update.enabled()) return;
       Update.lastCheck = Date.now();
-      window.Updater.checkRemote(window.fetch.bind(window), 'version.json?t=' + Date.now(), Update.current)      // 주소를 매번 다르게 해서 저장된 예전 답을 받지 않는다.then(function (r) {
+      // version.json 의 주소를 매번 다르게 해서(?t=) 기기에 저장된 예전 답을 받지 않는다
+      window.Updater.checkRemote(window.fetch.bind(window), 'version.json?t=' + Date.now(), Update.current).then(function (r) {
         if (!r.available || r.info.version === Update.offered) return; // "나중에"를 누른 버전은 다시 묻지 않는다
         setText($('update-text'), '새 버전 ' + (r.info.name || r.info.version) + ' 이 나왔다.' + (r.info.title ? ' ' + r.info.title + '.' : ''));
         $('update-bar').dataset.version = r.info.version;
