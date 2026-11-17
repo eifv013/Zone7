@@ -436,6 +436,8 @@
       perks: {}, pendingPerks: [], goalsDone: {},
       // 영구
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
+      treats: 0,             // 간식: 친구를 키우는 재화(철수해도 남는다)
+      petLv: {},             // 친구마다의 레벨 { 품종: 레벨 }
       kennel: {},            // 함께 있는 친구들 { 품종: 이름 }. 한 번 데려온 아이는 계속 남고, 누구를 데리고 다닐지 고른다
       heroName: HERO_DEFAULT,
       heroGender: 'none',    // 주인공의 성별: 'none'(설정 안 함) | 'm' | 'f'. 일지의 호칭이 달라진다    // 주인공의 이름
@@ -500,6 +502,10 @@
     if (s.heroName === '생존자') s.heroName = HERO_DEFAULT;
     s.heroGender = GENDERS.indexOf(raw.heroGender) >= 0 ? raw.heroGender : 'none';      // 예전 기본 이름은 새 기본 이름으로 옮긴다
     s.kennel = {};
+    s.treats = clamp(safeCount(raw.treats), 0, 1e9);
+    s.petLv = {};
+    var rl = raw.petLv && typeof raw.petLv === 'object' && !Array.isArray(raw.petLv) ? raw.petLv : {};
+    PET_BREEDS.forEach(function (b) { var n = clamp(safeCount(rl[b.id]), 0, PET_LEVEL_MAX); if (n > 0) s.petLv[b.id] = n; });
     var rk = raw.kennel && typeof raw.kennel === 'object' && !Array.isArray(raw.kennel) ? raw.kennel : {};
     PET_BREEDS.forEach(function (b) { if (Object.prototype.hasOwnProperty.call(rk, b.id)) s.kennel[b.id] = cleanName(rk[b.id], b.name); });
     s.pet = null;
@@ -1083,17 +1089,46 @@
     state.pet.name = clean; state.kennel[state.pet.breed] = clean;
     return { ok: true, name: clean };
   }
+  /*
+   * 친구 키우기: 간식을 주면 그 친구의 레벨이 오르고 효과가 커진다.
+   *   간식은 물자·항체와 다른 재화다. 밤을 막을 때마다 TREAT_NIGHT 개(변이체는 TREAT_BOSS 개), 구조 신호에 응답하면 1개를 얻는다.
+   *   레벨마다 효과가 PET_LEVEL_STEP(20%)씩 커진다(기본 효과에 곱한다). 값은 PET_FEED_BASE 에서 시작해 레벨마다 PET_FEED_GROWTH 배.
+   *   레벨은 친구마다 따로이고, 간식과 레벨은 철수해도 남는다.
+   */
+  var TREAT_NIGHT = 1, TREAT_BOSS = 5, PET_LEVEL_MAX = 10, PET_LEVEL_STEP = 0.2, PET_FEED_BASE = 5, PET_FEED_GROWTH = 1.6;
+  function petLevel(state, breedId) { var n = state.petLv && state.petLv[breedId]; return typeof n === 'number' && n > 0 ? Math.min(PET_LEVEL_MAX, Math.floor(n)) : 0; }
+  function petLevelMult(state, breedId) { return 1 + PET_LEVEL_STEP * petLevel(state, breedId); }
+  /** 지금 데리고 다니는 친구에게 간식을 주는 값. 친구가 없거나 최대 레벨이면 Infinity. */
+  function petFeedCost(state) {
+    if (!state.pet) return Infinity;
+    var lv = petLevel(state, state.pet.breed);
+    return lv >= PET_LEVEL_MAX ? Infinity : Math.ceil(PET_FEED_BASE * Math.pow(PET_FEED_GROWTH, lv));
+  }
+  function feedPet(state) {
+    if (!state.pet) return fail('nopet');
+    var cost = petFeedCost(state);
+    if (!isFinite(cost)) return fail('max');
+    if (!(state.treats >= cost)) return fail('treats');
+    state.treats -= cost;
+    state.petLv[state.pet.breed] = petLevel(state, state.pet.breed) + 1;
+    return { ok: true, level: state.petLv[state.pet.breed], cost: cost };
+  }
   /** 지금 데리고 다니는 친구의 효과 { key: 배수 항목, bonus: 올려 주는 비율 }. 없으면 null. */
   function petEffect(state) {
     if (!state.pet) return null;
     var breed = findById(PET_BREEDS, state.pet.breed), kind = PET_KINDS[state.pet.kind];
     if (!breed || !kind) return null;
     var rarity = findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0];
-    return { key: kind.key, bonus: rarity[breed.kind] };
+    return { key: kind.key, bonus: rarity[breed.kind] * petLevelMult(state, breed.id) };
   }
   function breedDesc(breed) {
     var kind = PET_KINDS[breed.kind], rarity = findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0];
     return kind.what + ' · ' + kind.label + ' +' + Math.round(rarity[breed.kind] * 100) + '%';
+  }
+  /** 지금 친구의 효과를 레벨까지 반영해 글로. 친구가 없으면 빈 글. */
+  function petEffectText(state) {
+    var e = petEffect(state), kind = state.pet ? PET_KINDS[state.pet.kind] : null;
+    return e && kind ? kind.label + ' +' + Math.round(e.bonus * 100) + '%' : '';
   }
   /** 지금 친구의 정보 { kind, kindName, breed(생김새), rarity, name, desc }. 없으면 null. */
   function petInfo(state) {
@@ -1304,7 +1339,9 @@
       earn(state, reward);
       state.wavesCleared++;
       state.siege = false;
-      return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss };
+      var treat = boss ? TREAT_BOSS : TREAT_NIGHT;
+      state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
+      return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat };
     }
     if (state.siege) return { type: 'held', wave: w, strength: strength, defense: defense, boss: boss };
     var lost = state.supplies * BREACH_LOSS;
@@ -1320,6 +1357,7 @@
     rng = typeof rng === 'function' ? rng : Math.random;
     state.signalLeft = 0;
     state.signalsAnswered++;
+    state.treats = Math.min(1e9, state.treats + 1);      // 신호에 응답하면 간식 하나
     if (rng() < 0.5) {
       var gain = Math.max(SIGNAL_SUPPLY_MIN, productionPerSec(state) * SIGNAL_SUPPLY_SECONDS);
       earn(state, gain);
@@ -1364,7 +1402,7 @@
     next.antibodyTotal = state.antibodyTotal + gained;
     TRAITS.forEach(function (t) { next.traits[t.id] = state.traits[t.id]; });
     next.retreats = state.retreats + 1;
-    next.pet = state.pet; next.kennel = state.kennel; next.heroName = state.heroName; next.heroGender = state.heroGender;      // 동물 친구와 이름은 함께 간다
+    next.pet = state.pet; next.kennel = state.kennel; next.treats = state.treats; next.petLv = state.petLv; next.heroName = state.heroName; next.heroGender = state.heroGender;      // 동물 친구와 이름은 함께 간다
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     next.lifetimeEarned = state.lifetimeEarned;
@@ -1548,7 +1586,7 @@
   function applyOffline(state, elapsed) {
     elapsed = safeNum(elapsed, 0);
     var counted = Math.min(elapsed, OFFLINE_CAP), rate = offlineRate(state);
-    var report = { elapsed: elapsed, counted: counted, capped: elapsed > OFFLINE_CAP, rate: rate, gain: 0, nights: 0, nightReward: 0, held: false, trains: 0, points: 0 };
+    var report = { elapsed: elapsed, counted: counted, capped: elapsed > OFFLINE_CAP, rate: rate, gain: 0, nights: 0, nightReward: 0, held: false, trains: 0, points: 0, treats: 0 };
     if (!(counted > 0)) return report;
     state.buff = null;
     state.signalLeft = 0;
@@ -1576,7 +1614,7 @@
     for (var i = 0; i < nights; i++) {
       if (defensePower(state) < nightStrength(state)) { report.held = true; state.day += nights - i; break; }
       var ev = resolveNight(state);
-      report.nights++; report.nightReward += ev.reward;
+      report.nights++; report.nightReward += ev.reward; report.treats += ev.treats || 0;
     }
     return report;
   }
@@ -1662,7 +1700,7 @@
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

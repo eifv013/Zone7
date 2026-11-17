@@ -49,6 +49,7 @@ test('소리는 부드러운 파형만 쓰고, 높은 음은 거름막 아래에
     if (n.noise) { assert.ok(n.cut <= 400, name); continue; }
     assert.ok(['sine', 'triangle'].includes(n.type), name + ': ' + n.type);
     assert.ok(n.f <= 1000 && n.f < S.SOFT_CUT, name + ': ' + n.f);
+    if (n.to !== undefined) assert.ok(n.to > 0 && n.to <= 1200, name + ' to: ' + n.to);
     assert.ok(n.g <= S.MAX_GAIN, name);
   }
 });

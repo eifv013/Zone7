@@ -2,7 +2,7 @@
  * Sound — 효과음
  * ------------------------------------------------------------
  * 음원 파일 없이 Web Audio 로 짧은 소리를 합성한다(파일 하나짜리 게임을 유지하기 위함).
- * 소리 하나는 음표 목록이다. { f: 주파수(Hz), d: 길이(초), at: 시작 시점(초), type: 파형, g: 음량 }
+ * 소리 하나는 음표 목록이다. { f: 주파수(Hz), to: 끝 주파수(있으면 그쪽으로 미끄러진다), d: 길이(초), at: 시작 시점(초), type: 파형, g: 음량 }
  * noise: true 인 항목은 주파수 대신 백색 소음을 cut(Hz) 아래로 걸러 낸다(둔탁한 충격음용).
  *
  * 브라우저는 사용자가 한 번 누르기 전에는 소리를 내지 못하게 막는다. 그래서 첫 입력 때
@@ -25,8 +25,9 @@
   var SOFT_CUT = 2400;   // 이 주파수(Hz) 위의 소리는 걸러 낸다(쇳소리 제거)
   var ATTACK = 0.02;     // 소리가 올라오는 시간(초). 짧을수록 딱딱하게 들린다
   var SOUNDS = {
-    click:      [{ f: 392, d: 0.06, type: 'sine', g: 0.04 }],
-    buy:        [{ f: 523, d: 0.07, type: 'sine', g: 0.045 }, { f: 659, d: 0.1, at: 0.06, type: 'sine', g: 0.045 }],
+    // 누르는 소리: 음이 위로 미끄러져 올라가는 '뽁' 소리(to 는 끝날 때의 주파수)
+    click:      [{ f: 520, to: 840, d: 0.09, type: 'sine', g: 0.05 }],
+    buy:        [{ f: 560, to: 860, d: 0.08, type: 'sine', g: 0.045 }, { f: 720, to: 1080, d: 0.11, at: 0.08, type: 'sine', g: 0.045 }],
     dusk:       [{ f: 294, d: 0.35, type: 'triangle', g: 0.03 }, { f: 233, d: 0.5, at: 0.3, type: 'triangle', g: 0.03 }],
     defended:   [{ f: 392, d: 0.1, type: 'sine', g: 0.05 }, { f: 494, d: 0.1, at: 0.1, type: 'sine', g: 0.05 }, { f: 587, d: 0.24, at: 0.2, type: 'sine', g: 0.05 }],
     breached:   [{ noise: true, cut: 260, d: 0.55, g: 0.12 }, { f: 82, d: 0.55, type: 'triangle', g: 0.07 }],
@@ -76,6 +77,7 @@
       src.connect(filter); filter.connect(gain);
     } else {
       src = ctx.createOscillator(); src.type = n.type || 'triangle'; src.frequency.setValueAtTime(n.f, start);
+      if (n.to > 0) src.frequency.exponentialRampToValueAtTime(n.to, start + n.d * 0.7);      // 음이 미끄러지는 소리
       src.connect(gain);
     }
     // 마지막에 높은 소리를 한 번 더 걸러서 부드럽게 한다

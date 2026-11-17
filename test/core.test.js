@@ -1622,3 +1622,34 @@ test('성별: 설정 안 함이면 중립 호칭, 고르면 형·오빠, 누나�
   const raw = JSON.parse(C.serialize(s)); raw.heroGender = 'zzz';
   assert.equal(C.sanitizeState(raw).heroGender, 'none');
 });
+
+test('간식과 친구 키우기: 밤을 막으면 간식을 얻고, 간식을 주면 레벨이 올라 효과가 커진다', () => {
+  const s = inMarket(); s.defenses.rail = 1e6; s.signalIn = 1e9; s.dayClock = C.DAY_SECONDS - 0.05;
+  const ev = C.tick(s, 0.1, () => 0.5).find(e => e.type === 'defended');
+  assert.ok(ev, '밤을 막았다');
+  assert.equal(s.treats, ev.boss ? C.TREAT_BOSS : C.TREAT_NIGHT);
+  assert.equal(C.feedPet(s).ok, false, '친구가 없으면 줄 수 없다');
+  assert.equal(C.petFeedCost(s), Infinity);
+  C.adoptPet(s, 'dog', () => 0);
+  const base = C.petEffect(s).bonus;
+  assert.equal(C.petFeedCost(s), 5);
+  s.treats = 4; assert.equal(C.feedPet(s).reason, 'treats');
+  s.treats = 5; assert.equal(C.feedPet(s).ok, true);
+  assert.equal(s.treats, 0);
+  assert.equal(C.petLevel(s, s.pet.breed), 1);
+  near(C.petEffect(s).bonus, base * (1 + C.PET_LEVEL_STEP));
+  assert.equal(C.petFeedCost(s), 8);
+  assert.ok(C.petEffectText(s).includes('%'));
+  s.treats = 1e9; for (let i = 0; i < 30; i++) C.feedPet(s);
+  assert.equal(C.petLevel(s, s.pet.breed), C.PET_LEVEL_MAX);
+  assert.equal(C.feedPet(s).reason, 'max');
+  // 철수해도, 저장을 거쳐도 남는다. 잘못된 값은 버린다
+  const breed = s.pet.breed, left = s.treats;
+  s.runEarned = 1e30;
+  const r = C.retreat(s);
+  assert.equal(r.ok, true);
+  assert.equal(r.state.treats, left); assert.equal(C.petLevel(r.state, breed), C.PET_LEVEL_MAX);
+  const raw = JSON.parse(C.serialize(r.state)); raw.treats = -5; raw.petLv = { [breed]: 999, fake: 3 };
+  const back = C.sanitizeState(raw);
+  assert.equal(back.treats, 0); assert.deepEqual(back.petLv, { [breed]: C.PET_LEVEL_MAX });
+});

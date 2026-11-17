@@ -172,19 +172,18 @@
   }
   /*
    * 이름표: 도트 화면은 너무 작아서(80칸) 글자를 그릴 수 없으므로, 화면 위에 글자를 겹쳐 놓고 주인공을 따라다니게 한다.
-   *   캐릭터를 가리지 않게 발밑(땅 부분)에 한 줄로 둔다: '주인공 · 동물 친구'. 밤 싸움 중이거나 설정에서 끄면 숨긴다.
+   *   따라다니면 그림을 가리므로 도트 화면의 왼쪽 아래 구석에 고정해 둔다: '주인공 · 동물 친구'. 밤 싸움 중이거나 설정에서 끄면 숨긴다.
    *   자리는 도트 화면 모델의 주인공 위치(hero.x)를 화면 너비에 대한 비율로 옮긴 것이다.
    */
   function renderNames() {
     var tag = $('tag-hero');
     if (!tag) return;
-    var m = scene && scene.model, show = prefs.names === 'on' && m && m.W > 0 && C.dayPhase(state).phase !== 'battle';
+    var show = prefs.names === 'on';
     tag.hidden = !show;
     if (!show) return;
-    var pet = C.petInfo(state), x = (m.hero.x + 4) / m.W * 100;
+    var pet = C.petInfo(state);
     setText($('tag-hero-name'), state.heroName || C.HERO_DEFAULT);
     setText($('tag-pet-name'), pet ? ' · ' + pet.name : '');
-    tag.style.left = Math.max(10, Math.min(90, x)).toFixed(1) + '%';
   }
   /** 짧은 진동. 설정에서 껐거나 기기가 지원하지 않으면 아무 일도 하지 않는다. */
   function buzz(ms) { try { if (prefs.vibrate === 'on' && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
@@ -1407,7 +1406,7 @@
     $('pet-empty').hidden = !!p; $('pet-card').hidden = !p;
     $('hero-input').placeholder = state.heroName;
     document.querySelectorAll('[data-gender]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-gender') === state.heroGender ? 'true' : 'false'); });
-    setText($('pet-kind'), p ? '친구 ' + have + ' / ' + C.PET_BREEDS.length : '아직 친구가 없어요');
+    setText($('pet-kind'), (p ? '친구 ' + have + ' / ' + C.PET_BREEDS.length : '아직 친구가 없어요') + ' · 간식 ' + fmt(state.treats));
     ['dog', 'cat'].forEach(function (kind) {
       var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
       setText(b.firstChild, k.name + (have ? ' 데려오기' : ' 맞이하기'));
@@ -1417,7 +1416,10 @@
     setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 절반 환불');
     if (!p) return;
     setText($('pet-name'), p.name);
-    setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · ' + p.desc);
+    var plv = C.petLevel(state, p.breed.id), feed = C.petFeedCost(state);
+    setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · Lv ' + plv + ' · ' + C.petEffectText(state));
+    setText($('pet-feed'), isFinite(feed) ? '간식 주기 · 간식 ' + fmt(feed) : '다 컸어요(최대 레벨)');
+    $('pet-feed').disabled = !(feed <= state.treats);
     $('pet-input').placeholder = p.name;
     var face = $('pet-face');
     face.className = 'pet-face ' + p.rarity.id;
@@ -1874,6 +1876,7 @@
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
     wirePrefs();
+    $('pet-feed').addEventListener('click', function () { var r = C.feedPet(state); if (r.ok) { sfx('buy'); toast('Lv ' + r.level + ' · ' + C.petEffectText(state)); Store.save(); render(); } });
     // 주인공의 성별: 고르면 일지의 호칭이 바뀐다(설정 안 함이면 중립)
     document.querySelectorAll('[data-gender]').forEach(function (b) {
       b.addEventListener('click', function () { if (C.setHeroGender(state, b.getAttribute('data-gender')).ok) { Store.save(); render(); renderJournal(); } });
