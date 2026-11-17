@@ -357,6 +357,18 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .pet-pick button small { display: block; font-weight: 400; font-size: 12px; color: var(--ink-soft); }
 .pet-pick button:hover, .pet-pick button:active { background: var(--hazard); color: var(--on-hazard); }
 .pet-pick button:hover small, .pet-pick button:active small { color: var(--on-hazard); }
+.hero-row { margin-bottom: 10px; }
+.kennel { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.kennel:empty { display: none; }
+.kennel button { display: flex; align-items: center; gap: 5px; padding: 3px 8px 3px 4px; background: transparent; color: var(--ink); border: 1px solid var(--ink); font: 500 12px/1.5 var(--font-body); cursor: pointer; }
+.kennel button i { width: 12px; height: 12px; border: 1px solid var(--ink); }
+.kennel button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.kennel button.rare { border-color: var(--hazard); box-shadow: inset 0 0 0 1px var(--hazard); }
+.pet-face.rare { box-shadow: 0 0 0 3px var(--hazard); }
+.pet-face.fine { box-shadow: 0 0 0 3px var(--ink-soft); }
+.pet-pick button:disabled { opacity: .5; cursor: default; background: transparent; color: var(--ink); }
+.pet-pick button:disabled small { color: var(--ink-soft); }
+.pet-odds { margin: 8px 0 0; }
 .pet-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .pet-face { flex: none; width: 36px; height: 36px; border: 2px solid var(--ink); }
 .pet-name { font: 400 26px/1.1 var(--font-display); }
@@ -645,7 +657,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.7.5</div>
+  <div class="boot-ver">7구역 알파 0.7.7</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -817,15 +829,16 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 
   <div class="col" data-view="exped">
     <section class="panel" aria-labelledby="h-pet">
-      <div class="panel-head"><h2 id="h-pet">동물 친구</h2><span class="label" id="pet-kind"></span></div>
-      <div id="pet-empty">
-        <p class="hint">거점 주변을 떠돌던 동물이 따라와요. 어느 쪽을 맞이할지 골라 주세요. 어떤 아이가 올지는 만나 봐야 알아요. 한번 맞이하면 철수해도 함께 가요.</p>
-        <div class="pet-pick"><button type="button" id="adopt-dog"></button><button type="button" id="adopt-cat"></button></div>
-      </div>
+      <div class="panel-head"><h2 id="h-pet">일행</h2><span class="label" id="pet-kind"></span></div>
+      <div class="pet-rename hero-row"><input type="text" id="hero-input" maxlength="8" autocomplete="off" spellcheck="false" aria-label="주인공의 새 이름"><button type="button" id="hero-rename">주인공 이름 바꾸기</button></div>
+      <p class="hint" id="pet-empty">거점 주변을 떠돌던 동물이 따라와요. 강아지나 고양이를 골라 데려와 보세요. 어떤 아이가 올지는 만나 봐야 알아요.</p>
       <div id="pet-card" hidden>
         <div class="pet-top"><i class="pet-face" id="pet-face"></i><div><div class="pet-name num" id="pet-name"></div><div class="label" id="pet-desc"></div></div></div>
-        <div class="pet-rename"><input type="text" id="pet-input" maxlength="8" autocomplete="off" spellcheck="false" aria-label="새 이름"><button type="button" id="pet-rename">이름 바꾸기</button></div>
+        <div class="pet-rename"><input type="text" id="pet-input" maxlength="8" autocomplete="off" spellcheck="false" aria-label="친구의 새 이름"><button type="button" id="pet-rename">이름 바꾸기</button></div>
+        <div class="kennel" id="kennel" role="group" aria-label="데리고 다닐 친구 고르기"></div>
       </div>
+      <div class="pet-pick"><button type="button" id="adopt-dog"></button><button type="button" id="adopt-cat"></button></div>
+      <p class="label pet-odds" id="pet-odds"></p>
     </section>
     <section class="panel" aria-labelledby="h-traits">
       <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label" id="trait-points">항체 샘플 0</span></div>
@@ -893,7 +906,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.7.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.7.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

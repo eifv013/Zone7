@@ -7,8 +7,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const C = require('../src/core.js');
 
-/** 새 판. 자동 보조(전력 투입·청신호를 알아서 쓰는 것)는 꺼 둔다: 규칙 하나하나를 따로 재기 위해서다. 자동 보조는 맨 아래에서 따로 시험한다. */
-const fresh = () => { const s = C.createState(0); s.autoAssist = false; return s; };
+const fresh = () => C.createState(0);
 const half = () => 0.5;
 /** 1구역 목표를 모두 채우고 2구역을 연 상태. */
 function inMarket() {
@@ -1346,11 +1345,13 @@ test('청신호: 잠긴 구역, 자리 비움, 저장', () => {
 
 /* ================= 자동 보조 ================= */
 
-test('자동 보조: 새 판에는 켜져 있고, 전력 투입을 준비되는 대로 알아서 쓴다', () => {
-  assert.equal(C.createState(0).autoAssist, true);
-  assert.equal(C.sanitizeState({ version: 2 }, 0).autoAssist, true);
-  assert.equal(C.sanitizeState({ version: 2, autoAssist: false }, 0).autoAssist, false);
-  const s = inFactory(); s.autoAssist = true; s.defenses.rail = 1e9; s.signalIn = 1e9;
+test('자동화: 특성을 찍으면 전력 투입을 준비되는 대로 알아서 쓴다', () => {
+  const off = inFactory(); off.defenses.rail = 1e9; off.signalIn = 1e9;
+  off.machines.sorter = 2; off.machines.press = 3; off.machines.assembler = 6;
+  assert.equal(C.assistOn(off), false);
+  assert.ok(!C.tick(off, 5, half).some(e => e.type === 'surge'), '특성이 없으면 알아서 쓰지 않는다');
+  assert.ok(C.surge(off).ok, '직접 누르면 된다');
+  const s = inFactory(); s.traits.auto = 1; s.defenses.rail = 1e9; s.signalIn = 1e9;
   let ev = C.tick(s, 1, half);
   assert.ok(!ev.some(e => e.type === 'surge'), '라인이 서 있으면 쓰지 않는다');
   s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
@@ -1362,8 +1363,8 @@ test('자동 보조: 새 판에는 켜져 있고, 전력 투입을 준비되는 
   assert.ok(fired >= 3 && fired <= 4, '90초마다 한 번: ' + fired);
 });
 
-test('자동 보조: 청신호도 알아서 켜고, 그 덕에 도착한 열차를 알린다', () => {
-  const s = inStation(); s.autoAssist = true; s.defenses.rail = 1e9; s.signalIn = 1e9;
+test('자동화: 청신호도 알아서 켜고, 그 덕에 도착한 열차를 알린다', () => {
+  const s = inStation(); s.traits.auto = 1; s.defenses.rail = 1e9; s.signalIn = 1e9;
   let ev = C.tick(s, 1, half);
   assert.ok(!ev.some(e => e.type === 'green'), '달리는 열차가 없으면 켜지 않는다');
   s.trains = 1; s.routes.loop = 1;
@@ -1378,57 +1379,138 @@ test('자동 보조: 청신호도 알아서 켜고, 그 덕에 도착한 열차�
   assert.ok(s.railEarned > before);
 });
 
-/* ================= 동물 친구 ================= */
+/* ================= 동물 친구와 이름 ================= */
 
-test('동물 친구: 종류를 고르면 그 안에서 무작위로 온다', () => {
+const lcg = (seed) => () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+
+test('동물 친구: 등급은 정해진 비율로 나오고, 높을수록 효과가 크다', () => {
+  assert.equal(C.PET_RARITIES.reduce((a, r) => a + r.weight, 0), 100);
+  const rng = lcg(7), n = { common: 0, fine: 0, rare: 0 };
+  for (let i = 0; i < 20000; i++) n[C.rollRarity(rng()).id]++;
+  for (const r of C.PET_RARITIES) assert.ok(Math.abs(n[r.id] / 20000 - r.weight / 100) < 0.02, r.id + ' ' + n[r.id]);
+  for (let i = 1; i < C.PET_RARITIES.length; i++) { assert.ok(C.PET_RARITIES[i].dog > C.PET_RARITIES[i - 1].dog); assert.ok(C.PET_RARITIES[i].cat > C.PET_RARITIES[i - 1].cat); }
+  for (const junk of [NaN, -1, 5, 'x', null]) assert.ok(C.rollRarity(junk).id);
+  // 종류마다 모든 등급에 품종이 있다
+  for (const kind of ['dog', 'cat']) for (const r of C.PET_RARITIES) assert.ok(C.PET_BREEDS.some(b => b.kind === kind && b.rarity === r.id), kind + ' ' + r.id);
+});
+
+test('동물 친구: 첫 친구는 그냥 오고, 고른 종류 안에서 무작위로 온다', () => {
   for (const kind of ['dog', 'cat']) {
-    const seen = new Set();
-    for (let i = 0; i < 40; i++) { const s = fresh(); const r = C.adoptPet(s, kind, () => i / 40); assert.ok(r.ok); assert.equal(s.pet.kind, kind); assert.equal(r.breed.kind, kind); assert.equal(s.pet.name, r.breed.name); seen.add(s.pet.breed); }
+    const seen = new Set(), rng = lcg(11);
+    for (let i = 0; i < 400; i++) { const s = fresh(); const r = C.adoptPet(s, kind, rng); assert.ok(r.ok); assert.equal(r.cost, 0); assert.equal(r.breed.kind, kind); assert.equal(r.breed.rarity, r.rarity.id); assert.equal(s.pet.breed, r.breed.id); assert.equal(s.kennel[r.breed.id], r.breed.name); seen.add(r.breed.id); }
     assert.equal(seen.size, C.PET_BREEDS.filter(b => b.kind === kind).length, '모든 품종이 나온다');
   }
-  const s = fresh();
-  assert.equal(C.adoptPet(s, 'bird', half).reason, 'unknown');
-  C.adoptPet(s, 'cat', half);
-  assert.equal(C.adoptPet(s, 'dog', half).reason, 'have');
+  assert.equal(C.adoptPet(fresh(), 'bird', half).reason, 'unknown');
   for (const junk of [() => NaN, () => 5, () => -1, null, 'x']) assert.ok(C.adoptPet(fresh(), 'dog', junk).ok);
 });
 
-test('동물 친구: 강아지는 방어력을, 고양이는 생산을 올린다', () => {
-  const d = fresh(), c = fresh(), n = fresh();
-  [d, c, n].forEach(s => { s.buildings.scouts = 10; s.defenses.wire = 10; });
-  C.adoptPet(d, 'dog', half); C.adoptPet(c, 'cat', half);
-  assert.equal(C.defensePower(d), Math.floor(C.defensePower(n) * 1.1));
-  near(C.productionPerSec(d), C.productionPerSec(n));
-  near(C.productionPerSec(c), C.productionPerSec(n) * 1.05);
-  assert.equal(C.defensePower(c), C.defensePower(n));
-  assert.ok(C.defensePlan(d).cost <= C.defensePlan(n).cost, '보강 계획에도 반영된다');
-  assert.equal(C.petInfo(n), null);
-  assert.equal(C.petInfo(d).kindName, '강아지');
+test('동물 친구: 다시 데려오기는 항체 샘플이 들고, 판이 커지면 값도 오른다', () => {
+  const s = fresh();
+  assert.equal(C.petPullCost(s), 0);
+  C.adoptPet(s, 'dog', () => 0);                       // 기본 등급의 첫 품종
+  assert.equal(C.petPullCost(s), C.PET_PULL_MIN);
+  assert.equal(C.adoptPet(s, 'cat', half).reason, 'antibodies');
+  s.antibodies = 10;
+  const r = C.adoptPet(s, 'cat', () => 0.99);          // 희귀
+  assert.ok(r.ok); assert.equal(r.rarity.id, 'rare'); assert.equal(r.dup, false);
+  assert.equal(s.antibodies, 10 - C.PET_PULL_MIN);
+  assert.equal(s.pet.breed, r.breed.id, '새로 온 아이를 바로 데리고 다닌다');
+  assert.equal(C.kennelCount(s), 2);
+  s.antibodyTotal = 1000;
+  assert.equal(C.petPullCost(s), Math.ceil(1000 * C.PET_PULL_SHARE));
 });
 
-test('동물 친구: 이름을 바꾼다', () => {
+test('동물 친구: 이미 함께 있는 아이가 또 나오면 값의 일부를 돌려받는다', () => {
+  const s = fresh(); s.antibodyTotal = 400; s.antibodies = 100;
+  C.adoptPet(s, 'dog', () => 0);
+  const active = s.pet.breed, cost = C.petPullCost(s), before = s.antibodies;
+  C.renamePet(s, '초코');
+  const r = C.adoptPet(s, 'dog', () => 0);
+  assert.equal(r.dup, true);
+  assert.equal(r.refund, Math.floor(cost * C.PET_DUP_REFUND));
+  assert.equal(s.antibodies, before - cost + r.refund);
+  assert.equal(s.pet.breed, active); assert.equal(s.pet.name, '초코', '이름은 그대로다');
+  assert.equal(C.kennelCount(s), 1);
+});
+
+test('동물 친구: 강아지는 방어력을, 고양이는 생산을 등급만큼 올리고, 데리고 다닐 아이를 고른다', () => {
+  const n = fresh(); n.buildings.scouts = 10; n.defenses.wire = 10;
+  const mk = (kind, roll) => { const s = fresh(); s.buildings.scouts = 10; s.defenses.wire = 10; C.adoptPet(s, kind, () => roll); return s; };
+  const d = mk('dog', 0), dr = mk('dog', 0.99), c = mk('cat', 0), cr = mk('cat', 0.99);
+  assert.equal(C.defensePower(d), Math.floor(C.defensePower(n) * 1.1));
+  assert.equal(C.defensePower(dr), Math.floor(C.defensePower(n) * 1.35));
+  near(C.productionPerSec(c), C.productionPerSec(n) * 1.05);
+  near(C.productionPerSec(cr), C.productionPerSec(n) * 1.2);
+  near(C.productionPerSec(d), C.productionPerSec(n)); assert.equal(C.defensePower(c), C.defensePower(n));
+  assert.ok(C.defensePlan(dr).cost <= C.defensePlan(n).cost, '보강 계획에도 반영된다');
+  assert.equal(C.petInfo(n), null); assert.equal(C.petEffect(n), null);
+  assert.ok(C.petInfo(dr).desc.includes('방어력 +35%')); assert.equal(C.petInfo(dr).rarity.name, '희귀');
+  // 둘을 데리고 있어도 효과는 데리고 다니는 아이 것만
+  d.antibodies = 99; C.adoptPet(d, 'cat', () => 0.99);
+  near(C.productionPerSec(d), C.productionPerSec(n) * 1.2); assert.equal(C.defensePower(d), C.defensePower(n));
+  const first = Object.keys(d.kennel)[0];
+  assert.ok(C.choosePet(d, first).ok);
+  assert.equal(C.defensePower(d), Math.floor(C.defensePower(n) * 1.1));
+  assert.equal(C.choosePet(d, 'siam').reason, 'unknown', '아직 없는 아이는 고를 수 없다');
+  assert.equal(C.choosePet(d, 'ghost').reason, 'unknown');
+});
+
+test('이름: 친구와 주인공의 이름을 바꾼다', () => {
   const s = fresh();
+  assert.equal(s.heroName, '생존자');
   assert.equal(C.renamePet(s, '초코').reason, 'none');
   C.adoptPet(s, 'dog', half);
   assert.equal(C.renamePet(s, '  초코  ').name, '초코');
-  assert.equal(s.pet.name, '초코');
+  assert.equal(s.kennel[s.pet.breed], '초코');
   assert.equal(C.renamePet(s, '   ').reason, 'empty');
   assert.equal(C.renamePet(s, null).reason, 'empty');
   assert.equal(s.pet.name, '초코', '빈 이름으로는 바뀌지 않는다');
   assert.equal(C.renamePet(s, '가나다라마바사아자차카').name, '가나다라마바사아');
   assert.equal(C.renamePet(s, '<b>뭉\n치</b>').name, 'b 뭉 치 /b');
   assert.equal(C.renamePet(s, '😀😀😀😀😀😀😀😀😀😀').name, '😀'.repeat(C.PET_NAME_MAX), '이모지도 글자 수로 센다');
-  assert.equal(C.cleanPetName(42, '기본'), '기본');
+  assert.equal(C.cleanName(42, '기본'), '기본');
+  assert.equal(C.setHeroName(s, ' 김씨 ').name, '김씨');
+  assert.equal(C.setHeroName(s, '').reason, 'empty');
+  assert.equal(s.heroName, '김씨');
 });
 
-test('동물 친구: 철수해도 함께 가고, 저장을 안전하게 읽는다', () => {
-  const s = inMarket(); C.adoptPet(s, 'cat', half); C.renamePet(s, '나비');
+test('동물 친구와 이름: 철수해도 함께 가고, 저장을 안전하게 읽는다', () => {
+  const s = inMarket(); C.adoptPet(s, 'cat', half); C.renamePet(s, '나비'); C.setHeroName(s, '김씨');
   s.runEarned = C.RETREAT_MIN * 10; s.pendingPerks = [];
   const r = C.retreat(s, 0).state;
-  assert.deepEqual(r.pet, s.pet);
-  assert.deepEqual(C.deserialize(C.serialize(r), 0).pet, r.pet);
+  assert.deepEqual(r.pet, s.pet); assert.deepEqual(r.kennel, s.kennel); assert.equal(r.heroName, '김씨');
+  assert.deepEqual(C.deserialize(C.serialize(r), 0), r);
   assert.equal(C.sanitizeState({ version: 2, pet: { breed: 'ghost', name: 'x' } }, 0).pet, null);
-  assert.deepEqual(C.sanitizeState({ version: 2, pet: { kind: 'dog', breed: 'cheese', name: '<script>' } }, 0).pet, { kind: 'cat', breed: 'cheese', name: 'script' });
-  assert.equal(C.sanitizeState({ version: 2, pet: { breed: 'jindo', name: '' } }, 0).pet.name, '흰둥이');
-  for (const junk of ['x', 5, [], true]) assert.equal(C.sanitizeState({ version: 2, pet: junk }, 0).pet, null);
+  // 알파 0.7.5 의 저장(친구 하나, 일행 목록 없음)은 그 아이가 일행에 들어간다
+  const old = C.sanitizeState({ version: 2, pet: { kind: 'dog', breed: 'cheese', name: '<script>' } }, 0);
+  assert.deepEqual(old.pet, { kind: 'cat', breed: 'cheese', name: 'script' });
+  assert.deepEqual(old.kennel, { cheese: 'script' });
+  const bad = C.sanitizeState({ version: 2, heroName: '<<>>', kennel: { jindo: '', ghost: 'x', nero: 5 }, pet: { breed: 'jindo', name: '다른 이름' } }, 0);
+  assert.equal(bad.heroName, '생존자');
+  assert.deepEqual(bad.kennel, { jindo: '흰둥이', nero: '네로' });
+  assert.equal(bad.pet.name, '흰둥이', '일행 목록의 이름을 따른다');
+  for (const junk of ['x', 5, [], true]) { const j = C.sanitizeState({ version: 2, pet: junk, kennel: junk, heroName: typeof junk === 'string' ? '' : junk }, 0); assert.equal(j.pet, null); assert.deepEqual(j.kennel, {}); assert.equal(j.heroName, '생존자'); }
+});
+
+test('자동화: 레벨이 오를수록 대기 시간이 줄고, 절반 아래로는 내려가지 않는다', () => {
+  const s = inStation();
+  assert.equal(C.assistFactor(s), 1);
+  s.traits.auto = 1;
+  assert.equal(C.assistFactor(s), 1, '1레벨은 자동으로 쓰기만 한다');
+  s.traits.auto = 2;
+  near(C.assistFactor(s), 1 - C.ASSIST_STEP);
+  near(C.surgeCooldown(s), C.SURGE_COOLDOWN * (1 - C.ASSIST_STEP));
+  near(C.greenCooldown(s), C.GREEN_COOLDOWN * (1 - C.ASSIST_STEP));
+  s.traits.auto = C.ASSIST_MAX;
+  assert.ok(C.assistFactor(s) >= 0.5 && C.assistFactor(s) < 0.6);
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6; s.trains = 1; s.routes.loop = 1;
+  C.surge(s); C.greenSignal(s);
+  near(s.surgeCool, C.surgeCooldown(s)); near(s.greenCool, C.greenCooldown(s));
+  const t = C.TRAITS.find(x => x.id === 'auto');
+  assert.equal(t.max, C.ASSIST_MAX);
+  const b = fresh(); b.antibodies = 2;
+  assert.ok(C.buyTrait(b, 'auto').ok);
+  assert.equal(C.assistOn(b), true);
+  C.resetTraits(b);
+  assert.equal(C.assistOn(b), false, '되돌리면 꺼진다');
 });

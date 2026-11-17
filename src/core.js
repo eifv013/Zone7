@@ -73,6 +73,8 @@
   var SURGE_MULT = 2;              // 전력 투입 중의 라인 산출 배수
   var SURGE_SECONDS = 15;          // 전력 투입이 이어지는 시간
   var SURGE_COOLDOWN = 90;         // 다시 쓸 수 있을 때까지의 시간(투입을 누른 때부터)
+  var ASSIST_MAX = 9;              // 영구 특성 '자동화'의 최대 레벨
+  var ASSIST_STEP = 0.06;          // 자동화 2레벨부터 레벨마다 줄어드는 대기 시간의 비율
   var LINE_MILESTONES = [15, 30, 60, 100, 150, 220, 300, 400, 520, 660, 820, 1000]; // 기계 레벨 합계가 이 수에 닿을 때마다 라인 산출 2배
   // 4구역 노선
   var TRAIN_VALUE = 1e14;          // 열차 한 대가 운행 1초마다 싣는 화물의 기준 값(물자)
@@ -101,18 +103,34 @@
    *   body·patch 는 도트 그림의 몸 색과 무늬 색이다.
    */
   var PET_KINDS = {
-    dog: { name: '강아지', desc: '밤마다 방벽을 지킨다 · 방어력 +10%', key: 'defense', mult: 1.1 },
-    cat: { name: '고양이', desc: '창고의 쥐를 잡는다 · 전체 생산 +5%', key: 'prod', mult: 1.05 }
+    dog: { name: '강아지', what: '밤마다 방벽을 지킨다', label: '방어력', key: 'defense' },
+    cat: { name: '고양이', what: '창고의 쥐를 잡는다', label: '전체 생산', key: 'prod' }
   };
+  /*
+   * 등급: 데려올 때 weight 의 비율로 정해진다(100 가운데). 등급이 높을수록 효과가 크다.
+   *   dog·cat 은 그 등급의 강아지·고양이가 올려 주는 비율(0.1 = +10%).
+   */
+  var PET_RARITIES = [
+    { id: 'common', name: '기본', weight: 70, dog: 0.10, cat: 0.05 },
+    { id: 'fine',   name: '고급', weight: 24, dog: 0.20, cat: 0.10 },
+    { id: 'rare',   name: '희귀', weight: 6,  dog: 0.35, cat: 0.20 }
+  ];
+  var PET_PULL_MIN = 2;            // 다시 데려오기에 드는 항체 샘플의 최소값
+  var PET_PULL_SHARE = 0.05;       // 다시 데려오기 값: 지금까지 얻은 항체 샘플 총량의 이 비율(판이 커져도 값이 헐해지지 않게)
+  var PET_DUP_REFUND = 0.5;        // 이미 함께 있는 아이가 또 나왔을 때 돌려받는 비율
   var PET_BREEDS = [
-    { id: 'jindo',   kind: 'dog', name: '흰둥이', body: '#e9e4d6', patch: '#e9e4d6' },
-    { id: 'nureong', kind: 'dog', name: '누렁이', body: '#b9853f', patch: '#e9d9b0' },
-    { id: 'black',   kind: 'dog', name: '검둥이', body: '#2b2a28', patch: '#2b2a28' },
-    { id: 'spot',    kind: 'dog', name: '바둑이', body: '#e9e4d6', patch: '#2b2a28' },
-    { id: 'cheese',  kind: 'cat', name: '치즈',   body: '#e0a04a', patch: '#f3e3c3' },
-    { id: 'tabby',   kind: 'cat', name: '고등어', body: '#7d7f84', patch: '#3c3e44' },
-    { id: 'tuxedo',  kind: 'cat', name: '턱시도', body: '#26262a', patch: '#f1efe8' },
-    { id: 'calico',  kind: 'cat', name: '삼색이', body: '#f1efe8', patch: '#d0782e' }
+    { id: 'jindo',   kind: 'dog', rarity: 'common', name: '흰둥이', body: '#e9e4d6', patch: '#e9e4d6' },
+    { id: 'nureong', kind: 'dog', rarity: 'common', name: '누렁이', body: '#b9853f', patch: '#e9d9b0' },
+    { id: 'black',   kind: 'dog', rarity: 'fine',   name: '검둥이', body: '#2b2a28', patch: '#2b2a28' },
+    { id: 'spot',    kind: 'dog', rarity: 'fine',   name: '바둑이', body: '#e9e4d6', patch: '#2b2a28' },
+    { id: 'sapsal',  kind: 'dog', rarity: 'rare',   name: '삽살이', body: '#a9a39a', patch: '#f0b400' },
+    { id: 'wolf',    kind: 'dog', rarity: 'rare',   name: '늑대개', body: '#5d6470', patch: '#e6e5db' },
+    { id: 'cheese',  kind: 'cat', rarity: 'common', name: '치즈',   body: '#e0a04a', patch: '#f3e3c3' },
+    { id: 'tabby',   kind: 'cat', rarity: 'common', name: '고등어', body: '#7d7f84', patch: '#3c3e44' },
+    { id: 'tuxedo',  kind: 'cat', rarity: 'fine',   name: '턱시도', body: '#26262a', patch: '#f1efe8' },
+    { id: 'calico',  kind: 'cat', rarity: 'fine',   name: '삼색이', body: '#f1efe8', patch: '#d0782e' },
+    { id: 'siam',    kind: 'cat', rarity: 'rare',   name: '샴',     body: '#e8dcc4', patch: '#4a3628' },
+    { id: 'nero',    kind: 'cat', rarity: 'rare',   name: '네로',   body: '#17171a', patch: '#f0b400' }
   ];
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
@@ -258,7 +276,8 @@
     { id: 'railman', name: '철도원',    desc: '화물 값 +30%',              key: 'z4',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'scholar', name: '연구자',    desc: '연구 속도 +30%',            key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
-    { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 }
+    { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
+    { id: 'auto',    name: '자동화',    desc: '전력 투입과 청신호를 알아서 쓴다 · 레벨마다 대기 시간 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
   ];
 
   /*
@@ -309,7 +328,6 @@
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
-      autoAssist: true,                // 전력 투입과 청신호를 준비되는 대로 알아서 쓴다(구역 진행에 손이 가지 않게)
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
@@ -323,7 +341,9 @@
       // 특전(이번 판)
       perks: {}, pendingPerks: [], goalsDone: {},
       // 영구
-      pet: null,             // 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
+      pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
+      kennel: {},            // 함께 있는 친구들 { 품종: 이름 }. 한 번 데려온 아이는 계속 남고, 누구를 데리고 다닐지 고른다
+      heroName: '생존자',    // 주인공의 이름
       antibodies: 0,         // 쓰지 않은 항체 샘플
       antibodyTotal: 0,      // 지금까지 얻은 항체 샘플
       traits: {},
@@ -378,11 +398,17 @@
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
-    s.autoAssist = raw.autoAssist !== false;
+    s.heroName = cleanName(raw.heroName, '생존자');
+    s.kennel = {};
+    var rk = raw.kennel && typeof raw.kennel === 'object' && !Array.isArray(raw.kennel) ? raw.kennel : {};
+    PET_BREEDS.forEach(function (b) { if (Object.prototype.hasOwnProperty.call(rk, b.id)) s.kennel[b.id] = cleanName(rk[b.id], b.name); });
     s.pet = null;
     if (raw.pet && typeof raw.pet === 'object') {
       var breed = findById(PET_BREEDS, raw.pet.breed);
-      if (breed) s.pet = { kind: breed.kind, breed: breed.id, name: cleanPetName(raw.pet.name, breed.name) };
+      if (breed) {
+        if (!s.kennel[breed.id]) s.kennel[breed.id] = cleanName(raw.pet.name, breed.name);       // 알파 0.7.5 의 저장: 친구가 하나뿐이었다
+        s.pet = { kind: breed.kind, breed: breed.id, name: s.kennel[breed.id] };
+      }
     }
     s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
     s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
@@ -435,8 +461,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, steady: 0, slack: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -449,7 +475,7 @@
     apply(UPGRADES, state.upgrades);
     apply(PERKS, state.perks);
     apply(TRAITS, state.traits);
-    if (state.pet && PET_KINDS[state.pet.kind]) m[PET_KINDS[state.pet.kind].key] *= PET_KINDS[state.pet.kind].mult;      // 동물 친구
+    var pe = petEffect(state); if (pe) m[pe.key] *= 1 + pe.bonus;      // 동물 친구
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
     m.labcost = Math.max(0.3, m.labcost); m.staffcost = Math.max(0.2, m.staffcost);
@@ -657,6 +683,16 @@
     }
     return bought ? { ok: true, bought: bought, cost: spent } : fail(last);
   }
+  /*
+   * 자동화(영구 특성): 1레벨부터 전력 투입과 청신호를 준비되는 대로 알아서 쓴다. 2레벨부터는 레벨마다 대기 시간이 ASSIST_STEP 씩 줄어든다.
+   * 특성이 없으면 단추를 직접 눌러야 한다. 줄어든 대기 시간은 직접 누를 때에도 똑같이 적용된다.
+   */
+  function assistLevel(state) { return Math.min(ASSIST_MAX, Math.max(0, Math.floor(mods(state).assist))); }
+  function assistOn(state) { return assistLevel(state) >= 1; }
+  /** 대기 시간에 곱하는 값: 0·1레벨 1, 그 뒤로 레벨마다 ASSIST_STEP 씩 줄고 절반 아래로는 내려가지 않는다. */
+  function assistFactor(state) { return Math.max(0.5, 1 - ASSIST_STEP * Math.max(0, assistLevel(state) - 1)); }
+  function surgeCooldown(state) { return SURGE_COOLDOWN * assistFactor(state); }
+  function greenCooldown(state) { return GREEN_COOLDOWN * assistFactor(state); }
   /**
    * 전력 투입: 라인을 SURGE_SECONDS 초 동안 SURGE_MULT 배로 돌린다. 누른 때부터 SURGE_COOLDOWN 초 뒤에 다시 쓸 수 있다.
    * 늘 챙겨 써도 평균 +17% 정도다: 지켜보는 사람의 작은 덤이고, 안 써도 뒤처지지 않는다. 라인이 서 있으면 쓸 수 없다.
@@ -665,7 +701,7 @@
     if (!zoneOpen(state, 2)) return fail('locked');
     if (state.surgeCool > 0) return fail('cooldown');
     if (!(lineInfo(state).flow > 0)) return fail('stopped');
-    state.surgeLeft = SURGE_SECONDS; state.surgeCool = SURGE_COOLDOWN;
+    state.surgeLeft = SURGE_SECONDS; state.surgeCool = surgeCooldown(state);
     return { ok: true, seconds: SURGE_SECONDS };
   }
   /** 지금 이 순간 라인이 초당 버는 물자(전력 투입 포함). 화면 표시용이다. 평균 수입 계산에는 lineRate 를 쓴다. */
@@ -841,40 +877,86 @@
     if (!running) return fail('stopped');
     var events = [];
     stepRail(state, GREEN_SECONDS, events);
-    state.greenCool = GREEN_COOLDOWN;
+    state.greenCool = greenCooldown(state);
     return { ok: true, arrivals: events };
   }
 
-  /* ---------- 동물 친구 ---------- */
+  /* ---------- 동물 친구와 이름 ---------- */
   /** 이름을 다듬는다: 글이 아니거나 비면 fallback, 줄바꿈·꺾쇠 같은 글자는 빼고, PET_NAME_MAX 글자까지. */
-  function cleanPetName(name, fallback) {
+  function cleanName(name, fallback) {
     var t = (typeof name === 'string' ? name : '').replace(/[\u0000-\u001f\u007f<>&"'`\\]/g, ' ').replace(/\s+/g, ' ').trim();
     t = Array.from(t).slice(0, PET_NAME_MAX).join('').trim();
     return t || fallback || '';
   }
-  /** 강아지('dog')나 고양이('cat')를 맞이한다. 그 종류 안에서 어떤 아이가 올지는 무작위다. 이미 있으면 바꿀 수 없다. */
+  function setHeroName(state, name) {
+    var clean = cleanName(name, '');
+    if (!clean) return fail('empty');
+    state.heroName = clean;
+    return { ok: true, name: clean };
+  }
+  function kennelCount(state) { var n = 0; PET_BREEDS.forEach(function (b) { if (state.kennel && state.kennel[b.id]) n++; }); return n; }
+  /** 데려오는 데 드는 항체 샘플. 첫 친구는 그냥 온다. 그 뒤로는 지금까지 얻은 항체 총량의 일부를 낸다. */
+  function petPullCost(state) {
+    if (!kennelCount(state)) return 0;
+    return Math.max(PET_PULL_MIN, Math.ceil(state.antibodyTotal * PET_PULL_SHARE));
+  }
+  /** 0 이상 1 미만의 수로 등급을 고른다(weight 의 비율). */
+  function rollRarity(r) {
+    var roll = clamp(safeNum(r, 0), 0, 0.999999) * 100, acc = 0;
+    for (var i = 0; i < PET_RARITIES.length; i++) { acc += PET_RARITIES[i].weight; if (roll < acc) return PET_RARITIES[i]; }
+    return PET_RARITIES[0];
+  }
+  /**
+   * 강아지('dog')나 고양이('cat')를 데려온다. 등급을 먼저 뽑고, 그 등급 안에서 어떤 아이가 올지 뽑는다.
+   *   첫 친구는 값이 없다. 그 뒤로는 항체 샘플을 낸다(petPullCost).
+   *   새 아이면 일행에 들어오고 바로 데리고 다닌다. 이미 함께 있는 아이가 또 나오면 값의 일부를 돌려받는다.
+   * 돌려주는 값: { ok, breed, rarity, dup, cost, refund }
+   */
   function adoptPet(state, kind, rng) {
     if (!PET_KINDS[kind]) return fail('unknown');
-    if (state.pet) return fail('have');
-    var pool = PET_BREEDS.filter(function (b) { return b.kind === kind; });
-    var r = typeof rng === 'function' ? rng() : Math.random();
-    var breed = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(safeNum(r, 0) * pool.length)))];
-    state.pet = { kind: kind, breed: breed.id, name: breed.name };
-    return { ok: true, pet: state.pet, breed: breed };
+    var cost = petPullCost(state);
+    if (cost > state.antibodies) return fail('antibodies');
+    rng = typeof rng === 'function' ? rng : Math.random;
+    var rarity = rollRarity(rng());
+    var pool = PET_BREEDS.filter(function (b) { return b.kind === kind && b.rarity === rarity.id; });
+    var breed = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(safeNum(rng(), 0) * pool.length)))];
+    var dup = !!state.kennel[breed.id], refund = dup ? Math.floor(cost * PET_DUP_REFUND) : 0;
+    state.antibodies -= cost - refund;
+    if (!dup) { state.kennel[breed.id] = breed.name; state.pet = { kind: kind, breed: breed.id, name: breed.name }; }
+    return { ok: true, breed: breed, rarity: rarity, dup: dup, cost: cost, refund: refund };
+  }
+  /** 함께 있는 친구 가운데 누구를 데리고 다닐지 고른다. */
+  function choosePet(state, breedId) {
+    var breed = findById(PET_BREEDS, breedId);
+    if (!breed || !state.kennel[breedId]) return fail('unknown');
+    state.pet = { kind: breed.kind, breed: breed.id, name: state.kennel[breedId] };
+    return { ok: true, breed: breed };
   }
   function renamePet(state, name) {
     if (!state.pet) return fail('none');
-    var clean = cleanPetName(name, '');
+    var clean = cleanName(name, '');
     if (!clean) return fail('empty');
-    state.pet.name = clean;
+    state.pet.name = clean; state.kennel[state.pet.breed] = clean;
     return { ok: true, name: clean };
   }
-  /** 지금 친구의 정보 { kind, kindName, breed(생김새), name, desc }. 없으면 null. */
+  /** 지금 데리고 다니는 친구의 효과 { key: 배수 항목, bonus: 올려 주는 비율 }. 없으면 null. */
+  function petEffect(state) {
+    if (!state.pet) return null;
+    var breed = findById(PET_BREEDS, state.pet.breed), kind = PET_KINDS[state.pet.kind];
+    if (!breed || !kind) return null;
+    var rarity = findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0];
+    return { key: kind.key, bonus: rarity[breed.kind] };
+  }
+  function breedDesc(breed) {
+    var kind = PET_KINDS[breed.kind], rarity = findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0];
+    return kind.what + ' · ' + kind.label + ' +' + Math.round(rarity[breed.kind] * 100) + '%';
+  }
+  /** 지금 친구의 정보 { kind, kindName, breed(생김새), rarity, name, desc }. 없으면 null. */
   function petInfo(state) {
     if (!state.pet) return null;
     var breed = findById(PET_BREEDS, state.pet.breed), kind = PET_KINDS[state.pet.kind];
     if (!breed || !kind) return null;
-    return { kind: state.pet.kind, kindName: kind.name, breed: breed, name: state.pet.name, desc: kind.desc };
+    return { kind: state.pet.kind, kindName: kind.name, breed: breed, rarity: findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0], name: state.pet.name, desc: breedDesc(breed) };
   }
 
   /* ---------- 구역 강화 ---------- */
@@ -1137,8 +1219,7 @@
     next.antibodyTotal = state.antibodyTotal + gained;
     TRAITS.forEach(function (t) { next.traits[t.id] = state.traits[t.id]; });
     next.retreats = state.retreats + 1;
-    next.pet = state.pet;                                   // 동물 친구는 함께 간다
-    next.autoAssist = state.autoAssist;
+    next.pet = state.pet; next.kennel = state.kennel; next.heroName = state.heroName;      // 동물 친구와 이름은 함께 간다
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     next.lifetimeEarned = state.lifetimeEarned;
@@ -1236,14 +1317,14 @@
       state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
       if (wasOn && !(state.surgeLeft > 0)) events.push({ type: 'surge-end' });
     }
-    // 준비되면 알아서 투입한다: 챙기지 않아도 놓치는 것이 없다
-    if (state.autoAssist && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
+    // 영구 특성 '자동화'가 있으면 준비되는 대로 알아서 투입한다
+    if (assistOn(state) && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
 
     stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
-    if (state.autoAssist && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
+    if (assistOn(state) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
     stepLab(state, dt, rng);
 
     if (state.signalLeft > 0) {
@@ -1389,8 +1470,10 @@
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
+    ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
-    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, cleanPetName: cleanPetName, adoptPet: adoptPet, renamePet: renamePet, petInfo: petInfo,
+    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND,
+    cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, breedDesc: breedDesc, petInfo: petInfo,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,

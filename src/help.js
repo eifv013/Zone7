@@ -31,7 +31,7 @@
     if (!core || typeof core !== 'object') throw new Error('도움말: GameCore 가 필요하다.');
     ['DAY_SECONDS', 'BATTLE_SECONDS', 'BREACH_LOSS', 'WAVE_BONUS', 'BOSS_EVERY', 'BOSS_STRENGTH', 'BOSS_REWARD', 'NIGHT_REWARD_SECONDS', 'CLICK_SHARE',
       'SIGNAL_WINDOW', 'SIGNAL_SUPPLY_SECONDS', 'BUFF_MULT', 'BUFF_SECONDS', 'OFFLINE_CAP', 'OFFLINE_RATE', 'PERK_CHOICES',
-      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'STREAK_MAX', 'STREAK_BONUS', 'SURGE_MULT', 'SURGE_SECONDS', 'SURGE_COOLDOWN', 'GREEN_SECONDS', 'GREEN_COOLDOWN', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
+      'PRICE_STEP', 'PRICE_FLOOR', 'PRICE_CEIL', 'PEAK_PRICE', 'GOODS_CAP_SECONDS', 'RETREAT_MIN', 'STEADY_AT', 'STEADY_BONUS', 'ROUTE_SLOTS', 'STREAK_MAX', 'STREAK_BONUS', 'SURGE_MULT', 'SURGE_SECONDS', 'SURGE_COOLDOWN', 'GREEN_SECONDS', 'GREEN_COOLDOWN', 'ASSIST_STEP', 'PET_PULL_SHARE', 'PET_PULL_MIN', 'PET_DUP_REFUND', 'PET_NAME_MAX', 'SWEEP_TILES', 'SWEEP_BONUS_CLICKS', 'SWEEP_AUTO_SECONDS', 'OFFER_COUNT', 'PROJECT_GROWTH', 'REROLL_SHARE'].forEach(function (k) {
       if (typeof core[k] !== 'number' || !isFinite(core[k])) throw new Error('도움말: 상수 ' + k + ' 가 없다.');
     });
     if (!Array.isArray(core.ZONES) || !Array.isArray(core.TRAITS) || !Array.isArray(core.PERKS) || typeof core.formatNumber !== 'function') throw new Error('도움말: 정의표가 없다.');
@@ -78,7 +78,7 @@
         '기계마다 레벨당 처리량이 달라요(' + core.MACHINES.map(function (m) { return m.name + ' ' + m.rate; }).join(', ') + '). 처리량이 비슷해지게 맞추면 돼요.',
         '가동률은 가장 느린 기계 ÷ 가장 빠른 기계예요. 가동률 ' + pct(core.STEADY_AT) + ' 이상이면 "정속 가동"이 되어 산출이 ' + pct(core.STEADY_BONUS) + ' 늘어나요.',
         '기계 레벨의 합계가 ' + core.LINE_MILESTONES.slice(0, 4).join(', ') + '… 에 닿을 때마다 라인 전체가 2배가 돼요.',
-        '전력 투입: ' + span(core.SURGE_COOLDOWN) + '마다 알아서 들어가요. ' + span(core.SURGE_SECONDS) + ' 동안 라인이 ' + core.SURGE_MULT + '배로 돌아요. 챙길 필요는 없어요.',
+        '"전력 투입"을 누르면 ' + span(core.SURGE_SECONDS) + ' 동안 라인이 ' + core.SURGE_MULT + '배로 돌아요. ' + span(core.SURGE_COOLDOWN) + ' 뒤에 다시 쓸 수 있어요. 영구 특성 "자동화"를 찍으면 알아서 들어가요.',
         '자리를 비워도 라인은 나갈 때의 상태 그대로 돌아요. 정속으로 맞춰 두고 나가면 그 시간도 정속 가동으로 쳐 줘요.' ] },
 
       { id: 'rail', title: '4구역: 노선', items: [
@@ -87,7 +87,7 @@
         '열차는 화물 배수가 높은 노선부터 알아서 타요. 노선 한 단계마다 열차 ' + core.ROUTE_SLOTS + '대가 다닐 수 있고, 자리가 없는 열차는 쉬어요.',
         '그래서 고를 것은 열차를 살지, 노선을 늘릴지, 어느 노선을 늘릴지예요. 먼 노선은 비싸지만 열차 한 대가 버는 양이 커요.',
         '열차가 ' + core.FLEET_MILESTONES.slice(0, 4).join(', ') + '… 대에 닿을 때마다 화물이 2배가 돼요.',
-        '청신호: ' + span(core.GREEN_COOLDOWN) + '마다 알아서 켜져요. 달리는 열차들이 ' + span(core.GREEN_SECONDS) + '만큼 앞서 달려요. 챙길 필요는 없어요.',
+        '"청신호"를 누르면 달리는 열차들이 ' + span(core.GREEN_SECONDS) + '만큼 앞서 달려요. ' + span(core.GREEN_COOLDOWN) + ' 뒤에 다시 켤 수 있어요. 영구 특성 "자동화"를 찍으면 알아서 켜져요.',
         '자리를 비운 동안에도 열차는 다녀요. 돌아온 화물은 자리 비움 효율로 받아요.' ] },
 
       { id: 'lab', title: '5구역: 연구', items: [
@@ -116,14 +116,18 @@
       { id: 'trait', title: '특성과 특전', items: [
         '영구 특성은 항체 샘플로 찍어요(특성 화면). 철수해도 남아요.',
         '영구 특성: ' + core.TRAITS.map(function (t) { return t.name + '(' + t.desc + ')'; }).join(', ') + '.',
+        '"자동화"는 전력 투입과 청신호를 알아서 써 주는 특성이에요. 2레벨부터는 레벨마다 대기 시간이 ' + pct(core.ASSIST_STEP) + ' 씩 줄어요(절반까지).',
         '"특성 되돌리기"를 누르면 쓴 샘플을 모두 돌려받아요. 값이 들지 않으니 판마다 다르게 찍어 봐도 좋아요.',
         '특전은 이번 판에만 쓰여요. 같은 특전을 또 고르면 레벨이 올라요.',
         '특전: ' + core.PERKS.map(function (p) { return p.name + '(' + p.desc + ')'; }).join(', ') + '.' ] },
 
-      { id: 'pet', title: '동물 친구', items: [
-        '특성 화면에서 강아지나 고양이 가운데 하나를 맞이할 수 있어요. 그 안에서 어떤 아이가 올지는 무작위예요(' + core.PET_BREEDS.map(function (b) { return b.name; }).join(', ') + ').',
-        '강아지: ' + core.PET_KINDS.dog.desc + '. 고양이: ' + core.PET_KINDS.cat.desc + '.',
-        '이름은 언제든 바꿀 수 있어요(' + core.PET_NAME_MAX + '글자까지). 도트 화면에서 주인공을 따라다니고, 철수해도 함께 가요.' ] },
+      { id: 'pet', title: '일행과 동물 친구', items: [
+        '특성 화면의 "일행"에서 강아지나 고양이를 데려올 수 있어요. 첫 친구는 그냥 와요.',
+        '등급이 있어요. ' + core.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%(강아지 방어력 +' + Math.round(r.dog * 100) + '%, 고양이 전체 생산 +' + Math.round(r.cat * 100) + '%)'; }).join(', ') + '.',
+        '다시 데려오려면 항체 샘플이 들어요. 값은 지금까지 얻은 항체 샘플 총량의 ' + pct(core.PET_PULL_SHARE) + ' 예요(최소 ' + core.PET_PULL_MIN + '개). 이미 함께 있는 아이가 또 나오면 ' + pct(core.PET_DUP_REFUND) + ' 를 돌려받아요.',
+        '한 번 데려온 아이는 계속 일행에 남아요. 그중 누구를 데리고 다닐지 고를 수 있고, 효과는 데리고 다니는 아이 것만 적용돼요.',
+        '친구들: ' + core.PET_BREEDS.map(function (b) { return b.name; }).join(', ') + '.',
+        '친구와 주인공의 이름은 언제든 바꿀 수 있어요(' + core.PET_NAME_MAX + '글자까지). 철수해도 모두 함께 가요.' ] },
 
       { id: 'signal', title: '구조 신호', items: [
         '가끔 무전기에 구조 신호가 잡혀요. 보유 물자 아래에 단추가 뜨는데, ' + span(core.SIGNAL_WINDOW) + ' 안에 누르면 응답할 수 있어요.',

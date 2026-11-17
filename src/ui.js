@@ -1078,7 +1078,7 @@
       var sg = $('surge'), sOn = state.surgeLeft > 0;
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
       sg.className = 'surge' + (sOn ? ' on' : '');
-      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) : '전력 투입 ×' + C.SURGE_MULT);
+      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) + (C.assistOn(state) ? ' · 자동' : '') : '전력 투입 ×' + C.SURGE_MULT);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies);
@@ -1102,7 +1102,7 @@
       var gb = $('green'), running = 0;
       C.ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
       gb.disabled = state.greenCool > 0 || !running;
-      setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + ' · 알아서 켜져요' : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
+      setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + (C.assistOn(state) ? ' · 알아서 켜져요' : '') : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
       setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
         : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
@@ -1157,16 +1157,44 @@
     });
   }
 
-  /** 동물 친구 칸: 아직 없으면 고르는 단추 둘, 있으면 이름·효과와 이름 바꾸기. */
+  /** 일행 칸: 주인공 이름, 지금 데리고 다니는 친구, 함께 있는 친구들(누르면 바꾼다), 데려오기 단추와 값. */
   function renderPet() {
-    var p = C.petInfo(state);
+    var p = C.petInfo(state), cost = C.petPullCost(state), have = C.kennelCount(state);
     $('pet-empty').hidden = !!p; $('pet-card').hidden = !p;
-    setText($('pet-kind'), p ? p.kindName + ' · ' + p.breed.name : '아직 없어요');
+    $('hero-input').placeholder = state.heroName;
+    setText($('pet-kind'), p ? '친구 ' + have + ' / ' + C.PET_BREEDS.length : '아직 친구가 없어요');
+    ['dog', 'cat'].forEach(function (kind) {
+      var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
+      setText(b.firstChild, k.name + (have ? ' 데려오기' : ' 맞이하기'));
+      setText(b.lastChild, k.what + ' · ' + (cost ? '항체 샘플 ' + fmt(cost) : '첫 친구는 그냥 와요'));
+      b.disabled = cost > state.antibodies;
+    });
+    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 이미 있는 아이가 나오면 ' + Math.round(C.PET_DUP_REFUND * 100) + '% 를 돌려받아요');
     if (!p) return;
     setText($('pet-name'), p.name);
-    setText($('pet-desc'), p.desc);
+    setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · ' + p.desc);
+    $('pet-input').placeholder = p.name;
     var face = $('pet-face');
+    face.className = 'pet-face ' + p.rarity.id;
     face.style.background = 'linear-gradient(135deg, ' + p.breed.body + ' 0 62%, ' + p.breed.patch + ' 62%)';      // 몸 색과 무늬 색
+    // 함께 있는 친구들: 목록이 바뀌었을 때만 다시 만든다(매 프레임 만들면 누르는 도중에 단추가 사라진다)
+    var key = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; }).map(function (b) { return b.id + ':' + state.kennel[b.id]; }).join('|') + '>' + state.pet.breed;
+    var box = $('kennel');
+    if (box.getAttribute('data-key') === key) return;
+    box.setAttribute('data-key', key);
+    while (box.firstChild) box.removeChild(box.firstChild);
+    if (have < 2) return;
+    C.PET_BREEDS.forEach(function (b) {
+      if (!state.kennel[b.id]) return;
+      var btn = el('button', b.rarity), dot = el('i');
+      btn.type = 'button'; btn.id = 'kennel-' + b.id;
+      dot.style.background = 'linear-gradient(135deg, ' + b.body + ' 0 62%, ' + b.patch + ' 62%)';
+      btn.appendChild(dot); btn.appendChild(document.createTextNode(state.kennel[b.id]));
+      btn.title = C.breedDesc(b);
+      btn.setAttribute('aria-pressed', String(b.id === state.pet.breed));
+      btn.addEventListener('click', function () { if (C.choosePet(state, b.id).ok) { sfx('click'); Store.save(); render(); } });
+      box.appendChild(btn);
+    });
   }
   function renderTraits() {
     renderPet();
@@ -1414,28 +1442,35 @@
       handleEvents(r.arrivals);
       sfx('click'); render();
     });
-    // 동물 친구: 맞이하기와 이름 바꾸기
+    // 일행: 데려오기(등급 뽑기), 친구 이름, 주인공 이름
     ['dog', 'cat'].forEach(function (kind) {
-      var b = $('adopt-' + kind), k = C.PET_KINDS[kind], small = el('small', '', k.desc);
-      setText(b, k.name); b.appendChild(small);
+      var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
+      b.appendChild(el('span', '', k.name)); b.appendChild(el('small', '', k.what));
       b.addEventListener('click', function () {
         var r = C.adoptPet(state, kind);
         if (!r.ok) return;
-        log(r.breed.name + '(이)가 거점에 눌러앉았다. ' + k.name + '다.', 'good');
-        toast(k.name + ' ' + r.breed.name + ' · 새 친구가 생겼어요');
+        if (r.dup) { log('이미 함께 있는 ' + r.breed.name + '(이)가 또 따라왔다. 항체 샘플 ' + fmt(r.refund) + ' 을 돌려받았다.'); toast(r.rarity.name + ' · ' + r.breed.name + ' · 이미 함께 있어요'); sfx('buy'); }
+        else {
+          log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + '(이)가 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
+          toast((r.rarity.id === 'rare' ? '희귀! ' : '') + r.rarity.name + ' · ' + r.breed.name + ' · 새 친구예요');
+          sfx(r.rarity.id === 'common' ? 'buy' : 'defended');
+        }
         $('pet-input').value = '';
-        sfx('defended'); Store.save(); render();
+        Store.save(); render();
       });
     });
-    var rename = function () {
-      var r = C.renamePet(state, $('pet-input').value);
-      if (!r.ok) { toast(r.reason === 'empty' ? '이름을 적어 주세요' : '아직 친구가 없어요'); return; }
-      $('pet-input').value = '';
-      toast('이제 ' + r.name + ' (이)라고 불러요');
-      sfx('buy'); Store.save(); render();
+    var renamer = function (inputId, change, done) {
+      var go = function () {
+        var r = change($(inputId).value);
+        if (!r.ok) { toast(r.reason === 'empty' ? '새 이름을 적어 주세요' : '아직 친구가 없어요'); return; }
+        $(inputId).value = '';
+        toast(done(r.name)); sfx('buy'); Store.save(); render();
+      };
+      $(inputId).addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+      return go;
     };
-    $('pet-rename').addEventListener('click', rename);
-    $('pet-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); rename(); } });
+    $('pet-rename').addEventListener('click', renamer('pet-input', function (v) { return C.renamePet(state, v); }, function (n) { return '이제 ' + n + ' (이)라고 불러요'; }));
+    $('hero-rename').addEventListener('click', renamer('hero-input', function (v) { return C.setHeroName(state, v); }, function (n) { return '주인공의 이름은 이제 ' + n; }));
     // 3구역: 전력 투입
     $('surge').addEventListener('click', function () {
       if (!C.surge(state).ok) return;
