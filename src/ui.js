@@ -1500,8 +1500,8 @@
     setText($('retreat-hint'), can
       ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차 누적 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
-    setText($('retreat-sub'), can ? '더 벌고 철수하면 샘플이 늘어요.'
-      : state.pendingPerks.length ? '' : '다 채우면 철수할 수 있어요.');
+    setText($('retreat-sub'), can ? '물자를 더 모으면 샘플이 늘어요.'
+      : state.pendingPerks.length ? '' : '물자를 다 모으면 철수할 수 있어요.');
     // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
     $('retreat-bar').hidden = !!state.pendingPerks.length && !can;
     $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / (can ? C.nextAntibodyAt(state) : C.RETREAT_MIN) * 100).toFixed(1) + '%';
