@@ -584,7 +584,19 @@
     else el.style.setProperty('--p', v);
   }
   /** 글을 줄 단위로 나눈다: 문장이 끝나는 곳과 괄호 앞에서 줄을 바꾼다. (CSS 의 white-space: pre-line 과 함께 쓴다) */
-  function lines(text) { return typeof text === 'string' ? text.replace(/([.!?…][”’"')]?) (?=\S)/g, '$1\n') : text; }
+  function lines(text) {
+    if (typeof text !== 'string') return text;
+    // 따옴표(“ ”) 안에서는 줄을 바꾸지 않는다: 대사는 한 줄로 읽혀야 한다. 따옴표가 닫힌 뒤에 문장이 끝나면 거기서 바꾼다
+    var out = '', depth = 0;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (ch === '“') depth++;
+      else if (ch === '”') depth = Math.max(0, depth - 1);
+      if (ch === ' ' && depth === 0 && i > 0 && i < text.length - 1 && /\S/.test(text[i + 1]) && /[.!?…]$|[.!?…][”’"')]$/.test(text.slice(Math.max(0, i - 2), i))) out += '\n';
+      else out += ch;
+    }
+    return out;
+  }
   /** 목표 글: 문장마다 한 줄에 더해, 진행 숫자(괄호)도 아랫줄로 내린다. */
   function goalLines(text) { return lines(String(text)).replace(/ \(/g, '\n('); }
   /** 글을 넣는다. 모든 글은 문장 끝에서 줄을 바꾼다(줄 정렬): 화면 너비에 따라 문장 중간에서 꺾이는 것을 줄인다. */
@@ -1461,6 +1473,14 @@
 
     // 다음 할 일
     guideNow = C.guide(state);
+    // 아래 탭의 붉은 점: 살 것이 있는데 다른 화면을 보느라 놓치지 않게 한다
+    var feedCost = state.pet ? C.petFeedCost(state) : Infinity;
+    var canFeed = isFinite(feedCost) && feedCost <= state.treats;
+    var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
+    var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.cost <= state.supplies && !(nz.soon && state.gate);
+    $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
+    $('mnav-manage').classList.toggle('dot', canOpen);
+    $('pet-feed').classList.toggle('ready', canFeed);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
     var guideText = goalLines(guideNow.text);
     ['', 'm-'].forEach(function (pre) { setText($(pre + 'goal'), guideText); $(pre + 'goal-go').hidden = !guideNow.view; });

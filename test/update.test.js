@@ -70,3 +70,12 @@ test('패치노트의 맨 위 버전이 package.json 의 버전과 같다', () =
   const versions = notes.map(n => n.ver.split(' ').pop());
   for (let i = 1; i < versions.length; i++) assert.equal(U.isNewer(versions[i - 1], versions[i]), true, '위에 있을수록 새 버전');
 });
+
+test('버전 번호: 끝자리는 9까지만 쓴다(0.x.9 다음은 가운데 자리가 오른다)', () => {
+  const notes = require('../src/notes.js');
+  for (const n of notes) {
+    const parts = n.ver.replace('알파 ', '').split('.');
+    if (parts.length === 3) assert.ok(Number(parts[2]) <= 9, n.ver);
+  }
+  assert.equal(new Set(notes.map((n) => n.ver)).size, notes.length, '같은 번호가 둘 있으면 안 된다');
+});
