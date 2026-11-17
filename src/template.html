@@ -850,11 +850,12 @@ body { font-size: 15.5px; line-height: 1.55; }
 /* 패치노트: 접힌 줄을 누르면 펼쳐진다. 최신 버전에는 노란 NEW 딱지 */
 .note { display: block; padding: 0; border-top: 1px solid var(--rule); }
 .note:first-child { border-top: 1px solid var(--edge); }
-.note-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; width: 100%; padding: 12px 2px; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
-.note-ver { font: 400 18px/1.2 var(--font-display); white-space: nowrap; }
-.note-title { grid-column: auto; grid-row: auto; font: 500 14px/1.4 var(--font-body); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; width: 100%; padding: 12px 2px; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.note-ver { grid-column: 1; grid-row: 1; font: 400 18px/1.2 var(--font-display); white-space: nowrap; }
+.note-date { grid-column: 2; grid-row: 1; font: 500 11px/1.6 var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
+/* 제목(부제)은 버전 아랫줄에 온 너비로 둔다. 옆에 두면 좁은 화면에서 두 줄로 꺾여 보기 나쁘다 */
+.note-title { grid-column: 1 / -1; grid-row: 2; margin: 0; font: 500 14px/1.45 var(--font-body); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .note.open .note-title { color: var(--ink); font-weight: 600; white-space: normal; }
-.note-date { font: 500 11px/1.6 var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
 .note-new { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--hazard); color: var(--on-hazard); font: 700 10px/1.6 var(--font-body); vertical-align: 3px; }
 .note-now .note-ver::after { content: none; }
 .note ul { display: none; margin: 0 0 14px; padding-left: 18px; }
@@ -877,7 +878,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.11</div>
+  <div class="boot-ver">7구역 알파 0.8.12</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1150,7 +1151,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.11 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.12 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

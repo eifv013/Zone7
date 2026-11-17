@@ -862,11 +862,12 @@ body { font-size: 15.5px; line-height: 1.55; }
 /* 패치노트: 접힌 줄을 누르면 펼쳐진다. 최신 버전에는 노란 NEW 딱지 */
 .note { display: block; padding: 0; border-top: 1px solid var(--rule); }
 .note:first-child { border-top: 1px solid var(--edge); }
-.note-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; width: 100%; padding: 12px 2px; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
-.note-ver { font: 400 18px/1.2 var(--font-display); white-space: nowrap; }
-.note-title { grid-column: auto; grid-row: auto; font: 500 14px/1.4 var(--font-body); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; width: 100%; padding: 12px 2px; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.note-ver { grid-column: 1; grid-row: 1; font: 400 18px/1.2 var(--font-display); white-space: nowrap; }
+.note-date { grid-column: 2; grid-row: 1; font: 500 11px/1.6 var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
+/* 제목(부제)은 버전 아랫줄에 온 너비로 둔다. 옆에 두면 좁은 화면에서 두 줄로 꺾여 보기 나쁘다 */
+.note-title { grid-column: 1 / -1; grid-row: 2; margin: 0; font: 500 14px/1.45 var(--font-body); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .note.open .note-title { color: var(--ink); font-weight: 600; white-space: normal; }
-.note-date { font: 500 11px/1.6 var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
 .note-new { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--hazard); color: var(--on-hazard); font: 700 10px/1.6 var(--font-body); vertical-align: 3px; }
 .note-now .note-ver::after { content: none; }
 .note ul { display: none; margin: 0 0 14px; padding-left: 18px; }
@@ -889,7 +890,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.11</div>
+  <div class="boot-ver">7구역 알파 0.8.12</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1297,7 +1298,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.11 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.12 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1421,7 +1422,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.12";
 </script>
 <script>
 /*
@@ -1440,6 +1441,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.12', date: '2026-11-17', at: '2026-11-17 18:20:00', title: '도감 그림과 글 다듬기',
+      items: [
+        '도감의 방어 수단에 그림을 그려 넣었어요. 아직 없는 것은 회색으로 보여요.',
+        '패치노트의 제목을 버전 아랫줄로 내렸어요.',
+        '"뒤지다"로 적혀 있던 설명을 모두 "수색하다"로 바꿨어요.'
+      ] },
     { ver: '알파 0.8.11', date: '2026-11-17', at: '2026-11-17 17:50:00', title: '밝아진 아이콘과 소문',
       items: [
         '앱 아이콘을 조금 밝게 손봤어요. 배경은 그대로 두고 경고 띠의 노랑을 넓히고, 탑을 밝게 하고, 별을 더 넣었어요. 설치한 앱은 새 설치 파일로 다시 깔아야 바뀌어요.',
@@ -1473,7 +1480,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
         '구역 지도를 다시 그렸어요. 숲과 덤불, 무너진 집, 버려진 차, 강둑과 흐르는 물, 다리가 생겼어요.',
         '덩굴 장식을 모두 뺐어요.',
         '이름표를 발밑 한 줄로 합쳤어요("주인공 · 동물 친구").',
-        '"동네 하나를 다 뒤졌다" 알림 띠를 없앴어요. 대신 수색 지도 머리줄에 잠깐 표시돼요.',
+        '"동네 하나를 다 수색했다" 알림 띠를 없앴어요. 대신 수색 지도 머리줄에 잠깐 표시돼요.',
         '화면 곳곳의 간격과 줄 맞춤을 손봤어요: 구역 머리줄의 단추 높이, 일행 칸의 이름 바꾸기와 데려오기 사이, 설정의 줄 간격, "처음부터 다시"와 그 설명.',
         '설명을 더 줄였어요: 상황판 첫 줄, 데려오기 단추, 영구 특성 안내, 개조 줄의 군더더기 딱지.',
         '주인공의 기본 이름이 "라라"가 됐어요. 일지 속 사람들이 주인공을 이름으로 불러요. 이름을 바꾸면 일지에도 바뀐 이름이 나와요.',
@@ -1605,8 +1612,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
     { ver: '알파 0.7.0', date: '2026-11-17', at: '2026-11-17 01:20:37', title: '화면을 비우고, 1구역에 수색 지도',
       items: [
         '구역 화면을 셋으로 나눴다. 운영(놀이 화면과 주된 구매), 강화, 목표. 한 번에 한 가지만 보여서 화면이 훨씬 비었다. 강화나 목표에 볼 것이 생기면 단추에 점이 찍힌다.',
-        '1구역에 수색 지도가 생겼다. 동네 하나가 스무 칸이고, 칸을 눌러 뒤진다. 빈집, 가게(1.25배), 은닉처(2배)가 섞여 있다. 스무 칸을 다 뒤지면 보너스를 받고 다음 동네로 넘어간다.',
-        '수색조가 있으면 3초마다 한 칸씩 알아서 뒤진다. "잔해 수색" 단추는 지도의 다음 칸을 뒤지는 것과 같다.',
+        '1구역에 수색 지도가 생겼다. 동네 하나가 스무 칸이고, 칸을 눌러 수색한다. 빈집, 가게(1.25배), 은닉처(2배)가 섞여 있다. 스무 칸을 다 수색하면 보너스를 받고 다음 동네로 넘어간다.',
+        '수색조가 있으면 3초마다 한 칸씩 알아서 수색한다. "잔해 수색" 단추는 지도의 다음 칸을 수색하는 것과 같다.',
         '구역 지도가 생겼다. 구역마다 지금 얼마를 벌고 전체에서 몇 할을 차지하는지 한눈에 본다. 구역 화면의 "구역 지도"나 맨 위의 구역 번호를 누르면 열린다.',
         '자리를 비웠다 돌아오면 쌓인 물자를 큰 숫자로 보여 주는 창이 뜬다.',
         '2구역부터 5구역까지의 놀이 화면은 다음 버전들에서 하나씩 새로 만든다.'
@@ -2108,7 +2115,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
    *           한 편은 { title 제목, text [문단, ...] }. 주인공(노란 우비를 입은 아이)이 쓰는 글이다.
    */
   var ZONES = [
-    { no: 1, name: '주택가', kind: 'search', cost: 0, lead: '잔해를 뒤지고 사람을 모은다',
+    { no: 1, name: '주택가', kind: 'search', cost: 0, lead: '잔해를 수색하고 사람을 모은다',
       story: [
         { title: "열두 번째 날", text: [
           "사태 12일째. 무전기는 오늘도 같은 말만 한다. “여기는 7구역. 생존자는 7구역으로 오라.” 여자 목소리다. 숨 쉴 틈도 없이 되풀이한다.",
@@ -2221,7 +2228,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
 
   // 1구역의 시설: 가만히 있어도 물자를 만든다
   var BUILDINGS = [
-    { id: 'scouts',   name: '잔해 수색조', desc: '폐허를 뒤져 물자를 가져온다', baseCost: 15,    baseRate: 0.5 },
+    { id: 'scouts',   name: '잔해 수색조', desc: '폐허를 수색해 물자를 가져온다', baseCost: 15,    baseRate: 0.5 },
     { id: 'garden',   name: '옥상 텃밭',   desc: '감자와 콩이 자란다',          baseCost: 120,   baseRate: 4 },
     { id: 'purifier', name: '빗물 정수기', desc: '마실 물은 곧 화폐다',         baseCost: 1100,  baseRate: 22 },
     { id: 'workshop', name: '고철 작업장', desc: '잔해를 쓸모 있게 바꾼다',     baseCost: 12000, baseRate: 120 }
@@ -3778,9 +3785,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
         '누르지 않아도 뒤처지지 않아요. 열심히 눌러도 가만히 둘 때보다 조금 빠른 정도예요.' ] },
 
       { id: 'map', tab: '1구역', title: '1구역: 수색 지도', items: [
-        '동네 하나는 ' + core.SWEEP_TILES + '칸이에요. 칸을 누르면 그 칸을 뒤져요. 빈집, 가게, 은닉처 가운데 무엇이 나올지는 뒤져 봐야 알아요.',
-        '다 뒤지면 보너스를 받고 다음 동네로 넘어가요.',
-        '개조에서 "순찰조"를 사면 수색조가 알아서 한 칸씩 뒤져요. 올릴수록 빨라져요.' ] },
+        '동네 하나는 ' + core.SWEEP_TILES + '칸이에요. 칸을 누르면 그 칸을 수색해요. 빈집, 가게, 은닉처 가운데 무엇이 나올지는 수색해 봐야 알아요.',
+        '다 수색하면 보너스를 받고 다음 동네로 넘어가요.',
+        '개조에서 "순찰조"를 사면 수색조가 알아서 한 칸씩 수색해요. 올릴수록 빨라져요.' ] },
 
       { id: 'trade', tab: '2구역', title: '2구역: 거래', items: [
         '좌판이 상품을 만들고, 상품은 그때의 시세로 팔려요. 시세는 계속 오르내려요.',
@@ -6237,6 +6244,17 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
     });
     return svg;
   }
+  /* 방어 수단의 도트 그림(12×12). k 어두운 쇠, s 쇠, l 밝은 쇠, w 나무, y 노랑, r 빨강, o 주황, c 번개, b 파랑 */
+  var WALL_PAL = { k: '#2a2c24', s: '#8d949e', l: '#cfd3d8', w: '#8a5a34', y: '#f0b400', r: '#e0392b', o: '#e0602b', c: '#7fe0f0', b: '#3f6f8f' };
+  var WALL_PAL_OFF = { k: '#4a4b40', s: '#4a4b40', l: '#55564a', w: '#4a4b40', y: '#55564a', r: '#4a4b40', o: '#4a4b40', c: '#55564a', b: '#4a4b40' };
+  var WALL_PIX = {
+    wire:   ['............', 'w....w....w.', 'wl..lwl..lw.', 'w.ll.w.ll.w.', 'wl..lwl..lw.', 'w.ll.w.ll.w.', 'wl..lwl..lw.', 'w.ll.w.ll.w.', 'w....w....w.', 'w....w....w.', 'w....w....w.', 'w....w....w.'],
+    tower:  ['..wwwwwwww..', '.wwwwwwwwww.', '..k......k..', '..kyyyyyyk..', '..ssssssss..', '..ssssssss..', '....w..w....', '....wwww....', '....w..w....', '....wwww....', '....w..w....', '...ww..ww...'],
+    turret: ['............', '............', '..yyyyyy....', '..ssssssllll', '..ssrsss....', '..ssssssllll', '..ssssss....', '...kkkk.....', '...kkkk.....', '..kkkkkk....', '.kkkkkkkk...', '.kkkkkkkk...'],
+    flame:  ['.......o....', '......oo..o.', '.....oyo.oo.', '....oyyooyo.', '....oyyyyyo.', '.....oyyyo..', 'rr....ooo...', 'rr..........', 'yyssssssk...', 'rr....ssk...', 'rr..........', 'rr..........'],
+    emp:    ['.cc......cc.', '.cc..c...cc.', '.kk.c.c..kk.', 'owwo..c.owwo', '.kk....c.kk.', 'owwo.c..owwo', '.kk.c....kk.', 'owwo.c..owwo', '.kk......kk.', '.kk......kk.', '.kk......kk.', 'kkkk....kkkk'],
+    rail:   ['............', '............', 'yyyyyy......', 'ssssssllllll', 'sbbsss.s.s.s', 'sbbsss.s.s.s', 'ssssssllllll', 'ssssss......', '..kkkk......', '..kkkk......', '.kkkkkk.....', 'kkkkkkkk....']
+  };
   var dexTab = 'pet', dexShown = '';
   function renderDex() {
     var owned = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; });
@@ -6274,7 +6292,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
       });
     } else {
       C.DEFENSES.forEach(function (d) {
-        var n = state.defenses[d.id] || 0, art = el('i', 'dex-wall dex-' + d.id);
+        var n = state.defenses[d.id] || 0, art = pixSvg(WALL_PIX[d.id] || ['k'], n ? WALL_PAL : WALL_PAL_OFF);
         card(art, d.name, n ? '가진 수 ' + fmt(n) : '아직 없어요', d.desc + '. ' + (LEAD_TEXT[d.id] || ''), !n);
       });
     }
@@ -6525,7 +6543,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
         var cls = 'tile' + (searched ? ' done ' + kind.id : i === nextIdx ? ' next' : '') + (b.classList.contains('hit') ? ' hit' : '');
         if (b.className !== cls) b.className = cls;
         setText(b, searched ? kind.name : '');
-        b.setAttribute('aria-label', searched ? kind.name + ' · 뒤진 칸' : '아직 뒤지지 않은 칸');
+        b.setAttribute('aria-label', searched ? kind.name + ' · 수색한 칸' : '아직 수색하지 않은 칸');
       });
       setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
       var patrol = C.autoOn(state, 0), every = C.sweepInterval(state);
@@ -6535,7 +6553,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
       fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
       $('search-bar').hidden = !patrol;
       $('search').classList.toggle('auto', patrol);          // 순찰조가 돌면 지도를 작게 접는다(눌러서 뒤질 일이 줄어드니까)
-      setText($('search-bonus'), '다 뒤지면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
+      setText($('search-bonus'), '다 수색하면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
     }
     if (tab === 'z0' && play) {
       C.BUILDINGS.forEach(function (b) {
@@ -7299,7 +7317,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.11";
       reportAway(C.applyOffline(state, (now - state.lastSeen) / 1000));
     } else if (!snapshot || !snapshot.version) {
       log('방벽을 손봐야 한다. 철조망 하나면 첫 밤은 넘길 수 있다.');
-      log('잔해를 뒤져 물자를 모으고, 수색조를 꾸려라.');
+      log('잔해를 수색해 물자를 모으고, 수색조를 꾸려라.');
       if (!loaded.error) notice('알파 0.6 부터 구조가 새로 바뀌었어요. "다음 할 일"을 따라가면 돼요. 자세한 설명은 기록 > 도움말에 있어요.');
     }
 

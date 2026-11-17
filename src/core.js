@@ -145,7 +145,7 @@
    *           한 편은 { title 제목, text [문단, ...] }. 주인공(노란 우비를 입은 아이)이 쓰는 글이다.
    */
   var ZONES = [
-    { no: 1, name: '주택가', kind: 'search', cost: 0, lead: '잔해를 뒤지고 사람을 모은다',
+    { no: 1, name: '주택가', kind: 'search', cost: 0, lead: '잔해를 수색하고 사람을 모은다',
       story: [
         { title: "열두 번째 날", text: [
           "사태 12일째. 무전기는 오늘도 같은 말만 한다. “여기는 7구역. 생존자는 7구역으로 오라.” 여자 목소리다. 숨 쉴 틈도 없이 되풀이한다.",
@@ -258,7 +258,7 @@
 
   // 1구역의 시설: 가만히 있어도 물자를 만든다
   var BUILDINGS = [
-    { id: 'scouts',   name: '잔해 수색조', desc: '폐허를 뒤져 물자를 가져온다', baseCost: 15,    baseRate: 0.5 },
+    { id: 'scouts',   name: '잔해 수색조', desc: '폐허를 수색해 물자를 가져온다', baseCost: 15,    baseRate: 0.5 },
     { id: 'garden',   name: '옥상 텃밭',   desc: '감자와 콩이 자란다',          baseCost: 120,   baseRate: 4 },
     { id: 'purifier', name: '빗물 정수기', desc: '마실 물은 곧 화폐다',         baseCost: 1100,  baseRate: 22 },
     { id: 'workshop', name: '고철 작업장', desc: '잔해를 쓸모 있게 바꾼다',     baseCost: 12000, baseRate: 120 }

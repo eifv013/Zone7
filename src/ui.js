@@ -1002,6 +1002,17 @@
     });
     return svg;
   }
+  /* 방어 수단의 도트 그림(12×12). k 어두운 쇠, s 쇠, l 밝은 쇠, w 나무, y 노랑, r 빨강, o 주황, c 번개, b 파랑 */
+  var WALL_PAL = { k: '#2a2c24', s: '#8d949e', l: '#cfd3d8', w: '#8a5a34', y: '#f0b400', r: '#e0392b', o: '#e0602b', c: '#7fe0f0', b: '#3f6f8f' };
+  var WALL_PAL_OFF = { k: '#4a4b40', s: '#4a4b40', l: '#55564a', w: '#4a4b40', y: '#55564a', r: '#4a4b40', o: '#4a4b40', c: '#55564a', b: '#4a4b40' };
+  var WALL_PIX = {
+    wire:   ['............', 'w....w....w.', 'wl..lwl..lw.', 'w.ll.w.ll.w.', 'wl..lwl..lw.', 'w.ll.w.ll.w.', 'wl..lwl..lw.', 'w.ll.w.ll.w.', 'w....w....w.', 'w....w....w.', 'w....w....w.', 'w....w....w.'],
+    tower:  ['..wwwwwwww..', '.wwwwwwwwww.', '..k......k..', '..kyyyyyyk..', '..ssssssss..', '..ssssssss..', '....w..w....', '....wwww....', '....w..w....', '....wwww....', '....w..w....', '...ww..ww...'],
+    turret: ['............', '............', '..yyyyyy....', '..ssssssllll', '..ssrsss....', '..ssssssllll', '..ssssss....', '...kkkk.....', '...kkkk.....', '..kkkkkk....', '.kkkkkkkk...', '.kkkkkkkk...'],
+    flame:  ['.......o....', '......oo..o.', '.....oyo.oo.', '....oyyooyo.', '....oyyyyyo.', '.....oyyyo..', 'rr....ooo...', 'rr..........', 'yyssssssk...', 'rr....ssk...', 'rr..........', 'rr..........'],
+    emp:    ['.cc......cc.', '.cc..c...cc.', '.kk.c.c..kk.', 'owwo..c.owwo', '.kk....c.kk.', 'owwo.c..owwo', '.kk.c....kk.', 'owwo.c..owwo', '.kk......kk.', '.kk......kk.', '.kk......kk.', 'kkkk....kkkk'],
+    rail:   ['............', '............', 'yyyyyy......', 'ssssssllllll', 'sbbsss.s.s.s', 'sbbsss.s.s.s', 'ssssssllllll', 'ssssss......', '..kkkk......', '..kkkk......', '.kkkkkk.....', 'kkkkkkkk....']
+  };
   var dexTab = 'pet', dexShown = '';
   function renderDex() {
     var owned = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; });
@@ -1039,7 +1050,7 @@
       });
     } else {
       C.DEFENSES.forEach(function (d) {
-        var n = state.defenses[d.id] || 0, art = el('i', 'dex-wall dex-' + d.id);
+        var n = state.defenses[d.id] || 0, art = pixSvg(WALL_PIX[d.id] || ['k'], n ? WALL_PAL : WALL_PAL_OFF);
         card(art, d.name, n ? '가진 수 ' + fmt(n) : '아직 없어요', d.desc + '. ' + (LEAD_TEXT[d.id] || ''), !n);
       });
     }
@@ -1290,7 +1301,7 @@
         var cls = 'tile' + (searched ? ' done ' + kind.id : i === nextIdx ? ' next' : '') + (b.classList.contains('hit') ? ' hit' : '');
         if (b.className !== cls) b.className = cls;
         setText(b, searched ? kind.name : '');
-        b.setAttribute('aria-label', searched ? kind.name + ' · 뒤진 칸' : '아직 뒤지지 않은 칸');
+        b.setAttribute('aria-label', searched ? kind.name + ' · 수색한 칸' : '아직 수색하지 않은 칸');
       });
       setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
       var patrol = C.autoOn(state, 0), every = C.sweepInterval(state);
@@ -1300,7 +1311,7 @@
       fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
       $('search-bar').hidden = !patrol;
       $('search').classList.toggle('auto', patrol);          // 순찰조가 돌면 지도를 작게 접는다(눌러서 뒤질 일이 줄어드니까)
-      setText($('search-bonus'), '다 뒤지면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
+      setText($('search-bonus'), '다 수색하면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
     }
     if (tab === 'z0' && play) {
       C.BUILDINGS.forEach(function (b) {
@@ -2064,7 +2075,7 @@
       reportAway(C.applyOffline(state, (now - state.lastSeen) / 1000));
     } else if (!snapshot || !snapshot.version) {
       log('방벽을 손봐야 한다. 철조망 하나면 첫 밤은 넘길 수 있다.');
-      log('잔해를 뒤져 물자를 모으고, 수색조를 꾸려라.');
+      log('잔해를 수색해 물자를 모으고, 수색조를 꾸려라.');
       if (!loaded.error) notice('알파 0.6 부터 구조가 새로 바뀌었어요. "다음 할 일"을 따라가면 돼요. 자세한 설명은 기록 > 도움말에 있어요.');
     }
 
