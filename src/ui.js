@@ -185,6 +185,38 @@
     setText($('tag-hero-name'), state.heroName || C.HERO_DEFAULT);
     setText($('tag-pet-name'), pet ? ' · ' + pet.name : '');
   }
+  /*
+   * 앱 알림(안드로이드 앱에서만): 앱이 Zone7Native 라는 통로를 내어 준다. 브라우저에는 없으므로 그때는 설정 줄을 숨긴다.
+   *   - 켬/끔은 앱이 기억한다(getNotify / setNotify).
+   *   - 알림 문구에 들어갈 주인공과 동물 친구의 이름을 바뀔 때마다 알려 준다(setNames).
+   * 통로가 없거나 부르다 실패해도 게임은 그대로 간다.
+   */
+  var nativeNames = '';
+  function nativeApp() { try { return window.Zone7Native && typeof window.Zone7Native.setNames === 'function' ? window.Zone7Native : null; } catch (e) { return null; } }
+  function syncNative() {
+    var app = nativeApp();
+    if (!app) return;
+    var pet = C.petInfo(state), key = (state.heroName || '') + '|' + (pet ? pet.name : '');
+    if (key === nativeNames) return;
+    nativeNames = key;
+    try { app.setNames(state.heroName || C.HERO_DEFAULT, pet ? pet.name : ''); } catch (e) { /* 알림 문구만 예전 이름으로 남는다 */ }
+  }
+  function wireNotify() {
+    var app = nativeApp(), row = $('notify-row');
+    if (!app || !row) return;
+    row.hidden = false;
+    function show(on) { document.querySelectorAll('[data-notify]').forEach(function (b) { b.setAttribute('aria-pressed', (b.getAttribute('data-notify') === 'on') === on ? 'true' : 'false'); }); }
+    var now = true;
+    try { now = !!app.getNotify(); } catch (e) { now = true; }
+    show(now);
+    document.querySelectorAll('[data-notify]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var on = b.getAttribute('data-notify') === 'on';
+        try { app.setNotify(on); } catch (e) { return; }
+        show(on);
+      });
+    });
+  }
   /** 짧은 진동. 설정에서 껐거나 기기가 지원하지 않으면 아무 일도 하지 않는다. */
   function buzz(ms) { try { if (prefs.vibrate === 'on' && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
   function recall(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
@@ -1232,6 +1264,7 @@
   /* ---------- 그리기 ---------- */
   function render() {
     renderNames();
+    syncNative();
     var m = C.mods(state), per = C.productionPerSec(state);
     setText($('supplies'), fmt(state.supplies));
     setText($('pps'), '초당 +' + fmt(per) + (state.buff ? ' · 지원 ×' + state.buff.mult + ' (' + Math.ceil(state.buff.left) + '초)' : ''));
@@ -2064,6 +2097,7 @@
       $('update-bar').hidden = true;
     });
     wirePrefs();
+    wireNotify();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 게임 파일을 받아 오는 데만 쓴다. 다른 권한은 요청하지 않는다. -->
+    <!-- 인터넷: 게임 파일을 받아 오는 데 쓴다. 알림: 창고가 가득 찼을 때와 오래 비웠을 때 알려 준다(하루에 많아야 두 번, 설정에서 끌 수 있다). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -22,5 +23,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 예약한 시각에 알림을 띄운다. 다른 앱이 부를 일이 없으므로 바깥에 내놓지 않는다. -->
+        <receiver android:name=".NoticeReceiver" android:exported="false" />
     </application>
 </manifest>

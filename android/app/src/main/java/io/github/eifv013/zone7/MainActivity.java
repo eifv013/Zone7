@@ -1,9 +1,18 @@
 package io.github.eifv013.zone7;
 
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.webkit.JavascriptInterface;
+import java.util.TimeZone;
 import android.view.View;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -54,6 +63,9 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(false);
         web.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
         web.setWebChromeClient(new WebChromeClient());  // alert/confirm 같은 기본 대화상자가 뜨게 한다
+        // 게임이 알림 설정과 이름을 알려 줄 통로. 이 웹뷰는 게임 주소만 열고 다른 링크는 바깥 브라우저로 보내므로, 게임만 이 통로를 쓴다.
+        web.addJavascriptInterface(new Bridge(), "Zone7Native");
+        askNoticePermission();
 
         web.setWebViewClient(new WebViewClient() {
             /** 게임 주소만 앱 안에서 연다. 그 밖의 링크는 바깥 브라우저로 보낸다. */
@@ -118,6 +130,78 @@ public class MainActivity extends Activity {
     /* 앱이 가려지면 웹뷰도 쉬게 한다. 게임은 이때 "자리를 비웠다"로 처리하고 저장한다(페이지의 visibilitychange). */
     @Override protected void onPause() { if (web != null) web.onPause(); super.onPause(); }
     @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); }
+
+    /* ---------- 알림 ---------- */
+    /*
+     * 앱이 화면에서 사라질 때(onStop) 알림 두 개를 예약하고, 다시 보일 때(onStart) 취소한다.
+     *   창고가 가득 찼을 때(4시간 뒤)와 오래 비웠을 때(24시간 뒤). 규칙과 문구는 Notices 에 있다.
+     * 정확한 시각이 필요 없으므로 AlarmManager.set(대략적인 알람)을 쓴다: 따로 권한이 필요 없고 배터리를 덜 쓴다.
+     * 기기를 껐다 켜면 예약이 사라진다(다시 앱을 열었다 닫으면 새로 잡힌다). 알림은 없어도 게임에는 지장이 없다.
+     */
+    @Override protected void onStop() { scheduleNotices(); super.onStop(); }
+    @Override protected void onStart() { super.onStart(); cancelNotices(); }
+
+    private SharedPreferences noticePrefs() { return getSharedPreferences(NoticeReceiver.PREFS, Context.MODE_PRIVATE); }
+
+    private PendingIntent noticeIntent(String kind, int code) {
+        Intent i = new Intent(this, NoticeReceiver.class);
+        i.putExtra(NoticeReceiver.KIND, kind);
+        return PendingIntent.getBroadcast(this, code, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private void scheduleNotices() {
+        try {
+            if (!noticePrefs().getBoolean("enabled", true)) return;
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            long now = System.currentTimeMillis();
+            TimeZone zone = TimeZone.getDefault();
+            am.set(AlarmManager.RTC_WAKEUP, Notices.fireAt(now, Notices.FULL_AFTER_MS, zone), noticeIntent(NoticeReceiver.KIND_FULL, NoticeReceiver.ID_FULL));
+            am.set(AlarmManager.RTC_WAKEUP, Notices.fireAt(now, Notices.BACK_AFTER_MS, zone), noticeIntent(NoticeReceiver.KIND_BACK, NoticeReceiver.ID_BACK));
+        } catch (Throwable e) {
+            // 예약하지 못해도 게임은 그대로다.
+        }
+    }
+
+    private void cancelNotices() {
+        try {
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            if (am != null) {
+                am.cancel(noticeIntent(NoticeReceiver.KIND_FULL, NoticeReceiver.ID_FULL));
+                am.cancel(noticeIntent(NoticeReceiver.KIND_BACK, NoticeReceiver.ID_BACK));
+            }
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) nm.cancelAll();      // 앱을 열었으면 떠 있던 알림은 지운다
+        } catch (Throwable e) {
+            // 위와 같다.
+        }
+    }
+
+    /** 안드로이드 13 이상은 알림을 띄우려면 허락을 받아야 한다. 처음 한 번만 묻는다(거절하면 다시 묻지 않는다). */
+    private void askNoticePermission() {
+        try {
+            if (Build.VERSION.SDK_INT < 33) return;
+            String perm = "android.permission.POST_NOTIFICATIONS";
+            if (checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) return;
+            SharedPreferences prefs = noticePrefs();
+            if (prefs.getBoolean("asked", false)) return;
+            prefs.edit().putBoolean("asked", true).apply();
+            requestPermissions(new String[] { perm }, 1);
+        } catch (Throwable e) {
+            // 물어보지 못해도 게임은 그대로다.
+        }
+    }
+
+    /** 게임(자바스크립트)이 부르는 통로. 받은 글은 길이를 다듬어 저장만 한다(Notices.clean). */
+    private final class Bridge {
+        /** 알림을 켜고 끈다(게임의 설정 화면). */
+        @JavascriptInterface public void setNotify(boolean on) { noticePrefs().edit().putBoolean("enabled", on).apply(); }
+        @JavascriptInterface public boolean getNotify() { return noticePrefs().getBoolean("enabled", true); }
+        /** 알림 문구에 넣을 주인공과 동물 친구의 이름. 친구가 없으면 빈 글. */
+        @JavascriptInterface public void setNames(String hero, String pet) {
+            noticePrefs().edit().putString("hero", Notices.clean(hero, Notices.DEFAULT_HERO)).putString("pet", Notices.clean(pet, "")).apply();
+        }
+    }
 
     @Override
     protected void onSaveInstanceState(Bundle out) {
