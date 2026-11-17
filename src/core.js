@@ -288,6 +288,7 @@
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
+      autoAssist: true,                // 전력 투입과 청신호를 준비되는 대로 알아서 쓴다(구역 진행에 손이 가지 않게)
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
@@ -355,6 +356,7 @@
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
+    s.autoAssist = raw.autoAssist !== false;
     s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
     s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
     s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
@@ -519,23 +521,22 @@
   function streakMult(state) { return 1 + Math.min(STREAK_MAX, state.streak || 0) * STREAK_BONUS; }
   /**
    * 가진 상품을 지금 시세에 모두 판다. auto 가 참이면 자동 판매다.
-   * 연속 호가: 직접 팔 때 시세가 평균 이상이면 단계가 하나 오르고(시세 하나에 한 번만), 평균 아래에서 팔면 0 으로 돌아간다.
-   *   단계마다 직접 판매 값이 STREAK_BONUS 만큼 는다(이번 판매에는 오르기 전의 단계가 적용된다).
-   *   자동 판매는 단계를 건드리지 않고 보너스도 받지 않는다: 지켜보다 좋은 때를 골라 파는 사람의 몫이다.
+   * 연속 호가: 시세가 평균 이상일 때 팔면 단계가 하나 오른다(시세 하나에 한 번만). 직접 평균 아래에서 팔면 0 으로 돌아간다.
+   *   단계마다 판매 값이 STREAK_BONUS 만큼 는다(이번 판매에는 오르기 전의 단계가 적용된다).
+   *   자동 판매도 똑같이 단계를 올리고 보너스를 받는다. 다만 낮은 시세에 자동으로 팔려도 끊기지는 않는다: 챙기지 않아도 손해 보지 않게.
    */
   function sellGoods(state, auto) {
     if (!zoneOpen(state, 1)) return fail('locked');
     if (!(state.goods > 0)) return fail('empty');
-    var price = state.price, bonus = auto ? 1 : streakMult(state);
+    var price = state.price, bonus = streakMult(state);
     var gain = state.goods * price * goodsValue(state) * bonus;
     earn(state, gain);
     state.tradeEarned += gain;
     if (price >= PEAK_PRICE) state.peakSales++;
     state.goods = 0;
-    if (!auto) {
-      if (price < priceRange(state).mean) state.streak = 0;
-      else if (!state.streakUsed) { state.streak = Math.min(STREAK_MAX, state.streak + 1); state.streakUsed = true; }
-    }
+    var below = price < priceRange(state).mean;
+    if (below) { if (!auto) state.streak = 0; }      // 자동 판매는 낮은 시세에 팔아도 끊지 않는다(창고가 차서 어쩔 수 없이 판 것이다)
+    else if (!state.streakUsed) { state.streak = Math.min(STREAK_MAX, state.streak + 1); state.streakUsed = true; }
     return { ok: true, gain: gain, price: price, peak: price >= PEAK_PRICE, bonus: bonus, streak: state.streak };
   }
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
@@ -1173,11 +1174,14 @@
       state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
       if (wasOn && !(state.surgeLeft > 0)) events.push({ type: 'surge-end' });
     }
+    // 준비되면 알아서 투입한다: 챙기지 않아도 놓치는 것이 없다
+    if (state.autoAssist && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
 
     stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
+    if (state.autoAssist && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
     stepLab(state, dt, rng);
 
     if (state.signalLeft > 0) {

@@ -1042,8 +1042,8 @@
       rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
       var mult = C.streakMult(state);
       setText($('streak-note'), state.streak
-        ? '연속 호가 ' + state.streak + ' · 직접 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 지금 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
-        : '평균 이상에서 직접 팔면 연속 호가가 쌓여요');
+        ? '연속 호가 ' + state.streak + ' · 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 지금 직접 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
+        : '평균 이상에서 팔리면 연속 호가가 쌓여요');
       var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
       setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
@@ -1078,7 +1078,7 @@
       var sg = $('surge'), sOn = state.surgeLeft > 0;
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
       sg.className = 'surge' + (sOn ? ' on' : '');
-      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '충전 ' + clock(state.surgeCool) : '전력 투입 ×' + C.SURGE_MULT);
+      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) : '전력 투입 ×' + C.SURGE_MULT);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies);
@@ -1102,7 +1102,7 @@
       var gb = $('green'), running = 0;
       C.ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
       gb.disabled = state.greenCool > 0 || !running;
-      setText(gb, state.greenCool > 0 ? '청신호 충전 ' + clock(state.greenCool) : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
+      setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + ' · 알아서 켜져요' : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
       setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
         : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
@@ -1242,6 +1242,7 @@
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
           toast('목표 달성 · ' + ev.text); sfx('buy');
           break;
+        case 'surge': if (tab === 'z2' && pane === 'play') sfx('defended'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
           if (ev.long) { log(ev.name + '이 돌아왔다. 화물 ' + fmt(ev.gain) + '.', 'good'); toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
@@ -1417,7 +1418,7 @@
       if (!r.ok) return;
       popNumber('+' + fmt(r.gain));
       if (r.peak) log('고점(×' + r.price.toFixed(2) + ')에 팔았다. 물자 ' + fmt(r.gain) + '.', 'good');
-      if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 직접 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
+      if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
       var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
       sfx(r.peak ? 'defended' : 'buy'); render();
     });

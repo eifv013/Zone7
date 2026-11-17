@@ -7,7 +7,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const C = require('../src/core.js');
 
-const fresh = () => C.createState(0);
+/** 새 판. 자동 보조(전력 투입·청신호를 알아서 쓰는 것)는 꺼 둔다: 규칙 하나하나를 따로 재기 위해서다. 자동 보조는 맨 아래에서 따로 시험한다. */
+const fresh = () => { const s = C.createState(0); s.autoAssist = false; return s; };
 const half = () => 0.5;
 /** 1구역 목표를 모두 채우고 2구역을 연 상태. */
 function inMarket() {
@@ -1237,17 +1238,20 @@ test('연속 호가: 평균 아래에서 팔면 끊기고, 시세가 바뀌면 �
   assert.equal(s.streak, 0);
 });
 
-test('연속 호가: 자동 판매는 단계를 건드리지 않고 보너스도 받지 않는다', () => {
+test('연속 호가: 자동 판매도 단계를 올리고 보너스를 받지만, 낮은 시세에 팔려도 끊기지 않는다', () => {
   const s = inMarket(); s.stalls = 10; s.streak = 3;
-  const value = C.goodsValue(s);
+  const value = C.goodsValue(s), mean = C.priceRange(s).mean;
   s.price = 0.6; s.goods = 100;
-  const r = C.sellGoods(s, true);
-  near(r.gain, 100 * 0.6 * value);
-  assert.equal(s.streak, 3);
+  let r = C.sellGoods(s, true);
+  near(r.gain, 100 * 0.6 * value * 1.3);
+  assert.equal(s.streak, 3, '낮은 시세의 자동 판매는 끊지 않는다');
+  s.price = mean + 0.1; s.goods = 100;
+  r = C.sellGoods(s, true);
+  assert.equal(s.streak, 4, '평균 이상의 자동 판매는 올린다');
   // tick 의 자동 판매도 마찬가지다
   s.defenses.rail = 1e5; s.signalIn = 1e9; s.autoSell = true; s.goods = C.goodsCap(s);
   const ev = C.tick(s, 0.1, half).find(e => e.type === 'sold');
-  assert.ok(ev && ev.auto); assert.equal(ev.bonus, 1); assert.equal(s.streak, 3);
+  assert.ok(ev && ev.auto); near(ev.bonus, 1.4);
 });
 
 test('시세판: 저장을 안전하게 읽고, 철수하면 비워진다', () => {
@@ -1338,4 +1342,38 @@ test('청신호: 잠긴 구역, 자리 비움, 저장', () => {
   assert.equal(s.greenCool, 0);
   const bad = C.sanitizeState({ version: 2, zone: 3, greenCool: 1e9 }, 0);
   assert.equal(bad.greenCool, C.GREEN_COOLDOWN);
+});
+
+/* ================= 자동 보조 ================= */
+
+test('자동 보조: 새 판에는 켜져 있고, 전력 투입을 준비되는 대로 알아서 쓴다', () => {
+  assert.equal(C.createState(0).autoAssist, true);
+  assert.equal(C.sanitizeState({ version: 2 }, 0).autoAssist, true);
+  assert.equal(C.sanitizeState({ version: 2, autoAssist: false }, 0).autoAssist, false);
+  const s = inFactory(); s.autoAssist = true; s.defenses.rail = 1e9; s.signalIn = 1e9;
+  let ev = C.tick(s, 1, half);
+  assert.ok(!ev.some(e => e.type === 'surge'), '라인이 서 있으면 쓰지 않는다');
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
+  ev = C.tick(s, 1, half);
+  assert.ok(ev.some(e => e.type === 'surge'));
+  assert.equal(s.surgeLeft, C.SURGE_SECONDS);
+  let fired = 0;
+  for (let i = 0; i < 300; i++) fired += C.tick(s, 1, half).filter(e => e.type === 'surge').length;
+  assert.ok(fired >= 3 && fired <= 4, '90초마다 한 번: ' + fired);
+});
+
+test('자동 보조: 청신호도 알아서 켜고, 그 덕에 도착한 열차를 알린다', () => {
+  const s = inStation(); s.autoAssist = true; s.defenses.rail = 1e9; s.signalIn = 1e9;
+  let ev = C.tick(s, 1, half);
+  assert.ok(!ev.some(e => e.type === 'green'), '달리는 열차가 없으면 켜지 않는다');
+  s.trains = 1; s.routes.loop = 1;
+  ev = C.tick(s, 1, half);
+  assert.ok(ev.some(e => e.type === 'green'));
+  assert.ok(ev.some(e => e.type === 'train'), '30초짜리 순환선은 청신호 한 번에 들어온다');
+  assert.equal(s.greenCool, C.GREEN_COOLDOWN);
+  // 2분 동안: 평소 4번 + 청신호 1번치 = 순환선 5번쯤
+  const before = s.railEarned; let trips = 0;
+  for (let i = 0; i < 120; i++) C.tick(s, 1, half).forEach(e => { if (e.type === 'train') trips += e.trips; });
+  assert.ok(trips >= 4 && trips <= 6, String(trips));
+  assert.ok(s.railEarned > before);
 });

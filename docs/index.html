@@ -645,7 +645,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.7.3</div>
+  <div class="boot-ver">7구역 알파 0.7.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1017,7 +1017,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.7.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.7.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1124,7 +1124,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.4";
 </script>
 <script>
 /*
@@ -1143,6 +1143,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.7.4', date: '2026-11-17', at: '2026-11-17 09:24:12', title: '구역은 알아서 돌아간다',
+      items: [
+        '구역의 덤 단추를 챙기지 않아도 되게 했다. 3구역의 전력 투입과 4구역의 청신호는 준비되는 대로 알아서 들어간다.',
+        '2구역의 연속 호가는 자동 판매로도 쌓이고, 자동 판매에도 보너스가 붙는다. 낮은 시세에 자동으로 팔려도 끊기지 않는다. 평균 아래에서 직접 팔 때만 끊긴다.',
+        '구역 화면은 들여다보는 맛으로 두고, 진행은 가만히 둬도 같은 속도로 가게 하는 것이 방향이다.'
+      ] },
     { ver: '알파 0.7.3', date: '2026-11-17', at: '2026-11-17 09:03:52', title: '4구역 환승역: 노선도와 청신호',
       items: [
         '4구역에 노선도가 생겼다. 왼쪽이 환승역이고, 열차가 종점까지 갔다가 화물을 싣고 돌아오는 것이 보인다. 끊긴 노선은 점선이다. 열차가 도착하면 역에 불빛이 켜진다.',
@@ -1811,6 +1817,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
+      autoAssist: true,                // 전력 투입과 청신호를 준비되는 대로 알아서 쓴다(구역 진행에 손이 가지 않게)
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
@@ -1878,6 +1885,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
+    s.autoAssist = raw.autoAssist !== false;
     s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
     s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
     s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
@@ -2042,23 +2050,22 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
   function streakMult(state) { return 1 + Math.min(STREAK_MAX, state.streak || 0) * STREAK_BONUS; }
   /**
    * 가진 상품을 지금 시세에 모두 판다. auto 가 참이면 자동 판매다.
-   * 연속 호가: 직접 팔 때 시세가 평균 이상이면 단계가 하나 오르고(시세 하나에 한 번만), 평균 아래에서 팔면 0 으로 돌아간다.
-   *   단계마다 직접 판매 값이 STREAK_BONUS 만큼 는다(이번 판매에는 오르기 전의 단계가 적용된다).
-   *   자동 판매는 단계를 건드리지 않고 보너스도 받지 않는다: 지켜보다 좋은 때를 골라 파는 사람의 몫이다.
+   * 연속 호가: 시세가 평균 이상일 때 팔면 단계가 하나 오른다(시세 하나에 한 번만). 직접 평균 아래에서 팔면 0 으로 돌아간다.
+   *   단계마다 판매 값이 STREAK_BONUS 만큼 는다(이번 판매에는 오르기 전의 단계가 적용된다).
+   *   자동 판매도 똑같이 단계를 올리고 보너스를 받는다. 다만 낮은 시세에 자동으로 팔려도 끊기지는 않는다: 챙기지 않아도 손해 보지 않게.
    */
   function sellGoods(state, auto) {
     if (!zoneOpen(state, 1)) return fail('locked');
     if (!(state.goods > 0)) return fail('empty');
-    var price = state.price, bonus = auto ? 1 : streakMult(state);
+    var price = state.price, bonus = streakMult(state);
     var gain = state.goods * price * goodsValue(state) * bonus;
     earn(state, gain);
     state.tradeEarned += gain;
     if (price >= PEAK_PRICE) state.peakSales++;
     state.goods = 0;
-    if (!auto) {
-      if (price < priceRange(state).mean) state.streak = 0;
-      else if (!state.streakUsed) { state.streak = Math.min(STREAK_MAX, state.streak + 1); state.streakUsed = true; }
-    }
+    var below = price < priceRange(state).mean;
+    if (below) { if (!auto) state.streak = 0; }      // 자동 판매는 낮은 시세에 팔아도 끊지 않는다(창고가 차서 어쩔 수 없이 판 것이다)
+    else if (!state.streakUsed) { state.streak = Math.min(STREAK_MAX, state.streak + 1); state.streakUsed = true; }
     return { ok: true, gain: gain, price: price, peak: price >= PEAK_PRICE, bonus: bonus, streak: state.streak };
   }
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
@@ -2696,11 +2703,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
       state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
       if (wasOn && !(state.surgeLeft > 0)) events.push({ type: 'surge-end' });
     }
+    // 준비되면 알아서 투입한다: 챙기지 않아도 놓치는 것이 없다
+    if (state.autoAssist && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
 
     stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
+    if (state.autoAssist && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
     stepLab(state, dt, rng);
 
     if (state.signalLeft > 0) {
@@ -2942,7 +2952,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
         '상품은 좌판이 ' + span(core.GOODS_CAP_SECONDS) + ' 동안 만드는 양까지만 쌓여요.',
         '"창고가 차면 알아서 판다"가 켜져 있으면(기본) 가만히 둬도 평균 시세만큼은 벌어요. 시세가 높을 때 직접 팔면 그보다 더 벌고요.',
         '시세판에는 지난 시세가 막대로 남아요. 맨 오른쪽이 지금 시세고, 점선이 평균, 굵은 선이 고점이에요.',
-        '연속 호가: 평균 이상의 시세에서 직접 팔면 한 단계씩 쌓여요(시세 하나에 한 번, 최대 ' + core.STREAK_MAX + '단계). 단계마다 직접 판매 값이 ' + pct(core.STREAK_BONUS) + ' 늘어요. 평균 아래에서 직접 팔면 끊겨요. 자동 판매는 단계에 영향을 주지 않아요.',
+        '연속 호가: 평균 이상의 시세에서 팔리면 한 단계씩 쌓여요(시세 하나에 한 번, 최대 ' + core.STREAK_MAX + '단계). 단계마다 판매 값이 ' + pct(core.STREAK_BONUS) + ' 늘어요. 자동 판매로도 쌓여요. 평균 아래에서 직접 팔 때만 끊겨요.',
         '시세 ' + core.PEAK_PRICE + ' 이상에서 판 것은 "고점 판매"로 세요. 2구역 목표 가운데 하나예요.' ] },
 
       { id: 'line', title: '3구역: 생산 라인', items: [
@@ -2951,7 +2961,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
         '기계마다 레벨당 처리량이 달라요(' + core.MACHINES.map(function (m) { return m.name + ' ' + m.rate; }).join(', ') + '). 처리량이 비슷해지게 맞추면 돼요.',
         '가동률은 가장 느린 기계 ÷ 가장 빠른 기계예요. 가동률 ' + pct(core.STEADY_AT) + ' 이상이면 "정속 가동"이 되어 산출이 ' + pct(core.STEADY_BONUS) + ' 늘어나요.',
         '기계 레벨의 합계가 ' + core.LINE_MILESTONES.slice(0, 4).join(', ') + '… 에 닿을 때마다 라인 전체가 2배가 돼요.',
-        '"전력 투입"을 누르면 ' + span(core.SURGE_SECONDS) + ' 동안 라인이 ' + core.SURGE_MULT + '배로 돌아요. 누른 때부터 ' + span(core.SURGE_COOLDOWN) + ' 뒤에 다시 쓸 수 있어요. 안 써도 뒤처지지 않는 작은 덤이에요.',
+        '전력 투입: ' + span(core.SURGE_COOLDOWN) + '마다 알아서 들어가요. ' + span(core.SURGE_SECONDS) + ' 동안 라인이 ' + core.SURGE_MULT + '배로 돌아요. 챙길 필요는 없어요.',
         '자리를 비워도 라인은 나갈 때의 상태 그대로 돌아요. 정속으로 맞춰 두고 나가면 그 시간도 정속 가동으로 쳐 줘요.' ] },
 
       { id: 'rail', title: '4구역: 노선', items: [
@@ -2960,7 +2970,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
         '열차는 화물 배수가 높은 노선부터 알아서 타요. 노선 한 단계마다 열차 ' + core.ROUTE_SLOTS + '대가 다닐 수 있고, 자리가 없는 열차는 쉬어요.',
         '그래서 고를 것은 열차를 살지, 노선을 늘릴지, 어느 노선을 늘릴지예요. 먼 노선은 비싸지만 열차 한 대가 버는 양이 커요.',
         '열차가 ' + core.FLEET_MILESTONES.slice(0, 4).join(', ') + '… 대에 닿을 때마다 화물이 2배가 돼요.',
-        '"청신호"를 누르면 달리는 열차들이 ' + span(core.GREEN_SECONDS) + '만큼 앞서 달려요. ' + span(core.GREEN_COOLDOWN) + ' 뒤에 다시 켤 수 있어요. 도착 직전의 열차를 바로 들어오게 할 수 있어요.',
+        '청신호: ' + span(core.GREEN_COOLDOWN) + '마다 알아서 켜져요. 달리는 열차들이 ' + span(core.GREEN_SECONDS) + '만큼 앞서 달려요. 챙길 필요는 없어요.',
         '자리를 비운 동안에도 열차는 다녀요. 돌아온 화물은 자리 비움 효율로 받아요.' ] },
 
       { id: 'lab', title: '5구역: 연구', items: [
@@ -5191,8 +5201,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
       rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
       var mult = C.streakMult(state);
       setText($('streak-note'), state.streak
-        ? '연속 호가 ' + state.streak + ' · 직접 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 지금 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
-        : '평균 이상에서 직접 팔면 연속 호가가 쌓여요');
+        ? '연속 호가 ' + state.streak + ' · 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 지금 직접 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
+        : '평균 이상에서 팔리면 연속 호가가 쌓여요');
       var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
       setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
@@ -5227,7 +5237,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
       var sg = $('surge'), sOn = state.surgeLeft > 0;
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
       sg.className = 'surge' + (sOn ? ' on' : '');
-      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '충전 ' + clock(state.surgeCool) : '전력 투입 ×' + C.SURGE_MULT);
+      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) : '전력 투입 ×' + C.SURGE_MULT);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies);
@@ -5251,7 +5261,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
       var gb = $('green'), running = 0;
       C.ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
       gb.disabled = state.greenCool > 0 || !running;
-      setText(gb, state.greenCool > 0 ? '청신호 충전 ' + clock(state.greenCool) : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
+      setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + ' · 알아서 켜져요' : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
       setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
         : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
@@ -5391,6 +5401,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
           toast('목표 달성 · ' + ev.text); sfx('buy');
           break;
+        case 'surge': if (tab === 'z2' && pane === 'play') sfx('defended'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
           if (ev.long) { log(ev.name + '이 돌아왔다. 화물 ' + fmt(ev.gain) + '.', 'good'); toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
@@ -5566,7 +5577,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.3";
       if (!r.ok) return;
       popNumber('+' + fmt(r.gain));
       if (r.peak) log('고점(×' + r.price.toFixed(2) + ')에 팔았다. 물자 ' + fmt(r.gain) + '.', 'good');
-      if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 직접 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
+      if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
       var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
       sfx(r.peak ? 'defended' : 'buy'); render();
     });

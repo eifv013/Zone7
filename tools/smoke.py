@@ -162,7 +162,7 @@ def run_case(browser, name, size, state, mode):
         if text('line-load') != '가동률 100%': problems.append('맞물렸는데 가동률이 100%가 아니다: ' + text('line-load'))
         # 컨베이어 그림이 그려졌는지(빈 그림이 아닌지), 전력 투입이 눌리고 쉬는 시간으로 들어가는지
         if not page.evaluate("(() => { const c = document.getElementById('belt'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n > 500; })()"): problems.append('컨베이어 그림이 비어 있다')
-        if not tap('#surge'): problems.append('전력 투입을 누를 수 없다')
+        page.wait_for_timeout(400)      # 전력은 준비되는 대로 알아서 들어간다
         if '투입 중' not in text('surge') or not page.is_disabled('#surge'): problems.append('전력 투입 표시가 이상하다: ' + text('surge'))
         if '정속 가동' not in text('line-note') or '초당 물자' not in text('line-note'): problems.append('정속 가동 표시가 없다: ' + text('line-note'))
         if not tap('#row-sorter'): problems.append('선별기를 살 수 없다')
@@ -215,8 +215,8 @@ def run_case(browser, name, size, state, mode):
         tap('#row-route-river'); tap('#row-signal'); tap('#row-timetable')
         # 노선도 그림과 청신호
         if not page.evaluate("(() => { const c = document.getElementById('railmap'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n > 800; })()"): problems.append('노선도 그림이 비어 있다')
-        if not tap('#green'): problems.append('청신호를 누를 수 없다')
-        if '충전' not in text('green') or not page.is_disabled('#green'): problems.append('청신호 표시가 이상하다: ' + text('green'))
+        page.wait_for_timeout(400)      # 청신호도 알아서 켜진다
+        if '다음 청신호' not in text('green') or not page.is_disabled('#green'): problems.append('청신호 표시가 이상하다: ' + text('green'))
         rows_text = page.evaluate("[...document.querySelectorAll('#rail-list .rail-row')].map(e => e.textContent).join(' | ')")
         if '끊김' not in rows_text or '/ 2대' not in rows_text: problems.append('노선 현황이 이상하다: ' + rows_text)
         if not fits(): problems.append('한 화면에 들어오지 않는다(4구역)')
