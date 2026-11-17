@@ -1332,6 +1332,8 @@
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
       tabs.appendChild(b);
     });
+    // 탭이 여덟이라 폰에서는 옆으로 밀어서 본다: 고른 탭이 화면 밖에 있으면 보이는 자리로 옮긴다
+    try { var on = tabs.querySelector('[aria-pressed="true"]'); if (on) tabs.scrollLeft = Math.max(0, on.offsetLeft - (tabs.clientWidth - on.offsetWidth) / 2); } catch (e) { /* 못 옮겨도 누르는 데는 지장이 없다 */ }
     function card(art, name, sub, text, locked, cls) {
       var c = el('div', 'dex-card' + (locked ? ' locked' : '') + (cls ? ' ' + cls : '')), body = el('div');
       var frame = el('div', 'dex-art'); frame.appendChild(art);
