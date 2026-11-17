@@ -342,10 +342,13 @@ def run_case(browser, name, size, state, mode):
         waves = page.evaluate("JSON.parse(localStorage.getItem('%s') || '{}').wavesCleared || 0" % SAVE_KEY)      # 10초마다 자동 저장된 값
         if not any(k in logs for k in ['막아냈다', '뚫렸다', '버티기만']) and waves <= (state or {}).get('wavesCleared', 0): problems.append('밤이 지났는데 결과가 남지 않았다')
         if name.startswith('폰') and '무리가 도착했다' not in logs: problems.append('도착 경보가 무전 로그에 없다')
-        # 철수: 두 번 눌러야 한다
+        # 철수: 누르면 확인 창이 뜨고, 거기서 한 번 더 골라야 한다
         zone_before = text('base-no')
         if not tap('#retreat'): problems.append('철수 단추를 누를 수 없다')
-        tap('#retreat'); page.wait_for_timeout(400); close_story()
+        page.wait_for_timeout(200)
+        if not page.locator('#confirm').is_visible(): problems.append('철수 확인 창이 뜨지 않았다')
+        if text('base-no') != zone_before: problems.append('확인도 하기 전에 철수됐다')
+        tap('#confirm-yes'); page.wait_for_timeout(400); close_story()
         if text('base-no') != '1구역 주택가': problems.append('철수했는데 1구역이 아니다: ' + zone_before + ' → ' + text('base-no'))
         if text('supplies') != '0': problems.append('철수했는데 물자가 남았다: ' + text('supplies'))
         page.wait_for_timeout(1500)

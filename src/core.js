@@ -1521,6 +1521,19 @@
     if (state.runEarned < RETREAT_MIN) return 0;
     return Math.floor(RETREAT_K * Math.pow(state.runEarned / RETREAT_MIN, RETREAT_POW) * mods(state).antibody);
   }
+  /**
+   * 항체 샘플을 하나 더 받으려면 이번 판 누적 물자가 얼마여야 하는지. (철수 화면이 "다음 샘플까지"를 알려 주는 데 쓴다)
+   * antibodiesOnRetreat 를 거꾸로 푼 값이다: 누적 = RETREAT_MIN × ((지금 받을 수 + 1) ÷ (K × 배수))^(1/POW)
+   */
+  function nextAntibodyAt(state) {
+    var mult = RETREAT_K * mods(state).antibody, want = antibodiesOnRetreat(state) + 1;
+    if (!(mult > 0)) return Infinity;
+    var need = Math.max(RETREAT_MIN, RETREAT_MIN * Math.pow(want / mult, 1 / RETREAT_POW));
+    // 소수점 오차로 문턱 바로 아래에 걸리지 않게 조금씩 올려 맞춘다
+    var probe = { runEarned: need, pendingPerks: [] }, guard = 0;
+    while (guard++ < 40 && Math.floor(mult * Math.pow(probe.runEarned / RETREAT_MIN, RETREAT_POW)) < want) probe.runEarned *= 1.0000001;
+    return probe.runEarned;
+  }
   function canRetreat(state) { return antibodiesOnRetreat(state) >= 1 && !state.pendingPerks.length; }
   /**
    * 철수: 거점을 전부 버리고 1구역에서 다시 시작한다.
@@ -1992,7 +2005,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

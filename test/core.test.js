@@ -1869,3 +1869,17 @@ test('업적에 달성한 시각이 남고, 예전 저장(true)도 그대로 달
   assert.ok(C.achProgress(back, done[0]).done);
   assert.equal(back.ach.fake, undefined);
 });
+
+test('다음 항체 샘플까지: 그만큼 모으면 정말 하나가 더 나온다', () => {
+  const s = fresh();
+  assert.equal(C.nextAntibodyAt(s), C.RETREAT_MIN, '아직 못 받는 판에서는 철수 문턱이 곧 첫 샘플');
+  [1e8, 3e8, 5e9, 7e12, 1e20].forEach((run) => {
+    s.runEarned = run;
+    const now = C.antibodiesOnRetreat(s), at = C.nextAntibodyAt(s);
+    assert.ok(at > run, '지금보다 더 모아야 한다');
+    s.runEarned = at;
+    assert.ok(C.antibodiesOnRetreat(s) >= now + 1, '그만큼 모으면 하나 더');
+    s.runEarned = at * 0.999;
+    assert.ok(C.antibodiesOnRetreat(s) <= now + 1);
+  });
+});

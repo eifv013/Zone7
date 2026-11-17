@@ -1453,10 +1453,15 @@
     var gain = C.antibodiesOnRetreat(state), rb = $('retreat'), can = C.canRetreat(state);
     rb.disabled = !can;
     setText($('retreat-count'), state.retreats ? state.retreats + '번 철수함' : '');
-    if (!rb.dataset.armed) setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
+    setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
+    // 철수의 기준은 "이번 판에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
     setText($('retreat-hint'), can
-      ? '1구역에서 다시 시작해요. 항체 샘플과 영구 특성만 남아요.'
-      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '물자 ' + fmt(C.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요(지금 ' + fmt(state.runEarned) + ').');
+      ? '이번 판에 모은 물자 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
+      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에 모은 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
+    setText($('retreat-sub'), can ? '더 모으고 철수하면 샘플이 늘어요. 쓴 물자도 쳐요.'
+      : state.pendingPerks.length ? '' : '다 채우면 철수할 수 있어요. 쓴 물자도 쳐요.');
+    $('retreat-bar').hidden = can || !!state.pendingPerks.length;
+    $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / C.RETREAT_MIN * 100).toFixed(1) + '%';
 
     renderZone(m);
     if (!$('zmap').hidden) renderZoneMap();
@@ -2148,7 +2153,12 @@
       sfx(r.peak ? 'peak' : 'sell'); render();
     });
     $('auto-sell').addEventListener('change', function () { C.setAutoSell(state, $('auto-sell').checked); Store.save(); render(); });
-    twoStep($('retreat'), '한 번 더 누르면 거점을 버리고 철수한다', function () {
+    // 철수는 되돌릴 수 없으니 확인 창을 한 번 거친다(안전한 쪽 단추에 초점이 간다)
+    $('retreat').addEventListener('click', function () {
+      if (!C.canRetreat(state)) return;
+      confirmBox('철수', '거점을 버리고 1구역에서 다시 시작해요. 항체 샘플 +' + fmt(C.antibodiesOnRetreat(state)) + '개를 받아요. 물자, 시설, 방벽, 연 구역은 사라지고 항체 샘플, 영구 특성, 일지, 업적, 도감은 남아요.', '남는다', '철수한다', doRetreat);
+    });
+    function doRetreat() {
       var r = C.retreat(state, Date.now());
       if (!r.ok) return;
       state = r.state;
@@ -2156,7 +2166,7 @@
       log('거점을 버리고 철수했다. 항체 샘플 ' + fmt(r.gained) + '개를 챙겼다. 다시 1구역이다.', 'good');
       notice('항체 샘플 ' + fmt(r.gained) + '개를 얻었어요. 특성 화면에서 영구 특성을 찍으면 다음 판이 빨라져요.');
       sfx('relocate'); Store.save(); Cloud.flush(); render();
-    });
+    }
     $('trait-reset').addEventListener('click', function () {
       confirmBox('특성 되돌리기', '찍은 특성을 모두 지우고, 쓴 항체 샘플을 전부 돌려받아요. 드는 값은 없고 바로 다시 찍을 수 있어요.', '그만둔다', '되돌린다', function () {
         var r = C.resetTraits(state);
