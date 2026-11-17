@@ -1379,7 +1379,7 @@
       C.PASSERS.forEach(function (r) {
         var n = state.passers[r.id] || 0;
         var pal = n ? { h: '#3a2e22', s: '#e8c39a', c: r.color, d: '#3b3f4a' } : { h: '#4a4b40', s: '#4a4b40', c: '#4a4b40', d: '#4a4b40' };
-        if (!n) { card(pixSvg(REG_PIX, pal), '???', '아직 못 만났어요', '6구역에서 무리의 ' + C.SAFE_NIGHT + '배 방어력으로 밤을 막으면 건너와요.', true); return; }
+        if (!n) { card(pixSvg(REG_PIX, pal), '???', '아직 못 만났어요', '6구역에서 밤을 넉넉히 막으면 와요.', true); return; }
         card(pixSvg(REG_PIX, pal), r.name, '건넌 수 ' + fmt(n) + '번', r.text, false);
       });
     } else if (dexTab === 'record') {
