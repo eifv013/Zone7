@@ -990,7 +990,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.2.1</div>
+  <div class="boot-ver">7구역 알파 1.2.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1000,21 +1000,41 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </script>
 <script>
 /*
- * 안전장치(0.8.15): 게임 스크립트가 통째로 죽어서(문법 오류 등) 12초 안에 시작하지 못하면
+ * 안전장치(0.8.15): 게임 스크립트가 통째로 죽어서(문법 오류 등) 페이지를 다 받고도 12초 안에 시작하지 못하면
  * "다시 불러오기" 단추만 있는 안내를 띄운다. 이 조각은 다른 스크립트와 따로 돌기 때문에 그쪽이 죽어도 살아 있다.
  * 단추는 주소 뒤에 시각을 붙여 기기에 저장된 화면을 건너뛰고 새로 받는다. 진행 저장은 건드리지 않는다.
  */
-setTimeout(function () {
-  if (window.ZONE7_STARTED) return;
-  var box = document.createElement('div');
-  box.setAttribute('role', 'alert');
-  box.style.cssText = 'position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#17180f;color:#e6e5db;text-align:center;font:16px/1.6 sans-serif';
-  var p = document.createElement('p'); p.textContent = '게임을 불러오지 못했어요. 진행은 저장돼 있어요.';
-  var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '다시 불러오기';
-  btn.style.cssText = 'padding:12px 22px;border:0;border-radius:8px;background:#f0b400;color:#17180f;font:700 16px/1.4 sans-serif';
-  btn.onclick = function () { try { location.replace(location.origin + location.pathname + '?r=' + Date.now()); } catch (e) { location.reload(); } };
-  box.appendChild(p); box.appendChild(btn); document.body.appendChild(box);
-}, 12000);
+/*
+ * 1.2.2: 업데이트 직후의 아이폰에서 게임이 멀쩡한데도 이 안내가 뜨던 것을 고쳤다.
+ *   - 예전에는 이 조각을 읽은 때부터 12초를 셌다. 새 버전을 처음 받을 때는 뒤따라오는 게임 본문을 받는 데만 그보다 오래 걸릴 수 있다.
+ *     이제 페이지를 끝까지 받은 뒤(load)부터 센다. 본문이 끝내 오지 않는 경우를 대비해 45초의 마지막 한도는 둔다.
+ *   - 안내를 띄운 뒤에라도 게임이 시작하면 안내를 스스로 걷는다.
+ */
+(function () {
+  var shown = null, armed = false;
+  function show() {
+    if (window.ZONE7_STARTED || shown) return;
+    var box = document.createElement('div');
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#17180f;color:#e6e5db;text-align:center;font:16px/1.6 sans-serif';
+    var p = document.createElement('p'); p.textContent = '게임을 불러오지 못했어요. 진행은 저장돼 있어요.';
+    var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '다시 불러오기';
+    btn.style.cssText = 'padding:12px 22px;border:0;border-radius:8px;background:#f0b400;color:#17180f;font:700 16px/1.4 sans-serif';
+    btn.onclick = function () { try { location.replace(location.origin + location.pathname + '?r=' + Date.now()); } catch (e) { location.reload(); } };
+    box.appendChild(p); box.appendChild(btn); document.body.appendChild(box);
+    shown = box;
+    // 늦게라도 시작했으면 걷는다
+    var watch = setInterval(function () {
+      if (!window.ZONE7_STARTED) return;
+      clearInterval(watch);
+      if (shown && shown.parentNode) shown.parentNode.removeChild(shown);
+      shown = null;
+    }, 500);
+  }
+  function arm() { if (armed) return; armed = true; setTimeout(show, 12000); }
+  if (document.readyState === 'complete') arm(); else window.addEventListener('load', arm);
+  setTimeout(show, 45000);
+})();
 </script>
 <div class="update-bar" id="update-bar" role="status" hidden>
   <p id="update-text"></p>
@@ -1336,7 +1356,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.2.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.2.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

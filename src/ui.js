@@ -2663,10 +2663,11 @@
     catch (e) { console.warn('scene', e); scene = null; }
     boot.mark('ready');
     setInterval(safeFrame, 100);
-    Cloud.init();
-    Update.afterUpdate();
-    Update.check();
-    window.ZONE7_STARTED = true;      // 안전장치(template.html)에게 무사히 시작했다고 알린다
+    window.ZONE7_STARTED = true;      // 안전장치(template.html)에게 무사히 시작했다고 알린다. 게임은 여기서 이미 돌고 있다
+    // 아래 셋은 부가 기능이다(1.2.2): 여기서 오류가 나도 게임 시작을 막지 않게 하나씩 감싼다
+    try { Cloud.init(); } catch (e) { console.warn('cloud', e); }
+    try { Update.afterUpdate(); } catch (e) { console.warn('update', e); }
+    try { Update.check(); } catch (e) { console.warn('update', e); }
   }
 
   // 뷰어가 페이지를 교체할 때 진행 상황을 넘겨받을 수 있도록 현재 상태를 제공한다.
