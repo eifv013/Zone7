@@ -15,7 +15,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var MAX_GAIN = 0.15; // 어떤 소리도 이보다 크게 내지 않는다(방치해 두는 게임이라 작게)
+  var MAX_GAIN = 0.4;  // 어떤 소리도 이보다 크게 내지 않는다
+  var VOLUME = 2.6;    // 전체 음량 배수(0.8.6: 소리가 작다는 의견에 따라 전체를 키웠다). 소리마다의 g 에 곱한다
 
   /*
    * 0.8.5: 소리를 부드럽게 다듬었다. 날카롭게 들리던 네모파·톱니파를 빼고 사인파·세모파만 쓴다.
@@ -62,7 +63,7 @@
   }
 
   function playNote(n, t0) {
-    var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.min(MAX_GAIN, n.g || 0.05), src;
+    var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.min(MAX_GAIN, (n.g || 0.05) * VOLUME), src;
     // 딸깍거리는 잡음을 막으려고 음량을 짧게 올렸다가 서서히 내린다
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(ATTACK, n.d / 2));
@@ -99,5 +100,5 @@
     } catch (e) { return false; }
   }
 
-  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
+  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
 });
