@@ -1852,13 +1852,19 @@
   function defensePlan(state) {
     var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, research: state.research, pet: state.pet, zone: state.zone };   // defensePower 가 읽는 것만 담는다(연구 과제 '방어 교범' 포함)
     DEFENSES.forEach(function (d) { tmp.defenses[d.id] = state.defenses[d.id]; });
-    var need = nightStrength(state), cost = 0, picked = {}, guard = 0;
-    while (defensePower(tmp) < need && guard++ < 3000) {
-      var best = null, bestValue = 0;
-      DEFENSES.forEach(function (d) { var c = defenseCost(tmp, d.id, 1), v = d.power / c; if (v > bestValue) { best = d; bestValue = v; } });
+    /*
+     * 1.2.3: 배수(mods)는 방어 수단을 더해도 바뀌지 않으므로 고리 밖에서 한 번만 셈한다.
+     *   예전에는 한 개를 더할 때마다 mods 를 여덟 번쯤 다시 셈해서, 방어력이 한참 모자란 후반 구역에서는 이 함수 한 번에 0.1초 가까이 걸렸다.
+     *   화면이 0.1초마다 이 함수를 부르므로(보강 단추의 값) 방벽이 밀리는 동안 게임이 통째로 버벅였다. 셈하는 식과 순서는 그대로다(결과가 같다).
+     */
+    var need = nightStrength(state), cost = 0, picked = {}, guard = 0, m = mods(tmp), costMul = m.cost * m.defcost, total = BASE_DEFENSE;
+    DEFENSES.forEach(function (d) { total += d.power * (tmp.defenses[d.id] || 0); });
+    while (Math.floor(total * m.defense) < need && guard++ < 3000) {
+      var best = null, bestValue = 0, bestCost = 0;
+      DEFENSES.forEach(function (d) { var c = seriesCost(d.baseCost * costMul, DEFENSE_GROWTH, tmp.defenses[d.id], 1), v = d.power / c; if (v > bestValue) { best = d; bestValue = v; bestCost = c; } });
       if (!best) break;
-      cost += defenseCost(tmp, best.id, 1);
-      tmp.defenses[best.id]++;
+      cost += bestCost;
+      tmp.defenses[best.id]++; total += best.power;
       picked[best.id] = (picked[best.id] || 0) + 1;
     }
     return { cost: cost, picks: Object.keys(picked).map(function (id) { return { id: id, qty: picked[id] }; }), enough: defensePower(tmp) >= need };

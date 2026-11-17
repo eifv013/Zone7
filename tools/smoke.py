@@ -247,7 +247,8 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
         if '[object' in page.inner_text('body'): problems.append('화면에 [object …] 가 찍혀 있다')
-        if '초당 +0' in text('pps') and '0.5' not in text('pps'): problems.append('수색조를 샀는데 생산이 0이다: ' + text('pps'))
+        # '+0.5', '+0.6' 처럼 소수로 시작하는 값은 0 이 아니다(0.6 을 0 으로 잘못 읽던 것을 고침)
+        if text('pps').strip().endswith('초당 +0'): problems.append('수색조를 샀는데 생산이 0이다: ' + text('pps'))
         page.wait_for_timeout(6000)
     elif mode == 'line':
         # 3구역: 기계가 없을 때의 안내 → 병목 올리기 → 직접 사서 병목이 바뀌는지 → 한 화면에 들어오는지

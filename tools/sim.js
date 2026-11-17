@@ -10,16 +10,22 @@
 const C = require('../src/core.js');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(k + '=')); return a ? +a.split('=')[1] : d; };
 
-function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck = 300, share = 0.5 } = {}) {
+function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck = 300, share = 0.5, dt = 1 } = {}) {
+  // dt: 한 걸음에 흐르는 초(1.2.2). 엔딩까지 재려면 수백 시간을 돌려야 하므로 3~5초로 성기게 돌릴 수 있다
   let z = seed >>> 0; const rng = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };
   let s = C.createState(0), day = 0, active = 0, cheapest = Infinity; const marks = [];
+  if (process.env.LIVE) { const push = marks.push.bind(marks); marks.push = (m) => { console.log(JSON.stringify(Object.assign({}, m, { hours: +m.hours.toFixed(1), pps: undefined }))); return push(m); }; }      // LIVE=1: 생기는 대로 찍는다(오래 도는 측정용)
   const traitOrder = ['immune', 'bulwark', 'immune', 'dealer', 'immune', 'pioneer', 'immune', 'thrift', 'legacy', 'immune', 'bulwark', 'dealer', 'engineer', 'railman', 'scholar'];
   const spendTraits = () => { for (let k = 0, bought = true; bought && k < 500; k++) { bought = false; for (const id of traitOrder) if ((id !== 'engineer' || s.bestZone >= 2) && (id !== 'railman' || s.bestZone >= 3) && (id !== 'scholar' || s.bestZone >= 4) && C.buyTrait(s, id).ok) bought = true; } };
   const step = () => {
-    active++;
-    C.tick(s, 1, rng);
+    active += dt;
+    const evs = C.tick(s, dt, rng);
+    if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
+    // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
+    if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s);
+    if (s.zone >= 6 && C.serumCost(s) <= s.supplies * 0.5) C.buySerum(s);      // 7구역: 혈청은 가진 물자의 절반으로 살 수 있을 때 산다
     for (let zi = 1; zi <= s.zone; zi++) if (!marks.some(m => m.enter === zi)) marks.push({ enter: zi, day: day + 1, hours: active / 3600, retreats: s.retreats, pps: C.productionPerSec(s) });
-    for (let k = 0; k < taps; k++) C.scavenge(s);
+    for (let k = 0; k < taps * dt; k++) C.scavenge(s);
     if (s.clicks < 15) C.scavenge(s);
     if (s.pendingPerks.length) C.choosePerk(s, (s.zone >= 3 ? ['driver', 'foreman', 'harvest', 'watch'] : s.zone >= 2 ? ['foreman', 'harvest', 'bargain', 'watch'] : ['harvest', 'bargain', 'watch']).find(id => s.pendingPerks.includes(id)) || s.pendingPerks[0]);
     if (s.signalLeft > 0) C.answerSignal(s, rng);
@@ -31,11 +37,20 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       C.runProject(s, s.offers.slice().sort((a, b) => worth(b) - worth(a))[0], rng);
     }
     C.fortify(s);
+    // 6구역 목표(무리의 2배 방어력으로 밤 15번): 목표가 남아 있으면 가진 물자의 30%까지 써서 방어력을 2배 위로 올려 둔다
+    if (s.zone === 5 && !s.goalsDone.z6b) {
+      let budget = s.supplies * 0.3;
+      for (let k = 0; k < 400 && C.defensePower(s) < C.nightStrength(s) * C.SAFE_NIGHT * 1.05; k++) {
+        let best = null, bv = 0; for (const d of C.DEFENSES) { const c = C.defenseCost(s, d.id, 1); if (d.power / c > bv) { bv = d.power / c; best = { id: d.id, c }; } }
+        if (!best || best.c > budget) break;
+        budget -= best.c; C.buyDefense(s, best.id, 1);
+      }
+    }
     const n = C.nextZone(s);
     if (n && n.ready && !(n.soon && s.gate) && C.openZone(s).ok && s.gate && !marks.some(m => m.gate)) marks.push({ gate: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 회수가 가장 빠른 것부터 산다: 시설, 좌판, 구역 강화
     // 살 것을 고르는 일은 3초에 한 번만 한다(매초 하면 계산이 너무 느리다. 결과는 거의 같다)
-    for (let g = 0; g < 60 && active % 3 === 0; g++) {
+    for (let g = 0; g < (+process.env.BUYS || 60) && (dt >= 3 || active % 3 === 0); g++) {
       let best = null; const per = Math.max(1e-9, C.productionPerSec(s));
       cheapest = Infinity;      // 못 산 것 중 가장 싼 값: 이것조차 한참 걸리면 '막혔다'고 본다
       const consider = (cost, gain, buy) => { if (cost > s.supplies && gain > 0) cheapest = Math.min(cheapest, cost); if (cost <= s.supplies && gain > 0 && (!best || cost / gain < best.pay)) best = { pay: cost / gain, buy }; };
@@ -52,7 +67,9 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
         consider(C.trainCost(s, 1), C.railRate(t) - rate, () => C.buyTrain(s, 1));
         for (const r of C.ROUTES) { const q = probe(); q.routes[r.id]++; consider(C.routeCost(s, r.id), Math.max(C.railRate(q) - rate, s.trains ? 0 : C.cargoValue(s) * 0.1), () => C.buyRoute(s, r.id)); }
       }
-      if (s.zone >= 4) consider(C.staffCost(s, 1), per * 0.03, () => C.buyStaff(s, 1));   // 5구역: 연구원은 물자를 직접 벌지 않으므로 어림값으로 따진다
+      if (s.zone >= 4) consider(C.staffCost(s, 1), per * 0.03, () => C.buyStaff(s, 1));
+      if (s.zone >= 5) { const q = Object.create(s); q.posts = s.posts + 1; consider(C.postCost(s, 1), Math.max(C.guardRate(q) - C.guardRate(s), per * 0.01), () => C.buyPost(s, 1)); }      // 6구역: 초소
+      if (s.zone >= 6) { const q = Object.create(s); q.antennas = s.antennas + 1; consider(C.antennaCost(s, 1), Math.max(per * 0.05, per * (C.survivorRate(q) - C.survivorRate(s)) / Math.max(1, C.survivorRate(s)) * 0.2), () => C.buyAntenna(s, 1)); }      // 7구역: 안테나(생존자가 전체 배수를 올린다)   // 5구역: 연구원은 물자를 직접 벌지 않으므로 어림값으로 따진다
       for (const u of C.UPGRADES) { const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' || u.key === 'trip' || u.key === 'traincost' || u.key === 'routecost' || u.key === 'staffcost' || u.key === 'labcost' ? 0.03 : u.key === 'lab' ? 0.06 : 0.12), () => C.buyUpgrade(s, u.id)); }
       if (!best) break;
       best.buy();
@@ -60,19 +77,22 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const gain = C.antibodiesOnRetreat(s);
     // 철수: 판을 30분 넘게 했고, 얻을 항체가 지금까지의 절반 이상이며, 다음 살 것까지 stuck 초 넘게 걸릴 만큼 막혔을 때
     const isStuck = cheapest - s.supplies > C.productionPerSec(s) * stuck;
-    if (C.canRetreat(s) && s.runSeconds > 1800 && isStuck && gain >= Math.max(3, s.antibodyTotal * share)) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone }); s = C.retreat(s, 0).state; spendTraits(); }
+    const nz = C.nextZone(s), wall = nz && nz.ready && (nz.cost - s.supplies) > C.incomePerSec(s) * 6 * 3600;      // 문 값의 벽: 목표는 다 채웠는데 문 값이 한참 멀다
+    const endWall = !nz && s.zone >= 6 && !s.endedRun && (C.serumCost(s) - s.supplies) > C.incomePerSec(s) * 6 * 3600;
+    if (C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone }); s = C.retreat(s, 0).state; spendTraits(); }
   };
   const gap = Math.max(0, 16 * 3600 / sessions - minutes * 60);
-  while (day < days && !marks.some(m => m.gate)) {
-    for (let i = 0; i < sessions; i++) { for (let t = 0; t < minutes * 60; t++) step(); C.applyOffline(s, i === sessions - 1 ? gap + 8 * 3600 : gap); }
+  while (day < days && !marks.some(m => m.end)) {
+    for (let i = 0; i < sessions && !marks.some(m => m.end); i++) { for (let t = 0; t < minutes * 60 && !marks.some(m => m.end); t += dt) step(); C.applyOffline(s, i === sessions - 1 ? gap + 8 * 3600 : gap); }
     day++;
+    if (process.env.LIVE && day % 5 === 0) console.log(`  .. ${day}일 ${(active / 3600).toFixed(0)}h ${s.zone + 1}구역 물자 ${C.formatNumber(s.supplies)} 초당 ${C.formatNumber(C.productionPerSec(s))} 철수 ${s.retreats} 항체 ${s.antibodyTotal} 목표 ${Object.keys(s.goalsDone).filter(k => k[1] == s.zone + 1).join(',')} 방어 ${C.formatNumber(C.defensePower(s))}/${C.formatNumber(C.nightStrength(s))} 넉넉한밤 ${s.safeNights} 생존자 ${C.formatNumber(s.survivors)} 혈청 ${s.serumStage} 직원 ${s.staff} 초소 ${s.posts} 안테나 ${s.antennas}`);
   }
   return { marks, day, state: s, hours: active / 3600 };
 }
 
 if (require.main === module) {
-  const r = run({ sessions: arg('SESSIONS', 4), minutes: arg('MINUTES', 15), days: arg('DAYS', 30), taps: arg('TAPS', 0), seed: arg('SEED', 1), stuck: arg('STUCK', 300), share: arg('SHARE', 0.5) });
-  r.marks.forEach(m => console.log(m.retreat ? `  철수: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, ${m.zone + 1}구역에서 항체 +${m.gain}` : `${m.gate ? '다음 구역(준비 중)의 문 앞' : (m.enter + 1) + '구역 첫 도착'}: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, 철수 ${m.retreats}번` + (m.pps ? `, 그때 초당 ${C.formatNumber(m.pps)}` : '')));
-  if (!r.marks.some(m => m.gate)) console.log(`${r.day}일 동안 문 앞에 닿지 못했다. 지금 ${C.zoneLabel(r.state)}, 철수 ${r.state.retreats}번, 항체 ${r.state.antibodyTotal}, 이번 판 누적 ${C.formatNumber(r.state.runEarned)}`);
+  const r = run({ sessions: arg('SESSIONS', 4), minutes: arg('MINUTES', 15), days: arg('DAYS', 30), taps: arg('TAPS', 0), seed: arg('SEED', 1), stuck: arg('STUCK', 300), share: arg('SHARE', 0.5), dt: arg('DT', 1) });
+  r.marks.forEach(m => console.log(m.end ? `엔딩: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, 철수 ${m.retreats}번` : m.retreat ? `  철수: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, ${m.zone + 1}구역에서 항체 +${m.gain}` : `${m.gate ? '다음 구역(준비 중)의 문 앞' : (m.enter + 1) + '구역 첫 도착'}: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, 철수 ${m.retreats}번` + (m.pps ? `, 그때 초당 ${C.formatNumber(m.pps)}` : '')));
+  if (!r.marks.some(m => m.end)) console.log(`${r.day}일 동안 엔딩에 닿지 못했다. 지금 ${C.zoneLabel(r.state)}, 철수 ${r.state.retreats}번, 항체 ${r.state.antibodyTotal}, 이번 판 누적 ${C.formatNumber(r.state.runEarned)}`);
 }
 module.exports = { run };

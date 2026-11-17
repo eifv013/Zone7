@@ -2179,3 +2179,15 @@ test('6구역 통행인: 넉넉하게 막은 밤에만 건너고, 건넌 만큼 
   assert.equal(bad.passers.porter, undefined); assert.equal(bad.passers['가짜'], undefined); assert.equal(bad.passersRun, 0);
   assert.equal(C.PASSERS.length, 12); assert.equal(new Set(C.PASSERS.map((x) => x.id)).size, 12);
 });
+
+test('보강 계획: 방어력이 한참 모자라도 빨리 셈하고, 하나씩 사서 더한 값과 같다', () => {
+  const s = inLab(); s.zone = 5; s.day = 400; s.supplies = 1e9;
+  const t0 = Date.now(); const plan = C.defensePlan(s); const ms = Date.now() - t0;
+  assert.ok(ms < 60, '계획 한 번에 ' + ms + 'ms');
+  // 같은 순서로 하나씩 사 보면 값이 같다
+  const b = JSON.parse(JSON.stringify(s)); let cost = 0;
+  plan.picks.forEach((p) => { /* 묶음 값은 올림 때문에 다를 수 있어 총 개수만 맞춘다 */ b.defenses[p.id] += p.qty; });
+  assert.equal(C.defensePower(b) >= C.nightStrength(s), plan.enough);
+  const before = s.supplies; assert.ok(C.fortify(s).ok); near(before - s.supplies, plan.cost);
+  assert.ok(C.defensePower(s) >= C.nightStrength(s) || !plan.enough);
+});
