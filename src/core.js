@@ -1803,7 +1803,7 @@
     { id: 'z5deep', group: 'z5', name: '한 우물', needs: [5, 10], value: function (s) { return maxOf(s.research); }, text: function (n) { return '같은 과제를 ' + n + '번 끝내기'; } },
     { id: 'z5gate', group: 'z5', name: '다리 앞에서', tier: 4, needs: [1], value: function (s) { return s.gate && s.zone >= 4 ? 1 : 0; }, text: function () { return '6구역의 문 앞에 닿기'; } },
     // 공통
-    { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 판에 밤 ' + n + '번 막기'; } },
+    { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 판에 방어 성공 ' + n + '번'; } },
     { id: 'retreat', group: 'all', name: '다시, 1구역', needs: [1, 5, 20, 50], value: function (s) { return s.retreats; }, text: function (n) { return '철수 ' + n + '번 하기'; } },
     { id: 'antibody', group: 'all', name: '항체 수집가', needs: [10, 100, 10000, 1000000], value: function (s) { return s.antibodyTotal; }, text: function (n) { return '항체 샘플을 모두 합쳐 ' + formatNumber(n) + '개 얻기'; } },
     { id: 'kennel', group: 'all', name: '동물 친구들', needs: [1, 6, 12, 24], value: function (s) { return kennelCount(s); }, text: function (n) { return '동물 친구 ' + n + '마리 만나기'; } },

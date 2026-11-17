@@ -964,7 +964,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.14</div>
+  <div class="boot-ver">7구역 알파 0.9.15</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1408,7 +1408,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.14 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.15 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1533,7 +1533,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.14";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.15";
 </script>
 <script>
 /*
@@ -1552,6 +1552,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.14";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.15', date: '2026-11-17', at: '2026-11-17 23:59:50', title: '말 다듬기',
+      items: [
+        '밤에 관한 말을 "방어 성공"으로 통일했어요. 오늘 밤 칸은 "방어 성공 시 물자 +…", "방어 성공한 밤 …번"으로 적혀요. 통계, 자리 비움 보상, 업적, 도움말도 같은 말을 써요.'
+      ] },
     { ver: '알파 0.9.14', date: '2026-11-17', at: '2026-11-17 23:59:40', title: '손끝 다듬기',
       items: [
         '조금 느린 박자로 이어 누를 때 가끔 한 번씩 안 눌리던 것을 고쳤어요.',
@@ -4005,7 +4009,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.14";
     { id: 'z5deep', group: 'z5', name: '한 우물', needs: [5, 10], value: function (s) { return maxOf(s.research); }, text: function (n) { return '같은 과제를 ' + n + '번 끝내기'; } },
     { id: 'z5gate', group: 'z5', name: '다리 앞에서', tier: 4, needs: [1], value: function (s) { return s.gate && s.zone >= 4 ? 1 : 0; }, text: function () { return '6구역의 문 앞에 닿기'; } },
     // 공통
-    { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 판에 밤 ' + n + '번 막기'; } },
+    { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 판에 방어 성공 ' + n + '번'; } },
     { id: 'retreat', group: 'all', name: '다시, 1구역', needs: [1, 5, 20, 50], value: function (s) { return s.retreats; }, text: function (n) { return '철수 ' + n + '번 하기'; } },
     { id: 'antibody', group: 'all', name: '항체 수집가', needs: [10, 100, 10000, 1000000], value: function (s) { return s.antibodyTotal; }, text: function (n) { return '항체 샘플을 모두 합쳐 ' + formatNumber(n) + '개 얻기'; } },
     { id: 'kennel', group: 'all', name: '동물 친구들', needs: [1, 6, 12, 24], value: function (s) { return kennelCount(s); }, text: function (n) { return '동물 친구 ' + n + '마리 만나기'; } },
@@ -4364,8 +4368,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.14";
 
       { id: 'night', tab: '밤', title: '밤과 방벽', items: [
         '하루의 길이는 ' + span(core.DAY_SECONDS) + ', 그 끝의 ' + span(core.BATTLE_SECONDS) + ' 동안 무리가 와서 방벽에서 싸워요. 싸우는 중에도 보강할 수 있어요.',
-        '방어력이 무리 규모보다 크면 막아요. 막으면 물자를 얻고, 못 막으면 물자를 조금 잃고 다음에 막을 때까지 버티기만 해요.',
-        core.BOSS_EVERY + '번째 밤마다 훨씬 큰 변이체가 와요. 막으면 전리품도 커요.',
+        '방어력이 무리 규모보다 크면 방어에 성공해요. 성공하면 물자를 얻고, 실패하면 물자를 조금 잃고 다음에 성공할 때까지 버티기만 해요.',
+        core.BOSS_EVERY + '번째 밤마다 훨씬 큰 변이체가 와요. 방어에 성공하면 전리품도 커요.',
         '가진 방어 수단 가운데 하나가 밤마다 주역으로 뽑혀 방벽 위에 올라와요. 주역마다 싸우는 모습이 달라요.',
         '무리는 밤마다 커져서 언젠가는 막을 수 없게 돼요. 그때가 철수를 생각할 때예요.' ] },
 
@@ -4384,7 +4388,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.14";
         '특성 화면의 "일행"에서 강아지나 고양이를 데려올 수 있어요. 첫 친구는 그냥 와요. 강아지는 방어를, 고양이는 생산을 도와요.',
         '기본, 고급, 희귀 등급이 있고 등급이 높을수록 효과가 좋아요. 다시 데려오려면 항체 샘플이 들어요.',
         '한 번 데려온 아이는 계속 남아요. 그중 누구를 데리고 다닐지 고를 수 있어요.',
-        '밤을 막으면 간식을 얻어요. 구조 신호의 보상으로도 가끔 나와요. 간식을 주면 그 친구의 레벨이 올라 효과가 커져요. 간식과 레벨은 철수해도 남아요.',
+        '밤 방어에 성공하면 간식을 얻어요. 구조 신호의 보상으로도 가끔 나와요. 간식을 주면 그 친구의 레벨이 올라 효과가 커져요. 간식과 레벨은 철수해도 남아요.',
         '친구와 주인공의 이름은 언제든 바꿀 수 있어요(' + core.PET_NAME_MAX + '글자까지).' ] },
 
       { id: 'signal', tab: '신호', title: '구조 신호', items: [
@@ -7152,7 +7156,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.14";
    */
   var STAT_HERO = [['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['total', '진행 시간']];
   var STAT_GROUPS = [
-    ['이번 판', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '막아낸 밤']]],
+    ['이번 판', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '방어 성공한 밤']]],
     ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비운 시간'], ['days', '시작한 지']]]
   ];
   function buildStats() {
@@ -7288,9 +7292,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.14";
     $('night-boss').hidden = !boss;
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
-    setText($('night-hint'), safe ? '막아내면 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
+    setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
       : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
-    setText($('night-sub'), '막아낸 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
+    setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -7813,7 +7817,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.14";
     var total = r.gain + (r.nightReward || 0), lines = [];
     setText($('away-gain'), '+' + fmt(total));
     setText($('away-text'), (r.capped ? '오래 비웠어요. 최대치인 ' + duration(r.counted) + '치만 계산했어요' : duration(r.elapsed) + ' 동안 거점이 돌아갔어요') + ' · 효율 ' + Math.round(r.rate * 100) + '%');
-    if (r.nights > 0) lines.push('막아낸 밤 ' + r.nights + '번 · 전리품 ' + fmt(r.nightReward));
+    if (r.nights > 0) lines.push('방어 성공한 밤 ' + r.nights + '번 · 전리품 ' + fmt(r.nightReward));
     if (r.trains > 0) lines.push('돌아온 열차 ' + r.trains + '편');
     if (r.points > 0) lines.push('연구 점수 +' + fmt(r.points));
     if (r.held) lines.push('막을 수 없는 밤이 와서 버티는 중이에요');

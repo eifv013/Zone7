@@ -1338,7 +1338,7 @@
    */
   var STAT_HERO = [['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['total', '진행 시간']];
   var STAT_GROUPS = [
-    ['이번 판', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '막아낸 밤']]],
+    ['이번 판', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '방어 성공한 밤']]],
     ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비운 시간'], ['days', '시작한 지']]]
   ];
   function buildStats() {
@@ -1474,9 +1474,9 @@
     $('night-boss').hidden = !boss;
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
-    setText($('night-hint'), safe ? '막아내면 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
+    setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
       : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
-    setText($('night-sub'), '막아낸 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
+    setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -1999,7 +1999,7 @@
     var total = r.gain + (r.nightReward || 0), lines = [];
     setText($('away-gain'), '+' + fmt(total));
     setText($('away-text'), (r.capped ? '오래 비웠어요. 최대치인 ' + duration(r.counted) + '치만 계산했어요' : duration(r.elapsed) + ' 동안 거점이 돌아갔어요') + ' · 효율 ' + Math.round(r.rate * 100) + '%');
-    if (r.nights > 0) lines.push('막아낸 밤 ' + r.nights + '번 · 전리품 ' + fmt(r.nightReward));
+    if (r.nights > 0) lines.push('방어 성공한 밤 ' + r.nights + '번 · 전리품 ' + fmt(r.nightReward));
     if (r.trains > 0) lines.push('돌아온 열차 ' + r.trains + '편');
     if (r.points > 0) lines.push('연구 점수 +' + fmt(r.points));
     if (r.held) lines.push('막을 수 없는 밤이 와서 버티는 중이에요');
