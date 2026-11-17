@@ -177,6 +177,19 @@
     for (var id in ZOMBIE_TYPES) if (Object.prototype.hasOwnProperty.call(ZOMBIE_TYPES, id)) { acc += ZOMBIE_TYPES[id].weight; if (roll < acc) return id; }
     return 'walker';
   }
+  /**
+   * 오늘 밤의 특별한 좀비(view.special) 가운데 지금 화면에 없는 첫 번째를 고른다. 없으면 null.
+   * 같은 종류는 한 번에 하나만 서 있게 해서, 드문 것이 드물게 보이도록 한다.
+   */
+  function pickSpecial(specials, zombies) {
+    if (!Array.isArray(specials) || !Array.isArray(zombies)) return null;
+    for (var i = 0; i < specials.length; i++) {
+      var sp = specials[i];
+      if (!sp || typeof sp.id !== 'string') continue;
+      if (!zombies.some(function (z) { return z.kind === sp.id; })) return sp;
+    }
+    return null;
+  }
   function stepZombies(model, view, dt, rng) {
     var dusk = view.t >= DUSK;
     if (!dusk) { if (view.t < 0.1) model.zombies.length = 0; return; }
@@ -192,6 +205,9 @@
         type: 'walker', hp: big ? BOSS_HP : (kind.hp || 1), stop: 0, phase: 0 });
       var nz = model.zombies[model.zombies.length - 1];
       nz.type = big ? 'walker' : zombieType(rng());
+      // 오늘 밤 섞여 온 특별한 좀비: 도감과 같은 옷 색으로 그린다(생김새는 그 종류의 틀을 쓴다)
+      var sp = !big && model.zombies.length > 2 ? pickSpecial(view.special, model.zombies) : null;      // 앞의 둘은 평범한 것, 그 뒤로 빈자리가 나면 반드시 섞여 온다(도감에 적힐 것이 화면에 안 보이는 밤이 없게)
+      if (sp) { nz.kind = sp.id; nz.pal = sp.pal || null; nz.glow = !!sp.glow; if (Object.prototype.hasOwnProperty.call(ZOMBIE_TYPES, sp.frames)) nz.type = sp.frames; }
       nz.speed *= ZOMBIE_TYPES[nz.type].speed; if (!big) nz.hp += ZOMBIE_TYPES[nz.type].hp;
       nz.phase = rng() * 6;
       model.spawn = (0.5 + rng() * 0.9) / (view.surge ? 2.5 : 1) / kind.speed;
@@ -1171,6 +1187,7 @@
       // 무리 성격의 색이 먼저, 그 위에 개체마다 다른 옷 색(성격이 옷 색을 정하지 않을 때만)
       var look = kind.look ? Object.assign({}, ZOMBIE_LOOKS[z.look || 0], kind.look) : ZOMBIE_LOOKS[z.look || 0];
       // 종류마다 그림이 다르다. 빠른 것은 다리도 빨리 움직인다
+      if (z.pal) look = Object.assign({}, look, z.pal);
       var frames = zombieFrames(z.big ? 'walker' : z.type), pace = z.type === 'runner' ? 7 : z.type === 'brute' ? 2 : 3;
       var frame = frames[Math.floor(t * pace * kind.speed + z.phase) % 2], tall = frame.length;
       // 방벽 앞에 선 맨 앞줄은, 못 막는 밤이면 방벽을 두드린다(앞뒤로 흔들린다)
@@ -1178,6 +1195,10 @@
       // 걷는 동안 한 칸씩 휘청이고(뛰는 것은 빼고), 방벽 앞에 서면 제자리에서 들썩인다
       var sway = moving && z.type !== 'runner' && Math.floor(t * 1.5 + z.phase) % 3 === 0 ? 1 : 0;
       var top = GROUND - tall * sc - (!moving && Math.floor(t * 5 + z.phase) % 2 ? 1 : 0);
+      if (z.glow) {      // 야광: 몸 둘레가 희미하게 빛난다
+        ctx.save(); ctx.globalAlpha = 0.18 + 0.08 * Math.sin(t * 3 + z.phase); ctx.fillStyle = (z.pal && z.pal.g) || PAL.g;
+        ctx.fillRect(Math.round(z.x + pound + sway) - 1, top - 1, frame[0].length * sc + 2, tall * sc + 2); ctx.restore();
+      }
       sprite(ctx, frame, z.x + pound + sway, top, true, sc, look);
       if (kind.hat) { ctx.fillStyle = kind.hat; ctx.fillRect(Math.round(z.x) + 1 * sc, top - sc, 5 * sc, sc); }           // 안전모
       if (z.big) { ctx.fillStyle = PAL.e; ctx.fillRect(Math.round(z.x) + 3 * sc, top + 2 * sc, sc, sc); ctx.fillRect(Math.round(z.x) + 5 * sc, top + 2 * sc, sc, sc); } // 변이체의 붉은 눈(그림을 뒤집어 그리므로 3·5번째 칸)
@@ -1245,7 +1266,7 @@
     };
   }
 
-  return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
+  return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });

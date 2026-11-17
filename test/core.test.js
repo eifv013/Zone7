@@ -1793,3 +1793,24 @@ test('시험 알림 목록: 1분 뒤에 하나, 잘못된 시각이 와도 깨�
   const bad = C.noticeTestPlan('엉뚱한 값');
   assert.ok(isFinite(bad[0].at) && bad[0].at > Date.now());
 });
+
+test('오늘 밤의 특별한 좀비: 도감에 적히는 것과 같고, 흔한 것과 변이체는 빠진다', () => {
+  const s = fresh(); s.zone = 4;
+  let seen = 0;
+  for (let day = 1; day <= 400; day++) {
+    const sp = C.nightSpecials(s, day);
+    sp.forEach((z) => {
+      const k = C.ZOMBIE_KINDS.find((x) => x.id === z.id);
+      assert.ok(k && !k.boss && k.rarity !== 'common' && k.zone <= s.zone);
+    });
+    seen += sp.length;
+    const before = Object.assign({}, s.zdex);
+    C.sightZombies(s, day, false);
+    sp.forEach((z) => assert.equal(s.zdex[z.id], (before[z.id] || 0) + 1));      // 화면에 보인 것은 반드시 도감에 적힌다
+  }
+  assert.ok(seen > 50);
+  s.zone = 0;
+  for (let day = 1; day <= 200; day++) C.nightSpecials(s, day).forEach((z) => assert.equal(C.ZOMBIE_KINDS.find((x) => x.id === z.id).zone, 0));
+  assert.deepEqual(C.nightSpecials(null, 1), []);
+  assert.deepEqual(C.nightSpecials(s, NaN), []);
+});

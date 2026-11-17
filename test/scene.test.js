@@ -629,3 +629,27 @@ test('방벽의 생김새는 구역마다 다르고, 어느 구역이든 그릴 
   }
   assert.ok(shapes.size >= 6, '구역마다 방벽 모양이 달라야 한다: ' + shapes.size);
 });
+
+test('특별한 좀비 고르기: 화면에 없는 첫 번째를 고르고, 잘못된 값에는 null', () => {
+  const sp = [{ id: 'vendor', frames: 'walker', pal: {} }, { id: 'glow', frames: 'walker', pal: {} }];
+  assert.equal(S.pickSpecial(sp, []).id, 'vendor');
+  assert.equal(S.pickSpecial(sp, [{ kind: 'vendor' }]).id, 'glow');
+  assert.equal(S.pickSpecial(sp, [{ kind: 'vendor' }, { kind: 'glow' }]), null);
+  assert.equal(S.pickSpecial(null, []), null);
+  assert.equal(S.pickSpecial([null, { id: 5 }], []), null);
+  assert.equal(S.pickSpecial(sp, undefined), null);
+});
+
+test('특별한 좀비가 섞인 밤: 화면에 실제로 걸어 나오고, 종류마다 한 번에 하나뿐이다', () => {
+  const m = S.create(256);
+  const sp = [{ id: 'vendor', frames: 'walker', pal: { c: '#b8402e' } }, { id: 'glow', frames: 'walker', pal: { g: '#b8ff7a' }, glow: true }, { id: '엉뚱', frames: '없는틀', pal: null }];
+  const night = Object.assign({}, dusk, { special: sp });
+  const seen = {};
+  for (let i = 0; i < 1500; i++) {
+    S.step(m, night, 0.1, rng);
+    const count = {};
+    m.zombies.forEach((z) => { if (z.kind) { seen[z.kind] = true; count[z.kind] = (count[z.kind] || 0) + 1; assert.ok(S.ZOMBIE_TYPES[z.type], '틀이 없으면 원래 종류를 쓴다'); } });
+    Object.keys(count).forEach((k) => assert.equal(count[k], 1));
+  }
+  assert.ok(seen.vendor, '특별한 좀비가 한 번은 나와야 한다');
+});
