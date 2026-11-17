@@ -2191,3 +2191,19 @@ test('보강 계획: 방어력이 한참 모자라도 빨리 셈하고, 하나�
   const before = s.supplies; assert.ok(C.fortify(s).ok); near(before - s.supplies, plan.cost);
   assert.ok(C.defensePower(s) >= C.nightStrength(s) || !plan.enough);
 });
+
+test('받침 판별: 한글은 글자로, 숫자로 끝나면 읽는 소리로 따진다', () => {
+  assert.equal(C.hasBatchim('물자'), false); assert.equal(C.hasBatchim('샘플'), true);
+  assert.equal(C.hasBatchim('1.2조'), false); assert.equal(C.hasBatchim('50.0만'), true); assert.equal(C.hasBatchim('3.5해'), false);
+  ['10', '1', '3', '6', '7', '8'].forEach((n) => assert.equal(C.hasBatchim(n), true, n));
+  ['2', '4', '5', '9', '1,252'].forEach((n) => assert.equal(C.hasBatchim(n), false, n));
+  assert.equal(C.hasBatchim(''), false);
+});
+
+test('일지와 화면 글의 맞춤법: 고쳐 달라고 했던 표기가 다시 들어오지 않는다', () => {
+  const fs = require('fs'), path = require('path');
+  const all = ['core.js', 'ui.js', 'help.js', 'template.html'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
+  ['회차이 ', '회차을', '회차은 ', '누굴 주느냐고'].forEach((w) => assert.ok(!all.includes(w), w));
+  const story = C.BEATS.map((b) => b.text).join('\n');
+  assert.ok(!story.includes('그다음'), '"그 다음"으로 띄어 쓴다');
+});

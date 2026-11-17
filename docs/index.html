@@ -459,6 +459,8 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .panes button { position: relative; padding: 6px 4px; background: transparent; color: var(--ink-soft); border: 0; font: 600 13px/1.4 var(--font-body); cursor: pointer; }
 .panes button + button { border-left: 2px solid var(--ink); }
 .panes button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.ach-card.hidden-ach { opacity: .55; }
+#zone-tabs button.avail::after { width: 8px; height: 8px; border-radius: 50%; background: var(--blood); }      /* 구역 탭의 점은 아래 메뉴의 점과 같은 빨간 동그라미 */
 .panes button.avail::after { content: ''; position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; background: var(--hazard); }
 .zmap-open { margin-right: auto; margin-left: 10px; padding: 3px 9px; background: transparent; color: var(--ink); border: 1px solid var(--ink); font: 600 12px/1.5 var(--font-body); cursor: pointer; }
 /* 1구역 수색 지도: 5×4 칸. 안 뒤진 칸은 어두운 건물, 뒤진 칸은 무엇이 나왔는지 보여 준다. */
@@ -1017,7 +1019,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.2.3</div>
+  <div class="boot-ver">7구역 알파 1.2.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1518,7 +1520,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.2.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.2.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1654,7 +1656,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.4";
 </script>
 <script>
 /*
@@ -1673,6 +1675,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.2.4', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '표시와 맞춤법 손질',
+      items: [
+        '아직 가 보지 못한 구역의 업적은 이름과 조건이 ???로 가려져요. 한 번이라도 가 본 구역은 철수해도 보여요.',
+        '채울 수 있는 단골 주문·납품 의뢰·표류 화물이 있으면 그 구역의 탭과 운영 단추에도 점이 찍혀요. 어느 구역의 일인지 바로 보여요.',
+        '영구 특성의 "쓴 것"을 "사용"으로 바꾸고, 가진 샘플은 "남은 항체 샘플"로 적었어요.',
+        '고침: 특전 고르기의 "이번 회차이"를 "이번 회차가"로 고쳤어요.',
+        '고침: 숫자 뒤의 조사(을/를, 이/가, 으로/로)가 숫자를 읽는 소리에 맞게 붙어요. 띄어 쓰던 " 이 들어요", " 을 모으면"도 붙였어요.',
+        '고침: 도움말의 "자동화이 있어요", 데려오기의 "(이)가", 도움말에 남아 있던 "판"을 고쳤어요.',
+        '일지의 띄어쓰기와 말투 몇 곳을 다듬었어요.'
+      ] },
     { ver: '알파 1.2.3', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '후반 구역의 버벅임',
       items: [
         '고침: 후반 구역에서 방어력이 무리보다 한참 모자랄 때 게임이 버벅이던 문제를 고쳤어요. 보강 값을 셈하는 방식을 가볍게 바꿨고, 값은 그대로예요.'
@@ -2714,7 +2726,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
           "통조림은 엿새 치가 남았다. 창밖 골목에는 어제보다 하나가 더 서 있다. 지도를 펴 보니 여기는 1구역이다. 7은 강 건너, 지도의 맨 끝에 있다.",
           "기다리는 건 오늘까지만 하기로 했다. 내일부터는 내가 찾으러 나간다. 옆집부터, 한 집씩."] },
         { title: "지붕 위의 7", text: [
-          "옆집 지붕에 누가 흰 페인트로 숫자를 써 놓았다. 7, 그리고 화살표. 화살표는 강 쪽을 가리킨다. 다음 집 지붕에도, 그다음 집에도 있다. 누군가 지붕을 타고 가면서 길을 남긴 것이다.",
+          "옆집 지붕에 누가 흰 페인트로 숫자를 써 놓았다. 7, 그리고 화살표. 화살표는 강 쪽을 가리킨다. 다음 집 지붕에도, 그 다음 집에도 있다. 누군가 지붕을 타고 가면서 길을 남긴 것이다.",
           "세 번째 집 다락에서 사람들을 만났다. 정수기 기사였다는 아저씨, 쌍둥이를 데리고 있는 아주머니, 말이 없는 {student}. 다들 같은 방송을 듣고 있었다. 아주머니가 이름을 물어서 {hero}라고 했다. 쌍둥이들이 그 이름을 세 번쯤 따라 불렀다.",
           "아저씨가 물었다. “{hero:야}, 그 상자엔 뭐가 들었냐.” 나는 모른다고 했다. 정말로 모른다. 아저씨는 더 묻지 않고 내 우비의 모자를 씌워 주었다. “비 온다. 노란색이라 멀리서도 보이겠네. 길 잃을 일은 없겠다.”",
           "밤에 방벽 너머에서 손톱으로 철판을 긁는 소리가 났다. 사람들이 숨을 죽였다. 나는 왼쪽 소매를 꼭 쥐고 있었다. 소매 아래가 가려웠다. 엄마가 긁지 말라고 했다.",
@@ -2722,7 +2734,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
         { title: "남겨 두는 것", text: [
           "동네의 통조림이 바닥을 보인다. 찾아볼 집이 이제 없다. 골목 끝에 셔터 내린 시장이 보인다. 다음은 거기다.",
           "떠나기 전에 아저씨가 이상한 일을 시켰다. 창고의 절반을 그대로 두고 가자는 것이다. 물, 통조림, 건전지. 문에는 분필로 썼다. “쓰고 채워 놓을 것.”",
-          "{student:이} 화를 냈다. 우리도 모자란데 누굴 주느냐고. 아저씨는 지붕을 가리켰다. “저 숫자 써 놓은 사람도 모자랐을 거다. 그래도 썼잖냐.”",
+          "{student:이} 화를 냈다. 우리도 모자란데 누굴 주냐고. 아저씨는 지붕을 가리켰다. “저 숫자 써 놓은 사람도 모자랐을 거다. 그래도 썼잖냐.”",
           "나는 우리 집 현관에 쪽지를 붙였다. “엄마, 나 7구역으로 가. 상자는 잘 들고 있어. — {hero}” 붙이고 나서 한참 서 있었다. 엄마가 이걸 읽을 일이 있을까.",
           "돌아보지 않으려고 했는데 한 번 돌아봤다. 지붕 위의 7이 비에 젖어 번들거렸다."] }] },
     { no: 2, name: '재래시장', kind: 'trade', cost: 5e7, lead: '좌판을 열고 시세를 봐 가며 판다',
@@ -2749,7 +2761,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
       story: [
         { title: "멈춘 자리", text: [
           "3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 밖에서 잠근 게 아니다. 안에 있던 사람들이 잠그고, 다른 길로 나간 것이다.",
-          "문을 뜯고 들어가니 기계들이 멈춘 자리 그대로 서 있다. 컨베이어 위에는 만들다 만 것들이 한 줄로 늘어서 있다. 맨 앞의 것에는 나사가 세 개 박혀 있고, 그다음은 두 개, 그다음은 하나.",
+          "문을 뜯고 들어가니 기계들이 멈춘 자리 그대로 서 있다. 컨베이어 위에는 만들다 만 것들이 한 줄로 늘어서 있다. 맨 앞의 것에는 나사가 세 개 박혀 있고, 그 다음은 두 개, 그 다음은 하나.",
           "누군가 네 번째 나사를 박으려다 손을 놓았다. 드라이버가 바닥에 떨어져 있다. 그 옆에 보온병. 뚜껑을 여니 아직 커피 냄새가 났다.",
           "아저씨가 배전반을 열어 보고 휘파람을 불었다. “죽은 게 아니야. 꺼 놓은 거지. 순서대로, 얌전하게.” 여기 사람들은 도망친 게 아니라 퇴근한 것이다.",
           "나는 드라이버를 주워서 제자리에 걸어 두었다. 벽에 공구 모양대로 그림자가 그려져 있었다."] },
@@ -4552,7 +4564,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
    */
   /** 마지막 글자에 받침이 있는가(한글이 아니면 false). */
   function hasBatchim(word) {
-    var c = String(word || '').charCodeAt(String(word || '').length - 1);
+    var w = String(word || ''), c = w.charCodeAt(w.length - 1);
+    // 숫자로 끝나면 읽는 소리로 따진다(1.2.4): 0 영, 1 일, 3 삼, 6 육, 7 칠, 8 팔 은 받침이 있고 2·4·5·9 는 없다. "1,250을", "1.2조를"
+    if (c >= 48 && c <= 57) return '013678'.indexOf(w[w.length - 1]) >= 0;
     return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
   }
   /**
@@ -4890,7 +4904,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
     var open = goals(state, state.zone).filter(function (x) { return !x.done; })[0];
     if (open) return g('goal', (state.zone + 1) + '구역 목표: ' + open.text + ' (' + formatNumber(open.value) + ' / ' + formatNumber(open.need) + ')', 'zone');
     var n = nextZone(state);
-    if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + '의 문을 열 차례예요. 물자 ' + formatNumber(n.cost) + ' 이 들어요.', 'zone');
+    if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + '의 문을 열 차례예요. 물자 ' + formatNumber(n.cost) + (hasBatchim(formatNumber(n.cost)) ? '이' : '가') + ' 들어요.', 'zone');
     return g('retreat', '지금은 더 나아갈 곳이 없어요. 철수해서 항체 샘플을 챙기고, 더 강하게 다시 시작해 보세요.');
   }
 
@@ -5062,7 +5076,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
         '목표를 모두 채우고 물자를 치르면 다음 구역의 문이 열려요. 뒤 구역을 열수록 밤에 오는 무리도 커져요.' ] },
 
       { id: 'click', tab: '수색', title: '직접 수색', items: [
-        '"잔해 수색"을 누르면 물자를 바로 얻어요. 판 초반에 첫 물자를 모으기 좋아요.',
+        '"잔해 수색"을 누르면 물자를 바로 얻어요. 회차 초반에 첫 물자를 모으기 좋아요.',
         '누르지 않아도 뒤처지지 않아요. 열심히 눌러도 가만히 둘 때보다 조금 빠른 정도예요.' ] },
 
       { id: 'map', tab: '1구역', title: '1구역: 수색 지도', items: [
@@ -5102,12 +5116,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
         '무리는 밤마다 커져서 언젠가는 막을 수 없게 돼요. 그때가 철수를 생각할 때예요.' ] },
 
       { id: 'retreat', tab: '철수', title: '철수와 항체 샘플', items: [
-        '이번 회차에서 물자 ' + fmt(core.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요.',
+        '이번 회차에서 물자 ' + fmt(core.RETREAT_MIN) + (core.hasBatchim(fmt(core.RETREAT_MIN)) ? '을' : '를') + ' 모으면 철수할 수 있어요.',
         '철수하면 거점을 버리고 1구역에서 다시 시작해요. 대신 항체 샘플을 얻어요. 많이 모았을수록 많이 받아요.',
         '진행이 벽에 막혀 느려졌을 때 하는 게 좋아요. 일지, 통계, 영구 특성, 일행은 그대로 남아요.' ] },
 
       { id: 'trait', tab: '특성', title: '특성과 특전', items: [
-        '영구 특성은 항체 샘플로 찍고, 철수해도 남아요. ' + names(core.TRAITS) + '이 있어요.',
+        '영구 특성은 항체 샘플로 찍고, 철수해도 남아요. ' + names(core.TRAITS) + (core.hasBatchim(core.TRAITS[core.TRAITS.length - 1].name) ? '이' : '가') + ' 있어요.',
         '구역의 자동(순찰조, 흥정꾼, 자동 제어반, 자동 신호)은 회차마다 개조로 사야 켜져요. 영구 특성 "자동화"는 전력 투입과 청신호의 대기 시간을 줄여 줘요.',
         '"특성 되돌리기"를 누르면 쓴 샘플을 모두 돌려받아요. 값이 들지 않으니 회차마다 다르게 찍어 봐도 좋아요.',
         '특전은 목표를 채울 때 고르고, 이번 회차에만 쓰여요. 같은 것을 또 고르면 레벨이 올라요.' ] },
@@ -7110,7 +7124,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
       // version.json 의 주소를 매번 다르게 해서(?t=) 기기에 저장된 예전 답을 받지 않는다
       window.Updater.checkRemote(window.fetch.bind(window), 'version.json?t=' + Date.now(), Update.current).then(function (r) {
         if (!r.available || r.info.version === Update.offered) return; // "나중에"를 누른 버전은 다시 묻지 않는다
-        setText($('update-text'), '새 버전 ' + (r.info.name || r.info.version) + ' 이 나왔다.' + (r.info.title ? ' ' + r.info.title + '.' : ''));
+        setText($('update-text'), '새 버전 ' + (r.info.name || r.info.version) + (C.hasBatchim(r.info.name || r.info.version) ? '이' : '가') + ' 나왔다.' + (r.info.title ? ' ' + r.info.title + '.' : ''));
         $('update-bar').dataset.version = r.info.version;
         $('update-bar').hidden = false;
       });
@@ -7135,7 +7149,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
       remember(VERSION_KEY, Update.current);
       if (seen && seen !== Update.current) {
         var name = PATCH_NOTES.length ? PATCH_NOTES[0].ver : Update.current;
-        notice(name + ' 으로 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.');
+        notice(name + (C.hasBatchim(name) && !/[178]$/.test(name) ? '으로' : '로') + ' 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.');
       }
     }
   };
@@ -7814,7 +7828,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
   function renderAch() {
     var list = C.ACHIEVEMENTS.filter(function (a) { return a.group === achTab; });
     var prog = list.map(function (a) { return C.achProgress(state, a); });
-    var key = achTab + '|' + prog.map(function (p) { return (p.done ? 'd' : '') + Math.floor(p.value / p.need * 50); }).join(',');
+    var key = achTab + '|' + Math.max(state.zone, state.bestZone || 0) + '|' + prog.map(function (p) { return (p.done ? 'd' : '') + Math.floor(p.value / p.need * 50); }).join(',');
     if (key === achShown) return;
     achShown = key;
     var total = C.achCount(state);
@@ -7832,6 +7846,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
     var order = list.map(function (a, i) { return i; }).sort(function (x, y) { return (prog[x].done - prog[y].done) || (list[x].tier - list[y].tier) || (x - y); });
     order.forEach(function (i) {
       var a = list[i], p = prog[i], card = el('div', 'ach-card tier' + a.tier + (p.done ? ' done' : '')), head = el('div', 'ach-head');
+      // 아직 가 보지 못한 구역의 업적은 이름과 조건을 가린다(1.2.4): 뒤 구역에서 무엇을 하는지 미리 알려 주지 않는다. 한 번이라도 가 본 구역은 철수해도 보인다
+      var zoneNo = /^z\d$/.test(a.group) ? Number(a.group.slice(1)) : 0;
+      if (zoneNo && !p.done && Math.max(state.zone, state.bestZone || 0) < zoneNo - 1) {
+        card.className = 'ach-card hidden-ach';
+        head.appendChild(el('b', '', '???')); head.appendChild(el('span', 'ach-tier', TIER_NAMES[a.tier]));
+        card.appendChild(head); card.appendChild(el('p', '', zoneNo + '구역을 열면 보여요.'));
+        box.appendChild(card);
+        return;
+      }
       head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier] + (p.retreats ? ' · 철수 ' + p.retreats + '번 뒤' : '')));      // 달성한 날짜(적어 둔 것만)
       card.appendChild(head); card.appendChild(el('p', '', a.text));
       if (p.locked) card.appendChild(el('p', 'ach-lock', '철수를 ' + p.retreats + '번 한 뒤에 달성할 수 있어요(지금 ' + state.retreats + '번).'));
@@ -8115,7 +8138,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
     var box = $('perk-list');
     box.textContent = '';
     if (!state.pendingPerks.length) { $('perk').hidden = true; return; }
-    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 회차이 끝날 때까지 남아요.');
+    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 회차가 끝날 때까지 남아요.');
     state.pendingPerks.forEach(function (id) {
       var def = null;
       C.PERKS.forEach(function (k) { if (k.id === id) def = k; });
@@ -8220,7 +8243,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
     setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
     // 철수의 기준은 "이번 회차에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
     setText($('retreat-hint'), can
-      ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
+      ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + (function (t) { return t + (C.hasBatchim(t) ? '을' : '를'); })(fmt(C.nextAntibodyAt(state))) + ' 넘기면 샘플 +' + fmt(gain + 1)
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차 누적 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
     setText($('retreat-sub'), can ? '물자를 더 모으면 샘플이 늘어요.'
       : state.pendingPerks.length ? '' : '물자를 다 모으면 철수할 수 있어요.');
@@ -8238,6 +8261,19 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
   }
 
   /** 구역 화면: 고른 탭에 따라 목표, 거래 칸, 목록을 바꿔 보여 준다. */
+  /** 그 구역에서 지금 채울 수 있는 것이 있는가: 2구역 단골 주문, 3구역 납품 의뢰, 4구역 표류 화물. */
+  function fillReady(zi) {
+    if (zi === 1) return !!state.order && state.goods >= state.order.need;
+    if (zi === 2) return !!state.contract && state.contract.have >= state.contract.need;
+    if (zi === 3) return !!state.salvage && state.salvage.have >= state.salvage.need;
+    return false;
+  }
+  /** 구역 탭에 점을 찍을 일: 채울 것이 있거나, 지금 구역에서 다음 문을 열 수 있다. */
+  function zoneTodo(zi) {
+    if (fillReady(zi)) return true;
+    var nz = C.nextZone(state);
+    return zi === state.zone && !!nz && nz.ready && nz.cost <= state.supplies;
+  }
   function renderZone(m) {
     var zi = tab === 'wall' ? -1 : Number(tab.slice(1));
     Object.keys(rows.tabs).forEach(function (id) {
@@ -8247,6 +8283,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
       if (n >= 0) setText(b, id === tab ? (n + 1) + '구역' : String(n + 1));
       if (n > state.zone) b.setAttribute('data-locked', '1'); else b.removeAttribute('data-locked');
       b.hidden = n > state.zone + 1;      // 아직 먼 구역의 탭은 숨긴다: 초반에 탭이 여섯 개나 보이지 않게
+      b.classList.toggle('avail', n >= 0 && n <= state.zone && id !== tab && zoneTodo(n));      // 그 구역에 지금 할 일이 있으면 점(1.2.4)
     });
     var open = zi >= 0 && zi <= state.zone, soon = zi >= 0 && C.ZONES[zi].kind === 'soon';
     setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳'));
@@ -8278,6 +8315,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
     if (zoneTab) {
       var upReady = C.UPGRADES.some(function (u) { return u.zone === zi && C.upgradeCost(state, u.id) <= state.supplies; });
       var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.cost <= state.supplies && !(nz.soon && state.gate);
+      $('zone-panes').children[0].classList.toggle('avail', fillReady(zi) && pane !== 'play');      // 운영: 채울 수 있는 주문·의뢰·화물이 있다
       $('zone-panes').children[1].classList.toggle('avail', upReady && pane !== 'up');
       $('zone-panes').children[2].classList.toggle('avail', goalReady && pane !== 'goal');
     }
@@ -8639,7 +8677,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
   }
   function renderTraits() {
     renderPet();
-    setText($('trait-points'), '항체 샘플 ' + fmt(state.antibodies) + ' · 쓴 것 ' + fmt(C.traitsSpent(state)));
+    setText($('trait-points'), '남은 항체 샘플 ' + fmt(state.antibodies) + ' · 사용 ' + fmt(C.traitsSpent(state)));
     C.TRAITS.forEach(function (t) {
       var r = rows.traits[t.id], lv = state.traits[t.id], cost = C.traitCost(state, t.id);
       setText(r.count, 'Lv ' + lv + ' / ' + t.max);
@@ -8986,7 +9024,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.2.3";
         if (!r.ok) return;
         if (r.dup) { toast(r.rarity.name + ' · ' + r.breed.name + ' · 이미 함께 있어요'); sfx('buy'); }
         else {
-          log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + '(이)가 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
+          log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
           toast((r.rarity.id === 'rare' ? '희귀! ' : '') + r.rarity.name + ' · ' + r.breed.name + ' · 새 친구예요');
           sfx(r.rarity.id === 'common' ? 'buy' : 'defended');
         }

@@ -541,7 +541,7 @@
       // version.json 의 주소를 매번 다르게 해서(?t=) 기기에 저장된 예전 답을 받지 않는다
       window.Updater.checkRemote(window.fetch.bind(window), 'version.json?t=' + Date.now(), Update.current).then(function (r) {
         if (!r.available || r.info.version === Update.offered) return; // "나중에"를 누른 버전은 다시 묻지 않는다
-        setText($('update-text'), '새 버전 ' + (r.info.name || r.info.version) + ' 이 나왔다.' + (r.info.title ? ' ' + r.info.title + '.' : ''));
+        setText($('update-text'), '새 버전 ' + (r.info.name || r.info.version) + (C.hasBatchim(r.info.name || r.info.version) ? '이' : '가') + ' 나왔다.' + (r.info.title ? ' ' + r.info.title + '.' : ''));
         $('update-bar').dataset.version = r.info.version;
         $('update-bar').hidden = false;
       });
@@ -566,7 +566,7 @@
       remember(VERSION_KEY, Update.current);
       if (seen && seen !== Update.current) {
         var name = PATCH_NOTES.length ? PATCH_NOTES[0].ver : Update.current;
-        notice(name + ' 으로 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.');
+        notice(name + (C.hasBatchim(name) && !/[178]$/.test(name) ? '으로' : '로') + ' 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.');
       }
     }
   };
@@ -1245,7 +1245,7 @@
   function renderAch() {
     var list = C.ACHIEVEMENTS.filter(function (a) { return a.group === achTab; });
     var prog = list.map(function (a) { return C.achProgress(state, a); });
-    var key = achTab + '|' + prog.map(function (p) { return (p.done ? 'd' : '') + Math.floor(p.value / p.need * 50); }).join(',');
+    var key = achTab + '|' + Math.max(state.zone, state.bestZone || 0) + '|' + prog.map(function (p) { return (p.done ? 'd' : '') + Math.floor(p.value / p.need * 50); }).join(',');
     if (key === achShown) return;
     achShown = key;
     var total = C.achCount(state);
@@ -1263,6 +1263,15 @@
     var order = list.map(function (a, i) { return i; }).sort(function (x, y) { return (prog[x].done - prog[y].done) || (list[x].tier - list[y].tier) || (x - y); });
     order.forEach(function (i) {
       var a = list[i], p = prog[i], card = el('div', 'ach-card tier' + a.tier + (p.done ? ' done' : '')), head = el('div', 'ach-head');
+      // 아직 가 보지 못한 구역의 업적은 이름과 조건을 가린다(1.2.4): 뒤 구역에서 무엇을 하는지 미리 알려 주지 않는다. 한 번이라도 가 본 구역은 철수해도 보인다
+      var zoneNo = /^z\d$/.test(a.group) ? Number(a.group.slice(1)) : 0;
+      if (zoneNo && !p.done && Math.max(state.zone, state.bestZone || 0) < zoneNo - 1) {
+        card.className = 'ach-card hidden-ach';
+        head.appendChild(el('b', '', '???')); head.appendChild(el('span', 'ach-tier', TIER_NAMES[a.tier]));
+        card.appendChild(head); card.appendChild(el('p', '', zoneNo + '구역을 열면 보여요.'));
+        box.appendChild(card);
+        return;
+      }
       head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier] + (p.retreats ? ' · 철수 ' + p.retreats + '번 뒤' : '')));      // 달성한 날짜(적어 둔 것만)
       card.appendChild(head); card.appendChild(el('p', '', a.text));
       if (p.locked) card.appendChild(el('p', 'ach-lock', '철수를 ' + p.retreats + '번 한 뒤에 달성할 수 있어요(지금 ' + state.retreats + '번).'));
@@ -1546,7 +1555,7 @@
     var box = $('perk-list');
     box.textContent = '';
     if (!state.pendingPerks.length) { $('perk').hidden = true; return; }
-    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 회차이 끝날 때까지 남아요.');
+    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 회차가 끝날 때까지 남아요.');
     state.pendingPerks.forEach(function (id) {
       var def = null;
       C.PERKS.forEach(function (k) { if (k.id === id) def = k; });
@@ -1651,7 +1660,7 @@
     setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
     // 철수의 기준은 "이번 회차에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
     setText($('retreat-hint'), can
-      ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
+      ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + (function (t) { return t + (C.hasBatchim(t) ? '을' : '를'); })(fmt(C.nextAntibodyAt(state))) + ' 넘기면 샘플 +' + fmt(gain + 1)
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차 누적 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
     setText($('retreat-sub'), can ? '물자를 더 모으면 샘플이 늘어요.'
       : state.pendingPerks.length ? '' : '물자를 다 모으면 철수할 수 있어요.');
@@ -1669,6 +1678,19 @@
   }
 
   /** 구역 화면: 고른 탭에 따라 목표, 거래 칸, 목록을 바꿔 보여 준다. */
+  /** 그 구역에서 지금 채울 수 있는 것이 있는가: 2구역 단골 주문, 3구역 납품 의뢰, 4구역 표류 화물. */
+  function fillReady(zi) {
+    if (zi === 1) return !!state.order && state.goods >= state.order.need;
+    if (zi === 2) return !!state.contract && state.contract.have >= state.contract.need;
+    if (zi === 3) return !!state.salvage && state.salvage.have >= state.salvage.need;
+    return false;
+  }
+  /** 구역 탭에 점을 찍을 일: 채울 것이 있거나, 지금 구역에서 다음 문을 열 수 있다. */
+  function zoneTodo(zi) {
+    if (fillReady(zi)) return true;
+    var nz = C.nextZone(state);
+    return zi === state.zone && !!nz && nz.ready && nz.cost <= state.supplies;
+  }
   function renderZone(m) {
     var zi = tab === 'wall' ? -1 : Number(tab.slice(1));
     Object.keys(rows.tabs).forEach(function (id) {
@@ -1678,6 +1700,7 @@
       if (n >= 0) setText(b, id === tab ? (n + 1) + '구역' : String(n + 1));
       if (n > state.zone) b.setAttribute('data-locked', '1'); else b.removeAttribute('data-locked');
       b.hidden = n > state.zone + 1;      // 아직 먼 구역의 탭은 숨긴다: 초반에 탭이 여섯 개나 보이지 않게
+      b.classList.toggle('avail', n >= 0 && n <= state.zone && id !== tab && zoneTodo(n));      // 그 구역에 지금 할 일이 있으면 점(1.2.4)
     });
     var open = zi >= 0 && zi <= state.zone, soon = zi >= 0 && C.ZONES[zi].kind === 'soon';
     setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳'));
@@ -1709,6 +1732,7 @@
     if (zoneTab) {
       var upReady = C.UPGRADES.some(function (u) { return u.zone === zi && C.upgradeCost(state, u.id) <= state.supplies; });
       var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.cost <= state.supplies && !(nz.soon && state.gate);
+      $('zone-panes').children[0].classList.toggle('avail', fillReady(zi) && pane !== 'play');      // 운영: 채울 수 있는 주문·의뢰·화물이 있다
       $('zone-panes').children[1].classList.toggle('avail', upReady && pane !== 'up');
       $('zone-panes').children[2].classList.toggle('avail', goalReady && pane !== 'goal');
     }
@@ -2070,7 +2094,7 @@
   }
   function renderTraits() {
     renderPet();
-    setText($('trait-points'), '항체 샘플 ' + fmt(state.antibodies) + ' · 쓴 것 ' + fmt(C.traitsSpent(state)));
+    setText($('trait-points'), '남은 항체 샘플 ' + fmt(state.antibodies) + ' · 사용 ' + fmt(C.traitsSpent(state)));
     C.TRAITS.forEach(function (t) {
       var r = rows.traits[t.id], lv = state.traits[t.id], cost = C.traitCost(state, t.id);
       setText(r.count, 'Lv ' + lv + ' / ' + t.max);
@@ -2417,7 +2441,7 @@
         if (!r.ok) return;
         if (r.dup) { toast(r.rarity.name + ' · ' + r.breed.name + ' · 이미 함께 있어요'); sfx('buy'); }
         else {
-          log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + '(이)가 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
+          log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
           toast((r.rarity.id === 'rare' ? '희귀! ' : '') + r.rarity.name + ' · ' + r.breed.name + ' · 새 친구예요');
           sfx(r.rarity.id === 'common' ? 'buy' : 'defended');
         }

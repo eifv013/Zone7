@@ -397,7 +397,7 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=exped]')
         if not tap('#row-immune'): problems.append('특성을 찍을 수 없다')
         if tap('#trait-reset'): tap('#confirm-yes')
-        if '쓴 것 0' not in text('trait-points'): problems.append('특성을 되돌렸는데 쓴 샘플이 남았다: ' + text('trait-points'))
+        if '사용 0' not in text('trait-points'): problems.append('특성을 되돌렸는데 쓴 샘플이 남았다: ' + text('trait-points'))
         tap('#row-immune'); tap('#row-bulwark')
         tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'save', 'journal']: tap('[data-rtab-set=%s]' % t)
