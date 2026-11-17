@@ -670,9 +670,16 @@
     r.tier = tier;
     // 별: 문턱의 수만큼 빈 별이 있고, 넘을 때마다 하나씩 채워진다. 다 채우면 금색으로 빛난다
     var total = (Array.isArray(list) ? list : C.MILESTONES).length;
-    var stars = new Array(tier + 1).join('★') + new Array(Math.max(0, total - tier) + 1).join('☆');
     var hit = next !== null && !!can && q > 0 && n + q >= next;
-    setText(r.mile, hit ? '★ 지금 2배' : stars);
+    // 별은 글자(★)가 아니라 도형으로 그린다: 글자는 폰마다 크기와 높이가 달라서(아이폰에서는 작고 아래로 처졌다) 줄이 맞지 않았다
+    var key = hit ? 'hit' : tier + '/' + total;
+    if (r.mileKey !== key) {
+      r.mileKey = key;
+      while (r.mile.firstChild) r.mile.removeChild(r.mile.firstChild);
+      if (hit) { r.mile.appendChild(el('i', 'st on')); r.mile.appendChild(el('span', '', '지금 2배')); }
+      else for (var si = 0; si < total; si++) r.mile.appendChild(el('i', si < tier ? 'st on' : 'st'));
+      r.mile.setAttribute('aria-label', hit ? '이번에 사면 2배' : '2배 등급 ' + tier + ' / ' + total);
+    }
     r.mile.hidden = false;
     r.mile.classList.toggle('full', next === null);
     r.next = next;
@@ -1448,8 +1455,13 @@
     setText(pill, safe ? '방어 가능' : sieging ? '농성 중' : '방벽 위험');
     pill.className = 'pill ' + (safe ? 'pill-safe' : sieging ? 'pill-siege' : 'pill-danger');
     var plan = safe ? null : C.defensePlan(state);
-    setText($('night-hint'), (boss ? '오늘은 변이체가 무리를 이끌어요. ' : '') + (safe ? '막으면 물자 +' + fmt(C.nightReward(state)) + ' · 막아낸 밤 ' + state.wavesCleared + '번(생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%)'
-      : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '% 를 잃어요.'));
+    // 변이체가 오는 밤은 제목 옆 딱지와 칸의 테두리로 알린다(글에 섞어 적으면 줄이 넘쳐 읽기 어려웠다)
+    $('night-boss').hidden = !boss;
+    $('night').classList.toggle('boss', boss);
+    // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
+    setText($('night-hint'), safe ? '막아내면 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
+      : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
+    setText($('night-sub'), '막아낸 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -1461,10 +1473,10 @@
     setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
     // 철수의 기준은 "이번 판에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
     setText($('retreat-hint'), can
-      ? '이번 판에 모은 물자 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
-      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에 모은 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
-    setText($('retreat-sub'), can ? '더 모으고 철수하면 샘플이 늘어요. 쓴 물자도 쳐요.'
-      : state.pendingPerks.length ? '' : '다 채우면 철수할 수 있어요. 쓴 물자도 쳐요.');
+      ? '이번 판에 번 물자 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
+      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에 번 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
+    setText($('retreat-sub'), can ? '가진 물자가 아니라 이번 판에 번 물자를 모두 더한 값이에요. 더 벌고 철수하면 샘플이 늘어요.'
+      : state.pendingPerks.length ? '' : '가진 물자가 아니라 이번 판에 번 물자를 모두 더한 값이에요. 다 채우면 철수할 수 있어요.');
     // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
     $('retreat-bar').hidden = !!state.pendingPerks.length && !can;
     $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / (can ? C.nextAntibodyAt(state) : C.RETREAT_MIN) * 100).toFixed(1) + '%';

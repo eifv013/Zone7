@@ -199,7 +199,17 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .row[data-tier="4"] { --tier: #e08a3c; } .row[data-tier="5"] { --tier: #d85a5a; }
 .row[data-tier="6"], .row[data-tier="7"], .row[data-tier="8"], .row[data-tier="9"], .row[data-tier="10"] { --tier: var(--hazard); }
 .row[data-tier]:not([data-tier="0"]) .row-mile:not(.hit) { color: var(--tier); }
-.row-mile { font-size: 13px; line-height: 1.3; letter-spacing: 0; }
+.row-mile { display: inline-flex; align-items: center; gap: 1px; padding: 4px 7px; font: 600 11px/1 var(--font-body); }
+.row-mile .st { display: block; width: 10px; height: 10px; background: currentColor; opacity: .28; clip-path: polygon(50% 2%, 62% 36%, 98% 36%, 69% 58%, 80% 93%, 50% 72%, 20% 93%, 31% 58%, 2% 36%, 38% 36%); }
+.row-mile .st.on { opacity: 1; }
+.row-mile span { margin-left: 4px; white-space: nowrap; }
+#retreat-sub { margin-bottom: 10px; }
+/* 변이체가 오는 밤: 제목 옆의 보라색 딱지와 칸의 테두리 */
+.boss-tag { margin-right: auto; padding: 3px 8px; border-radius: 999px; background: #9a5ac8; color: #fff; font: 700 12px/1.4 var(--font-body); white-space: nowrap; animation: mile-pop .9s ease-in-out infinite alternate; }
+.boss-tag[hidden] { display: none; }
+#night.boss { box-shadow: inset 0 0 0 2px #9a5ac8; }
+#night-sub { margin-top: 2px; }
+@media (prefers-reduced-motion: reduce) { .boss-tag { animation: none; } }
 .row-mile.full:not(.hit) { color: var(--hazard); border-color: var(--hazard); text-shadow: 0 0 6px color-mix(in srgb, var(--hazard) 70%, transparent); }
 /* 아이폰: 두 번 누르면 화면이 커지는 것을 막는다(벌려서 키우기는 그대로 된다) */
 html, body, button, .row, .panel { touch-action: manipulation; }
@@ -948,7 +958,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.11</div>
+  <div class="boot-ver">7구역 알파 0.9.12</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1177,6 +1187,7 @@ setTimeout(function () {
     <section class="panel" id="night" aria-labelledby="h-night">
       <div class="panel-head">
         <h2 id="h-night">오늘 밤</h2>
+        <span class="boss-tag" id="night-boss" hidden>변이체 출현</span>
         <span class="pill" id="night-pill">방벽 위험</span>
       </div>
       <div class="timer-row" id="night-timer-row"><span class="label" id="night-timer-label">무리 도착까지</span><span class="num" id="night-timer">0:50</span></div>
@@ -1186,6 +1197,7 @@ setTimeout(function () {
         <span class="label">방어력</span><div class="track"><i id="defense-bar"></i></div><span class="num" id="defense-power">5</span>
       </div>
       <p class="hint" id="night-hint"></p>
+      <p class="hint" id="night-sub"></p>
       <button type="button" class="fortify" id="fortify" hidden></button>
     </section>
     <section class="panel" aria-labelledby="h-retreat">
@@ -1390,7 +1402,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.11 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.12 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1514,7 +1526,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.11";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
 </script>
 <script>
 /*
@@ -1533,10 +1545,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.11";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
-    { ver: '알파 0.9.11', date: '2026-11-17', at: '2026-11-17 23:58:00', title: '방벽을 맡길 사람들',
+    { ver: '알파 0.9.12', date: '2026-11-17', at: '2026-11-17 23:59:00', title: '방벽을 맡길 사람들',
       items: [
         '방벽 화면에 개조 셋이 생겼어요. 건축가는 방어력을 올리고, 건설자는 방어 수단 값을 내려요.',
         '수리공을 사면 방어 수단을 알아서 사 줘요. 방어 수단마다 단추를 눌러 끔, 10개, 25개… 500개까지 몇 개까지 살지 정해요. 올릴수록 빨리 사요.',
+        '2배 등급의 별을 도형으로 다시 그렸어요. 아이폰에서 별이 작고 아래로 처져 보이던 것이 안드로이드와 같아져요.',
+        '철수 칸의 설명을 다시 썼어요. 기준은 지금 가진 물자가 아니라 이번 판에 번 물자를 모두 더한 값이에요.',
+        '변이체가 무리를 이끄는 밤에는 "오늘 밤" 제목 옆에 보라색 "변이체 출현" 딱지가 붙고 칸 테두리가 보라색이 돼요.',
+        '오늘 밤 칸의 설명을 두 줄로 나눠 정리했어요.',
         '상황 화면의 "최근 일지" 자리에 가장 최근 무전이 보여요.',
         '통계 맨 아래의 "지난 판"을 "지난번 철수"로 바꿨어요. 개조 설명의 "지금"도 "현재"로 바꿨어요.'
       ] },
@@ -6440,9 +6456,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.11";
     r.tier = tier;
     // 별: 문턱의 수만큼 빈 별이 있고, 넘을 때마다 하나씩 채워진다. 다 채우면 금색으로 빛난다
     var total = (Array.isArray(list) ? list : C.MILESTONES).length;
-    var stars = new Array(tier + 1).join('★') + new Array(Math.max(0, total - tier) + 1).join('☆');
     var hit = next !== null && !!can && q > 0 && n + q >= next;
-    setText(r.mile, hit ? '★ 지금 2배' : stars);
+    // 별은 글자(★)가 아니라 도형으로 그린다: 글자는 폰마다 크기와 높이가 달라서(아이폰에서는 작고 아래로 처졌다) 줄이 맞지 않았다
+    var key = hit ? 'hit' : tier + '/' + total;
+    if (r.mileKey !== key) {
+      r.mileKey = key;
+      while (r.mile.firstChild) r.mile.removeChild(r.mile.firstChild);
+      if (hit) { r.mile.appendChild(el('i', 'st on')); r.mile.appendChild(el('span', '', '지금 2배')); }
+      else for (var si = 0; si < total; si++) r.mile.appendChild(el('i', si < tier ? 'st on' : 'st'));
+      r.mile.setAttribute('aria-label', hit ? '이번에 사면 2배' : '2배 등급 ' + tier + ' / ' + total);
+    }
     r.mile.hidden = false;
     r.mile.classList.toggle('full', next === null);
     r.next = next;
@@ -7218,8 +7241,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.11";
     setText(pill, safe ? '방어 가능' : sieging ? '농성 중' : '방벽 위험');
     pill.className = 'pill ' + (safe ? 'pill-safe' : sieging ? 'pill-siege' : 'pill-danger');
     var plan = safe ? null : C.defensePlan(state);
-    setText($('night-hint'), (boss ? '오늘은 변이체가 무리를 이끌어요. ' : '') + (safe ? '막으면 물자 +' + fmt(C.nightReward(state)) + ' · 막아낸 밤 ' + state.wavesCleared + '번(생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%)'
-      : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '% 를 잃어요.'));
+    // 변이체가 오는 밤은 제목 옆 딱지와 칸의 테두리로 알린다(글에 섞어 적으면 줄이 넘쳐 읽기 어려웠다)
+    $('night-boss').hidden = !boss;
+    $('night').classList.toggle('boss', boss);
+    // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
+    setText($('night-hint'), safe ? '막아내면 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
+      : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
+    setText($('night-sub'), '막아낸 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -7231,10 +7259,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.11";
     setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
     // 철수의 기준은 "이번 판에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
     setText($('retreat-hint'), can
-      ? '이번 판에 모은 물자 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
-      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에 모은 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
-    setText($('retreat-sub'), can ? '더 모으고 철수하면 샘플이 늘어요. 쓴 물자도 쳐요.'
-      : state.pendingPerks.length ? '' : '다 채우면 철수할 수 있어요. 쓴 물자도 쳐요.');
+      ? '이번 판에 번 물자 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
+      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에 번 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
+    setText($('retreat-sub'), can ? '가진 물자가 아니라 이번 판에 번 물자를 모두 더한 값이에요. 더 벌고 철수하면 샘플이 늘어요.'
+      : state.pendingPerks.length ? '' : '가진 물자가 아니라 이번 판에 번 물자를 모두 더한 값이에요. 다 채우면 철수할 수 있어요.');
     // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
     $('retreat-bar').hidden = !!state.pendingPerks.length && !can;
     $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / (can ? C.nextAntibodyAt(state) : C.RETREAT_MIN) * 100).toFixed(1) + '%';
