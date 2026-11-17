@@ -356,6 +356,28 @@ def run_case(browser, name, size, state, mode):
         page.wait_for_timeout(1500)
     note = page.evaluate("document.getElementById('notice').hidden ? '' : document.getElementById('notice-text').textContent")
     if '문제가 생겼' in note: problems.append('화면의 오류 안내: ' + note)
+    # 끝 검수(1.0.2): 어떤 경우든 마지막에 모든 화면을 돌며 "예전 것이 꼬였는지"를 본다. 새 기능을 넣다가 다른 곳이 망가지는 일을 잡으려는 것이다
+    try:
+        if os.environ.get('SELFTEST'): page.evaluate("document.querySelector('.mast, header, body').insertAdjacentHTML('beforeend', '<span>[object 시험]</span>')")      # 검수가 정말 잡아내는지 확인할 때만 쓴다
+        views = ['base', 'manage', 'exped', 'record'] if page.locator('.mnav').first.is_visible() else [None]
+        for v in views:
+            if v: page.evaluate("document.querySelector('[data-mview-set=%s]').click()" % v); page.wait_for_timeout(250)
+            where = v or '넓은 화면'
+            found = page.evaluate("""() => {
+              const out = [], vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+              const txt = document.body.innerText;
+              for (const w of ['[object', 'undefined', 'NaN', 'Infinity']) if (txt.includes(w)) out.push('화면에 "' + w + '" 가 찍혀 있다');
+              if (document.documentElement.scrollWidth > window.innerWidth) out.push('옆으로 넘친다');
+              if (vis(document.getElementById('story')) && vis(document.getElementById('perk'))) out.push('일지 창과 특전 창이 겹쳐 떠 있다');
+              document.querySelectorAll('.row-mile').forEach((e) => { if (vis(e) && !e.children.length) out.push('빈 2배 딱지가 보인다: ' + (e.parentElement.textContent || '').slice(0, 12)); });
+              document.querySelectorAll('.row.nope, .row.pressed').forEach((e) => out.push('누름/부족 표시가 남아 있다: ' + e.id));
+              document.querySelectorAll('button').forEach((e) => { if (vis(e) && !e.textContent.trim() && !e.querySelector('svg, img, i') && !e.getAttribute('aria-label')) out.push('글자 없는 단추: ' + (e.id || e.className)); });
+              document.querySelectorAll('[id]').forEach((e) => { if (vis(e) && e.children.length === 0 && !e.textContent.trim().replace(/[·/]/g, '') && e.matches('p, span.label, .hint') && e.offsetHeight > 4) out.push('빈 글 칸: ' + e.id); });
+              return out;
+            }""")
+            for f in found: problems.append('끝 검수(%s): %s' % (where, f))
+    except Exception as e:
+        problems.append('끝 검수를 돌리지 못했다: %s' % str(e)[:120])
     ctx.close()
     return problems
 

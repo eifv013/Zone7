@@ -1420,6 +1420,8 @@
   /* ---------- 특전 고르기 ---------- */
   /** 골라야 할 특전이 있으면 선택 창을 띄운다. 게임은 뒤에서 계속 진행된다. */
   function renderPerkChoice() {
+    // 일지 창이 떠 있는 동안에는 특전 창을 띄우지 않는다: 목표를 채우면 일지와 특전이 한꺼번에 열려 두 창이 겹쳤다. 일지를 닫으면 이어서 뜬다
+    if (!$('story').hidden) { if (!$('perk').hidden) { $('perk').hidden = true; perkShown = ''; } return; }
     var key = state.pendingPerks.join(',') + '|' + C.rerollsLeft(state);
     if (key === perkShown) return;
     perkShown = key;
