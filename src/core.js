@@ -315,15 +315,25 @@
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
           "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
-    { no: 6, name: '강변 검문소', kind: 'soon', cost: 1e31, lead: '다리를 지키며 밀려오는 무리를 막는다',
+    { no: 6, name: '강변 검문소', kind: 'guard', cost: 1e31, lead: '다리를 지키며 밀려오는 무리를 막는다',
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
           "아이 열여섯. 나는 쪽지 뒷면을 꺼내서, 줄 그은 이름 하나를 뺀 나머지를 소리 내어 읽었다. 열여섯 개. 맞다. 그러면 남는 하나는 아이가 아니다. 아이들과 같이 건넌 어른이 하나 있다.",
           "다리 위에는 버려진 차들이 끝까지 늘어서 있다. 그 사이사이에 놈들이 서 있다. 걷지 않는다. 다리 한가운데부터는 전부 멈춰서 건너편을 보고 있다. 방송이 저기서 나오기 때문이다.",
           "그때 건너편 탐조등이 돌던 것을 멈추고 이쪽으로 내려왔다. 빛이 차들을 훑고, 놈들을 훑고, 차단기 앞의 나한테 와서 섰다. 노란 우비가 대낮처럼 환해졌다.",
-          "불빛이 한 번 꺼졌다 켜졌다. 그리고 또 한 번. 누가 저기서 나를 보고 있다. 다리를 건너려면 여기를 먼저 지켜야 한다."] }] },
-    { no: 7, name: '송신탑', kind: 'soon', cost: 1e30, lead: '', story: [] }
+          "불빛이 한 번 꺼졌다 켜졌다. 그리고 또 한 번. 누가 저기서 나를 보고 있다. 다리를 건너려면 여기를 먼저 지켜야 한다."] },
+        { title: "깜박임", text: [
+          "탐조등은 밤마다 온다. 길게 한 번, 짧게 두 번. 매번 같다. 아저씨는 그게 신호라고 했다. 뜻은 모른다고 했다.",
+          "나는 초소 지붕에 올라가 손전등으로 똑같이 돌려보냈다. 길게 한 번, 짧게 두 번. 건너편 불빛이 한참 멈춰 있다가, 처음으로 다르게 깜박였다. 짧게 세 번.",
+          "다리 위의 놈들은 불빛을 보지 않는다. 소리만 따라간다. 방송이 나오는 쪽으로 서 있을 뿐이다. 그러니까 저 불빛은 놈들한테 보내는 게 아니다.",
+          "초소를 하나 더 세웠다. 차단기 옆에 모래주머니를 쌓으면서 건너편을 자꾸 봤다. 누가 보고 있다는 건, 누가 기다리고 있다는 뜻일지도 모른다."] },
+        { title: "차단기", text: [
+          "열다섯 밤을 버텼다. 다리 이쪽 끝의 놈들이 눈에 띄게 줄었다. 초소마다 불을 켜 두니 다리 절반까지 훤하다.",
+          "새벽에 건너편에서 쇠 긁는 소리가 났다. 차단기가 올라가는 소리였다. 저쪽 차단기다. 절반쯤 올라가다 멈췄다.",
+          "탐조등이 다리 한가운데를 비췄다. 버려진 버스 한 대가 가로로 서 있다. 그 지붕 위에 밧줄 뭉치가 놓여 있었다. 어제는 없던 것이다.",
+          "아저씨가 말했다. “저쪽에서도 길을 내고 있는 거야. 우리가 여기서 버티는 걸 보고.” 나는 냉장 상자를 고쳐 멨다. 강은 넓고, 다리는 하나뿐이다."] }] },
+    { no: 7, name: '송신탑', kind: 'soon', cost: 1e38, lead: '', story: [] }
   ];
 
   // 1구역의 시설: 가만히 있어도 물자를 만든다
@@ -401,6 +411,8 @@
     { id: 'depot',   zone: 3, name: '차량 기지', desc: '열차 값 -4%',            key: 'traincost', per: -0.04, baseCost: 1e19, growth: 3, max: 12 },
     { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e24, growth: 2.4, max: 40 },
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
+    { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 3e31, growth: 2.4, max: 40 },
+    { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 1e32, growth: 6,   max: 4 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
     // 방벽 개조(zone -1: 구역이 아니라 방벽 화면에 놓인다. 처음부터 살 수 있다)
@@ -468,7 +480,10 @@
       { id: 'z4c', text: '화물로 번 물자 누적 100해', need: 1e22, value: function (s) { return s.railEarned; } } ],
     [ { id: 'z5a', text: '연구원 40명', need: 40, value: function (s) { return s.staff; } },
       { id: 'z5b', text: '연구 과제 15개 끝내기', need: 15, value: function (s) { return s.projectsDone; } },
-      { id: 'z5c', text: '혈청 배양 3번 끝내기', need: 3, value: function (s) { return s.research.serum; } } ]
+      { id: 'z5c', text: '혈청 배양 3번 끝내기', need: 3, value: function (s) { return s.research.serum; } } ],
+    [ { id: 'z6a', text: '초소 40곳', need: 40, value: function (s) { return s.posts; } },
+      { id: 'z6b', text: '무리의 2배 방어력으로 밤 15번 방어', need: 15, value: function (s) { return s.safeNights; } },
+      { id: 'z6c', text: '통행 물자 누적 100구', need: 1e34, value: function (s) { return s.guardEarned; } } ]
   ];
 
   /* ---------- 작은 도우미 ---------- */
@@ -506,6 +521,7 @@
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
+      posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
       // 밤
       day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false, siegeNights: 0,
       // 구조 신호
@@ -606,6 +622,8 @@
     s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
     s.sweepClock = clamp(safeNum(raw.sweepClock, 0), 0, SWEEP_AUTO_SECONDS);
     s.staff = Math.min(s.staff, COUNT_MAX);
+    s.posts = clamp(safeCount(raw.posts), 0, COUNT_MAX); s.guardEarned = Math.max(0, safeNum(raw.guardEarned, 0)); s.safeNights = clamp(safeCount(raw.safeNights), 0, 1e9);
+    if (s.zone < 5) { s.posts = 0; }
     s.research = counts(PROJECTS, raw.research, 200);
     s.offers = [];
     (Array.isArray(raw.offers) ? raw.offers : []).forEach(function (id) { if (findById(PROJECTS, id) && s.offers.indexOf(id) < 0 && s.offers.length < OFFER_COUNT) s.offers.push(id); });
@@ -668,8 +686,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -1345,7 +1363,33 @@
 
   /* ---------- 생산 합계와 직접 수색 ---------- */
   /** 가만히 둘 때의 초당 생산(1구역 시설 + 2구역 평균 판매 + 3구역 라인 + 4구역 열차의 평균). */
-  function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state); }
+  /*
+   * 6구역 강변 검문소(방어전): 초소를 세워 다리를 지킨다. 다리가 안전할수록 건너오는 사람이 많아 통행 물자가 는다.
+   *   통행 물자 = 초소 수 × 2배 문턱 배수 × GUARD_VALUE × 개조 × 전체 배수 × 다리 안전도
+   *   다리 안전도 = 방어력 ÷ 오늘 밤 무리 규모. SAFETY_MIN 아래로는 안 내려가고, SAFETY_MAX(+탐조등)까지만 쳐 준다.
+   *   그래서 이 구역에서는 방벽을 무리보다 넉넉하게 올려 두는 것이 곧 벌이다(방어전).
+   */
+  var POST_COST = 1e30, POST_GROWTH = 1.13, GUARD_VALUE = 2e27, SAFETY_MIN = 0.5, SAFETY_MAX = 3, SAFE_NIGHT = 2;
+  function bridgeSafety(state) {
+    var str = nightStrength(state), ratio = str > 0 ? defensePower(state) / str : SAFETY_MAX;
+    return clamp(ratio, SAFETY_MIN, SAFETY_MAX + mods(state).margin);
+  }
+  function postCost(state, qty) {
+    if (!zoneOpen(state, 5) || state.posts + qty > COUNT_MAX) return Infinity;
+    return seriesCost(POST_COST * mods(state).cost, POST_GROWTH, state.posts, qty);
+  }
+  function maxPosts(state) { return zoneOpen(state, 5) ? seriesMax(POST_COST * mods(state).cost, POST_GROWTH, state.posts, state.supplies, COUNT_MAX) : 0; }
+  function buyPost(state, qty) {
+    qty = Math.floor(qty);
+    if (!zoneOpen(state, 5)) return fail('locked');
+    if (!(qty >= 1)) return fail('unknown');
+    return pay(state, postCost(state, qty), function () { state.posts += qty; });
+  }
+  function guardRate(state) {
+    if (!zoneOpen(state, 5) || !(state.posts > 0)) return 0;
+    return state.posts * milestoneMult(state.posts) * GUARD_VALUE * mods(state).z6 * globalMult(state) * bridgeSafety(state);
+  }
+  function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + guardRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
   function clickPower(state) { return 1 + Math.log(Math.max(1, mods(state).click)) / Math.LN2; }
   function clickValue(state) { return (globalMult(state) + productionPerSec(state) * CLICK_SHARE) * clickPower(state); }
@@ -1588,6 +1632,7 @@
       var reward = nightReward(state);
       earn(state, reward);
       state.wavesCleared++;
+      if (zoneOpen(state, 5) && defense >= strength * SAFE_NIGHT) state.safeNights++;      // 6구역 목표: 무리의 두 배가 넘는 방어력으로 막은 밤
       state.siege = false; state.siegeNights = 0;
       var treat = boss ? TREAT_BOSS : TREAT_NIGHT;
       state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
@@ -1958,6 +2003,8 @@
     // 전력 투입 중인 시간만큼은 라인이 SURGE_MULT 배로 돈다(dt 가 길어도 남은 투입 시간까지만 친다)
     if (line > 0 && state.surgeLeft > 0) line *= 1 + (SURGE_MULT - 1) * Math.min(dt, state.surgeLeft) / dt;
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
+    var guard = guardRate(state) * dt;      // 6구역 통행 물자
+    if (guard > 0) { earn(state, guard); state.guardEarned += guard; }
     if (state.surgeLeft > 0 || state.surgeCool > 0) {
       var wasOn = state.surgeLeft > 0;
       state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
@@ -2014,9 +2061,12 @@
     state.surgeLeft = 0; state.surgeCool = Math.max(0, state.surgeCool - elapsed);      // 전력 투입은 자리를 비우면 끝난 것으로 친다
     var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
     report.gain = (searchRate(state) + sweepRate(state)) * counted * rate + trade + line;      // 순찰조는 자리를 비운 동안에도 돈다
+    var guardAway = guardRate(state) * counted * rate;
+    report.gain += guardAway;
     earn(state, report.gain);
     state.tradeEarned += trade;
     state.lineEarned += line;
+    state.guardEarned += guardAway;
     if (line > 0 && lineInfo(state).steady) state.steadySeconds += counted;     // 정속으로 맞춰 두고 나갔으면 그 시간도 친다
     // 4구역 열차: 자리를 비운 동안에도 다닌다. 돌아온 열차의 화물은 자리 비움 효율로 쳐서 받는다.
     var railEvents = [], before = state.supplies, earnedBefore = state.railEarned;
@@ -2098,7 +2148,7 @@
   }
 
   /* ---------- 표시용 숫자 ---------- */
-  var UNITS = ['만', '억', '조', '경', '해', '자', '양'];
+  var UNITS = ['만', '억', '조', '경', '해', '자', '양', '구', '간', '정', '재', '극'];      // 1.0.4: 6구역의 숫자가 '양'을 넘어서 뒤 단위를 더했다
   /** 12345 → "1.23만". 보유량이 실제보다 많아 보이지 않도록 내림한다. */
   /*
    * 숫자 표기: 'kr' 만·억·조(기본), 'sci' 1.23e8 꼴. 설정에서 바꾼다. 화면에 보이는 모양만 달라진다.
@@ -2149,7 +2199,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

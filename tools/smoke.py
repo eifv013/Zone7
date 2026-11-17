@@ -54,6 +54,14 @@ def lab(**over):
     return s
 
 # (이름, 화면 크기, 저장, 할 일)
+def guard(**over):
+    """6구역(강변 검문소)까지 연 판: 초소는 없고 물자는 넉넉하다."""
+    s = lab(zone=5, supplies=5e33, runEarned=5e33, defenses={"rail": 3000000000000})
+    s["goalsDone"].update({"z5a": True, "z5b": True, "z5c": True})
+    s["story"].update({"z5-1": True, "z5-2": True, "z6-0": True})
+    s.update(over)
+    return s
+
 CASES = [
     ('폰 · 2구역, 못 막는 밤', (390, 760), market(), 'full'),
     ('PC · 2구역, 막는 밤', (1280, 900), market(defenses={"wire": 60, "tower": 40, "turret": 30, "flame": 10}, autoSell=True), 'full'),
@@ -64,6 +72,8 @@ CASES = [
     ('PC · 4구역 노선', (1280, 900), station(), 'rail'),
     ('폰 · 5구역 연구', (390, 760), lab(), 'lab'),
     ('PC · 5구역 연구', (1280, 900), lab(), 'lab'),
+    ('폰 · 6구역 검문소', (390, 760), guard(), 'guard'),
+    ('PC · 6구역 검문소', (1280, 900), guard(), 'guard'),
 ]
 
 def run_case(browser, name, size, state, mode):
@@ -251,6 +261,18 @@ def run_case(browser, name, size, state, mode):
         if page.locator('[data-tab=z4]').is_visible(): problems.append('아직 먼 5구역 탭이 보인다')
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
+    elif mode == 'guard':
+        # 6구역: 안전도 칸이 보이고 → 초소를 사면 통행 물자가 들어오고 → 한 화면에 들어온다(긴 구역 이름이 머리띠를 밀어내지 않는다)
+        tap('[data-mview-set=manage]'); tap('[data-tab=z5]')
+        if not page.locator('#guard').is_visible(): problems.append('6구역 탭에 다리 안전도 칸이 없다')
+        if '×' not in text('guard-safety'): problems.append('다리 안전도가 없다: ' + text('guard-safety'))
+        if not tap('#row-post'): problems.append('초소를 살 수 없다')
+        page.wait_for_timeout(300)
+        if not text('row-post').strip().startswith('초소') or '1 / 500' not in text('row-post'): problems.append('초소를 샀는데 수가 그대로다: ' + text('row-post')[:40])
+        if '초당 +0' in text('guard-rate'): problems.append('초소가 있는데 통행 물자가 0이다: ' + text('guard-rate'))
+        if not fits(): problems.append('한 화면에 들어오지 않는다(6구역)')
+        tap('[data-mview-set=base]')
+        if not fits(): problems.append('한 화면에 들어오지 않는다(6구역 상황)')
     elif mode == 'lab':
         # 5구역: 과제 셋이 보이고 → 하나를 끝내면 점수가 줄고 셋이 새로 나오고 → 다음 과제가 비싸지고 → 연구원을 뽑으면 점수가 모인다
         tap('[data-mview-set=manage]'); tap('[data-tab=z4]')
@@ -272,7 +294,7 @@ def run_case(browser, name, size, state, mode):
         page.wait_for_timeout(4000)
         if text('lab-points') == '13': problems.append('연구원이 있는데 점수가 모이지 않는다')
         tap('[data-tab=z5]')
-        if '다음 버전' not in text('soon'): problems.append('6구역 탭에 준비 중 안내가 없다: ' + text('soon'))
+        if '아직 열지 않은' not in text('soon'): problems.append('아직 열지 않은 6구역 탭에 안내가 없다: ' + text('soon'))
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=radio]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
     elif mode == 'rail':

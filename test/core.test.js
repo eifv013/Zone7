@@ -62,8 +62,8 @@ test('저장: 직렬화를 거쳐도 같고, 깨진 값과 모르는 항목을 �
     traits: { immune: 9999 }, pendingPerks: ['harvest', 'nothing', 42], goalsDone: { z1a: 1, fake: 1 }, story: { 'z1-0': true, fake: true },
     runLog: [null, { zone: 1, seconds: 5, antibodies: 2 }, 'x'], buff: { mult: 99, left: 1e9 } }, 0);
   assert.equal(bad.supplies, 0);
-  assert.equal(bad.zone, 4, '아직 없는 구역에는 들어가 있을 수 없다');
-  assert.equal(C.ZONES[5].kind, 'soon');
+  assert.equal(bad.zone, 5, '아직 없는 구역(7구역)에는 들어가 있을 수 없다');
+  assert.equal(C.ZONES[6].kind, 'soon');
   assert.equal(bad.buildings.scouts, 0);
   assert.equal(bad.buildings.nothing, undefined);
   assert.equal(bad.stalls, C.COUNT_MAX);
@@ -213,16 +213,21 @@ test('다음 구역: 목표를 다 채우고 값을 치러야 열리고, 열어�
 test('다음 구역: 아직 만들지 않은 구역은 문 앞까지만 간다', () => {
   const s = inLab();
   C.GOALS[4].forEach(g => { s.goalsDone[g.id] = true; });
+  // 6구역(강변 검문소)은 이제 열린다
+  s.supplies = C.nextZone(s).cost;
+  assert.equal(C.nextZone(s).soon, false);
+  assert.ok(C.openZone(s).ok); assert.equal(s.zone, 5);
+  C.GOALS[5].forEach(g => { s.goalsDone[g.id] = true; });
   const n = C.nextZone(s);
   assert.equal(n.soon, true);
   s.supplies = n.cost;
   const r = C.openZone(s);
   assert.ok(r.ok && r.soon);
-  assert.equal(s.zone, 4, '들어가지는 못한다');
+  assert.equal(s.zone, 5, '들어가지는 못한다');
   assert.equal(s.gate, true);
-  assert.equal(s.bestZone, 5);
+  assert.equal(s.bestZone, 6);
   assert.equal(s.supplies, 0);
-  s.supplies = 1e40;
+  s.supplies = 1e60;
   assert.equal(C.openZone(s).reason, 'soon', '두 번 치르지 않는다');
   s.buildings.scouts = 1; s.defenses.rail = 1e5; s.clicks = 1;
   assert.equal(C.guide(s).id, 'retreat');
@@ -781,9 +786,12 @@ test('저장: 기계와 라인 기록을 안전하게 읽고, 문 앞에 있던 
   // 알파 0.6.4 까지: 4구역도 같은 식으로 문 앞까지만 갈 수 있었다
   const old4 = C.sanitizeState({ version: 2, zone: 2, gate: true, story: { 'gate-4': true } }, 0);
   assert.equal(old4.zone, 3); assert.equal(old4.gate, false);
-  // 지금의 문 앞(6구역)은 그대로 둔다
-  const now = C.sanitizeState({ version: 2, zone: 4, gate: true }, 0);
-  assert.equal(now.zone, 4); assert.equal(now.gate, true);
+  // 1.0.4: 6구역이 열렸다. 6구역 문 앞에 있던 저장은 6구역으로 들어간다
+  const old6 = C.sanitizeState({ version: 2, zone: 4, gate: true, story: { 'gate-6': true } }, 0);
+  assert.equal(old6.zone, 5); assert.equal(old6.gate, false);
+  // 지금의 문 앞(7구역)은 그대로 둔다
+  const now = C.sanitizeState({ version: 2, zone: 5, gate: true }, 0);
+  assert.equal(now.zone, 5); assert.equal(now.gate, true);
 });
 
 /* ================= 4구역: 노선 ================= */
@@ -2000,4 +2008,29 @@ test('단골 주문이 와 있으면 흥정꾼은 상품을 팔지 않고 모아
   const cap = C.goodsCap(m); m.goods = cap;
   const ev = C.tick(m, 1, () => 0.5);
   assert.ok(ev.some((e) => e.type === 'sold'), '창고가 차면 판다');
+});
+
+test('6구역 강변 검문소: 초소가 통행 물자를 벌고, 방어력이 넉넉할수록 더 번다', () => {
+  const s = inLab(); s.zone = 5; s.supplies = 1e40;
+  assert.equal(C.guardRate(s), 0, '초소가 없으면 0');
+  assert.ok(C.buyPost(s, 10).ok); assert.equal(s.posts, 10);
+  s.defenses.rail = 0; s.defenses.wire = 0;
+  const low = C.guardRate(s);
+  assert.ok(low > 0);
+  s.defenses.rail = 1e12;                                    // 방어력이 무리보다 훨씬 크다
+  const high = C.guardRate(s);
+  assert.ok(high > low * 3, '다리가 안전하면 더 번다');
+  near(C.bridgeSafety(s), C.SAFETY_MAX);                     // 상한에서 멈춘다
+  s.upgrades.lamp = 2; near(C.bridgeSafety(s), C.SAFETY_MAX + 1);
+  const before = s.guardEarned;
+  assert.ok(C.productionPerSec(s) >= C.guardRate(s), '초당 물자에 들어간다');
+  C.tick(s, 1, () => 0.5);
+  assert.ok(s.guardEarned > before);
+  const nights = s.safeNights; s.dayClock = C.DAY_SECONDS - 0.5;
+  C.tick(s, 1, () => 0.5);
+  assert.equal(s.safeNights, nights + 1, '넉넉하게 막은 밤을 센다');
+  const closed = inLab(); closed.supplies = 1e40;
+  assert.equal(C.buyPost(closed, 1).reason, 'locked');
+  const bad = C.sanitizeState({ version: 2, zone: 2, posts: 50, guardEarned: -3, safeNights: 'x' }, 0);
+  assert.equal(bad.posts, 0); assert.equal(bad.guardEarned, 0); assert.equal(bad.safeNights, 0);
 });

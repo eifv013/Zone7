@@ -194,6 +194,9 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .row-mile .st.on { opacity: 1; }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
+.guard .track { margin: 8px 0 6px; }
+#guard-rate { text-align: right; }
+#guard-note { white-space: pre-line; }
 /* 단골 주문 칸(2구역) */
 .order { margin: 10px 0; padding: 10px 12px; border: 2px solid var(--hazard); border-radius: 10px; }
 .order[hidden] { display: none; }
@@ -693,7 +696,9 @@ html, body, button, .row, .panel { touch-action: manipulation; }
   .route li { width: 16px; height: 16px; font-size: 9px; border-width: 1px; }
   .dplus { display: flex; align-items: baseline; gap: 8px; }
   .dplus-num { font-size: 24px; }
-  .dplus-sub { font-size: 11px; letter-spacing: 0; white-space: nowrap; }
+  .mast { min-width: 0; max-width: 100vw; }      /* 격자 칸은 내용의 최소 너비만큼 버티므로, 긴 구역 이름이 오면 머리띠만 화면보다 넓어졌다 */
+  .mast > .dplus { flex: 0 1 auto; min-width: 0; }
+  .dplus-sub { font-size: 11px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }      /* 긴 구역 이름(6구역 강변 검문소)이 화면 밖으로 밀려 나가지 않게 한다 */
   .grid, .col-main { display: contents; }
   .scene-wrap { grid-row: 4; margin: 8px 12px 0; height: 124px; } /* 거점 건물의 지붕까지 보이도록 104 에서 키웠다 */
   .notice { grid-row: 5; margin: 8px 12px 0; padding: 6px 10px; font-size: 13px; }
@@ -973,7 +978,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.0.3</div>
+  <div class="boot-ver">7구역 알파 1.0.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1163,12 +1168,19 @@ setTimeout(function () {
       <div class="rows" id="rows-z1" hidden></div>
       <div class="rows" id="rows-z2" hidden></div>
       <div class="rows" id="rows-z3" hidden></div>
+      <div class="trade guard" id="guard" hidden>
+        <div class="lab-top"><div><div class="label">다리 안전도</div><div class="trade-price num" id="guard-safety">×1.00</div></div><div class="label" id="guard-rate"></div></div>
+        <div class="track"><i id="guard-bar"></i></div>
+        <div class="label" id="guard-note"></div>
+      </div>
       <div class="rows" id="rows-z4" hidden></div>
+      <div class="rows" id="rows-z5" hidden></div>
       <div class="rows" id="ups-z0" hidden></div>
       <div class="rows" id="ups-z1" hidden></div>
       <div class="rows" id="ups-z2" hidden></div>
       <div class="rows" id="ups-z3" hidden></div>
       <div class="rows" id="ups-z4" hidden></div>
+      <div class="rows" id="ups-z5" hidden></div>
       <div class="rows" id="rows-wall" hidden></div>
       <div id="wall-extra" hidden>
         <div class="label wall-label">자동 구입</div>
@@ -1289,7 +1301,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.0.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.0.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

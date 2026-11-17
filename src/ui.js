@@ -911,6 +911,7 @@
   function zmapRate(zi, rates) {
     if (zi > state.zone) return '잠김';
     if (zi === 4) return '점수 +' + fmt(C.researchRate(state)) + '/초';
+    if (zi === 5) return '+' + fmt(C.guardRate(state)) + '/초';
     return zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '';
   }
   function renderZoneMap() {
@@ -1050,6 +1051,7 @@
     z2: '공단 · 가장 느린 기계만큼만 나와요.',
     z3: '환승역 · 먼 노선일수록 많이 실어 와요.',
     z4: '대학 병원 · 과제를 끝내면 다른 구역이 강해져요.',
+    z5: '강변 검문소 · 방어력이 무리보다 넉넉할수록 더 벌어요.',
     wall: '방어력이 무리 규모보다 커야 밤을 넘겨요.'
   };
   var perkShown = '', journalShown = '', statsShown = '';
@@ -1119,6 +1121,9 @@
     })(k);
     rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수를 모은다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff)), 'staff'); });
     $('rows-z4').appendChild(rows.staff.btn);
+    // 6구역: 초소
+    rows.post = buildRow({ id: 'post', name: '초소', desc: '다리를 건너오는 사람들에게서 통행 물자를 받는다. 10·25·50곳마다 2배' }, function () { buy(C.buyPost(state, qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts)), 'defense'); });
+    $('rows-z5').appendChild(rows.post.btn);
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id), 'upgrade'); });
       r.btn.classList.add('row-zone');
@@ -1585,11 +1590,13 @@
     $('rail').hidden = !(tab === 'z3' && open);
     $('rows-z4').hidden = !(tab === 'z4' && open);
     $('lab').hidden = !(tab === 'z4' && open);
+    $('rows-z5').hidden = !(tab === 'z5' && open);
+    $('guard').hidden = !(tab === 'z5' && open);
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-extra').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
     $('line').hidden = !(tab === 'z2' && open);
-    ['rows-z1', 'rows-z2', 'rows-z3', 'rows-z4', 'trade', 'line', 'rail', 'lab'].forEach(function (id) { if (!play) $(id).hidden = true; });
+    ['rows-z1', 'rows-z2', 'rows-z3', 'rows-z4', 'rows-z5', 'trade', 'line', 'rail', 'lab', 'guard'].forEach(function (id) { if (!play) $(id).hidden = true; });
     $('pane-goals').hidden = !(zi >= 0) || (open && pane !== 'goal');
     $('qty').hidden = soon || (zi > state.zone) || (zoneTab && !play);
     // 강화나 목표에 볼 것이 생기면 전환 단추에 점을 찍는다
@@ -1788,6 +1795,20 @@
       setText(rows.train.info, '대당 초당 화물 ' + fmt(cargo) + (plan.idle ? ' · 탈 노선이 없음' : ''));
       setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + fmt(tcost) : '최대');
       rows.train.btn.disabled = !(tcost <= state.supplies);
+    }
+    if (tab === 'z5' && open) {
+      // 6구역: 다리 안전도(방어력 ÷ 무리)와 초소
+      var safety = C.bridgeSafety(state), safeMax = C.SAFETY_MAX + m.margin, gRate = C.guardRate(state);
+      setText($('guard-safety'), '×' + safety.toFixed(2));
+      setText($('guard-rate'), '통행 물자 초당 +' + fmt(gRate));
+      $('guard-bar').style.width = Math.min(100, safety / safeMax * 100).toFixed(1) + '%';
+      setText($('guard-note'), '방어력이 오늘 밤 무리의 몇 배인지예요. 최대 ×' + safeMax.toFixed(1) + '까지 쳐 줘요.\n무리의 ' + C.SAFE_NIGHT + '배 방어력으로 막은 밤 ' + state.safeNights + '번');
+      var pq = qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts), pcost = C.postCost(state, pq);
+      setText(rows.post.count, state.posts + ' / ' + C.COUNT_MAX);
+      setMile(rows.post, state.posts, pq, pcost <= state.supplies);
+      setText(rows.post.info, state.posts ? '초당 ' + fmt(gRate) : '사면 통행 물자가 들어와요');
+      setText(rows.post.cost, isFinite(pcost) ? '×' + pq + ' ' + fmt(pcost) : '최대');
+      rows.post.btn.disabled = !(pcost <= state.supplies);
     }
     if (tab === 'z4' && open) {
       var pc = C.projectCost(state), rc = C.rerollCost(state), rate = C.researchRate(state);
