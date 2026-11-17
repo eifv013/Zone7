@@ -2,7 +2,7 @@
 <resources>
     <color name="ink">#17180F</color>
     <color name="paper">#CFCFC4</color>
-    <color name="icon_bg">#1e2947</color>
+    <color name="icon_bg">#131827</color>
     <!-- 제목 줄 없는 화면. 게임이 뜨기 전에는 바탕 그림(drawable/splash: 어두운 바탕 + 아이콘)이 보인다. -->
     <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@drawable/splash</item>

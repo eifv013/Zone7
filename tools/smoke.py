@@ -179,6 +179,7 @@ def run_case(browser, name, size, state, mode):
         if n < 10: problems.append('도움말 탭이 없다')
         page.locator('#help-tabs button').nth(n - 1).click(); page.wait_for_timeout(80)
         if page.locator('#help .note').count() != 1: problems.append('도움말은 한 번에 한 항목만 보여야 한다')
+        if not page.locator('#help .note li').first.is_visible(): problems.append('도움말 내용이 보이지 않는다')
         tap('[data-rtab-set=stats]')
         if page.locator('#stats-zones li').count() < 1 or page.locator('#stats-grid dd').count() != 12: problems.append('통계에 지난 구역이 없다')
         tap('[data-rtab-set=save]')

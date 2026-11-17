@@ -870,8 +870,10 @@ body { font-size: 15.5px; line-height: 1.55; }
 .note.open .note-title { color: var(--ink); font-weight: 600; white-space: normal; }
 .note-new { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--hazard); color: var(--on-hazard); font: 700 10px/1.6 var(--font-body); vertical-align: 3px; }
 .note-now .note-ver::after { content: none; }
-.note ul { display: none; margin: 0 0 14px; padding-left: 18px; }
-.note.open ul { display: block; }
+/* 접기는 패치노트(#notes)에만 건다. 도움말도 같은 .note 틀을 쓰므로 범위를 좁히지 않으면 도움말 내용이 숨는다(0.8.13 에서 고침) */
+#notes .note ul { display: none; margin: 0 0 14px; padding-left: 18px; }
+#notes .note.open ul { display: block; }
+#help .note ul { display: block; margin: 0; padding-left: 18px; }
 .vol { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; max-width: 210px; }
 .vol input { flex: 1 1 auto; min-width: 0; accent-color: var(--hazard); }
 .vol b { width: 28px; text-align: right; font-size: 13px; }
@@ -890,7 +892,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.12</div>
+  <div class="boot-ver">7구역 알파 0.8.13</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1298,7 +1300,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.12 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.13 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1422,7 +1424,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.12";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.13";
 </script>
 <script>
 /*
@@ -1441,6 +1443,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.12";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.13', date: '2026-11-17', at: '2026-11-17 18:50:00', title: '도움말과 업데이트 알림 고침',
+      items: [
+        '도움말의 내용이 보이지 않던 문제를 고쳤어요. 패치노트를 접히게 만들면서 도움말까지 접혀 버렸어요.',
+        '"지금 업데이트"를 눌러도 알림 띠가 다시 나오던 문제를 고쳤어요. 기기에 저장된 예전 화면이 다시 뜨던 것이 원인이었어요.',
+        '앱 아이콘의 배경을 원래 밤하늘 색으로 되돌렸어요.'
+      ] },
     { ver: '알파 0.8.12', date: '2026-11-17', at: '2026-11-17 18:20:00', title: '도감 그림과 글 다듬기',
       items: [
         '도감의 방어 수단에 그림을 그려 넣었어요. 아직 없는 것은 회색으로 보여요.',
@@ -5636,7 +5644,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.12";
     check: function () {
       if (!Update.enabled()) return;
       Update.lastCheck = Date.now();
-      window.Updater.checkRemote(window.fetch.bind(window), 'version.json', Update.current).then(function (r) {
+      window.Updater.checkRemote(window.fetch.bind(window), 'version.json?t=' + Date.now(), Update.current)      // 주소를 매번 다르게 해서 저장된 예전 답을 받지 않는다.then(function (r) {
         if (!r.available || r.info.version === Update.offered) return; // "나중에"를 누른 버전은 다시 묻지 않는다
         setText($('update-text'), '새 버전 ' + (r.info.name || r.info.version) + ' 이 나왔다.' + (r.info.title ? ' ' + r.info.title + '.' : ''));
         $('update-bar').dataset.version = r.info.version;
@@ -5650,7 +5658,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.12";
       if (!paused) Store.save();
       try { if (window.caches) { var keys = await caches.keys(); await Promise.all(keys.map(function (k) { return caches.delete(k); })); } } catch (e) { /* 지우지 못해도 서비스 워커가 새 파일을 받아 온다 */ }
       try { var reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) { /* 위와 같다 */ }
-      location.reload();
+      // 그냥 새로 고치면 기기에 저장된 예전 페이지가 다시 뜰 수 있다(그러면 알림 띠가 또 나온다).
+      // 주소 뒤에 새 버전 번호를 붙여서 열어 저장된 것을 건너뛴다.
+      var target = $('update-bar').dataset.version || String(Date.now());
+      try { location.replace(location.origin + location.pathname + '?v=' + encodeURIComponent(target)); }
+      catch (e) { location.reload(); }
     },
     /** 지난번에 열었을 때와 버전이 다르면 한 번 알린다. */
     afterUpdate: function () {

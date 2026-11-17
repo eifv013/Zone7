@@ -394,7 +394,7 @@
     check: function () {
       if (!Update.enabled()) return;
       Update.lastCheck = Date.now();
-      window.Updater.checkRemote(window.fetch.bind(window), 'version.json', Update.current).then(function (r) {
+      window.Updater.checkRemote(window.fetch.bind(window), 'version.json?t=' + Date.now(), Update.current)      // 주소를 매번 다르게 해서 저장된 예전 답을 받지 않는다.then(function (r) {
         if (!r.available || r.info.version === Update.offered) return; // "나중에"를 누른 버전은 다시 묻지 않는다
         setText($('update-text'), '새 버전 ' + (r.info.name || r.info.version) + ' 이 나왔다.' + (r.info.title ? ' ' + r.info.title + '.' : ''));
         $('update-bar').dataset.version = r.info.version;
@@ -408,7 +408,11 @@
       if (!paused) Store.save();
       try { if (window.caches) { var keys = await caches.keys(); await Promise.all(keys.map(function (k) { return caches.delete(k); })); } } catch (e) { /* 지우지 못해도 서비스 워커가 새 파일을 받아 온다 */ }
       try { var reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) { /* 위와 같다 */ }
-      location.reload();
+      // 그냥 새로 고치면 기기에 저장된 예전 페이지가 다시 뜰 수 있다(그러면 알림 띠가 또 나온다).
+      // 주소 뒤에 새 버전 번호를 붙여서 열어 저장된 것을 건너뛴다.
+      var target = $('update-bar').dataset.version || String(Date.now());
+      try { location.replace(location.origin + location.pathname + '?v=' + encodeURIComponent(target)); }
+      catch (e) { location.reload(); }
     },
     /** 지난번에 열었을 때와 버전이 다르면 한 번 알린다. */
     afterUpdate: function () {

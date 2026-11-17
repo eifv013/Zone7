@@ -858,8 +858,10 @@ body { font-size: 15.5px; line-height: 1.55; }
 .note.open .note-title { color: var(--ink); font-weight: 600; white-space: normal; }
 .note-new { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--hazard); color: var(--on-hazard); font: 700 10px/1.6 var(--font-body); vertical-align: 3px; }
 .note-now .note-ver::after { content: none; }
-.note ul { display: none; margin: 0 0 14px; padding-left: 18px; }
-.note.open ul { display: block; }
+/* 접기는 패치노트(#notes)에만 건다. 도움말도 같은 .note 틀을 쓰므로 범위를 좁히지 않으면 도움말 내용이 숨는다(0.8.13 에서 고침) */
+#notes .note ul { display: none; margin: 0 0 14px; padding-left: 18px; }
+#notes .note.open ul { display: block; }
+#help .note ul { display: block; margin: 0; padding-left: 18px; }
 .vol { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; max-width: 210px; }
 .vol input { flex: 1 1 auto; min-width: 0; accent-color: var(--hazard); }
 .vol b { width: 28px; text-align: right; font-size: 13px; }
@@ -878,7 +880,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.12</div>
+  <div class="boot-ver">7구역 알파 0.8.13</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1151,7 +1153,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.12 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.13 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
