@@ -274,7 +274,7 @@
     try {
       // 직접 눌러 준 단추에 브라우저의 누르기가 뒤따라오면 버린다(한 번 눌렀는데 두 번 사지 않게)
       document.addEventListener('click', function (e) {
-        if (e.isTrusted && synth.btn && Date.now() - synth.at < 450 && synth.btn.contains(e.target)) { e.stopImmediatePropagation(); e.preventDefault(); }
+        if (e.isTrusted && synth.btn && Date.now() - synth.at < 100 &&      /* 같은 손가락에서 곧바로 뒤따라온 것만 버린다. 창이 길면(전에는 0.45초) 조금 느리게 이어 누른 것까지 버려졌다 */ synth.btn.contains(e.target)) { e.stopImmediatePropagation(); e.preventDefault(); }
       }, true);
       document.addEventListener('touchstart', function (e) {
         if (e.touches.length > 1) multi = true;
@@ -286,6 +286,9 @@
         for (var i = 0; i < e.changedTouches.length; i++) {
           var t = e.changedTouches[i], s = starts[t.identifier];
           delete starts[t.identifier];
+          // 살 수 없는 줄(물자 부족)을 눌렀으면 값이 붉게 흔들린다: 눌리긴 했는데 물자가 모자라다는 것을 알려 준다
+          var off = s && s.target && s.target.closest ? s.target.closest('button.row:disabled') : null;
+          if (off && C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) { off.classList.remove('nope'); void off.offsetWidth; off.classList.add('nope'); }
           if (!(multi || quick) || !s || !C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) continue;
           var btn = s.target && s.target.closest ? s.target.closest('button') : null, under = document.elementFromPoint(t.clientX, t.clientY);
           if (btn && !btn.disabled && under && btn.contains(under)) { synth = { btn: btn, at: Date.now() }; btn.click(); made = true; }
