@@ -274,9 +274,9 @@ test('거래: 시세는 10초마다 범위 안에서 바뀌고, 강화로 범위
   for (const roll of [0, 0.3, 0.7, 0.999]) { C.tick(s, C.PRICE_STEP, () => roll); assert.ok(s.price >= r.floor - 1e-9 && s.price <= r.ceil + 1e-9); }
 });
 
-test('거래: 자동 판매는 거간꾼(개조)이나 자동화 특성이 있어야 한다. 좋은 시세에 팔고, 창고가 차면 그냥 판다', () => {
+test('거래: 자동 판매는 흥정꾼(개조)이나 자동화 특성이 있어야 한다. 좋은 시세에 팔고, 창고가 차면 그냥 판다', () => {
   const none = inMarket(); none.stalls = 10;
-  for (let i = 0; i < 200; i++) assert.ok(!C.tick(none, 1, half).some(e => e.type === 'sold'), '거간꾼이 없으면 알아서 팔지 않는다');
+  for (let i = 0; i < 200; i++) assert.ok(!C.tick(none, 1, half).some(e => e.type === 'sold'), '흥정꾼이 없으면 알아서 팔지 않는다');
   const viaTrait = inMarket(); viaTrait.stalls = 10; viaTrait.traits.auto = 3;
   let traitSold = 0; for (let i = 0; i < 200; i++) traitSold += C.tick(viaTrait, 1, half).filter(e => e.type === 'sold').length;
   assert.equal(traitSold, 0, '자동화 특성만으로는 팔지 않는다(0.9.0)');
@@ -286,7 +286,7 @@ test('거래: 자동 판매는 거간꾼(개조)이나 자동화 특성이 있�
   assert.ok(sold.length >= 2, '가만히 둬도 팔린다');
   sold.forEach(e => assert.equal(e.auto, true));
   assert.ok(s.tradeEarned > 0);
-  // 거간꾼: 평균 이상인 동안 sellInterval 초마다 판다. 레벨마다 2초씩 빨라진다(2초까지)
+  // 흥정꾼: 평균 이상인 동안 sellInterval 초마다 판다. 레벨마다 2초씩 빨라진다(2초까지)
   assert.deepEqual([1, 2, 5, 9].map(lv => { const t = inMarket(); t.upgrades.broker = lv; return C.sellInterval(t); }), [10, 8, 2, 2]);
   const b = inMarket(); b.stalls = 10; b.upgrades.broker = 1; b.price = 1.9; b.goods = C.goodsCap(b) * 0.1; b.priceClock = 0; b.sellClock = 0;
   assert.ok(!C.tick(b, 0.1, half).some(e => e.type === 'sold'), '방금 팔았으면 간격을 기다린다');
@@ -1701,7 +1701,7 @@ test('업적: 조건을 채우면 달성되어 알림이 오고, 하나마다 �
   assert.ok(s.ach['z1click-1']); assert.ok(!s.ach['z1click-2']);
   near(C.achMult(s), 1 + C.ACH_BONUS * C.achCount(s));
   const a = C.ACHIEVEMENTS.find(x => x.id === 'z1click-2');
-  assert.deepEqual(C.achProgress(s, a), { value: 150, need: 1000, done: false });
+  assert.deepEqual(C.achProgress(s, a), { value: 150, need: 1000, done: false, at: 0 });
   // 값을 읽다 오류가 나도 0 으로 본다
   assert.equal(C.achProgress(s, { id: 'x', need: 5, value: () => { throw new Error('x'); } }).value, 0);
   const n = C.achCount(s);
@@ -1834,4 +1834,38 @@ test('순찰조의 초당 물자: 없으면 0, 사면 생기고, 빨라질수록
   near(C.incomePerSec(s), C.productionPerSec(s) + r1);
   s.upgrades.patrol = 5;
   assert.ok(C.sweepRate(s) > r1, '한 칸에 걸리는 시간이 줄면 초당 물자가 오른다');
+});
+
+test('2배 등급: 넘은 문턱의 수', () => {
+  assert.equal(C.milestoneTier(0), 0);
+  assert.equal(C.milestoneTier(9), 0);
+  assert.equal(C.milestoneTier(10), 1);
+  assert.equal(C.milestoneTier(100), 4);
+  assert.equal(C.milestoneTier(500), C.MILESTONES.length);
+  assert.equal(C.milestoneTier(8, C.FLEET_MILESTONES), 2);
+  assert.equal(C.milestoneTier('엉뚱'), 0);
+});
+
+test('누르기 판정: 조금 움직인 짧은 터치만 누르기다', () => {
+  assert.ok(C.isTap(0, 0, 80));
+  assert.ok(C.isTap(8, -8, 300));
+  assert.ok(!C.isTap(30, 0, 100), '밀기');
+  assert.ok(!C.isTap(0, 0, 2000), '길게 누르기');
+  assert.ok(!C.isTap(NaN, 0, 100));
+  assert.ok(!C.isTap(0, 0, -5));
+});
+
+test('업적에 달성한 시각이 남고, 예전 저장(true)도 그대로 달성으로 읽힌다', () => {
+  const s = fresh(); s.clicks = 1e6;
+  C.checkAchievements(s, [], 1700000000000);
+  const done = C.ACHIEVEMENTS.filter((a) => s.ach[a.id]);
+  assert.ok(done.length > 0);
+  assert.equal(s.ach[done[0].id], 1700000000000);
+  assert.equal(C.achProgress(s, done[0]).at, 1700000000000);
+  const raw = JSON.parse(JSON.stringify(s)); raw.ach[done[0].id] = true; raw.ach.fake = 5;
+  const back = C.sanitizeState(raw, 0);
+  assert.equal(back.ach[done[0].id], true);
+  assert.equal(C.achProgress(back, done[0]).at, 0);
+  assert.ok(C.achProgress(back, done[0]).done);
+  assert.equal(back.ach.fake, undefined);
 });

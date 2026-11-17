@@ -263,6 +263,43 @@
       await pushPost('/schedule', { endpoint: sub.endpoint, times: plan.map(function (p) { return p.at; }) });
     } catch (e) { /* 알림은 없어도 게임에는 지장이 없다 */ }
   }
+  /**
+   * 두 손가락으로 번갈아 누르기: 폰 브라우저는 손가락 하나가 닿아 있는 동안 다른 손가락의 누르기(click)를 만들어 주지 않는다.
+   * 그래서 손가락이 둘 이상 닿은 동안에는, 뗀 손가락이 "누르기"였으면(C.isTap) 그 단추를 직접 눌러 준다.
+   * 빠르게 두 번 누를 때도 같은 방법을 쓴다: 아이폰은 두 번 누르면 화면을 키우는데, 두 번째 누르기를 직접 처리해서 막는다.
+   * 그 밖에 손가락 하나로 누를 때는 브라우저가 하던 대로 둔다(겹쳐서 두 번 눌리지 않게).
+   */
+  function wireMultiTouch() {
+    var starts = {}, multi = false, lastEnd = 0, synth = { btn: null, at: 0 };
+    try {
+      // 직접 눌러 준 단추에 브라우저의 누르기가 뒤따라오면 버린다(한 번 눌렀는데 두 번 사지 않게)
+      document.addEventListener('click', function (e) {
+        if (e.isTrusted && synth.btn && Date.now() - synth.at < 450 && synth.btn.contains(e.target)) { e.stopImmediatePropagation(); e.preventDefault(); }
+      }, true);
+      document.addEventListener('touchstart', function (e) {
+        if (e.touches.length > 1) multi = true;
+        for (var i = 0; i < e.changedTouches.length; i++) { var t = e.changedTouches[i]; starts[t.identifier] = { x: t.clientX, y: t.clientY, at: Date.now(), target: t.target }; }
+      }, { passive: true });
+      document.addEventListener('touchend', function (e) {
+        var made = false, now = Date.now(), quick = now - lastEnd < 350;      // quick: 빠르게 두 번 누름(아이폰은 이때 화면을 키운다)
+        lastEnd = now;
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          var t = e.changedTouches[i], s = starts[t.identifier];
+          delete starts[t.identifier];
+          if (!(multi || quick) || !s || !C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) continue;
+          var btn = s.target && s.target.closest ? s.target.closest('button') : null, under = document.elementFromPoint(t.clientX, t.clientY);
+          if (btn && !btn.disabled && under && btn.contains(under)) { synth = { btn: btn, at: Date.now() }; btn.click(); made = true; }
+          else if (quick && !(s.target && s.target.closest && s.target.closest('input, textarea, select, a'))) made = true;      // 빈 곳을 두 번 눌러도 화면이 커지지 않게
+        }
+        if (made && e.cancelable) e.preventDefault();      // 브라우저가 뒤늦게 한 번 더 누르지 않게
+        if (e.touches.length === 0) { multi = false; starts = {}; }
+      }, { passive: false });
+      document.addEventListener('touchcancel', function (e) {
+        for (var i = 0; i < e.changedTouches.length; i++) delete starts[e.changedTouches[i].identifier];
+        if (e.touches.length === 0) { multi = false; starts = {}; }
+      }, { passive: true });
+    } catch (err) { /* 터치가 없는 기기: 할 일이 없다 */ }
+  }
   function wireNotify() {
     var app = nativeApp(), row = $('notify-row');
     if (!row || (!app && !webPushReady())) return;
@@ -622,13 +659,24 @@
    */
   function setMile(r, n, q, can, list) {
     if (!r || !r.mile) return;
-    var next = C.nextMilestone(n, list);
-    r.mile.hidden = next === null;
-    if (next === null) return;
-    var hit = !!can && q > 0 && n + q >= next;
-    setText(r.mile, hit ? '★ 지금 2배' : '★ ' + next);
+    var next = C.nextMilestone(n, list), tier = C.milestoneTier(n, list);
+    // 등급(넘은 문턱 수)에 따라 줄의 띠 색과 별의 수가 달라진다
+    r.btn.setAttribute('data-tier', String(tier));
+    if (typeof r.tier === 'number' && tier > r.tier) {      // 방금 2배가 됐다: 줄을 한 번 번쩍인다
+      r.btn.classList.remove('tier-up'); void r.btn.offsetWidth; r.btn.classList.add('tier-up');
+      buzz(25);
+    }
+    r.tier = tier;
+    // 별: 문턱의 수만큼 빈 별이 있고, 넘을 때마다 하나씩 채워진다. 다 채우면 금색으로 빛난다
+    var total = (Array.isArray(list) ? list : C.MILESTONES).length;
+    var stars = new Array(tier + 1).join('★') + new Array(Math.max(0, total - tier) + 1).join('☆');
+    var hit = next !== null && !!can && q > 0 && n + q >= next;
+    setText(r.mile, hit ? '★ 지금 2배' : stars);
+    r.mile.hidden = false;
+    r.mile.classList.toggle('full', next === null);
+    r.next = next;
     r.mile.classList.toggle('hit', hit);
-    r.mile.title = next + '에 닿으면 2배가 돼요';
+    r.mile.title = next === null ? '2배 문턱을 모두 넘었어요' : next + '에 닿으면 2배가 돼요';
   }
 
 
@@ -844,7 +892,7 @@
     rows.zmapHere.setAttribute('x', here[0] + 12); rows.zmapHere.setAttribute('y', here[1] - 9);
     // 아래 카드: 고른 구역의 설명
     var z = C.ZONES[zmapPick], open = zmapPick <= state.zone, soon = z.kind === 'soon';
-    setText($('zmap-name'), z.no + '구역 ' + z.name + (zmapPick === state.zone ? ' · 지금 여기' : ''));
+    setText($('zmap-name'), z.no + '구역 ' + z.name + (zmapPick === state.zone ? ' · 현재' : ''));
     setText($('zmap-lead'), soon ? '다음 버전에서 열려요.' : open ? z.lead + '.' : '아직 열지 않았어요. ' + z.lead + '.');
     setText($('zmap-rate'), zmapRate(zmapPick, rates));
     fill($('zmap-share'), open && zmapPick < rates.length && total > 0 ? rates[zmapPick] / total : 0);
@@ -1131,7 +1179,7 @@
     var order = list.map(function (a, i) { return i; }).sort(function (x, y) { return (prog[x].done - prog[y].done) || (list[x].tier - list[y].tier) || (x - y); });
     order.forEach(function (i) {
       var a = list[i], p = prog[i], card = el('div', 'ach-card tier' + a.tier + (p.done ? ' done' : '')), head = el('div', 'ach-head');
-      head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' : TIER_NAMES[a.tier]));
+      head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier]));      // 달성한 날짜(적어 둔 것만)
       card.appendChild(head); card.appendChild(el('p', '', a.text));
       if (!p.done) {
         var bar = el('div', 'autobar');
@@ -1141,6 +1189,13 @@
       }
       box.appendChild(card);
     });
+  }
+
+  /** 시각(ms)을 '2026.11.17' 꼴의 날짜로. 잘못된 값이면 빈 글. */
+  function dayText(ms) {
+    var d = new Date(ms);
+    if (isNaN(d.getTime())) return '';
+    return d.getFullYear() + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + ('0' + d.getDate()).slice(-2);
   }
 
   /* ---------- 도감 ---------- */
@@ -1218,7 +1273,7 @@
         if (!got) { card(art, '???', rname + ' 등급', '데려오기에서 만날 수 있어요.', true, 'r-' + b.rarity); return; }
         var lv = C.petLevel(state, b.id), with_ = state.pet && state.pet.breed === b.id;
         var bonus = Math.round((rar ? rar[b.kind] : 0) * (1 + C.PET_LEVEL_STEP * lv) * 100);
-        card(art, state.kennel[b.id] + (with_ ? ' ★' : ''), rname + ' · ' + b.name + ' · Lv ' + lv, kind.label + ' +' + bonus + '%', false, 'r-' + b.rarity);
+        card(art, state.kennel[b.id] + (with_ ? ' ★' : ''), rname + ' · ' + b.name + ' · Lv ' + lv + ' / ' + C.PET_LEVEL_MAX, kind.label + ' +' + bonus + '%', false, 'r-' + b.rarity);
       });
     } else if (dexTab === 'zombie') {
       C.ZOMBIE_KINDS.forEach(function (z) {
@@ -1269,7 +1324,7 @@
   var STAT_HERO = [['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['total', '진행 시간']];
   var STAT_GROUPS = [
     ['이번 판', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '막아낸 밤']]],
-    ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비움으로 받은 시간'], ['days', '시작한 지']]]
+    ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비운 시간'], ['days', '시작한 지']]]
   ];
   function buildStats() {
     var root = $('stats-grid');
@@ -1305,7 +1360,7 @@
     st.zones.forEach(function (r) {
       var li = el('li', r.here ? 'bar here' : 'bar');
       fill(li, r.seconds === null ? 0 : r.seconds / longest);      // 머문 시간만큼 막대가 찬다(가장 오래 머문 구역이 가득)
-      li.appendChild(el('span', '', (r.zone + 1) + '구역 ' + r.name + (r.here ? ' · 지금 여기' : '')));
+      li.appendChild(el('span', '', (r.zone + 1) + '구역 ' + r.name + (r.here ? ' · 현재' : '')));
       li.appendChild(el('span', 'num', r.seconds === null ? '기록 없음' : (r.here ? '' : '머문 시간 ') + d(r.seconds)));
       list.appendChild(li);
     });
@@ -1469,7 +1524,11 @@
       ob.hidden = !showOpen;
       if (showOpen) {
         ob.disabled = !n.ready || n.cost > state.supplies;
-        setText(ob, n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다 · 물자 ' + fmt(n.cost) : n.zone.no + '구역은 ' + (state.zone + 1) + '구역의 목표를 모두 채워야 열려요 · 물자 ' + fmt(n.cost));
+        // 두 줄로 나눠 적는다: 윗줄은 할 일, 아랫줄은 모은 물자 / 필요한 물자(막대와 함께)
+        if (!ob.firstChild) { ob.appendChild(el('span', 'oz-main')); ob.appendChild(el('span', 'oz-sub num')); var ozb = el('span', 'oz-bar'); ozb.appendChild(el('i')); ob.appendChild(ozb); }
+        setText(ob.children[0], n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다' : (state.zone + 1) + '구역 목표를 모두 채우면 ' + n.zone.no + '구역이 열려요');
+        setText(ob.children[1], '물자 ' + fmt(Math.min(state.supplies, n.cost)) + ' / ' + fmt(n.cost));
+        ob.children[2].firstChild.style.width = (n.cost > 0 ? Math.min(100, state.supplies / n.cost * 100) : 100).toFixed(1) + '%';
       }
       var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 지금은 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 지금은 문 앞까지 갈 수 있어요.')
         : !open ? '아직 열지 않은 구역이에요. 앞 구역의 목표를 모두 채우면 문을 열 수 있어요.' : '';
@@ -1501,7 +1560,7 @@
         var r = rows.buildings[b.id], n = state.buildings[b.id], q = qtyFor(C.maxBuildings(state, b.id), C.COUNT_MAX - n), cost = C.buildingCost(state, b.id, q);
         setText(r.count, n + ' / ' + C.COUNT_MAX);
         setMile(r, n, q, cost <= state.supplies);
-        setText(r.info, n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state)));
+        setText(r.info, (n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state))) + (r.next ? ' · ' + r.next + '곳에서 2배' : ''));
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies);
       });
@@ -1539,7 +1598,7 @@
       sb.disabled = !(state.goods > 0);
       setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
-      // 자동 판매: 거간꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
+      // 자동 판매: 흥정꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
       var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= C.priceRange(state).mean;
       var sellEvery = C.sellInterval(state);
       $('auto-sell-row').hidden = !broker;
@@ -1547,8 +1606,8 @@
       // 시세가 좋을 때는 다음 판매까지의 시간, 낮을 때는 창고가 찰 때까지(회색)
       fill($('sell-bar'), !selling ? 0 : goodPrice ? state.sellClock / sellEvery : (cap > 0 ? state.goods / cap : 0));
       $('sell-bar').classList.toggle('wait', !goodPrice);
-      setText($('sell-auto'), !broker ? '개조에서 거간꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
-        : goodPrice ? '시세가 좋아요 · 거간꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
+      setText($('sell-auto'), !broker ? '개조에서 흥정꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
+        : goodPrice ? '시세가 좋아요 · 흥정꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setMile(rows.stall, state.stalls, q2, sc <= state.supplies);
@@ -1671,7 +1730,7 @@
         var nowS = secs(C.sweepInterval(state)), nextS = secs(C.sweepInterval(probe));
         infoText = !lv ? '사면 ' + nextS + '마다 한 칸' : lv >= u.max ? '지금 ' + nowS + '마다 한 칸' : '지금 ' + nowS + ' → ' + nextS;
       }
-      if (u.id === 'broker') {             // 거간꾼: 몇 초마다 파는지(지금 → 산 뒤)
+      if (u.id === 'broker') {             // 흥정꾼: 몇 초마다 파는지(지금 → 산 뒤)
         var bp = Object.create(state); bp.upgrades = Object.create(state.upgrades); bp.upgrades.broker = lv + 1;
         var bNow = secs(C.sellInterval(state)), bNext = secs(C.sellInterval(bp));
         infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '지금 ' + bNow + '마다 판매' : '지금 ' + bNow + ' → ' + bNext;
@@ -1700,7 +1759,7 @@
     if (!p) return;
     setText($('pet-name'), p.name);
     var plv = C.petLevel(state, p.breed.id), feed = C.petFeedCost(state);
-    setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · Lv ' + plv + ' · ' + C.petEffectText(state));
+    setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · Lv ' + plv + ' / ' + C.PET_LEVEL_MAX + ' · ' + C.petEffectText(state));
     setText($('pet-feed'), isFinite(feed) ? '간식 주기 · 간식 ' + fmt(feed) : '다 컸어요(최대 레벨)');
     $('pet-feed').disabled = !(feed <= state.treats);
     $('pet-input').placeholder = p.name;
@@ -2186,6 +2245,7 @@
     });
     wirePrefs();
     wireNotify();
+    wireMultiTouch();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');

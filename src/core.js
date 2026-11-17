@@ -236,9 +236,9 @@
       story: [
         { title: "저울", text: [
           "2구역. 시장 골목은 셔터가 전부 내려가 있다. 그런데 좌판 하나에 저울이 그대로 놓여 있었다. 바늘이 0을 가리키고 있다. 누가 닦아 놓은 것처럼 깨끗하다.",
-          "저울 주인은 건어물 가게 뒤에 숨어 있던 할머니였다. 할머니는 우리를 보자마자 말했다. “공짜는 없다. 뭘 가져왔는지부터 보자.”",
+          "저울 주인은 건어물 가게 뒤에 숨어 있던 할머니였다. 할머니는 우리를 보자마자 말했다. “공짜는 없어. 뭘 가져왔는지부터 보자꾸나.”",
           "아저씨가 통조림 두 개를 올렸다. 할머니는 무게를 달고, 멸치 한 봉지를 내주고, 장부에 적었다. 세상이 이렇게 됐는데 장부를 쓴다. 나는 그게 이상하게 마음이 놓였다.",
-          "“물건이 있으면 사람이 온다. 사람이 오면 소문이 돈다. 소문이 돌면 살 길이 보인다.” 할머니는 저울을 툭 쳤다. “장사는 그러려고 하는 거다.”",
+          "“물건이 있으면 사람이 오고, 사람이 오면 소문이 돌아. 소문이 돌면 살 길도 보이는 법이지.” 할머니는 저울을 툭 쳤다. “장사는 그러자고 하는 거야.”",
           "그날 저녁에 벌써 두 사람이 더 왔다. 한 사람은 라디오 건전지를 들고 왔다."] },
         { title: "3반 일동", text: [
           "생선 가게 냉동고를 열었다가 쪽지를 찾았다. 비닐에 싸서 얼음 틈에 끼워 놓았다. “먼저 갑니다. 7구역에서 만나요. 3반 일동.”",
@@ -405,7 +405,7 @@
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
-    { id: 'broker',  zone: 1, name: '거간꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
+    { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
     { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 5e13, growth: 1, max: 1 },
     { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 5e20, growth: 1, max: 1 }
   ];
@@ -487,7 +487,7 @@
       // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
       sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
       // 2구역 거래
-      sellClock: 0,                        // 거간꾼이 마지막으로 판 뒤 흐른 시간(초)
+      sellClock: 0,                        // 흥정꾼이 마지막으로 판 뒤 흐른 시간(초)
       hands: { porter: 0, crier: 0 },      // 시장의 일손(HANDS)
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
@@ -619,7 +619,8 @@
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
     ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
     var ra = raw.ach && typeof raw.ach === 'object' ? raw.ach : {};
-    ACHIEVEMENTS.forEach(function (a) { if (ra[a.id]) s.ach[a.id] = true; });
+    // 값은 달성한 시각(ms). 날짜를 적기 전의 저장(true)은 그대로 true 로 둔다(날짜 없이 '달성'만 보인다)
+    ACHIEVEMENTS.forEach(function (a) { var v = ra[a.id]; if (v) s.ach[a.id] = typeof v === 'number' && isFinite(v) && v > 0 ? Math.floor(v) : true; });
     // 예전에는 '문 앞'까지만 갈 수 있던 구역이 그 뒤 버전에서 열린 경우: 문값은 이미 치렀으므로 들여보낸다.
     if (s.gate && s.zone + 1 < ZONES.length && ZONES[s.zone + 1].kind !== 'soon') {
       s.zone++; s.gate = false; s.bestZone = Math.max(s.bestZone, s.zone);
@@ -643,7 +644,7 @@
    * 구역 강화, 특전, 영구 특성을 모두 모아 항목별 배수로 돌려준다.
    *   prod 전체 생산, z1 / z2 구역별 생산, click 수색 배수, defense 방어력, loot 밤 전리품,
    *   cost 모든 값, z1cost 1구역 시설 값, floor / ceil 시세 범위에 더하는 값, cap 창고 배수,
-   *   offline 자리 비움 효율에 더하는 값, antibody 철수 항체 배수, start 선발대 레벨, broker 거간꾼 여부,
+   *   offline 자리 비움 효율에 더하는 값, antibody 철수 항체 배수, start 선발대 레벨, broker 흥정꾼 여부,
    *   lab 연구 속도, labcost 과제에 드는 점수, staffcost 연구원 값,
    *   z4 화물 값, trip 운행 시간, routecost 노선 값, traincost 열차 값,
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
@@ -716,6 +717,21 @@
     if (!isFinite(n)) n = 0;
     for (var i = 0; i < marks.length; i++) if (n < marks[i]) return marks[i];
     return null;
+  }
+  /** 지금까지 넘은 2배 문턱의 수(등급). 0 이면 아직 하나도 못 넘은 것. */
+  function milestoneTier(count, list) {
+    var marks = Array.isArray(list) ? list : MILESTONES, n = Number(count), tier = 0;
+    if (!isFinite(n)) return 0;
+    marks.forEach(function (t) { if (n >= t) tier++; });
+    return tier;
+  }
+  /**
+   * 손가락을 뗀 것이 "누르기"인지: 거의 움직이지 않았고(12px 이내) 오래 누르지 않았을 때(0.7초 이내).
+   * 두 손가락으로 번갈아 누를 때 직접 누르기를 만들어 주는 데 쓴다(밀기·벌리기와 구별한다).
+   */
+  function isTap(dx, dy, ms) {
+    if (!isFinite(dx) || !isFinite(dy) || !isFinite(ms)) return false;
+    return dx * dx + dy * dy <= 144 && ms >= 0 && ms <= 700;
   }
   function milestoneMult(count) { var m = 1; MILESTONES.forEach(function (t) { if (count >= t) m *= 2; }); return m; }
   function buildingCost(state, id, qty) {
@@ -819,8 +835,8 @@
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
   /** 2구역이 가만히 둘 때 초당 버는 물자(평균 시세 기준). 화면의 '초당' 표시와 자리 비움 계산에 쓴다. */
   function tradeRate(state) { return goodsRate(state) * goodsValue(state) * priceRange(state).mean; }
-  var SELL_AUTO_SECONDS = 10;   // 거간꾼 1레벨이 한 번 파는 간격(초)
-  /** 거간꾼이 한 번 파는 간격(초). 레벨마다 2초씩 줄어든다(2초까지). 자동화 특성만 있으면 10초. */
+  var SELL_AUTO_SECONDS = 10;   // 흥정꾼 1레벨이 한 번 파는 간격(초)
+  /** 흥정꾼이 한 번 파는 간격(초). 레벨마다 2초씩 줄어든다(2초까지). 자동화 특성만 있으면 10초. */
   function sellInterval(state) { return Math.max(2, SELL_AUTO_SECONDS - 2 * Math.max(0, mods(state).broker - 1)); }
   function stepTrade(state, dt, rng, events) {
     if (!zoneOpen(state, 1)) return;
@@ -836,7 +852,7 @@
     var cap = goodsCap(state);
     state.goods = Math.min(cap, state.goods + goodsRate(state) * dt);
     if (!state.autoSell || !autoOn(state, 1)) return;
-    // 자동 판매(거간꾼): 시세가 평균 이상인 동안 sellInterval 초마다 한 번씩 판다. 낮은 시세에서는 기다린다(시계는 다 찬 채로 멈춘다).
+    // 자동 판매(흥정꾼): 시세가 평균 이상인 동안 sellInterval 초마다 한 번씩 판다. 낮은 시세에서는 기다린다(시계는 다 찬 채로 멈춘다).
     // 창고가 차면 시세와 상관없이 판다(버려지지 않게).
     var every = sellInterval(state);
     state.sellClock = Math.min(every, state.sellClock + dt);
@@ -1702,7 +1718,7 @@
     { id: 'z2peak', group: 'z2', name: '고점 사냥꾼', needs: [10, 100, 1000], value: function (s) { return s.peakSales; }, text: function (n) { return '한 판에 고점에서 ' + n + '번 팔기'; } },
     { id: 'z2streak', group: 'z2', name: '연속 호가', tier: 2, needs: [STREAK_MAX], value: function (s) { return s.streak; }, text: function () { return '연속 호가를 끝까지 쌓기'; } },
     { id: 'z2hand', group: 'z2', name: '북적이는 시장', needs: [20, 150], value: function (s) { return sumOf(s.hands); }, text: function (n) { return '짐꾼과 호객꾼을 합쳐 ' + n + '명 두기'; } },
-    { id: 'z2broker', group: 'z2', name: '믿음직한 거간꾼', needs: [1, 5], value: function (s) { return s.upgrades.broker; }, text: function (n) { return n === 1 ? '거간꾼 두기' : '거간꾼을 끝까지 올리기'; } },
+    { id: 'z2broker', group: 'z2', name: '믿음직한 흥정꾼', needs: [1, 5], value: function (s) { return s.upgrades.broker; }, text: function (n) { return n === 1 ? '흥정꾼 두기' : '흥정꾼을 끝까지 올리기'; } },
     // 3구역 공단
     { id: 'z3level', group: 'z3', name: '기계공', needs: [10, 50, 150, 300], value: function (s) { return sumOf(s.machines); }, text: function (n) { return '기계 레벨의 합계 ' + n + ' 채우기'; } },
     { id: 'z3earn', group: 'z3', name: '공장장', needs: [1e13, 1e16, 1e19], value: function (s) { return s.lineEarned; }, text: function (n) { return '한 판에 라인으로 물자 ' + formatNumber(n) + ' 벌기'; } },
@@ -1755,14 +1771,15 @@
     var v = 0;
     try { v = a.value(state); } catch (e) { v = 0; }
     v = typeof v === 'number' && isFinite(v) && v > 0 ? v : 0;
-    return { value: Math.min(v, a.need), need: a.need, done: !!state.ach[a.id] };
+    return { value: Math.min(v, a.need), need: a.need, done: !!state.ach[a.id], at: typeof state.ach[a.id] === 'number' ? state.ach[a.id] : 0 };
   }
   /** 조건을 채운 업적을 달성으로 바꾸고 'achievement' 사건을 남긴다. */
-  function checkAchievements(state, events) {
+  function checkAchievements(state, events, now) {
+    var at = typeof now === 'number' && isFinite(now) && now > 0 ? Math.floor(now) : Date.now();      // 달성한 시각을 적어 둔다
     ACHIEVEMENTS.forEach(function (a) {
       if (state.ach[a.id]) return;
       var p = achProgress(state, a);
-      if (p.value >= a.need) { state.ach[a.id] = true; if (events) events.push({ type: 'achievement', id: a.id, name: a.name, text: a.text, group: a.group, tier: a.tier }); }
+      if (p.value >= a.need) { state.ach[a.id] = at; if (events) events.push({ type: 'achievement', id: a.id, name: a.name, text: a.text, group: a.group, tier: a.tier }); }
     });
   }
 
@@ -1975,7 +1992,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, milestoneMult: milestoneMult, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
