@@ -1891,7 +1891,7 @@
   }
   /* ---------- 업적 ---------- */
   /*
-   * 업적: 구역마다 15개, 공통 30개(모두 105개). 한 번 달성하면 철수해도 남는다.
+   * 업적: 구역마다 15개, 공통 30개(모두 120개(1.0.5: 6구역 15개를 더했다)). 한 번 달성하면 철수해도 남는다.
    *   묶음(series) 하나가 문턱(needs)마다 업적 하나씩이 된다: '좌판 주인 Ⅰ~Ⅳ' 처럼 쉬운 것부터 아주 어려운 것까지.
    *   group : 'all'(공통) 또는 'z1'~'z5',  value(state) : 지금의 값,  text(need) : 조건을 적은 글
    *   tier  : 1 쉬움, 2 되풀이, 3 어려움, 4 아주 어려움 (묶음 안에서의 차례로 정한다. 문턱이 하나뿐인 묶음은 tier 를 따로 적는다)
@@ -1940,7 +1940,14 @@
     { id: 'z5points', group: 'z5', name: '쌓인 연구', needs: [1000, 1000000], value: function (s) { return s.points; }, text: function (n) { return '연구 점수 ' + formatNumber(n) + ' 모아 두기'; } },
     { id: 'z5up', group: 'z5', name: '실험 도구', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 4); }, text: function (n) { return '5구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z5deep', group: 'z5', name: '한 우물', needs: [5, 10], value: function (s) { return maxOf(s.research); }, text: function (n) { return '같은 과제를 ' + n + '번 끝내기'; } },
-    { id: 'z5gate', group: 'z5', name: '다리 앞에서', tier: 4, needs: [1], value: function (s) { return s.gate && s.zone >= 4 ? 1 : 0; }, text: function () { return '6구역의 문 앞에 닿기'; } },
+    { id: 'z5gate', group: 'z5', name: '다리 앞에서', tier: 4, needs: [1], value: function (s) { return s.zone >= 5 ? 1 : 0; }, text: function () { return '6구역의 문 열기'; } },
+    // 6구역 강변 검문소(1.0.5)
+    { id: 'z6post', group: 'z6', name: '검문소장', needs: [5, 25, 100, 250], value: function (s) { return s.posts; }, text: function (n) { return '초소 ' + n + '곳 세우기'; } },
+    { id: 'z6safe', group: 'z6', name: '넉넉한 밤', needs: [5, 15, 50, 150], value: function (s) { return s.safeNights; }, text: function (n) { return '한 회차에 무리의 2배 방어력으로 밤 ' + n + '번 방어'; } },
+    { id: 'z6earn', group: 'z6', name: '다리지기', needs: [1e32, 1e35, 1e38], value: function (s) { return s.guardEarned; }, text: function (n) { return '한 회차에 통행 물자 ' + formatNumber(n) + ' 벌기'; } },
+    { id: 'z6up', group: 'z6', name: '검문 장비', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 5); }, text: function (n) { return '6구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
+    { id: 'z6max', group: 'z6', name: '철통', tier: 3, needs: [1], value: function (s) { return s.zone >= 5 && s.posts > 0 && bridgeSafety(s) >= SAFETY_MAX + mods(s).margin ? 1 : 0; }, text: function () { return '다리 안전도를 끝까지 채우기'; } },
+    { id: 'z6gate', group: 'z6', name: '송신탑 앞에서', tier: 4, needs: [1], value: function (s) { return s.gate && s.zone >= 5 ? 1 : 0; }, text: function () { return '7구역의 문 앞에 닿기'; } },
     // 공통
     { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 회차에 방어 성공 ' + n + '번'; } },
     { id: 'retreat', group: 'all', name: '다시, 1구역', needs: [1, 5, 20, 50], value: function (s) { return s.retreats; }, text: function (n) { return '철수 ' + n + '번 하기'; } },

@@ -1695,9 +1695,9 @@ test('구조 신호의 보상: 물자, 간식, 생산 배수 가운데 하나', 
 test('업적: 구역마다 15개, 공통 30개. 이름과 조건이 있고 id 가 겹치지 않는다', () => {
   const by = {};
   for (const a of C.ACHIEVEMENTS) { by[a.group] = (by[a.group] || 0) + 1; assert.ok(a.name && a.text && a.need > 0 && a.tier >= 1 && a.tier <= 4, a.id); assert.ok(!/undefined|NaN/.test(a.text), a.text); }
-  assert.deepEqual(by, { z1: 15, z2: 15, z3: 15, z4: 15, z5: 15, all: 30 });
-  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.id)).size, 105);
-  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.name)).size, 105);
+  assert.deepEqual(by, { z1: 15, z2: 15, z3: 15, z4: 15, z5: 15, z6: 15, all: 30 });
+  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.id)).size, 120);
+  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.name)).size, 120);
   for (const g of Object.keys(by)) assert.ok(new Set(C.ACHIEVEMENTS.filter(a => a.group === g).map(a => a.tier)).size >= 3, g + ' 에 여러 난이도가 있다');
 });
 

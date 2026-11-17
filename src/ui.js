@@ -1200,7 +1200,7 @@
    *   달성한 것은 노란 표시, 아직인 것은 진행 막대와 '지금 / 목표'. 머리줄에는 달성 수와 지금의 생산 보너스.
    */
   var achTab = 'all', achShown = '';
-  var ACH_GROUPS = [['all', '공통'], ['z1', '1구역'], ['z2', '2구역'], ['z3', '3구역'], ['z4', '4구역'], ['z5', '5구역']];
+  var ACH_GROUPS = [['all', '공통'], ['z1', '1구역'], ['z2', '2구역'], ['z3', '3구역'], ['z4', '4구역'], ['z5', '5구역'], ['z6', '6구역']];
   var TIER_NAMES = ['', '쉬움', '반복', '어려움', '아주 어려움'];
   function renderAch() {
     var list = C.ACHIEVEMENTS.filter(function (a) { return a.group === achTab; });
