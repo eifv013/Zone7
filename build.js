@@ -68,8 +68,9 @@ body { padding-top: env(safe-area-inset-top); }
   @media (display-mode: standalone) {
     /* 1.1.0: 빈 띠(40px) 대신 노란 테이프를 두껍게 깔아 그 자리를 채운다. 테이프는 흐려져도 무늬로 보이고, 머리띠는 그 아래에서 시작한다.
        빈 공간을 줄이려고 띠를 30px 로 잡았다(흐림은 아래로 갈수록 옅어진다). 업데이트 알림은 테이프 아래로 내린다 */
-    .tape { grid-row: 1; height: 30px; }
-    .update-bar { grid-row: 2; }
+    /* 이 묶음은 게임의 스타일보다 앞에 놓이므로, 뒤의 규칙에 덮이지 않게 body 를 붙여 힘을 준다 */
+    body .tape { grid-row: 1; height: 30px; }
+    body .update-bar { grid-row: 2; }
   }
 }
 </style>`;
