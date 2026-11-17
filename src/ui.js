@@ -1382,10 +1382,18 @@
     }
   }
 
+  function wirePerkReroll() {
+    $('perk-reroll').addEventListener('click', function () {
+      var r = C.rerollPerks(state, Math.random);
+      if (!r.ok) return;
+      log('특전 후보를 다시 뽑았다.', '');
+      sfx('click'); Store.save(); render();
+    });
+  }
   /* ---------- 특전 고르기 ---------- */
   /** 골라야 할 특전이 있으면 선택 창을 띄운다. 게임은 뒤에서 계속 진행된다. */
   function renderPerkChoice() {
-    var key = state.pendingPerks.join(',');
+    var key = state.pendingPerks.join(',') + '|' + C.rerollsLeft(state);
     if (key === perkShown) return;
     perkShown = key;
     var box = $('perk-list');
@@ -1409,6 +1417,10 @@
       });
       box.appendChild(btn);
     });
+    // 다시 뽑기(영구 특성): 남은 횟수가 있을 때만 단추가 보인다
+    var left = C.rerollsLeft(state), rr = $('perk-reroll');
+    rr.hidden = left < 1;
+    setText(rr, '다시 뽑기 · 이번 판에 ' + left + '번 남음');
     $('perk').hidden = false;
   }
 
@@ -2278,6 +2290,7 @@
     wirePrefs();
     wireNotify();
     wireMultiTouch();
+    wirePerkReroll();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');

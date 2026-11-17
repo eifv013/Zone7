@@ -204,6 +204,8 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .row-mile .st.on { opacity: 1; }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
+.perk-reroll { margin-top: 12px; width: 100%; padding: 10px; background: transparent; color: #f0b400; border: 1px dashed #f0b400; border-radius: 8px; font: 600 14px/1.3 var(--font-body); cursor: pointer; }
+.perk-reroll[hidden] { display: none; }
 /* 변이체가 오는 밤: 제목 옆의 보라색 딱지와 칸의 테두리 */
 .boss-tag { margin-right: auto; padding: 3px 8px; border-radius: 999px; background: #9a5ac8; color: #fff; font: 700 12px/1.4 var(--font-body); white-space: nowrap; animation: mile-pop .9s ease-in-out infinite alternate; }
 .boss-tag[hidden] { display: none; }
@@ -958,7 +960,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.12</div>
+  <div class="boot-ver">7구역 알파 0.9.13</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1402,7 +1404,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.12 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.13 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1485,6 +1487,7 @@ setTimeout(function () {
     <div class="label" id="perk-title">특전</div>
     <p class="sync-q" id="perk-lead"></p>
     <div class="perk-list" id="perk-list"></div>
+    <button type="button" class="perk-reroll" id="perk-reroll" hidden></button>
   </div>
 </div>
 
@@ -1526,7 +1529,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.13";
 </script>
 <script>
 /*
@@ -1545,6 +1548,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.13', date: '2026-11-17', at: '2026-11-17 23:59:30', title: '다시 뽑기',
+      items: [
+        '영구 특성 "다시 뽑기"가 생겼어요. 특전 후보가 마음에 안 들면 한 판에 레벨만큼 다시 뽑을 수 있어요. 철수하면 횟수가 다시 차요.'
+      ] },
     { ver: '알파 0.9.12', date: '2026-11-17', at: '2026-11-17 23:59:00', title: '방벽을 맡길 사람들',
       items: [
         '방벽 화면에 개조 셋이 생겼어요. 건축가는 방어력을 올리고, 건설자는 방어 수단 값을 내려요.',
@@ -2630,6 +2637,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
     { id: 'scholar', name: '연구자',    desc: '연구 속도 +30%',            key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
+    { id: 'reroll',  name: '다시 뽑기', desc: '특전 후보를 한 판에 1번 더 다시 뽑을 수 있다', key: 'reroll', per: 1, baseCost: 3, growth: 1.8, max: 5 },
     { id: 'auto',    name: '자동화',    desc: '전력 투입·청신호의 대기 시간 -6% (자동은 구역 개조로 켜요)', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
   ];
 
@@ -2696,7 +2704,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
       // 구조 신호
       signalIn: SIGNAL_FIRST, signalLeft: 0, signalsAnswered: 0, buff: null,
       // 특전(이번 판)
-      perks: {}, pendingPerks: [], goalsDone: {},
+      perks: {}, pendingPerks: [], goalsDone: {}, rerollsUsed: 0,      // rerollsUsed: 이번 판에 특전을 다시 뽑은 횟수(철수하면 0)
       // 영구
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
       treats: 0,             // 간식: 친구를 키우는 재화(철수해도 남는다)
@@ -2804,6 +2812,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
     s.perks = counts(PERKS, raw.perks, 999);
     s.traits = counts(TRAITS, raw.traits, function (t) { return t.max; });
+    s.rerollsUsed = clamp(safeCount(raw.rerollsUsed), 0, 99);
     s.pendingPerks = (Array.isArray(raw.pendingPerks) ? raw.pendingPerks : []).filter(function (id) { return !!findById(PERKS, id); }).slice(0, PERK_CHOICES);
     var gd = raw.goalsDone && typeof raw.goalsDone === 'object' ? raw.goalsDone : {};
     GOALS.forEach(function (list) { list.forEach(function (g) { if (gd[g.id]) s.goalsDone[g.id] = true; }); });
@@ -2843,8 +2852,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -3730,6 +3739,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
     while (out.length < PERK_CHOICES && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length) % pool.length, 1)[0]);
     return out;
   }
+  /** 이번 판에 남은 '다시 뽑기' 횟수(영구 특성 '다시 뽑기'의 레벨 − 이번 판에 쓴 횟수). */
+  function rerollsLeft(state) { return Math.max(0, Math.floor(mods(state).reroll) - (state.rerollsUsed || 0)); }
+  /** 지금 떠 있는 특전 후보를 버리고 새로 뽑는다. 후보가 없거나 횟수가 없으면 실패. */
+  function rerollPerks(state, rng) {
+    if (!state.pendingPerks.length) return fail('none');
+    if (rerollsLeft(state) < 1) return fail('empty');
+    state.rerollsUsed = (state.rerollsUsed || 0) + 1;
+    state.pendingPerks = drawPerks(rng, state);
+    return { ok: true, left: rerollsLeft(state) };
+  }
   function choosePerk(state, id) {
     if (state.pendingPerks.indexOf(id) < 0) return fail('unknown');
     state.perks[id]++;
@@ -4228,7 +4247,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
@@ -7168,10 +7187,18 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
     }
   }
 
+  function wirePerkReroll() {
+    $('perk-reroll').addEventListener('click', function () {
+      var r = C.rerollPerks(state, Math.random);
+      if (!r.ok) return;
+      log('특전 후보를 다시 뽑았다.', '');
+      sfx('click'); Store.save(); render();
+    });
+  }
   /* ---------- 특전 고르기 ---------- */
   /** 골라야 할 특전이 있으면 선택 창을 띄운다. 게임은 뒤에서 계속 진행된다. */
   function renderPerkChoice() {
-    var key = state.pendingPerks.join(',');
+    var key = state.pendingPerks.join(',') + '|' + C.rerollsLeft(state);
     if (key === perkShown) return;
     perkShown = key;
     var box = $('perk-list');
@@ -7195,6 +7222,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
       });
       box.appendChild(btn);
     });
+    // 다시 뽑기(영구 특성): 남은 횟수가 있을 때만 단추가 보인다
+    var left = C.rerollsLeft(state), rr = $('perk-reroll');
+    rr.hidden = left < 1;
+    setText(rr, '다시 뽑기 · 이번 판에 ' + left + '번 남음');
     $('perk').hidden = false;
   }
 
@@ -8064,6 +8095,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.12";
     wirePrefs();
     wireNotify();
     wireMultiTouch();
+    wirePerkReroll();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');

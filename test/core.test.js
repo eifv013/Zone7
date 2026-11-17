@@ -1913,3 +1913,22 @@ test('수리공: 없으면 목표를 못 정하고, 있으면 정한 수까지�
   for (let k = 0; k < C.AUTO_DEF_STEPS.length; k++) C.cycleAutoDef(s, 'rail');
   assert.equal(s.autoDef.rail, 0, '한 바퀴 돌면 끔');
 });
+
+test('특전 다시 뽑기: 특성 레벨만큼만 쓸 수 있고, 철수하면 다시 찬다', () => {
+  const s = fresh();
+  assert.equal(C.rerollsLeft(s), 0);
+  s.pendingPerks = ['harvest'];
+  assert.equal(C.rerollPerks(s, Math.random).ok, false, '특성이 없으면 못 뽑는다');
+  s.traits.reroll = 2;
+  assert.equal(C.rerollsLeft(s), 2);
+  const r = C.rerollPerks(s, Math.random);
+  assert.ok(r.ok); assert.equal(r.left, 1); assert.ok(s.pendingPerks.length > 0);
+  assert.ok(C.rerollPerks(s, Math.random).ok);
+  assert.equal(C.rerollPerks(s, Math.random).ok, false, '다 쓰면 못 뽑는다');
+  s.pendingPerks = [];
+  assert.equal(C.rerollPerks(s, Math.random).reason, 'none');
+  s.runEarned = 1e9;
+  const back = C.retreat(s, 1);
+  assert.ok(back.ok); assert.equal(C.rerollsLeft(back.state), 2);
+  assert.equal(C.sanitizeState({ version: 2, rerollsUsed: -4 }, 0).rerollsUsed, 0);
+});
