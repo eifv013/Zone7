@@ -408,10 +408,14 @@ test('철수: 이번 판에서 충분히 모아야 하고, 많이 모을수록 �
   assert.equal(C.antibodiesOnRetreat(s), C.RETREAT_K);
   s.runEarned = C.RETREAT_MIN * 1e4;
   const big = C.antibodiesOnRetreat(s);
-  assert.equal(big, Math.floor(C.RETREAT_K * Math.pow(1e4, C.RETREAT_POW)));
-  assert.ok(big > C.RETREAT_K * 10);
+  const raw = C.RETREAT_K + C.ANTI_STEP * Math.pow(4, C.ANTI_CURVE);      // 자릿수 4(1만 배)
+  assert.equal(big, Math.floor(raw));
+  assert.ok(big > C.RETREAT_K * 5);
+  s.runEarned = C.RETREAT_MIN * 1e22;
+  assert.ok(C.antibodiesOnRetreat(s) < 400, '뒤 구역에서 물자가 폭발해도 샘플은 수백 개를 넘지 않는다');
+  s.runEarned = C.RETREAT_MIN * 1e4;
   s.traits.legacy = 5;
-  assert.equal(C.antibodiesOnRetreat(s), Math.floor(C.RETREAT_K * Math.pow(1e4, C.RETREAT_POW) * 1.5));
+  assert.equal(C.antibodiesOnRetreat(s), Math.floor(raw * 1.5));
   s.pendingPerks = ['harvest'];
   assert.equal(C.canRetreat(s), false, '고르지 않은 특전이 있으면 안 된다');
 });

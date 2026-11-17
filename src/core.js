@@ -61,7 +61,7 @@
   // 2구역 거래
   var PRICE_STEP = 10;             // 시세가 바뀌는 간격(초)
   var PRICE_FLOOR = 0.5, PRICE_CEIL = 2;  // 기본 시세의 범위
-  var GOODS_VALUE = 60;            // 상품 하나의 기준 값(물자)
+  var GOODS_VALUE = 600;           // 상품 하나의 기준 값(물자)
   var GOODS_CAP_SECONDS = 60;      // 창고에 쌓아 둘 수 있는 양(좌판 생산의 초 수)
   var PRICE_HISTORY = 14;          // 시세판에 남겨 두는 지난 시세의 수
   var STREAK_MAX = 5;              // 연속 호가의 최대 단계
@@ -202,7 +202,7 @@
   function zdexCount(state) { var n = 0; ZOMBIE_KINDS.forEach(function (z) { if (state.zdex[z.id] > 0) n++; }); return n; }
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
-  var RETREAT_K = 2, RETREAT_POW = 0.4;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
+  var RETREAT_K = 2, RETREAT_POW = 0.3;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
 
   /* ---------- 정의표 ---------- */
   /*
@@ -252,7 +252,7 @@
           "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
           "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
           "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
-    { no: 3, name: '공단', kind: 'line', cost: 3e11, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
+    { no: 3, name: '공단', kind: 'line', cost: 1e11, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
       story: [
         { title: "멈춘 자리", text: [
           "3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 밖에서 잠근 게 아니다. 안에 있던 사람들이 잠그고, 다른 길로 나간 것이다.",
@@ -1579,22 +1579,30 @@
 
   /* ---------- 철수와 영구 특성 ---------- */
   /** 지금 철수하면 얻는 항체 샘플 수. 이번 판에서 RETREAT_MIN 이상 모아야 1개 이상이 된다. */
-  function antibodiesOnRetreat(state) {
-    if (state.runEarned < RETREAT_MIN) return 0;
-    return Math.floor(RETREAT_K * Math.pow(state.runEarned / RETREAT_MIN, RETREAT_POW) * mods(state).antibody);
+  /*
+   * 항체 샘플은 "물자의 자릿수"를 따라 는다(0.9.24). 전에는 물자의 거듭제곱이라, 뒤 구역에서 물자가 폭발하면 샘플도 수천 개씩 쏟아졌다.
+   *   샘플 = RETREAT_K + ANTI_STEP × (자릿수)^ANTI_CURVE × 배수.   자릿수 = log10(이번 회차 누적 물자 ÷ RETREAT_MIN)
+   *   1억 → 2개, 1,000억 → 18개, 1,000경 → 90개쯤. 물자를 10배 더 모을 때마다 몇 개씩 더 받는 셈이다.
+   */
+  var ANTI_STEP = 4, ANTI_CURVE = 1.3;
+  function antibodiesFor(run, mult) {
+    if (!(run >= RETREAT_MIN)) return 0;
+    var d = Math.log(run / RETREAT_MIN) / Math.LN10;
+    return Math.floor((RETREAT_K + ANTI_STEP * Math.pow(d, ANTI_CURVE)) * mult);
   }
+  function antibodiesOnRetreat(state) { return antibodiesFor(state.runEarned, mods(state).antibody); }
   /**
-   * 항체 샘플을 하나 더 받으려면 이번 판 누적 물자가 얼마여야 하는지. (철수 화면이 "다음 샘플까지"를 알려 주는 데 쓴다)
-   * antibodiesOnRetreat 를 거꾸로 푼 값이다: 누적 = RETREAT_MIN × ((지금 받을 수 + 1) ÷ (K × 배수))^(1/POW)
+   * 항체 샘플을 하나 더 받으려면 이번 회차 누적 물자가 얼마여야 하는지. (철수 화면이 "다음 샘플까지"를 알려 주는 데 쓴다)
+   * 식을 거꾸로 풀지 않고 반씩 좁혀 가며 찾는다: 식이 바뀌어도 그대로 맞는다.
    */
   function nextAntibodyAt(state) {
-    var mult = RETREAT_K * mods(state).antibody, want = antibodiesOnRetreat(state) + 1;
+    var mult = mods(state).antibody, want = antibodiesOnRetreat(state) + 1;
     if (!(mult > 0)) return Infinity;
-    var need = Math.max(RETREAT_MIN, RETREAT_MIN * Math.pow(want / mult, 1 / RETREAT_POW));
-    // 소수점 오차로 문턱 바로 아래에 걸리지 않게 조금씩 올려 맞춘다
-    var probe = { runEarned: need, pendingPerks: [] }, guard = 0;
-    while (guard++ < 40 && Math.floor(mult * Math.pow(probe.runEarned / RETREAT_MIN, RETREAT_POW)) < want) probe.runEarned *= 1.0000001;
-    return probe.runEarned;
+    if (antibodiesFor(RETREAT_MIN, mult) >= want) return RETREAT_MIN;
+    var lo = Math.max(RETREAT_MIN, state.runEarned || 0), hi = lo * 2, guard = 0;
+    while (antibodiesFor(hi, mult) < want && guard++ < 400) hi *= 2;
+    for (var k = 0; k < 80; k++) { var mid = Math.sqrt(lo * hi); if (antibodiesFor(mid, mult) >= want) hi = mid; else lo = mid; }
+    return hi;
   }
   function canRetreat(state) { return antibodiesOnRetreat(state) >= 1 && !state.pendingPerks.length; }
   /**
@@ -2068,7 +2076,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

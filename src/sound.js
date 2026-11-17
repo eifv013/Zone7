@@ -28,6 +28,18 @@
     // 누르는 소리: 음이 위로 미끄러져 올라가는 '뽁' 소리(to 는 끝날 때의 주파수)
     click:      [{ f: 520, to: 840, d: 0.09, type: 'sine', g: 0.05 }],
     buy:        [{ f: 523, d: 0.07, type: 'sine', g: 0.045 }, { f: 659, d: 0.1, at: 0.06, type: 'sine', g: 0.045 }],
+    // 0.9.24: 사는 것마다 소리가 다르다. 전에는 무엇을 사든 buy 하나였다. 음색(사인·세모·잡음)과 음높이를 달리해서 귀로 구별되게 했다
+    stall:      [{ noise: true, cut: 400, d: 0.05, g: 0.06 }, { f: 392, d: 0.09, at: 0.02, type: 'triangle', g: 0.05 }],                                 // 좌판: 나무 두드리는 소리
+    hand:       [{ f: 330, d: 0.05, type: 'triangle', g: 0.05 }, { f: 330, d: 0.06, at: 0.09, type: 'triangle', g: 0.05 }],                              // 일손: 낮게 똑똑
+    machine:    [{ f: 180, to: 120, d: 0.12, type: 'triangle', g: 0.06 }, { noise: true, cut: 400, d: 0.05, at: 0.06, g: 0.07 }],                       // 기계: 철컥
+    train:      [{ f: 311, d: 0.3, type: 'triangle', g: 0.04 }, { f: 370, d: 0.3, type: 'triangle', g: 0.04 }],                                          // 열차: 두 음이 겹친 경적
+    route:      [{ noise: true, cut: 380, d: 0.04, g: 0.08 }, { noise: true, cut: 380, d: 0.04, at: 0.1, g: 0.08 }, { f: 196, d: 0.14, at: 0.1, type: 'triangle', g: 0.04 }],   // 노선: 덜컹덜컹
+    staff:      [{ f: 784, to: 1047, d: 0.06, type: 'sine', g: 0.035 }, { f: 988, d: 0.07, at: 0.07, type: 'sine', g: 0.03 }],                          // 연구원: 높고 짧게
+    upgrade:    [{ f: 392, d: 0.05, type: 'triangle', g: 0.045 }, { f: 523, d: 0.05, at: 0.05, type: 'triangle', g: 0.045 }, { f: 659, d: 0.12, at: 0.1, type: 'triangle', g: 0.045 }],   // 개조: 세 음이 올라간다
+    defense:    [{ noise: true, cut: 400, d: 0.06, g: 0.07 }, { f: 220, d: 0.1, type: 'triangle', g: 0.055 }],                                           // 방어 수단: 못 박는 소리
+    trait:      [{ f: 659, d: 0.06, type: 'sine', g: 0.04 }, { f: 784, d: 0.06, at: 0.05, type: 'sine', g: 0.04 }, { f: 988, d: 0.26, at: 0.1, type: 'sine', g: 0.04 }],          // 특성: 반짝
+    perk:       [{ f: 523, d: 0.35, type: 'sine', g: 0.035 }, { f: 659, d: 0.35, type: 'sine', g: 0.035 }, { f: 784, d: 0.35, type: 'sine', g: 0.035 }],  // 특전: 화음
+    cache:      [{ f: 660, to: 990, d: 0.12, type: 'sine', g: 0.045 }, { f: 523, d: 0.07, at: 0.1, type: 'triangle', g: 0.04 }],                            // 은닉처: 찾았다
     // 0.8.10: 하는 일마다 소리가 다르다
     sell:       [{ f: 784, d: 0.05, type: 'sine', g: 0.045 }, { f: 988, d: 0.13, at: 0.05, type: 'sine', g: 0.045 }],                                   // 동전 소리
     peak:       [{ f: 784, d: 0.05, type: 'sine', g: 0.045 }, { f: 988, d: 0.08, at: 0.05, type: 'sine', g: 0.045 }, { f: 880, to: 1175, d: 0.2, at: 0.13, type: 'sine', g: 0.045 }],

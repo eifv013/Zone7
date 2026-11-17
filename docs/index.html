@@ -973,7 +973,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.23</div>
+  <div class="boot-ver">7구역 알파 0.9.24</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1417,7 +1417,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.23 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.24 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1542,7 +1542,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
 </script>
 <script>
 /*
@@ -1561,6 +1561,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.24', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '소리와 균형',
+      items: [
+        '사는 것마다 소리가 달라요. 전에는 무엇을 사든 같은 소리였어요. 좌판은 나무 두드리는 소리, 기계는 철컥, 열차는 경적, 노선은 덜컹덜컹, 방어 수단은 못 박는 소리, 개조는 세 음이 올라가는 소리, 특성은 반짝, 특전은 화음이에요.',
+        '은닉처를 찾았을 때와 일손, 연구원을 살 때도 소리가 따로 있어요.',
+        '2구역 상품 값을 10배로 올렸어요. 전에는 2구역이 1구역보다 덜 벌어서 3구역 문값을 모을 수 없었어요.',
+        '3구역 문값을 1,000억으로 내렸어요.',
+        '항체 샘플을 주는 방식을 바꿨어요. 물자를 10배 더 모을 때마다 몇 개씩 더 받아요. 뒤 구역에서 샘플이 수천 개씩 쏟아지던 것이 수십~수백 개로 줄어요.'
+      ] },
     { ver: '알파 0.9.23', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '더 큰 소리',
       items: [
         '효과음을 두 배로 키웠어요. 음량 100에서도 작던 것이 커져요. 지금 음량이 크게 느껴지면 설정에서 줄여 주세요.'
@@ -2320,7 +2328,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
   // 2구역 거래
   var PRICE_STEP = 10;             // 시세가 바뀌는 간격(초)
   var PRICE_FLOOR = 0.5, PRICE_CEIL = 2;  // 기본 시세의 범위
-  var GOODS_VALUE = 60;            // 상품 하나의 기준 값(물자)
+  var GOODS_VALUE = 600;           // 상품 하나의 기준 값(물자)
   var GOODS_CAP_SECONDS = 60;      // 창고에 쌓아 둘 수 있는 양(좌판 생산의 초 수)
   var PRICE_HISTORY = 14;          // 시세판에 남겨 두는 지난 시세의 수
   var STREAK_MAX = 5;              // 연속 호가의 최대 단계
@@ -2461,7 +2469,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
   function zdexCount(state) { var n = 0; ZOMBIE_KINDS.forEach(function (z) { if (state.zdex[z.id] > 0) n++; }); return n; }
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
-  var RETREAT_K = 2, RETREAT_POW = 0.4;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
+  var RETREAT_K = 2, RETREAT_POW = 0.3;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
 
   /* ---------- 정의표 ---------- */
   /*
@@ -2511,7 +2519,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
           "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
           "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
           "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
-    { no: 3, name: '공단', kind: 'line', cost: 3e11, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
+    { no: 3, name: '공단', kind: 'line', cost: 1e11, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
       story: [
         { title: "멈춘 자리", text: [
           "3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 밖에서 잠근 게 아니다. 안에 있던 사람들이 잠그고, 다른 길로 나간 것이다.",
@@ -3838,22 +3846,30 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
 
   /* ---------- 철수와 영구 특성 ---------- */
   /** 지금 철수하면 얻는 항체 샘플 수. 이번 판에서 RETREAT_MIN 이상 모아야 1개 이상이 된다. */
-  function antibodiesOnRetreat(state) {
-    if (state.runEarned < RETREAT_MIN) return 0;
-    return Math.floor(RETREAT_K * Math.pow(state.runEarned / RETREAT_MIN, RETREAT_POW) * mods(state).antibody);
+  /*
+   * 항체 샘플은 "물자의 자릿수"를 따라 는다(0.9.24). 전에는 물자의 거듭제곱이라, 뒤 구역에서 물자가 폭발하면 샘플도 수천 개씩 쏟아졌다.
+   *   샘플 = RETREAT_K + ANTI_STEP × (자릿수)^ANTI_CURVE × 배수.   자릿수 = log10(이번 회차 누적 물자 ÷ RETREAT_MIN)
+   *   1억 → 2개, 1,000억 → 18개, 1,000경 → 90개쯤. 물자를 10배 더 모을 때마다 몇 개씩 더 받는 셈이다.
+   */
+  var ANTI_STEP = 4, ANTI_CURVE = 1.3;
+  function antibodiesFor(run, mult) {
+    if (!(run >= RETREAT_MIN)) return 0;
+    var d = Math.log(run / RETREAT_MIN) / Math.LN10;
+    return Math.floor((RETREAT_K + ANTI_STEP * Math.pow(d, ANTI_CURVE)) * mult);
   }
+  function antibodiesOnRetreat(state) { return antibodiesFor(state.runEarned, mods(state).antibody); }
   /**
-   * 항체 샘플을 하나 더 받으려면 이번 판 누적 물자가 얼마여야 하는지. (철수 화면이 "다음 샘플까지"를 알려 주는 데 쓴다)
-   * antibodiesOnRetreat 를 거꾸로 푼 값이다: 누적 = RETREAT_MIN × ((지금 받을 수 + 1) ÷ (K × 배수))^(1/POW)
+   * 항체 샘플을 하나 더 받으려면 이번 회차 누적 물자가 얼마여야 하는지. (철수 화면이 "다음 샘플까지"를 알려 주는 데 쓴다)
+   * 식을 거꾸로 풀지 않고 반씩 좁혀 가며 찾는다: 식이 바뀌어도 그대로 맞는다.
    */
   function nextAntibodyAt(state) {
-    var mult = RETREAT_K * mods(state).antibody, want = antibodiesOnRetreat(state) + 1;
+    var mult = mods(state).antibody, want = antibodiesOnRetreat(state) + 1;
     if (!(mult > 0)) return Infinity;
-    var need = Math.max(RETREAT_MIN, RETREAT_MIN * Math.pow(want / mult, 1 / RETREAT_POW));
-    // 소수점 오차로 문턱 바로 아래에 걸리지 않게 조금씩 올려 맞춘다
-    var probe = { runEarned: need, pendingPerks: [] }, guard = 0;
-    while (guard++ < 40 && Math.floor(mult * Math.pow(probe.runEarned / RETREAT_MIN, RETREAT_POW)) < want) probe.runEarned *= 1.0000001;
-    return probe.runEarned;
+    if (antibodiesFor(RETREAT_MIN, mult) >= want) return RETREAT_MIN;
+    var lo = Math.max(RETREAT_MIN, state.runEarned || 0), hi = lo * 2, guard = 0;
+    while (antibodiesFor(hi, mult) < want && guard++ < 400) hi *= 2;
+    for (var k = 0; k < 80; k++) { var mid = Math.sqrt(lo * hi); if (antibodiesFor(mid, mult) >= want) hi = mid; else lo = mid; }
+    return hi;
   }
   function canRetreat(state) { return antibodiesOnRetreat(state) >= 1 && !state.pendingPerks.length; }
   /**
@@ -4327,7 +4343,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
@@ -5784,6 +5800,18 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
     // 누르는 소리: 음이 위로 미끄러져 올라가는 '뽁' 소리(to 는 끝날 때의 주파수)
     click:      [{ f: 520, to: 840, d: 0.09, type: 'sine', g: 0.05 }],
     buy:        [{ f: 523, d: 0.07, type: 'sine', g: 0.045 }, { f: 659, d: 0.1, at: 0.06, type: 'sine', g: 0.045 }],
+    // 0.9.24: 사는 것마다 소리가 다르다. 전에는 무엇을 사든 buy 하나였다. 음색(사인·세모·잡음)과 음높이를 달리해서 귀로 구별되게 했다
+    stall:      [{ noise: true, cut: 400, d: 0.05, g: 0.06 }, { f: 392, d: 0.09, at: 0.02, type: 'triangle', g: 0.05 }],                                 // 좌판: 나무 두드리는 소리
+    hand:       [{ f: 330, d: 0.05, type: 'triangle', g: 0.05 }, { f: 330, d: 0.06, at: 0.09, type: 'triangle', g: 0.05 }],                              // 일손: 낮게 똑똑
+    machine:    [{ f: 180, to: 120, d: 0.12, type: 'triangle', g: 0.06 }, { noise: true, cut: 400, d: 0.05, at: 0.06, g: 0.07 }],                       // 기계: 철컥
+    train:      [{ f: 311, d: 0.3, type: 'triangle', g: 0.04 }, { f: 370, d: 0.3, type: 'triangle', g: 0.04 }],                                          // 열차: 두 음이 겹친 경적
+    route:      [{ noise: true, cut: 380, d: 0.04, g: 0.08 }, { noise: true, cut: 380, d: 0.04, at: 0.1, g: 0.08 }, { f: 196, d: 0.14, at: 0.1, type: 'triangle', g: 0.04 }],   // 노선: 덜컹덜컹
+    staff:      [{ f: 784, to: 1047, d: 0.06, type: 'sine', g: 0.035 }, { f: 988, d: 0.07, at: 0.07, type: 'sine', g: 0.03 }],                          // 연구원: 높고 짧게
+    upgrade:    [{ f: 392, d: 0.05, type: 'triangle', g: 0.045 }, { f: 523, d: 0.05, at: 0.05, type: 'triangle', g: 0.045 }, { f: 659, d: 0.12, at: 0.1, type: 'triangle', g: 0.045 }],   // 개조: 세 음이 올라간다
+    defense:    [{ noise: true, cut: 400, d: 0.06, g: 0.07 }, { f: 220, d: 0.1, type: 'triangle', g: 0.055 }],                                           // 방어 수단: 못 박는 소리
+    trait:      [{ f: 659, d: 0.06, type: 'sine', g: 0.04 }, { f: 784, d: 0.06, at: 0.05, type: 'sine', g: 0.04 }, { f: 988, d: 0.26, at: 0.1, type: 'sine', g: 0.04 }],          // 특성: 반짝
+    perk:       [{ f: 523, d: 0.35, type: 'sine', g: 0.035 }, { f: 659, d: 0.35, type: 'sine', g: 0.035 }, { f: 784, d: 0.35, type: 'sine', g: 0.035 }],  // 특전: 화음
+    cache:      [{ f: 660, to: 990, d: 0.12, type: 'sine', g: 0.045 }, { f: 523, d: 0.07, at: 0.1, type: 'triangle', g: 0.04 }],                            // 은닉처: 찾았다
     // 0.8.10: 하는 일마다 소리가 다르다
     sell:       [{ f: 784, d: 0.05, type: 'sine', g: 0.045 }, { f: 988, d: 0.13, at: 0.05, type: 'sine', g: 0.045 }],                                   // 동전 소리
     peak:       [{ f: 784, d: 0.05, type: 'sine', g: 0.045 }, { f: 988, d: 0.08, at: 0.05, type: 'sine', g: 0.045 }, { f: 880, to: 1175, d: 0.2, at: 0.13, type: 'sine', g: 0.045 }],
@@ -6680,7 +6708,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
       flashSweep(r.bonus);
       var box = $('search'); box.classList.remove('swept'); void box.offsetWidth; box.classList.add('swept');
       sfx('defended');
-    } else sfx(r.kind === 'cache' ? 'buy' : 'click');
+    } else sfx(r.kind === 'cache' ? 'cache' : 'click');
     render();
   }
   /** 구역 지도를 채운다: 구역마다 이름, 하는 일, 지금 버는 양(전체에서 차지하는 몫을 막대로). */
@@ -6959,12 +6987,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
     for (var bi = 0; bi <= C.PRICE_HISTORY; bi++) { var bar = el('i'); rows.bars.push(bar); $('board-bars').appendChild(bar); }
     for (var pi = 0; pi < C.STREAK_MAX; pi++) { var pip = el('i'); rows.pips.push(pip); $('streak-pips').appendChild(pip); }
     // 2구역: 좌판
-    rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls))); });
+    rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls)), 'stall'); });
     $('rows-z1').appendChild(rows.stall.btn);
     // 2구역: 시장의 일손(짐꾼, 호객꾼)
     rows.hands = {};
     C.HANDS.forEach(function (d) {
-      var r = buildRow(d, function () { buy(C.buyHand(state, d.id, qtyFor(C.maxHands(state, d.id), d.max - state.hands[d.id]))); });
+      var r = buildRow(d, function () { buy(C.buyHand(state, d.id, qtyFor(C.maxHands(state, d.id), d.max - state.hands[d.id])), 'hand'); });
       rows.hands[d.id] = r; $('rows-z1').appendChild(r.btn);
     });
     // 3구역: 기계 셋(위쪽의 흐름 칸과 아래쪽의 구매 줄)
@@ -6972,17 +7000,17 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
       var cell = el('div', 'line-cell'), name = el('div', 'line-name', d.name), cap = el('div', 'line-cap', '0'), track = el('div', 'track'), bar = el('i');
       track.appendChild(bar); cell.appendChild(name); cell.appendChild(cap); cell.appendChild(track);
       rows.cells[d.id] = { cell: cell, cap: cap, bar: bar }; $('line-flow').appendChild(cell);
-      var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - state.machines[d.id]))); });
+      var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - state.machines[d.id])), 'machine'); });
       rows.machines[d.id] = r; $('rows-z2').appendChild(r.btn);
     });
     // 4구역: 노선 현황(위쪽)과 열차·노선 구매 줄(아래쪽)
-    rows.train = buildRow({ id: 'train', name: '열차', desc: '화물을 싣고 다닌다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '대마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains))); });
+    rows.train = buildRow({ id: 'train', name: '열차', desc: '화물을 싣고 다닌다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '대마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains)), 'train'); });
     $('rows-z3').appendChild(rows.train.btn);
     C.ROUTES.forEach(function (d) {
       var row = el('div', 'rail-row'), name = el('div', 'rail-name', d.name), small = el('small'), side = el('div', 'rail-side'), track = el('div', 'track'), bar = el('i');
       name.appendChild(small); track.appendChild(bar); row.appendChild(name); row.appendChild(side); row.appendChild(track);
       rows.railRows[d.id] = { row: row, small: small, side: side, bar: bar }; $('rail-list').appendChild(row);
-      var r = buildRow({ id: 'route-' + d.id, name: d.name, desc: d.desc }, function () { buy(C.buyRoute(state, d.id)); });
+      var r = buildRow({ id: 'route-' + d.id, name: d.name, desc: d.desc }, function () { buy(C.buyRoute(state, d.id), 'route'); });
       rows.routes[d.id] = r; $('rows-z3').appendChild(r.btn);
     });
     // 5구역: 과제 세 장(위쪽)과 연구원 구매 줄(아래쪽). 과제 단추는 자리만 만들어 두고, 무엇을 보여 줄지는 그릴 때 정한다.
@@ -6998,15 +7026,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
       });
       rows.offers.push({ btn: b, name: name, desc: desc, cost: cost }); $('lab-offers').appendChild(b);
     })(k);
-    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수를 모은다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff))); });
+    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수를 모은다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff)), 'staff'); });
     $('rows-z4').appendChild(rows.staff.btn);
     C.UPGRADES.forEach(function (u) {
-      var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id)); });
+      var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id), 'upgrade'); });
       r.btn.classList.add('row-zone');
       rows.upgrades[u.id] = r; $(u.zone < 0 ? 'ups-wall' : 'ups-z' + u.zone).appendChild(r.btn);      // zone -1 은 방벽 개조
     });
     C.DEFENSES.forEach(function (d) {
-      var r = buildRow(d, function () { buy(C.buyDefense(state, d.id, qtyFor(C.maxDefenses(state, d.id), 1e6))); });
+      var r = buildRow(d, function () { buy(C.buyDefense(state, d.id, qtyFor(C.maxDefenses(state, d.id), 1e6)), 'defense'); });
       rows.defenses[d.id] = r; $('rows-wall').appendChild(r.btn);
       // 수리공의 자동 구입 목표: 누를 때마다 끔 → 10 → 25 → … 로 넘어간다
       var ab = el('button', 'auto-def'); ab.type = 'button'; ab.id = 'auto-def-' + d.id;
@@ -7014,7 +7042,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
       rows.autoDef = rows.autoDef || {}; rows.autoDef[d.id] = ab; $('auto-defs').appendChild(ab);
     });
     C.TRAITS.forEach(function (t) {
-      var r = buildRow(t, function () { var res = C.buyTrait(state, t.id); if (res.ok) { sfx('buy'); Store.save(); render(); } });
+      var r = buildRow(t, function () { var res = C.buyTrait(state, t.id); if (res.ok) { sfx('trait'); Store.save(); render(); } });
       rows.traits[t.id] = r; $('traits').appendChild(r.btn);
     });
     // 구역 목표 세 줄
@@ -7039,7 +7067,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
   /** 초를 글로: 정수면 '3초', 아니면 소수 한 자리 '2.6초'. */
   function secs(v) { return (Math.round(v * 10) / 10).toFixed(1).replace('.0', '') + '초'; }
   function qtyFor(max, room) { return Math.max(1, Math.min(Math.max(1, room), qtyMode === 'max' ? Math.max(1, max) : qtyMode)); }
-  function buy(result) { if (result && result.ok) { sfx('buy'); render(); } }
+  /** 구매 결과를 받아 소리를 내고 화면을 고친다. sound 는 무엇을 샀는지에 따라 다른 소리(없으면 시설을 살 때의 buy). */
+  function buy(result, sound) { if (result && result.ok) { sfx(sound || 'buy'); render(); } }
   /*
    * 패치노트: 버전마다 한 줄(버전, 날짜, 제목)만 보이고, 누르면 내용이 펼쳐진다.
    * 맨 위(최신 버전)는 처음부터 펼쳐져 있고 버전 옆에 노란 NEW 딱지가 붙는다.
@@ -7320,7 +7349,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.23";
         var r = C.choosePerk(state, id);
         if (!r.ok) return;
         log('특전을 골랐다: ' + def.name + ' Lv ' + r.level + '.', 'good');
-        sfx('buy'); Store.save(); render();
+        sfx('perk'); Store.save(); render();
       });
       box.appendChild(btn);
     });

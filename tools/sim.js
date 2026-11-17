@@ -60,7 +60,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const gain = C.antibodiesOnRetreat(s);
     // 철수: 판을 30분 넘게 했고, 얻을 항체가 지금까지의 절반 이상이며, 다음 살 것까지 stuck 초 넘게 걸릴 만큼 막혔을 때
     const isStuck = cheapest - s.supplies > C.productionPerSec(s) * stuck;
-    if (C.canRetreat(s) && s.runSeconds > 1800 && isStuck && gain >= Math.max(3, s.antibodyTotal * share)) { marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone }); s = C.retreat(s, 0).state; spendTraits(); }
+    if (C.canRetreat(s) && s.runSeconds > 1800 && isStuck && gain >= Math.max(3, s.antibodyTotal * share)) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone }); s = C.retreat(s, 0).state; spendTraits(); }
   };
   const gap = Math.max(0, 16 * 3600 / sessions - minutes * 60);
   while (day < days && !marks.some(m => m.gate)) {

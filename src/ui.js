@@ -784,7 +784,7 @@
       flashSweep(r.bonus);
       var box = $('search'); box.classList.remove('swept'); void box.offsetWidth; box.classList.add('swept');
       sfx('defended');
-    } else sfx(r.kind === 'cache' ? 'buy' : 'click');
+    } else sfx(r.kind === 'cache' ? 'cache' : 'click');
     render();
   }
   /** 구역 지도를 채운다: 구역마다 이름, 하는 일, 지금 버는 양(전체에서 차지하는 몫을 막대로). */
@@ -1063,12 +1063,12 @@
     for (var bi = 0; bi <= C.PRICE_HISTORY; bi++) { var bar = el('i'); rows.bars.push(bar); $('board-bars').appendChild(bar); }
     for (var pi = 0; pi < C.STREAK_MAX; pi++) { var pip = el('i'); rows.pips.push(pip); $('streak-pips').appendChild(pip); }
     // 2구역: 좌판
-    rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls))); });
+    rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls)), 'stall'); });
     $('rows-z1').appendChild(rows.stall.btn);
     // 2구역: 시장의 일손(짐꾼, 호객꾼)
     rows.hands = {};
     C.HANDS.forEach(function (d) {
-      var r = buildRow(d, function () { buy(C.buyHand(state, d.id, qtyFor(C.maxHands(state, d.id), d.max - state.hands[d.id]))); });
+      var r = buildRow(d, function () { buy(C.buyHand(state, d.id, qtyFor(C.maxHands(state, d.id), d.max - state.hands[d.id])), 'hand'); });
       rows.hands[d.id] = r; $('rows-z1').appendChild(r.btn);
     });
     // 3구역: 기계 셋(위쪽의 흐름 칸과 아래쪽의 구매 줄)
@@ -1076,17 +1076,17 @@
       var cell = el('div', 'line-cell'), name = el('div', 'line-name', d.name), cap = el('div', 'line-cap', '0'), track = el('div', 'track'), bar = el('i');
       track.appendChild(bar); cell.appendChild(name); cell.appendChild(cap); cell.appendChild(track);
       rows.cells[d.id] = { cell: cell, cap: cap, bar: bar }; $('line-flow').appendChild(cell);
-      var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - state.machines[d.id]))); });
+      var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - state.machines[d.id])), 'machine'); });
       rows.machines[d.id] = r; $('rows-z2').appendChild(r.btn);
     });
     // 4구역: 노선 현황(위쪽)과 열차·노선 구매 줄(아래쪽)
-    rows.train = buildRow({ id: 'train', name: '열차', desc: '화물을 싣고 다닌다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '대마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains))); });
+    rows.train = buildRow({ id: 'train', name: '열차', desc: '화물을 싣고 다닌다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '대마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains)), 'train'); });
     $('rows-z3').appendChild(rows.train.btn);
     C.ROUTES.forEach(function (d) {
       var row = el('div', 'rail-row'), name = el('div', 'rail-name', d.name), small = el('small'), side = el('div', 'rail-side'), track = el('div', 'track'), bar = el('i');
       name.appendChild(small); track.appendChild(bar); row.appendChild(name); row.appendChild(side); row.appendChild(track);
       rows.railRows[d.id] = { row: row, small: small, side: side, bar: bar }; $('rail-list').appendChild(row);
-      var r = buildRow({ id: 'route-' + d.id, name: d.name, desc: d.desc }, function () { buy(C.buyRoute(state, d.id)); });
+      var r = buildRow({ id: 'route-' + d.id, name: d.name, desc: d.desc }, function () { buy(C.buyRoute(state, d.id), 'route'); });
       rows.routes[d.id] = r; $('rows-z3').appendChild(r.btn);
     });
     // 5구역: 과제 세 장(위쪽)과 연구원 구매 줄(아래쪽). 과제 단추는 자리만 만들어 두고, 무엇을 보여 줄지는 그릴 때 정한다.
@@ -1102,15 +1102,15 @@
       });
       rows.offers.push({ btn: b, name: name, desc: desc, cost: cost }); $('lab-offers').appendChild(b);
     })(k);
-    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수를 모은다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff))); });
+    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수를 모은다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff)), 'staff'); });
     $('rows-z4').appendChild(rows.staff.btn);
     C.UPGRADES.forEach(function (u) {
-      var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id)); });
+      var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id), 'upgrade'); });
       r.btn.classList.add('row-zone');
       rows.upgrades[u.id] = r; $(u.zone < 0 ? 'ups-wall' : 'ups-z' + u.zone).appendChild(r.btn);      // zone -1 은 방벽 개조
     });
     C.DEFENSES.forEach(function (d) {
-      var r = buildRow(d, function () { buy(C.buyDefense(state, d.id, qtyFor(C.maxDefenses(state, d.id), 1e6))); });
+      var r = buildRow(d, function () { buy(C.buyDefense(state, d.id, qtyFor(C.maxDefenses(state, d.id), 1e6)), 'defense'); });
       rows.defenses[d.id] = r; $('rows-wall').appendChild(r.btn);
       // 수리공의 자동 구입 목표: 누를 때마다 끔 → 10 → 25 → … 로 넘어간다
       var ab = el('button', 'auto-def'); ab.type = 'button'; ab.id = 'auto-def-' + d.id;
@@ -1118,7 +1118,7 @@
       rows.autoDef = rows.autoDef || {}; rows.autoDef[d.id] = ab; $('auto-defs').appendChild(ab);
     });
     C.TRAITS.forEach(function (t) {
-      var r = buildRow(t, function () { var res = C.buyTrait(state, t.id); if (res.ok) { sfx('buy'); Store.save(); render(); } });
+      var r = buildRow(t, function () { var res = C.buyTrait(state, t.id); if (res.ok) { sfx('trait'); Store.save(); render(); } });
       rows.traits[t.id] = r; $('traits').appendChild(r.btn);
     });
     // 구역 목표 세 줄
@@ -1143,7 +1143,8 @@
   /** 초를 글로: 정수면 '3초', 아니면 소수 한 자리 '2.6초'. */
   function secs(v) { return (Math.round(v * 10) / 10).toFixed(1).replace('.0', '') + '초'; }
   function qtyFor(max, room) { return Math.max(1, Math.min(Math.max(1, room), qtyMode === 'max' ? Math.max(1, max) : qtyMode)); }
-  function buy(result) { if (result && result.ok) { sfx('buy'); render(); } }
+  /** 구매 결과를 받아 소리를 내고 화면을 고친다. sound 는 무엇을 샀는지에 따라 다른 소리(없으면 시설을 살 때의 buy). */
+  function buy(result, sound) { if (result && result.ok) { sfx(sound || 'buy'); render(); } }
   /*
    * 패치노트: 버전마다 한 줄(버전, 날짜, 제목)만 보이고, 누르면 내용이 펼쳐진다.
    * 맨 위(최신 버전)는 처음부터 펼쳐져 있고 버전 옆에 노란 NEW 딱지가 붙는다.
@@ -1424,7 +1425,7 @@
         var r = C.choosePerk(state, id);
         if (!r.ok) return;
         log('특전을 골랐다: ' + def.name + ' Lv ' + r.level + '.', 'good');
-        sfx('buy'); Store.save(); render();
+        sfx('perk'); Store.save(); render();
       });
       box.appendChild(btn);
     });
