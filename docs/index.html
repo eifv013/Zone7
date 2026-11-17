@@ -808,6 +808,12 @@ body { font-size: 15.5px; line-height: 1.55; }
 #back .boot-track { width: min(280px, 72vw); height: 18px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
 #back #back-bar { height: 100%; width: 0; background: repeating-linear-gradient(-45deg, #f0b400 0 8px, #17180f 8px 16px); }
 #back #back-text { margin: 12px 0 0; font: 600 13px/1.5 var(--font-mono); }
+/* 도트 화면의 이름표: 주인공 머리 위와 동물 친구 발밑. 작고 반투명해서 그림을 가리지 않는다 */
+.scene-wrap { position: relative; }
+.tag { position: absolute; transform: translateX(-50%); padding: 0 5px; border-radius: 99px; font: 600 10px/1.5 var(--font-body); white-space: nowrap; pointer-events: none; transition: left .1s linear; }
+.tag[hidden] { display: none; }
+.tag-hero { top: 52%; background: rgba(23, 24, 15, .72); color: #f0b400; }
+.tag-pet { top: 86%; background: rgba(23, 24, 15, .55); color: #e6e5db; font-weight: 500; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -823,7 +829,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.4</div>
+  <div class="boot-ver">7구역 알파 0.8.5</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1002,7 +1008,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
     </div>
   </section>
-  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas></div>
+  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="tag tag-hero" id="tag-hero" aria-hidden="true" hidden></span><span class="tag tag-pet" id="tag-pet" aria-hidden="true" hidden></span></div>
   <div class="col col-main">
     <div class="notice" id="notice" role="status" hidden>
       <p id="notice-text"></p>
@@ -1204,6 +1210,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="qty" role="group" aria-label="숫자 표기"><button type="button" data-pref="notation" data-value="kr">1.23억</button><button type="button" data-pref="notation" data-value="sci">1.23e8</button></div></div>
       <div class="set-row"><span class="label">새 일지</span>
         <div class="qty" role="group" aria-label="새 일지가 열릴 때"><button type="button" data-pref="storyPop" data-value="on">바로 띄우기</button><button type="button" data-pref="storyPop" data-value="off">조용히 쌓기</button></div></div>
+      <div class="set-row"><span class="label">이름표</span>
+        <div class="qty" role="group" aria-label="도트 화면의 이름표"><button type="button" data-pref="names" data-value="on">보이기</button><button type="button" data-pref="names" data-value="off">숨기기</button></div></div>
       <div class="set-row"><span class="label">화면 흔들림</span>
         <div class="qty" role="group" aria-label="화면 흔들림"><button type="button" data-pref="shake" data-value="on">켬</button><button type="button" data-pref="shake" data-value="off">끔</button></div></div>
     </div>
@@ -1218,7 +1226,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
-    <p class="ver">7구역 알파 0.8.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1342,7 +1350,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.5";
 </script>
 <script>
 /*
@@ -1361,6 +1369,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.5', date: '2026-11-17', at: '2026-11-17 14:40:00', title: '이름표, 부드러운 소리, 거간꾼 손질',
+      items: [
+        '도트 화면에 이름표가 생겼어요. 주인공 이름은 머리 위에, 동물 친구 이름은 발밑에 따라다녀요. 밤 싸움 중에는 숨고, 설정에서 끌 수 있어요.',
+        '효과음을 부드럽게 다듬었어요. 날카롭던 음을 낮추고 쇳소리를 걸러 냈어요.',
+        '거간꾼이 이제 시간 간격으로 팔아요. 시세가 좋은 동안 10초마다 팔고, 개조를 올릴 때마다 2초씩 빨라져요(2초까지). 운영 화면과 개조 칸에 몇 초인지 나와요.',
+        '자동 개조의 값을 올렸어요: 순찰조, 거간꾼, 자동 제어반, 자동 신호. 이미 산 것은 그대로예요.'
+      ] },
     { ver: '알파 0.8.4', date: '2026-11-17', at: '2026-11-17 14:00:00', title: '돌아오면 정산 화면이 나와요',
       items: [
         '게임을 켜 둔 채 다른 앱에 다녀오면, 보상 창 앞에 짧은 정산 화면이 나와요. 오래 비울수록 조금 더 길어요(1~3초).',
@@ -2165,10 +2180,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
-    { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 뒤진다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 60, growth: 6, max: 5 },
-    { id: 'broker',  zone: 1, name: '거간꾼',    desc: '알아서 판다 · 시세가 평균 이상이거나 창고가 찼을 때', key: 'broker', per: 1, baseCost: 2e5, growth: 1, max: 1 },
-    { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 3e12, growth: 1, max: 1 },
-    { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 2e19, growth: 1, max: 1 }
+    { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 뒤진다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
+    { id: 'broker',  zone: 1, name: '거간꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
+    { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 5e13, growth: 1, max: 1 },
+    { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 5e20, growth: 1, max: 1 }
   ];
   /*
    * 특전: 구역의 목표를 달성할 때마다 셋 중 하나를 고른다. 이번 판에만 유효하고 철수하면 사라진다.
@@ -2247,6 +2262,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
       // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
       sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
       // 2구역 거래
+      sellClock: 0,                        // 거간꾼이 마지막으로 판 뒤 흐른 시간(초)
       hands: { porter: 0, crier: 0 },      // 시장의 일손(HANDS)
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
@@ -2305,6 +2321,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
     s.bestZone = clamp(Math.max(safeCount(raw.bestZone), s.zone), 0, ZONES.length - 1);
     s.gate = !!raw.gate;
     s.stalls = Math.min(s.stalls, COUNT_MAX);
+    s.sellClock = clamp(safeNum(raw.sellClock, 0), 0, SELL_AUTO_SECONDS);
     HANDS.forEach(function (d) { s.hands[d.id] = clamp(safeCount(raw.hands && typeof raw.hands === 'object' ? raw.hands[d.id] : 0), 0, d.max); });
     s.day = Math.max(1, safeCount(raw.day));
     s.dayClock = clamp(safeNum(raw.dayClock, 0), 0, DAY_SECONDS);
@@ -2551,7 +2568,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
   /** 2구역이 가만히 둘 때 초당 버는 물자(평균 시세 기준). 화면의 '초당' 표시와 자리 비움 계산에 쓴다. */
   function tradeRate(state) { return goodsRate(state) * goodsValue(state) * priceRange(state).mean; }
-  var AUTO_SELL_AT = 0.25;      // 자동 판매는 창고가 이만큼 찼을 때부터 판다(너무 잘게 팔지 않게)
+  var SELL_AUTO_SECONDS = 10;   // 거간꾼 1레벨이 한 번 파는 간격(초)
+  /** 거간꾼이 한 번 파는 간격(초). 레벨마다 2초씩 줄어든다(2초까지). 자동화 특성만 있으면 10초. */
+  function sellInterval(state) { return Math.max(2, SELL_AUTO_SECONDS - 2 * Math.max(0, mods(state).broker - 1)); }
   function stepTrade(state, dt, rng, events) {
     if (!zoneOpen(state, 1)) return;
     state.priceClock += dt;
@@ -2565,9 +2584,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
     }
     var cap = goodsCap(state);
     state.goods = Math.min(cap, state.goods + goodsRate(state) * dt);
-    if (!state.autoSell || !autoOn(state, 1) || !(state.goods > 0)) return;
-    // 자동 판매(거간꾼): 시세가 평균 이상이면 팔고, 낮은 시세는 기다린다. 창고가 차면 시세와 상관없이 판다(버려지지 않게).
-    var full = state.goods >= cap, good = state.price >= priceRange(state).mean && state.goods >= cap * AUTO_SELL_AT;
+    if (!state.autoSell || !autoOn(state, 1)) return;
+    // 자동 판매(거간꾼): 시세가 평균 이상인 동안 sellInterval 초마다 한 번씩 판다. 낮은 시세에서는 기다린다(시계는 다 찬 채로 멈춘다).
+    // 창고가 차면 시세와 상관없이 판다(버려지지 않게).
+    var every = sellInterval(state);
+    state.sellClock = Math.min(every, state.sellClock + dt);
+    if (!(state.goods > 0)) return;
+    var full = state.goods >= cap, good = state.price >= priceRange(state).mean && state.sellClock >= every;
+    if (full || good) state.sellClock = 0;
     if (full || good) { var sold = sellGoods(state, true); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
 
@@ -3442,7 +3466,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, AUTO_SELL_AT: AUTO_SELL_AT, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
@@ -4892,17 +4916,23 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
 
   var MAX_GAIN = 0.15; // 어떤 소리도 이보다 크게 내지 않는다(방치해 두는 게임이라 작게)
 
+  /*
+   * 0.8.5: 소리를 부드럽게 다듬었다. 날카롭게 들리던 네모파·톱니파를 빼고 사인파·세모파만 쓴다.
+   *   높은 음(1200Hz 이상)은 한 옥타브쯤 내렸고, 모든 소리는 SOFT_CUT 아래만 남기는 거름막을 거친다.
+   */
+  var SOFT_CUT = 2400;   // 이 주파수(Hz) 위의 소리는 걸러 낸다(쇳소리 제거)
+  var ATTACK = 0.02;     // 소리가 올라오는 시간(초). 짧을수록 딱딱하게 들린다
   var SOUNDS = {
-    click:      [{ f: 520, d: 0.04, type: 'square', g: 0.035 }],
-    buy:        [{ f: 660, d: 0.05, g: 0.05 }, { f: 880, d: 0.07, at: 0.05, g: 0.05 }],
-    dusk:       [{ f: 392, d: 0.28, type: 'sawtooth', g: 0.03 }, { f: 311, d: 0.4, at: 0.3, type: 'sawtooth', g: 0.03 }],
-    defended:   [{ f: 523, d: 0.08, g: 0.06 }, { f: 659, d: 0.08, at: 0.09, g: 0.06 }, { f: 784, d: 0.18, at: 0.18, g: 0.06 }],
-    breached:   [{ noise: true, cut: 320, d: 0.5, g: 0.14 }, { f: 98, d: 0.5, type: 'sawtooth', g: 0.06 }],
-    signal:     [{ f: 1200, d: 0.04, g: 0.04 }, { f: 1500, d: 0.04, at: 0.08, g: 0.04 }, { f: 1200, d: 0.04, at: 0.16, g: 0.04 }],
-    expedition: [{ f: 440, d: 0.08, g: 0.05 }, { f: 587, d: 0.14, at: 0.1, g: 0.05 }],
-    story:      [{ f: 330, d: 0.5, type: 'sine', g: 0.06 }, { f: 247, d: 0.8, at: 0.3, type: 'sine', g: 0.05 }],
-    type:       [{ f: 1700, d: 0.012, type: 'square', g: 0.012 }],
-    relocate:   [{ f: 294, d: 0.12, g: 0.05 }, { f: 370, d: 0.12, at: 0.13, g: 0.05 }, { f: 440, d: 0.12, at: 0.26, g: 0.05 }, { f: 587, d: 0.3, at: 0.39, g: 0.05 }]
+    click:      [{ f: 392, d: 0.06, type: 'sine', g: 0.04 }],
+    buy:        [{ f: 523, d: 0.07, type: 'sine', g: 0.045 }, { f: 659, d: 0.1, at: 0.06, type: 'sine', g: 0.045 }],
+    dusk:       [{ f: 294, d: 0.35, type: 'triangle', g: 0.03 }, { f: 233, d: 0.5, at: 0.3, type: 'triangle', g: 0.03 }],
+    defended:   [{ f: 392, d: 0.1, type: 'sine', g: 0.05 }, { f: 494, d: 0.1, at: 0.1, type: 'sine', g: 0.05 }, { f: 587, d: 0.24, at: 0.2, type: 'sine', g: 0.05 }],
+    breached:   [{ noise: true, cut: 260, d: 0.55, g: 0.12 }, { f: 82, d: 0.55, type: 'triangle', g: 0.07 }],
+    signal:     [{ f: 784, d: 0.07, type: 'sine', g: 0.035 }, { f: 988, d: 0.07, at: 0.1, type: 'sine', g: 0.035 }, { f: 784, d: 0.09, at: 0.2, type: 'sine', g: 0.035 }],
+    expedition: [{ f: 349, d: 0.1, type: 'sine', g: 0.045 }, { f: 466, d: 0.16, at: 0.1, type: 'sine', g: 0.045 }],
+    story:      [{ f: 294, d: 0.55, type: 'sine', g: 0.05 }, { f: 220, d: 0.85, at: 0.3, type: 'sine', g: 0.045 }],
+    type:       [{ f: 620, d: 0.025, type: 'sine', g: 0.009 }],
+    relocate:   [{ f: 262, d: 0.14, type: 'sine', g: 0.045 }, { f: 330, d: 0.14, at: 0.13, type: 'sine', g: 0.045 }, { f: 392, d: 0.14, at: 0.26, type: 'sine', g: 0.045 }, { f: 523, d: 0.32, at: 0.39, type: 'sine', g: 0.045 }]
   };
 
   var enabled = true, ctx = null, unlocked = false;
@@ -4934,7 +4964,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
     var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.min(MAX_GAIN, n.g || 0.05), src;
     // 딸깍거리는 잡음을 막으려고 음량을 짧게 올렸다가 서서히 내린다
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(peak, start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(ATTACK, n.d / 2));
     gain.gain.exponentialRampToValueAtTime(0.0001, start + n.d);
     if (n.noise) {
       var len = Math.max(1, Math.floor(ctx.sampleRate * n.d)), buf = ctx.createBuffer(1, len, ctx.sampleRate), data = buf.getChannelData(0);
@@ -4946,7 +4976,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
       src = ctx.createOscillator(); src.type = n.type || 'triangle'; src.frequency.setValueAtTime(n.f, start);
       src.connect(gain);
     }
-    gain.connect(ctx.destination);
+    // 마지막에 높은 소리를 한 번 더 걸러서 부드럽게 한다
+    var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = SOFT_CUT;
+    gain.connect(soft); soft.connect(ctx.destination);
     src.start(start); src.stop(start + n.d + 0.02);
   }
 
@@ -4966,7 +4998,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
     } catch (e) { return false; }
   }
 
-  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
+  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
 });
 
 </script>
@@ -5126,9 +5158,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
    * 설정: 기기에 따로 기억한다(저장 코드에는 들어가지 않는다). 모르는 값은 기본값으로 읽는다.
    *   vibrate 진동, notation 숫자 표기, storyPop 새 일지를 바로 띄울지, shake 화면 흔들림
    */
-  var PREF_DEFAULTS = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on' };
-  var PREF_VALUES = { vibrate: ['on', 'off'], notation: ['kr', 'sci'], storyPop: ['on', 'off'], shake: ['on', 'off'] };
-  var prefs = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on' };
+  var PREF_DEFAULTS = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on', names: 'on' };
+  var PREF_VALUES = { vibrate: ['on', 'off'], notation: ['kr', 'sci'], storyPop: ['on', 'off'], shake: ['on', 'off'], names: ['on', 'off'] };
+  var prefs = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on', names: 'on' };
   function setPref(name, value, keep) {
     if (!PREF_VALUES[name]) return;
     prefs[name] = PREF_VALUES[name].indexOf(value) >= 0 ? value : PREF_DEFAULTS[name];
@@ -5142,6 +5174,23 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
     document.querySelectorAll('[data-pref]').forEach(function (b) {
       b.addEventListener('click', function () { setPref(b.getAttribute('data-pref'), b.getAttribute('data-value'), true); buzz(12); });
     });
+  }
+  /*
+   * 이름표: 도트 화면은 너무 작아서(80칸) 글자를 그릴 수 없으므로, 화면 위에 글자를 겹쳐 놓고 주인공을 따라다니게 한다.
+   *   주인공 이름은 머리 위에, 동물 친구 이름은 발밑(땅 아래쪽)에 둔다. 밤 싸움 중이거나 설정에서 끄면 숨긴다.
+   *   자리는 도트 화면 모델의 주인공 위치(hero.x)를 화면 너비에 대한 비율로 옮긴 것이다.
+   */
+  function renderNames() {
+    var heroTag = $('tag-hero'), petTag = $('tag-pet');
+    if (!heroTag || !petTag) return;
+    var m = scene && scene.model, show = prefs.names === 'on' && m && m.W > 0 && !C.dayPhase(state).phase.match(/battle/);
+    var pet = show ? C.petInfo(state) : null;
+    heroTag.hidden = !show; petTag.hidden = !pet;
+    if (!show) return;
+    var x = (m.hero.x + 4) / m.W * 100, back = m.hero.face > 0 ? -7 : 7;
+    setText(heroTag, state.heroName || '생존자');
+    heroTag.style.left = Math.max(6, Math.min(94, x)).toFixed(1) + '%';
+    if (pet) { setText(petTag, pet.name); petTag.style.left = Math.max(6, Math.min(94, x + back / m.W * 100)).toFixed(1) + '%'; }
   }
   /** 짧은 진동. 설정에서 껐거나 기기가 지원하지 않으면 아무 일도 하지 않는다. */
   function buzz(ms) { try { if (prefs.vibrate === 'on' && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
@@ -5984,6 +6033,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
 
   /* ---------- 그리기 ---------- */
   function render() {
+    renderNames();
     var m = C.mods(state), per = C.productionPerSec(state);
     setText($('supplies'), fmt(state.supplies));
     setText($('pps'), '초당 +' + fmt(per) + (state.buff ? ' · 지원 ×' + state.buff.mult + ' (' + Math.ceil(state.buff.left) + '초)' : ''));
@@ -6171,13 +6221,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
       $('auto-sell').checked = state.autoSell;
       // 자동 판매: 거간꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
       var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= C.priceRange(state).mean;
-      var need = cap * (goodPrice ? C.AUTO_SELL_AT : 1);
+      var sellEvery = C.sellInterval(state);
       $('auto-sell-row').hidden = !broker;
       $('sell-bar').hidden = !selling;
-      fill($('sell-bar'), selling && need > 0 ? state.goods / need : 0);
+      // 시세가 좋을 때는 다음 판매까지의 시간, 낮을 때는 창고가 찰 때까지(회색)
+      fill($('sell-bar'), !selling ? 0 : goodPrice ? state.sellClock / sellEvery : (cap > 0 ? state.goods / cap : 0));
       $('sell-bar').classList.toggle('wait', !goodPrice);
       setText($('sell-auto'), !broker ? '개조에서 거간꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
-        : goodPrice ? '시세가 평균 이상이에요. 조금만 쌓이면 바로 팔아요.' : '시세가 낮아서 기다려요. 창고가 차면 그냥 팔아요.');
+        : goodPrice ? '시세가 좋아요 · 거간꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
@@ -6296,6 +6347,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.4";
         var probe = Object.create(state); probe.upgrades = Object.create(state.upgrades); probe.upgrades.patrol = lv + 1;
         var nowS = secs(C.sweepInterval(state)), nextS = secs(C.sweepInterval(probe));
         infoText = !lv ? '사면 ' + nextS + '마다 한 칸' : lv >= u.max ? '지금 ' + nowS + '마다 한 칸' : '지금 ' + nowS + ' → ' + nextS;
+      }
+      if (u.id === 'broker') {             // 거간꾼: 몇 초마다 파는지(지금 → 산 뒤)
+        var bp = Object.create(state); bp.upgrades = Object.create(state.upgrades); bp.upgrades.broker = lv + 1;
+        var bNow = secs(C.sellInterval(state)), bNext = secs(C.sellInterval(bp));
+        infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '지금 ' + bNow + '마다 판매' : '지금 ' + bNow + ' → ' + bNext;
       }
       setText(r.info, infoText);
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');

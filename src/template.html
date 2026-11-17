@@ -796,6 +796,12 @@ body { font-size: 15.5px; line-height: 1.55; }
 #back .boot-track { width: min(280px, 72vw); height: 18px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
 #back #back-bar { height: 100%; width: 0; background: repeating-linear-gradient(-45deg, #f0b400 0 8px, #17180f 8px 16px); }
 #back #back-text { margin: 12px 0 0; font: 600 13px/1.5 var(--font-mono); }
+/* 도트 화면의 이름표: 주인공 머리 위와 동물 친구 발밑. 작고 반투명해서 그림을 가리지 않는다 */
+.scene-wrap { position: relative; }
+.tag { position: absolute; transform: translateX(-50%); padding: 0 5px; border-radius: 99px; font: 600 10px/1.5 var(--font-body); white-space: nowrap; pointer-events: none; transition: left .1s linear; }
+.tag[hidden] { display: none; }
+.tag-hero { top: 52%; background: rgba(23, 24, 15, .72); color: #f0b400; }
+.tag-pet { top: 86%; background: rgba(23, 24, 15, .55); color: #e6e5db; font-weight: 500; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -811,7 +817,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.4</div>
+  <div class="boot-ver">7구역 알파 0.8.5</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -855,7 +861,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
     </div>
   </section>
-  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas></div>
+  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="tag tag-hero" id="tag-hero" aria-hidden="true" hidden></span><span class="tag tag-pet" id="tag-pet" aria-hidden="true" hidden></span></div>
   <div class="col col-main">
     <div class="notice" id="notice" role="status" hidden>
       <p id="notice-text"></p>
@@ -1057,6 +1063,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="qty" role="group" aria-label="숫자 표기"><button type="button" data-pref="notation" data-value="kr">1.23억</button><button type="button" data-pref="notation" data-value="sci">1.23e8</button></div></div>
       <div class="set-row"><span class="label">새 일지</span>
         <div class="qty" role="group" aria-label="새 일지가 열릴 때"><button type="button" data-pref="storyPop" data-value="on">바로 띄우기</button><button type="button" data-pref="storyPop" data-value="off">조용히 쌓기</button></div></div>
+      <div class="set-row"><span class="label">이름표</span>
+        <div class="qty" role="group" aria-label="도트 화면의 이름표"><button type="button" data-pref="names" data-value="on">보이기</button><button type="button" data-pref="names" data-value="off">숨기기</button></div></div>
       <div class="set-row"><span class="label">화면 흔들림</span>
         <div class="qty" role="group" aria-label="화면 흔들림"><button type="button" data-pref="shake" data-value="on">켬</button><button type="button" data-pref="shake" data-value="off">끔</button></div></div>
     </div>
@@ -1071,7 +1079,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
-    <p class="ver">7구역 알파 0.8.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

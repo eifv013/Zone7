@@ -42,3 +42,13 @@ test('켜고 끄기는 불리언 true 만 켜짐으로 인정한다', () => {
   assert.equal(Sound.setEnabled('yes'), false);
   assert.equal(Sound.setEnabled(true), true);
 });
+
+test('소리는 부드러운 파형만 쓰고, 높은 음은 거름막 아래에 있다(0.8.5)', () => {
+  const S = require('../src/sound.js');
+  for (const [name, notes] of Object.entries(S.SOUNDS)) for (const n of notes) {
+    if (n.noise) { assert.ok(n.cut <= 400, name); continue; }
+    assert.ok(['sine', 'triangle'].includes(n.type), name + ': ' + n.type);
+    assert.ok(n.f <= 1000 && n.f < S.SOFT_CUT, name + ': ' + n.f);
+    assert.ok(n.g <= S.MAX_GAIN, name);
+  }
+});

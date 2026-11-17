@@ -17,17 +17,23 @@
 
   var MAX_GAIN = 0.15; // 어떤 소리도 이보다 크게 내지 않는다(방치해 두는 게임이라 작게)
 
+  /*
+   * 0.8.5: 소리를 부드럽게 다듬었다. 날카롭게 들리던 네모파·톱니파를 빼고 사인파·세모파만 쓴다.
+   *   높은 음(1200Hz 이상)은 한 옥타브쯤 내렸고, 모든 소리는 SOFT_CUT 아래만 남기는 거름막을 거친다.
+   */
+  var SOFT_CUT = 2400;   // 이 주파수(Hz) 위의 소리는 걸러 낸다(쇳소리 제거)
+  var ATTACK = 0.02;     // 소리가 올라오는 시간(초). 짧을수록 딱딱하게 들린다
   var SOUNDS = {
-    click:      [{ f: 520, d: 0.04, type: 'square', g: 0.035 }],
-    buy:        [{ f: 660, d: 0.05, g: 0.05 }, { f: 880, d: 0.07, at: 0.05, g: 0.05 }],
-    dusk:       [{ f: 392, d: 0.28, type: 'sawtooth', g: 0.03 }, { f: 311, d: 0.4, at: 0.3, type: 'sawtooth', g: 0.03 }],
-    defended:   [{ f: 523, d: 0.08, g: 0.06 }, { f: 659, d: 0.08, at: 0.09, g: 0.06 }, { f: 784, d: 0.18, at: 0.18, g: 0.06 }],
-    breached:   [{ noise: true, cut: 320, d: 0.5, g: 0.14 }, { f: 98, d: 0.5, type: 'sawtooth', g: 0.06 }],
-    signal:     [{ f: 1200, d: 0.04, g: 0.04 }, { f: 1500, d: 0.04, at: 0.08, g: 0.04 }, { f: 1200, d: 0.04, at: 0.16, g: 0.04 }],
-    expedition: [{ f: 440, d: 0.08, g: 0.05 }, { f: 587, d: 0.14, at: 0.1, g: 0.05 }],
-    story:      [{ f: 330, d: 0.5, type: 'sine', g: 0.06 }, { f: 247, d: 0.8, at: 0.3, type: 'sine', g: 0.05 }],
-    type:       [{ f: 1700, d: 0.012, type: 'square', g: 0.012 }],
-    relocate:   [{ f: 294, d: 0.12, g: 0.05 }, { f: 370, d: 0.12, at: 0.13, g: 0.05 }, { f: 440, d: 0.12, at: 0.26, g: 0.05 }, { f: 587, d: 0.3, at: 0.39, g: 0.05 }]
+    click:      [{ f: 392, d: 0.06, type: 'sine', g: 0.04 }],
+    buy:        [{ f: 523, d: 0.07, type: 'sine', g: 0.045 }, { f: 659, d: 0.1, at: 0.06, type: 'sine', g: 0.045 }],
+    dusk:       [{ f: 294, d: 0.35, type: 'triangle', g: 0.03 }, { f: 233, d: 0.5, at: 0.3, type: 'triangle', g: 0.03 }],
+    defended:   [{ f: 392, d: 0.1, type: 'sine', g: 0.05 }, { f: 494, d: 0.1, at: 0.1, type: 'sine', g: 0.05 }, { f: 587, d: 0.24, at: 0.2, type: 'sine', g: 0.05 }],
+    breached:   [{ noise: true, cut: 260, d: 0.55, g: 0.12 }, { f: 82, d: 0.55, type: 'triangle', g: 0.07 }],
+    signal:     [{ f: 784, d: 0.07, type: 'sine', g: 0.035 }, { f: 988, d: 0.07, at: 0.1, type: 'sine', g: 0.035 }, { f: 784, d: 0.09, at: 0.2, type: 'sine', g: 0.035 }],
+    expedition: [{ f: 349, d: 0.1, type: 'sine', g: 0.045 }, { f: 466, d: 0.16, at: 0.1, type: 'sine', g: 0.045 }],
+    story:      [{ f: 294, d: 0.55, type: 'sine', g: 0.05 }, { f: 220, d: 0.85, at: 0.3, type: 'sine', g: 0.045 }],
+    type:       [{ f: 620, d: 0.025, type: 'sine', g: 0.009 }],
+    relocate:   [{ f: 262, d: 0.14, type: 'sine', g: 0.045 }, { f: 330, d: 0.14, at: 0.13, type: 'sine', g: 0.045 }, { f: 392, d: 0.14, at: 0.26, type: 'sine', g: 0.045 }, { f: 523, d: 0.32, at: 0.39, type: 'sine', g: 0.045 }]
   };
 
   var enabled = true, ctx = null, unlocked = false;
@@ -59,7 +65,7 @@
     var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.min(MAX_GAIN, n.g || 0.05), src;
     // 딸깍거리는 잡음을 막으려고 음량을 짧게 올렸다가 서서히 내린다
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(peak, start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(ATTACK, n.d / 2));
     gain.gain.exponentialRampToValueAtTime(0.0001, start + n.d);
     if (n.noise) {
       var len = Math.max(1, Math.floor(ctx.sampleRate * n.d)), buf = ctx.createBuffer(1, len, ctx.sampleRate), data = buf.getChannelData(0);
@@ -71,7 +77,9 @@
       src = ctx.createOscillator(); src.type = n.type || 'triangle'; src.frequency.setValueAtTime(n.f, start);
       src.connect(gain);
     }
-    gain.connect(ctx.destination);
+    // 마지막에 높은 소리를 한 번 더 걸러서 부드럽게 한다
+    var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = SOFT_CUT;
+    gain.connect(soft); soft.connect(ctx.destination);
     src.start(start); src.stop(start + n.d + 0.02);
   }
 
@@ -91,5 +99,5 @@
     } catch (e) { return false; }
   }
 
-  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
+  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
 });

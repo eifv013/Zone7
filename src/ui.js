@@ -153,9 +153,9 @@
    * 설정: 기기에 따로 기억한다(저장 코드에는 들어가지 않는다). 모르는 값은 기본값으로 읽는다.
    *   vibrate 진동, notation 숫자 표기, storyPop 새 일지를 바로 띄울지, shake 화면 흔들림
    */
-  var PREF_DEFAULTS = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on' };
-  var PREF_VALUES = { vibrate: ['on', 'off'], notation: ['kr', 'sci'], storyPop: ['on', 'off'], shake: ['on', 'off'] };
-  var prefs = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on' };
+  var PREF_DEFAULTS = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on', names: 'on' };
+  var PREF_VALUES = { vibrate: ['on', 'off'], notation: ['kr', 'sci'], storyPop: ['on', 'off'], shake: ['on', 'off'], names: ['on', 'off'] };
+  var prefs = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on', names: 'on' };
   function setPref(name, value, keep) {
     if (!PREF_VALUES[name]) return;
     prefs[name] = PREF_VALUES[name].indexOf(value) >= 0 ? value : PREF_DEFAULTS[name];
@@ -169,6 +169,23 @@
     document.querySelectorAll('[data-pref]').forEach(function (b) {
       b.addEventListener('click', function () { setPref(b.getAttribute('data-pref'), b.getAttribute('data-value'), true); buzz(12); });
     });
+  }
+  /*
+   * 이름표: 도트 화면은 너무 작아서(80칸) 글자를 그릴 수 없으므로, 화면 위에 글자를 겹쳐 놓고 주인공을 따라다니게 한다.
+   *   주인공 이름은 머리 위에, 동물 친구 이름은 발밑(땅 아래쪽)에 둔다. 밤 싸움 중이거나 설정에서 끄면 숨긴다.
+   *   자리는 도트 화면 모델의 주인공 위치(hero.x)를 화면 너비에 대한 비율로 옮긴 것이다.
+   */
+  function renderNames() {
+    var heroTag = $('tag-hero'), petTag = $('tag-pet');
+    if (!heroTag || !petTag) return;
+    var m = scene && scene.model, show = prefs.names === 'on' && m && m.W > 0 && !C.dayPhase(state).phase.match(/battle/);
+    var pet = show ? C.petInfo(state) : null;
+    heroTag.hidden = !show; petTag.hidden = !pet;
+    if (!show) return;
+    var x = (m.hero.x + 4) / m.W * 100, back = m.hero.face > 0 ? -7 : 7;
+    setText(heroTag, state.heroName || '생존자');
+    heroTag.style.left = Math.max(6, Math.min(94, x)).toFixed(1) + '%';
+    if (pet) { setText(petTag, pet.name); petTag.style.left = Math.max(6, Math.min(94, x + back / m.W * 100)).toFixed(1) + '%'; }
   }
   /** 짧은 진동. 설정에서 껐거나 기기가 지원하지 않으면 아무 일도 하지 않는다. */
   function buzz(ms) { try { if (prefs.vibrate === 'on' && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
@@ -1011,6 +1028,7 @@
 
   /* ---------- 그리기 ---------- */
   function render() {
+    renderNames();
     var m = C.mods(state), per = C.productionPerSec(state);
     setText($('supplies'), fmt(state.supplies));
     setText($('pps'), '초당 +' + fmt(per) + (state.buff ? ' · 지원 ×' + state.buff.mult + ' (' + Math.ceil(state.buff.left) + '초)' : ''));
@@ -1198,13 +1216,14 @@
       $('auto-sell').checked = state.autoSell;
       // 자동 판매: 거간꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
       var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= C.priceRange(state).mean;
-      var need = cap * (goodPrice ? C.AUTO_SELL_AT : 1);
+      var sellEvery = C.sellInterval(state);
       $('auto-sell-row').hidden = !broker;
       $('sell-bar').hidden = !selling;
-      fill($('sell-bar'), selling && need > 0 ? state.goods / need : 0);
+      // 시세가 좋을 때는 다음 판매까지의 시간, 낮을 때는 창고가 찰 때까지(회색)
+      fill($('sell-bar'), !selling ? 0 : goodPrice ? state.sellClock / sellEvery : (cap > 0 ? state.goods / cap : 0));
       $('sell-bar').classList.toggle('wait', !goodPrice);
       setText($('sell-auto'), !broker ? '개조에서 거간꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
-        : goodPrice ? '시세가 평균 이상이에요. 조금만 쌓이면 바로 팔아요.' : '시세가 낮아서 기다려요. 창고가 차면 그냥 팔아요.');
+        : goodPrice ? '시세가 좋아요 · 거간꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
@@ -1323,6 +1342,11 @@
         var probe = Object.create(state); probe.upgrades = Object.create(state.upgrades); probe.upgrades.patrol = lv + 1;
         var nowS = secs(C.sweepInterval(state)), nextS = secs(C.sweepInterval(probe));
         infoText = !lv ? '사면 ' + nextS + '마다 한 칸' : lv >= u.max ? '지금 ' + nowS + '마다 한 칸' : '지금 ' + nowS + ' → ' + nextS;
+      }
+      if (u.id === 'broker') {             // 거간꾼: 몇 초마다 파는지(지금 → 산 뒤)
+        var bp = Object.create(state); bp.upgrades = Object.create(state.upgrades); bp.upgrades.broker = lv + 1;
+        var bNow = secs(C.sellInterval(state)), bNext = secs(C.sellInterval(bp));
+        infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '지금 ' + bNow + '마다 판매' : '지금 ' + bNow + ' → ' + bNext;
       }
       setText(r.info, infoText);
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');

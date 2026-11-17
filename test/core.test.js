@@ -286,10 +286,14 @@ test('거래: 자동 판매는 거간꾼(개조)이나 자동화 특성이 있�
   assert.ok(sold.length >= 2, '가만히 둬도 팔린다');
   sold.forEach(e => assert.equal(e.auto, true));
   assert.ok(s.tradeEarned > 0);
-  // 거간꾼: 평균 이상이면 창고의 1/4 만 차도 판다
-  const b = inMarket(); b.stalls = 10; b.upgrades.broker = 1; b.price = 1.9; b.goods = C.goodsCap(b) * 0.3; b.priceClock = 0;
+  // 거간꾼: 평균 이상인 동안 sellInterval 초마다 판다. 레벨마다 2초씩 빨라진다(2초까지)
+  assert.deepEqual([1, 2, 5, 9].map(lv => { const t = inMarket(); t.upgrades.broker = lv; return C.sellInterval(t); }), [10, 8, 2, 2]);
+  const b = inMarket(); b.stalls = 10; b.upgrades.broker = 1; b.price = 1.9; b.goods = C.goodsCap(b) * 0.1; b.priceClock = 0; b.sellClock = 0;
+  assert.ok(!C.tick(b, 0.1, half).some(e => e.type === 'sold'), '방금 팔았으면 간격을 기다린다');
+  b.sellClock = C.sellInterval(b);
   assert.ok(C.tick(b, 0.1, half).some(e => e.type === 'sold'));
-  const low = inMarket(); low.stalls = 10; low.upgrades.broker = 1; low.price = 0.6; low.goods = C.goodsCap(low) * 0.3;
+  assert.ok(b.sellClock < 1, '팔면 시계가 처음으로 돌아간다');
+  const low = inMarket(); low.stalls = 10; low.upgrades.broker = 1; low.price = 0.6; low.goods = C.goodsCap(low) * 0.3; low.sellClock = 99;
   assert.ok(!C.tick(low, 0.1, half).some(e => e.type === 'sold'), '낮은 시세에서는 기다린다');
   const off = inMarket(); off.stalls = 10; off.upgrades.broker = 1; C.setAutoSell(off, false);
   for (let i = 0; i < 200; i++) assert.ok(!C.tick(off, 1, half).some(e => e.type === 'sold'));
