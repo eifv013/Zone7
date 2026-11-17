@@ -252,7 +252,7 @@
           "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
           "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
           "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
-    { no: 3, name: '공단', kind: 'line', cost: 3e11, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
+    { no: 3, name: '공단', kind: 'line', cost: 1e12, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
       story: [
         { title: "멈춘 자리", text: [
           "3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 밖에서 잠근 게 아니다. 안에 있던 사람들이 잠그고, 다른 길로 나간 것이다.",
@@ -273,7 +273,7 @@
           "반장은 철망을 잡고 흔들지 않았다. 그냥 서서 강 쪽을 보고 있었다. 내가 이름을 불렀다. 고개가 아주 천천히 돌아왔다. 입이 한 번 움직였다. 소리는 없었지만 나는 그 모양을 안다. {hero}. 그리고 내 노란 우비를 한참 봤다. 나는 그 눈이 나를 알아봤다고 지금도 생각한다.",
           "철망 사이로 반장의 손이 나와 내 왼쪽 소매를 잡았다. 망을 보던 사람들이 소리를 질렀다. 놈들은 산 사람을 잡으면 문다. 그런데 반장은 물지 않았다. 소매에 코를 대고 한참 있다가, 놓았다. 아무도 그 까닭을 묻지 않았고 나도 말하지 않았다.",
           "새벽에 무리가 움직이자 반장도 따라갔다. 선로 쪽으로. 열일곱 명 중에 몇이나 건넜을까. 나는 쪽지 뒷면의 이름 하나에 줄을 그었다. 선로를 따라가면 환승역이다."] }] },
-    { no: 4, name: '환승역', kind: 'rail', cost: 3e18, lead: '끊긴 노선을 잇고 열차를 보낸다',
+    { no: 4, name: '환승역', kind: 'rail', cost: 5e18, lead: '끊긴 노선을 잇고 열차를 보낸다',
       story: [
         { title: "행선지", text: [
           "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
@@ -295,7 +295,7 @@
           "아저씨가 그건 신호라고 했다. 누가 거기서 손으로 켰다 껐다 하는 거라고. 녹음이 아니라 사람이라고.",
           "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. {student:이} 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
           "아무도 대답하지 못했다. 나는 방송의 목소리를 한 번 더 떠올렸다. 숨 쉴 틈 없이 말하는 여자. 엄마는 급할 때 그렇게 말한다. 그 생각은 입 밖에 내지 않았다. 다음 급행은 병원 앞까지 간다."] }] },
-    { no: 5, name: '대학 병원', kind: 'lab', cost: 1e23, lead: '남은 연구를 이어 가며 과제를 고른다',
+    { no: 5, name: '대학 병원', kind: 'lab', cost: 5e23, lead: '남은 연구를 이어 가며 과제를 고른다',
       story: [
         { title: "감염내과, 7층", text: [
           "5구역. 응급실 문의 쇠사슬을 끊었다. 복도에 비상등이 깜박인다. 안내판의 화살표가 전부 한 곳을 가리킨다. 누가 매직으로 덧그려 놓았다. 감염내과, 7층.",
@@ -315,7 +315,7 @@
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
           "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
-    { no: 6, name: '강변 검문소', kind: 'guard', cost: 1e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
+    { no: 6, name: '강변 검문소', kind: 'guard', cost: 3e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
@@ -333,7 +333,7 @@
           "새벽에 건너편에서 쇠 긁는 소리가 났다. 차단기가 올라가는 소리였다. 저쪽 차단기다. 절반쯤 올라가다 멈췄다.",
           "탐조등이 다리 한가운데를 비췄다. 버려진 버스 한 대가 가로로 서 있다. 그 지붕 위에 밧줄 뭉치가 놓여 있었다. 어제는 없던 것이다.",
           "아저씨가 말했다. “저쪽에서도 길을 내고 있는 거야. 우리가 여기서 버티는 걸 보고.” 나는 냉장 상자를 고쳐 멨다. 강은 넓고, 다리는 하나뿐이다."] }] },
-    { no: 7, name: '송신탑', kind: 'tower', cost: 5e29, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
+    { no: 7, name: '송신탑', kind: 'tower', cost: 5e30, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
       story: [
         { title: "밧줄", text: [
           "7구역. 버스 지붕의 밧줄을 잡고 건넜다. 밧줄은 저쪽에서 당겨 주었다. 당긴 손은 작았다. 여럿이었다.",
@@ -784,7 +784,7 @@
    *   전체 생산 배수 = 1 + TOWER_GAIN × log10(1 + 생존자).  10만 명이면 3.5배.
    *   혈청: 물자를 들여 세 단계로 완성한다(SERUM_COSTS). 마지막 단계를 끝내면 이야기가 끝난다(ended).
    */
-  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [1e30, 4e30, 1.5e31];
+  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [5e30, 1e31, 3e31];
   function towerMult(state) { return zoneOpen(state, 6) ? 1 + TOWER_GAIN * Math.log(1 + Math.max(0, state.survivors || 0)) / Math.LN10 : 1; }
   function globalMult(state) {
     return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state) * towerMult(state);
@@ -1783,10 +1783,17 @@
     }
   }
   /** 다음 구역의 상태 { index, zone, cost, ready(목표를 다 채웠는가), soon(아직 없는 구역인가) }. 마지막 구역이면 null. */
+  /*
+   * 다음 구역의 문(1.4.0): 문 값은 "이번 회차에 모은 물자의 누적"으로 잰다. 가진 물자를 내지 않는다.
+   *   전에는 가진 물자에서 문 값을 냈다. 그러면 문 값을 모으는 동안 아무것도 사지 않고 기다리는 것이 가장 빨랐다(방치형에서 가장 재미없는 구간).
+   *   이제는 사고 싶은 것을 사면서 가도 문이 열린다. 철수 화면의 "이번 회차 누적"과 같은 숫자다.
+   *   have: 이번 회차 누적 물자, enough: 문 값에 닿았는가.
+   */
   function nextZone(state) {
     var i = state.zone + 1;
     if (i >= ZONES.length) return null;
-    return { index: i, zone: ZONES[i], cost: Math.ceil(ZONES[i].cost * mods(state).cost), ready: goalsComplete(state, state.zone), soon: ZONES[i].kind === 'soon' };
+    var cost = Math.ceil(ZONES[i].cost * mods(state).cost), have = Math.max(0, state.runEarned || 0);
+    return { index: i, zone: ZONES[i], cost: cost, have: have, enough: have >= cost, ready: goalsComplete(state, state.zone), soon: ZONES[i].kind === 'soon' };
   }
   /**
    * 다음 구역의 문을 연다. 앞 구역은 그대로 남아 계속 번다.
@@ -1797,8 +1804,7 @@
     if (!n) return fail('last');
     if (!n.ready) return fail('goals');
     if (n.soon && state.gate) return fail('soon');
-    if (n.cost > state.supplies) return fail('supplies');
-    state.supplies -= n.cost;
+    if (!n.enough) return fail('supplies');      // 누적이 모자라다. 물자는 내지 않는다
     if (n.soon) { state.gate = true; state.bestZone = Math.max(state.bestZone, n.index); return { ok: true, soon: true, index: n.index, zone: n.zone }; }
     state.zone = n.index;
     state.zoneLog.push({ zone: n.index, seconds: state.runSeconds, day: state.day });      // 통계의 '지난 구역'
@@ -2445,7 +2451,7 @@
     var open = goals(state, state.zone).filter(function (x) { return !x.done; })[0];
     if (open) return g('goal', (state.zone + 1) + '구역 목표: ' + open.text + ' (' + formatNumber(open.value) + ' / ' + formatNumber(open.need) + ')', 'zone');
     var n = nextZone(state);
-    if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + '의 문을 열 차례예요. 물자 ' + formatNumber(n.cost) + (hasBatchim(formatNumber(n.cost)) ? '이' : '가') + ' 들어요.', 'zone');
+    if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + (n.enough ? '의 문을 열 수 있어요.' : '의 문은 이번 회차 누적 물자 ' + formatNumber(n.cost) + '에 열려요.'), 'zone');
     return g('retreat', '지금은 더 나아갈 곳이 없어요. 철수해서 항체 샘플을 챙기고, 더 강하게 다시 시작해 보세요.');
   }
 

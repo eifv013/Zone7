@@ -1643,7 +1643,7 @@
     var feedCost = state.pet ? C.petFeedCost(state) : Infinity;
     var canFeed = isFinite(feedCost) && feedCost <= state.treats;
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
-    var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.cost <= state.supplies && !(nz.soon && state.gate);
+    var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.soon && state.gate);
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
     var canFill = (!!state.order && state.goods >= state.order.need) || (!!state.contract && state.contract.have >= state.contract.need) || (!!state.salvage && state.salvage.have >= state.salvage.need);
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
@@ -1718,7 +1718,7 @@
   function zoneTodo(zi) {
     if (fillReady(zi)) return true;
     var nz = C.nextZone(state);
-    return zi === state.zone && !!nz && nz.ready && nz.cost <= state.supplies;
+    return zi === state.zone && !!nz && nz.ready && nz.enough;
   }
   function renderZone(m) {
     var zi = tab === 'wall' ? -1 : Number(tab.slice(1));
@@ -1760,7 +1760,7 @@
     // 강화나 목표에 볼 것이 생기면 전환 단추에 점을 찍는다
     if (zoneTab) {
       var upReady = C.UPGRADES.some(function (u) { return u.zone === zi && C.upgradeCost(state, u.id) <= state.supplies; });
-      var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.cost <= state.supplies && !(nz.soon && state.gate);
+      var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.soon && state.gate);
       $('zone-panes').children[0].classList.toggle('avail', fillReady(zi) && pane !== 'play');      // 운영: 채울 수 있는 주문·의뢰·화물이 있다
       $('zone-panes').children[1].classList.toggle('avail', upReady && pane !== 'up');
       $('zone-panes').children[2].classList.toggle('avail', goalReady && pane !== 'goal');
@@ -1782,12 +1782,13 @@
       var n = C.nextZone(state), ob = $('open-zone'), showOpen = !!n && (zi === state.zone || zi === n.index) && !(n.soon && state.gate);
       ob.hidden = !showOpen;
       if (showOpen) {
-        ob.disabled = !n.ready || n.cost > state.supplies;
+        ob.disabled = !n.ready || !n.enough;
         // 두 줄로 나눠 적는다: 윗줄은 할 일, 아랫줄은 모은 물자 / 필요한 물자(막대와 함께)
         if (!ob.firstChild) { ob.appendChild(el('span', 'oz-main')); ob.appendChild(el('span', 'oz-sub num')); var ozb = el('span', 'oz-bar'); ozb.appendChild(el('i')); ob.appendChild(ozb); }
         setText(ob.children[0], n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다' : (state.zone + 1) + '구역 목표를 모두 채우면 ' + n.zone.no + '구역이 열려요');
-        setText(ob.children[1], '물자 ' + fmt(Math.min(state.supplies, n.cost)) + ' / ' + fmt(n.cost));
-        ob.children[2].firstChild.style.width = (n.cost > 0 ? Math.min(100, state.supplies / n.cost * 100) : 100).toFixed(1) + '%';
+        // 문 값은 이번 회차 누적 물자로 잰다(1.4.0). 가진 물자는 줄지 않는다
+        setText(ob.children[1], '이번 회차 누적 ' + fmt(Math.min(n.have, n.cost)) + ' / ' + fmt(n.cost));
+        ob.children[2].firstChild.style.width = (n.cost > 0 ? Math.min(100, n.have / n.cost * 100) : 100).toFixed(1) + '%';
       }
       var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 지금은 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 지금은 문 앞까지 갈 수 있어요.')
         : !open ? '아직 열지 않은 구역이에요. 앞 구역의 목표를 모두 채우면 문을 열 수 있어요.' : '';
@@ -1918,7 +1919,10 @@
         c.cell.classList.toggle('slow', d.id === line.bottleneck);      // 가장 느린 기계: 이것을 올려야 라인이 빨라진다
         var q = qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - lv), cost = C.machineCost(state, d.id, q);
         setText(r.count, 'Lv ' + lv);
-        setText(r.info, '레벨당 초당 ' + d.rate + (d.id === line.bottleneck ? ' · 지금 병목' : ''));
+        // 이 기계가 지금 초당 몇 개를 처리하는지와, 한 레벨에 얼마나 느는지(1.4.0). 전에는 "레벨당 초당 3"뿐이라 무슨 수인지 알기 어려웠다
+        setText(r.info, '초당 ' + fmt(lv * d.rate) + '개 처리 · 레벨당 +' + d.rate + (d.id === line.bottleneck ? ' · 현재 병목' : ''));
+        // 별: 기계 레벨 합계의 2배 문턱(세 기계가 함께 채운다). 이 기계를 사서 문턱을 넘으면 "지금 2배"가 뜬다
+        setMile(r, line.levels, q, cost <= state.supplies, C.LINE_MILESTONES);
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies);
       });
@@ -1926,7 +1930,7 @@
       setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '%');
       ld.className = 'num' + (line.steady ? ' steady' : '');
       setText($('line-note'), line.flow > 0
-        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : Math.round(line.steadyAt * 100) + '% 이상이면 정속 가동이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
+        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
         : '기계 셋이 모두 있어야 라인이 돌아요');
       drawBelt(line);
       var sg = $('surge'), sOn = state.surgeLeft > 0;

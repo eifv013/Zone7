@@ -13,8 +13,9 @@ const half = () => 0.5;
 function inMarket() {
   const s = fresh();
   C.GOALS[0].forEach(g => { s.goalsDone[g.id] = true; });
-  s.supplies = C.ZONES[1].cost;
+  s.runEarned = C.ZONES[1].cost;      // 1.4.0: 문은 이번 회차 누적 물자로 열린다(가진 물자를 내지 않는다)
   assert.ok(C.openZone(s).ok);
+  s.runEarned = 0;
   return s;
 }
 /** 3구역(공단)까지 연 상태. 앞 구역의 목표는 채운 것으로 둔다. */
@@ -191,21 +192,24 @@ test('목표: 채우면 달성되고 특전 선택이 걸린다. 고르기 전�
   assert.ok(view[0].value <= view[0].need);
 });
 
-test('다음 구역: 목표를 다 채우고 값을 치러야 열리고, 열어도 앞 구역은 그대로 남는다', () => {
+test('다음 구역: 목표를 다 채우고 이번 회차 누적 물자가 문 값에 닿아야 열린다. 가진 물자는 내지 않고, 앞 구역은 그대로 남는다', () => {
   const s = fresh(); s.supplies = 1e12; s.buildings.scouts = 30;
   assert.equal(C.openZone(s).reason, 'goals');
   C.GOALS[0].forEach(g => { s.goalsDone[g.id] = true; });
   const n = C.nextZone(s);
   assert.equal(n.zone.name, '재래시장');
   assert.equal(n.cost, C.ZONES[1].cost);
-  s.supplies = 100;
-  assert.equal(C.openZone(s).reason, 'supplies');
-  s.supplies = C.ZONES[1].cost + 5;
+  // 가진 물자가 아무리 많아도 누적이 모자라면 안 열린다
+  s.supplies = 1e12; s.runEarned = 100;
+  assert.equal(n.enough, false); assert.equal(C.openZone(s).reason, 'supplies');
+  // 누적이 닿으면 가진 물자가 한 푼도 없어도 열리고, 물자는 그대로다
+  s.supplies = 5; s.runEarned = C.ZONES[1].cost;
+  assert.equal(C.nextZone(s).enough, true); assert.equal(C.nextZone(s).have, C.ZONES[1].cost);
   const before = C.searchRate(s);
   const r = C.openZone(s);
   assert.ok(r.ok && !r.soon);
   assert.equal(s.zone, 1);
-  assert.equal(s.supplies, 5);
+  assert.equal(s.supplies, 5, '문을 열어도 물자는 줄지 않는다');
   assert.equal(s.buildings.scouts, 30, '1구역 시설은 남는다');
   assert.equal(C.searchRate(s), before, '1구역은 계속 번다');
 });
@@ -213,15 +217,15 @@ test('다음 구역: 목표를 다 채우고 값을 치러야 열리고, 열어�
 test('다음 구역: 7구역까지 차례로 열리고, 그 뒤로는 다음 구역이 없다', () => {
   const s = inLab();
   C.GOALS[4].forEach(g => { s.goalsDone[g.id] = true; });
-  s.supplies = C.nextZone(s).cost;
+  s.runEarned = C.nextZone(s).cost;
   assert.equal(C.nextZone(s).soon, false);
   assert.ok(C.openZone(s).ok); assert.equal(s.zone, 5);
   C.GOALS[5].forEach(g => { s.goalsDone[g.id] = true; });
-  s.supplies = C.nextZone(s).cost;
+  s.runEarned = C.nextZone(s).cost;
   assert.equal(C.nextZone(s).soon, false);
   assert.ok(C.openZone(s).ok); assert.equal(s.zone, 6); assert.equal(s.gate, false);
   assert.equal(C.nextZone(s), null, '7구역이 마지막이다');
-  s.supplies = 1e60;
+  s.runEarned = 1e60;
   assert.equal(C.openZone(s).ok, false);
 });
 
@@ -509,7 +513,7 @@ test('이야기: 구역에 들어설 때, 목표 둘, 목표 셋에 일지가 �
   assert.deepEqual(story(s), ['z1-1']);
   s.goalsDone.z1c = true;
   assert.deepEqual(story(s), ['z1-2']);
-  s.supplies = 1e9; assert.ok(C.openZone(s).ok);
+  s.runEarned = 1e9; assert.ok(C.openZone(s).ok);
   const ev = C.tick(s, 0.1, half).filter(e => e.type === 'story');
   assert.equal(ev[0].id, 'z2-0');
   assert.equal(ev[0].zoneName, '재래시장');
@@ -520,7 +524,7 @@ test('이야기: 첫 철수와 공단의 문 앞에서 일지가 열리고, 읽�
   const s = inMarket();
   C.tick(s, 0.1, half);
   C.GOALS[1].forEach(g => { s.goalsDone[g.id] = true; });
-  s.supplies = 1e12; C.openZone(s);
+  s.runEarned = 1e12; C.openZone(s);
   assert.ok(C.tick(s, 0.1, half).some(e => e.type === 'story' && e.id === 'z3-0'));
   s.pendingPerks = [];
   s.runEarned = 1e11;
