@@ -778,6 +778,15 @@ body { font-size: 15.5px; line-height: 1.55; }
 @keyframes boot-run { from { left: -12%; } to { left: 104%; } }
 @keyframes boot-hop { 50% { transform: translateY(-3px) rotate(-4deg); } }
 @media (prefers-reduced-motion: reduce) { #boot .boot-run i { animation: none; left: 40%; } #boot .boot-run i:nth-child(2) { left: 22%; } #boot .boot-run i:nth-child(3) { left: 10%; } #boot .boot-run i:nth-child(4) { left: -2%; } }
+/* 순찰조가 도는 동안의 수색 지도: 칸을 낮게 접어 자리를 덜 차지한다(누를 수는 있다) */
+.search.auto .tile { aspect-ratio: 4 / 1; font-size: 0; }
+.search.auto .tile::before { content: none; }
+.search.auto .tile.done.cache, .search.auto .tile.done.store { font-size: 0; }
+.search.auto .search-grid { gap: 3px; }
+/* 마스코트: 자리 비움 보상 창에는 우비 소년, 일지 창 제목 옆에도 작게 */
+.away-card::before { content: ''; display: block; width: 56px; height: 64px; margin: 0 auto -4px; background: var(--art-boy) no-repeat center / contain; image-rendering: pixelated; }
+.story-title:not(:empty)::before { content: ''; display: inline-block; width: 22px; height: 25px; margin-right: 8px; background: var(--art-boy) no-repeat center / contain; image-rendering: pixelated; vertical-align: -3px; }
+.journal .j-empty::before, #stats-zones .hint::before { content: ''; display: inline-block; width: 18px; height: 12px; margin-right: 6px; background: var(--art-zombie) no-repeat center / contain; image-rendering: pixelated; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -793,7 +802,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.2</div>
+  <div class="boot-ver">7구역 알파 0.8.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1188,7 +1197,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
-    <p class="ver">7구역 알파 0.8.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1303,7 +1312,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.3";
 </script>
 <script>
 /*
@@ -1322,6 +1331,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.3', date: '2026-11-17', at: '2026-11-17 13:30:00', title: '시장에 일손이 생겼어요',
+      items: [
+        '2구역 운영 화면에서 좌판 말고도 살 것이 생겼어요. 짐꾼은 쌓아 둘 수 있는 양을, 호객꾼은 상품 값을 올려요.',
+        '순찰조가 도는 동안에는 1구역 수색 지도가 낮게 접혀요. 접힌 칸도 누를 수 있어요.',
+        '자리 비움 보상 창과 일지 창에도 우비 소년이 나와요.'
+      ] },
     { ver: '알파 0.8.2', date: '2026-11-17', at: '2026-11-17 13:00:00', title: '진짜 지도와 구역마다의 자동',
       items: [
         '구역 지도가 진짜 지도가 됐어요. 일곱 구역이 길로 이어져 있고 강 건너에 6·7구역이 있어요. 구역을 누르면 설명과 버는 양이 나오고, 그 구역으로 바로 갈 수 있어요.',
@@ -2193,6 +2208,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
       // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
       sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
       // 2구역 거래
+      hands: { porter: 0, crier: 0 },      // 시장의 일손(HANDS)
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
       priceHistory: [], streak: 0, streakUsed: false,
@@ -2250,6 +2266,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
     s.bestZone = clamp(Math.max(safeCount(raw.bestZone), s.zone), 0, ZONES.length - 1);
     s.gate = !!raw.gate;
     s.stalls = Math.min(s.stalls, COUNT_MAX);
+    HANDS.forEach(function (d) { s.hands[d.id] = clamp(safeCount(raw.hands && typeof raw.hands === 'object' ? raw.hands[d.id] : 0), 0, d.max); });
     s.day = Math.max(1, safeCount(raw.day));
     s.dayClock = clamp(safeNum(raw.dayClock, 0), 0, DAY_SECONDS);
     s.siege = !!raw.siege;
@@ -2429,6 +2446,31 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
     var m = mods(state), floor = PRICE_FLOOR + m.floor, ceil = PRICE_CEIL + m.ceil;
     return { floor: Math.min(floor, ceil), ceil: ceil, mean: (Math.min(floor, ceil) + ceil) / 2 };
   }
+  /*
+   * 시장의 일손: 좌판 말고도 2구역 운영 화면에서 살 수 있는 것. 값은 살 때마다 GROWTH 배.
+   *   짐꾼은 쌓아 둘 수 있는 양을, 호객꾼은 상품 값을 올린다(per 는 한 명마다 더하는 비율). 철수하면 사라진다.
+   */
+  var HANDS = [
+    { id: 'porter', name: '짐꾼',   desc: '쌓아 둘 수 있는 양 +10%', per: 0.10, baseCost: 2e5, max: 100 },
+    { id: 'crier',  name: '호객꾼', desc: '상품 값 +3%',             per: 0.03, baseCost: 1e6, max: 200 }
+  ];
+  function handBonus(state, id) { var d = findById(HANDS, id); return d ? 1 + d.per * (state.hands[id] || 0) : 1; }
+  function handCost(state, id, qty) {
+    var d = findById(HANDS, id);
+    if (!d || !zoneOpen(state, 1) || !(qty >= 1) || state.hands[id] + qty > d.max) return Infinity;
+    return seriesCost(d.baseCost * mods(state).cost, GROWTH, state.hands[id], qty);
+  }
+  function maxHands(state, id) {
+    var d = findById(HANDS, id);
+    return d && zoneOpen(state, 1) ? seriesMax(d.baseCost * mods(state).cost, GROWTH, state.hands[id], state.supplies, d.max) : 0;
+  }
+  function buyHand(state, id, qty) {
+    qty = Math.floor(qty);
+    if (!findById(HANDS, id)) return fail('unknown');
+    if (!zoneOpen(state, 1)) return fail('locked');
+    if (!(qty >= 1)) return fail('unknown');
+    return pay(state, handCost(state, id, qty), function () { state.hands[id] += qty; });
+  }
   function stallCost(state, qty) {
     if (!zoneOpen(state, 1) || state.stalls + qty > COUNT_MAX) return Infinity;
     return seriesCost(5e4 * mods(state).cost, GROWTH, state.stalls, qty);
@@ -2442,9 +2484,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
   }
   /** 좌판 전체가 초당 만드는 상품 수. */
   function goodsRate(state) { return zoneOpen(state, 1) ? state.stalls * milestoneMult(state.stalls) : 0; }
-  function goodsCap(state) { return goodsRate(state) * GOODS_CAP_SECONDS * mods(state).cap; }
+  function goodsCap(state) { return goodsRate(state) * GOODS_CAP_SECONDS * mods(state).cap * handBonus(state, 'porter'); }
   /** 상품 하나를 시세 1 에 팔았을 때의 물자. */
-  function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state); }
+  function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state) * handBonus(state, 'crier'); }
   /** 연속 호가로 직접 판매에 붙는 배수(1 ~ 1.5). */
   function streakMult(state) { return 1 + Math.min(STREAK_MAX, state.streak || 0) * STREAK_BONUS; }
   /**
@@ -3361,7 +3403,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
   }
 
   return {
-    autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, AUTO_SELL_AT: AUTO_SELL_AT, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, AUTO_SELL_AT: AUTO_SELL_AT, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
@@ -3474,6 +3516,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
 
       { id: 'trade', tab: '2구역', title: '2구역: 거래', items: [
         '좌판이 상품을 만들고, 상품은 그때의 시세로 팔려요. 시세는 계속 오르내려요.',
+        '좌판 말고도 짐꾼(창고를 넓혀요)과 호객꾼(상품 값을 올려요)을 살 수 있어요.',
         '개조에서 "거간꾼"을 사면 알아서 팔아요. 시세가 평균 이상일 때 팔고, 낮을 때는 기다렸다가 창고가 차면 팔아요.',
         '평균보다 높은 시세에서 팔리면 "연속 호가"가 쌓여서 판매 값이 올라요. 평균 아래에서 직접 팔면 끊겨요.',
         '시세판의 점선이 평균, 굵은 선이 고점이에요.' ] },
@@ -5698,6 +5741,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
     // 2구역: 좌판
     rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls))); });
     $('rows-z1').appendChild(rows.stall.btn);
+    // 2구역: 시장의 일손(짐꾼, 호객꾼)
+    rows.hands = {};
+    C.HANDS.forEach(function (d) {
+      var r = buildRow(d, function () { buy(C.buyHand(state, d.id, qtyFor(C.maxHands(state, d.id), d.max - state.hands[d.id]))); });
+      rows.hands[d.id] = r; $('rows-z1').appendChild(r.btn);
+    });
     // 3구역: 기계 셋(위쪽의 흐름 칸과 아래쪽의 구매 줄)
     C.MACHINES.forEach(function (d) {
       var cell = el('div', 'line-cell'), name = el('div', 'line-name', d.name), cap = el('div', 'line-cap', '0'), track = el('div', 'track'), bar = el('i');
@@ -6030,6 +6079,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
       setText($('search-note'), (state.sweeps + 1) + '번째 동네 · ' + (patrol ? '수색조가 ' + every.toFixed(1).replace('.0', '') + '초마다 한 칸' : '개조에서 순찰조를 사면 알아서 뒤져요'));
       fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
       $('search-bar').hidden = !patrol;
+      $('search').classList.toggle('auto', patrol);          // 순찰조가 돌면 지도를 작게 접는다(눌러서 뒤질 일이 줄어드니까)
       setText($('search-bonus'), '다 뒤지면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
     }
     if (tab === 'z0' && play) {
@@ -6088,6 +6138,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
       setText(rows.stall.cost, isFinite(sc) ? '×' + q2 + ' ' + fmt(sc) : '최대');
       rows.stall.btn.disabled = !(sc <= state.supplies);
+      C.HANDS.forEach(function (d) {
+        var r = rows.hands[d.id], n = state.hands[d.id], q = qtyFor(C.maxHands(state, d.id), d.max - n), cost = C.handCost(state, d.id, q);
+        setText(r.count, n + ' / ' + d.max);
+        setText(r.info, '지금 +' + Math.round((C.handBonus(state, d.id) - 1) * 100) + '%');
+        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
+        r.btn.disabled = !(cost <= state.supplies);
+      });
     }
     if (tab === 'z2' && open) {
       var line = C.lineInfo(state), top = 0, names = {};

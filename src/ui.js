@@ -807,6 +807,12 @@
     // 2구역: 좌판
     rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls))); });
     $('rows-z1').appendChild(rows.stall.btn);
+    // 2구역: 시장의 일손(짐꾼, 호객꾼)
+    rows.hands = {};
+    C.HANDS.forEach(function (d) {
+      var r = buildRow(d, function () { buy(C.buyHand(state, d.id, qtyFor(C.maxHands(state, d.id), d.max - state.hands[d.id]))); });
+      rows.hands[d.id] = r; $('rows-z1').appendChild(r.btn);
+    });
     // 3구역: 기계 셋(위쪽의 흐름 칸과 아래쪽의 구매 줄)
     C.MACHINES.forEach(function (d) {
       var cell = el('div', 'line-cell'), name = el('div', 'line-name', d.name), cap = el('div', 'line-cap', '0'), track = el('div', 'track'), bar = el('i');
@@ -1139,6 +1145,7 @@
       setText($('search-note'), (state.sweeps + 1) + '번째 동네 · ' + (patrol ? '수색조가 ' + every.toFixed(1).replace('.0', '') + '초마다 한 칸' : '개조에서 순찰조를 사면 알아서 뒤져요'));
       fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
       $('search-bar').hidden = !patrol;
+      $('search').classList.toggle('auto', patrol);          // 순찰조가 돌면 지도를 작게 접는다(눌러서 뒤질 일이 줄어드니까)
       setText($('search-bonus'), '다 뒤지면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
     }
     if (tab === 'z0' && play) {
@@ -1197,6 +1204,13 @@
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
       setText(rows.stall.cost, isFinite(sc) ? '×' + q2 + ' ' + fmt(sc) : '최대');
       rows.stall.btn.disabled = !(sc <= state.supplies);
+      C.HANDS.forEach(function (d) {
+        var r = rows.hands[d.id], n = state.hands[d.id], q = qtyFor(C.maxHands(state, d.id), d.max - n), cost = C.handCost(state, d.id, q);
+        setText(r.count, n + ' / ' + d.max);
+        setText(r.info, '지금 +' + Math.round((C.handBonus(state, d.id) - 1) * 100) + '%');
+        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
+        r.btn.disabled = !(cost <= state.supplies);
+      });
     }
     if (tab === 'z2' && open) {
       var line = C.lineInfo(state), top = 0, names = {};

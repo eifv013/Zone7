@@ -414,6 +414,7 @@
       // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
       sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
       // 2구역 거래
+      hands: { porter: 0, crier: 0 },      // 시장의 일손(HANDS)
       stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
       priceHistory: [], streak: 0, streakUsed: false,
@@ -471,6 +472,7 @@
     s.bestZone = clamp(Math.max(safeCount(raw.bestZone), s.zone), 0, ZONES.length - 1);
     s.gate = !!raw.gate;
     s.stalls = Math.min(s.stalls, COUNT_MAX);
+    HANDS.forEach(function (d) { s.hands[d.id] = clamp(safeCount(raw.hands && typeof raw.hands === 'object' ? raw.hands[d.id] : 0), 0, d.max); });
     s.day = Math.max(1, safeCount(raw.day));
     s.dayClock = clamp(safeNum(raw.dayClock, 0), 0, DAY_SECONDS);
     s.siege = !!raw.siege;
@@ -650,6 +652,31 @@
     var m = mods(state), floor = PRICE_FLOOR + m.floor, ceil = PRICE_CEIL + m.ceil;
     return { floor: Math.min(floor, ceil), ceil: ceil, mean: (Math.min(floor, ceil) + ceil) / 2 };
   }
+  /*
+   * 시장의 일손: 좌판 말고도 2구역 운영 화면에서 살 수 있는 것. 값은 살 때마다 GROWTH 배.
+   *   짐꾼은 쌓아 둘 수 있는 양을, 호객꾼은 상품 값을 올린다(per 는 한 명마다 더하는 비율). 철수하면 사라진다.
+   */
+  var HANDS = [
+    { id: 'porter', name: '짐꾼',   desc: '쌓아 둘 수 있는 양 +10%', per: 0.10, baseCost: 2e5, max: 100 },
+    { id: 'crier',  name: '호객꾼', desc: '상품 값 +3%',             per: 0.03, baseCost: 1e6, max: 200 }
+  ];
+  function handBonus(state, id) { var d = findById(HANDS, id); return d ? 1 + d.per * (state.hands[id] || 0) : 1; }
+  function handCost(state, id, qty) {
+    var d = findById(HANDS, id);
+    if (!d || !zoneOpen(state, 1) || !(qty >= 1) || state.hands[id] + qty > d.max) return Infinity;
+    return seriesCost(d.baseCost * mods(state).cost, GROWTH, state.hands[id], qty);
+  }
+  function maxHands(state, id) {
+    var d = findById(HANDS, id);
+    return d && zoneOpen(state, 1) ? seriesMax(d.baseCost * mods(state).cost, GROWTH, state.hands[id], state.supplies, d.max) : 0;
+  }
+  function buyHand(state, id, qty) {
+    qty = Math.floor(qty);
+    if (!findById(HANDS, id)) return fail('unknown');
+    if (!zoneOpen(state, 1)) return fail('locked');
+    if (!(qty >= 1)) return fail('unknown');
+    return pay(state, handCost(state, id, qty), function () { state.hands[id] += qty; });
+  }
   function stallCost(state, qty) {
     if (!zoneOpen(state, 1) || state.stalls + qty > COUNT_MAX) return Infinity;
     return seriesCost(5e4 * mods(state).cost, GROWTH, state.stalls, qty);
@@ -663,9 +690,9 @@
   }
   /** 좌판 전체가 초당 만드는 상품 수. */
   function goodsRate(state) { return zoneOpen(state, 1) ? state.stalls * milestoneMult(state.stalls) : 0; }
-  function goodsCap(state) { return goodsRate(state) * GOODS_CAP_SECONDS * mods(state).cap; }
+  function goodsCap(state) { return goodsRate(state) * GOODS_CAP_SECONDS * mods(state).cap * handBonus(state, 'porter'); }
   /** 상품 하나를 시세 1 에 팔았을 때의 물자. */
-  function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state); }
+  function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state) * handBonus(state, 'crier'); }
   /** 연속 호가로 직접 판매에 붙는 배수(1 ~ 1.5). */
   function streakMult(state) { return 1 + Math.min(STREAK_MAX, state.streak || 0) * STREAK_BONUS; }
   /**
@@ -1582,7 +1609,7 @@
   }
 
   return {
-    autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, AUTO_SELL_AT: AUTO_SELL_AT, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, AUTO_SELL_AT: AUTO_SELL_AT, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

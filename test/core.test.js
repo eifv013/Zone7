@@ -1562,3 +1562,24 @@ test('숫자 표기: 지수 표기로 바꿀 수 있고, 모르는 값은 기본
   assert.equal(C.setNotation('nonsense'), 'kr');
   assert.equal(C.formatNumber(123456789), '1.23억');
 });
+
+test('시장의 일손: 짐꾼은 창고를, 호객꾼은 상품 값을 올린다. 2구역이 열려야 살 수 있고 상한이 있다', () => {
+  const s = inMarket(); s.stalls = 10; s.supplies = 1e12;
+  const cap = C.goodsCap(s), value = C.goodsValue(s);
+  assert.equal(C.buyHand(s, 'porter', 3).ok, true);
+  near(C.goodsCap(s), cap * 1.3);
+  assert.equal(C.buyHand(s, 'crier', 10).ok, true);
+  near(C.goodsValue(s), value * 1.3);
+  assert.ok(C.handCost(s, 'porter', 1) > C.HANDS[0].baseCost, '살수록 비싸진다');
+  assert.equal(C.buyHand(s, 'nothing', 1).ok, false);
+  assert.equal(C.buyHand(s, 'porter', 0).ok, false);
+  assert.equal(C.handCost(s, 'porter', 1e6), Infinity);
+  s.supplies = 0; assert.equal(C.buyHand(s, 'porter', 1).ok, false);
+  const f = C.createState(); f.supplies = 1e12;
+  assert.equal(C.buyHand(f, 'porter', 1).ok, false, '2구역을 열기 전에는 못 산다');
+  // 저장을 거쳐도 남고, 잘못된 값은 0 ~ 상한으로 맞춘다
+  assert.deepEqual(C.deserialize(C.serialize(s), 0).hands, { porter: 3, crier: 10 });
+  const raw = JSON.parse(C.serialize(s)); raw.hands = { porter: -4, crier: 1e9, fake: 3 };
+  assert.deepEqual(C.sanitizeState(raw).hands, { porter: 0, crier: 200 });
+  raw.hands = 'x'; assert.deepEqual(C.sanitizeState(raw).hands, { porter: 0, crier: 0 });
+});
