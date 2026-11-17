@@ -403,6 +403,10 @@
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
+    // 방벽 개조(zone -1: 구역이 아니라 방벽 화면에 놓인다. 처음부터 살 수 있다)
+    { id: 'architect', zone: -1, name: '건축가', desc: '방어력 +20%',              key: 'defense', per: 0.2,   baseCost: 5000, growth: 3,  max: 30 },
+    { id: 'builder',   zone: -1, name: '건설자', desc: '방어 수단 값 -5%',         key: 'defcost', per: -0.05, baseCost: 2e4,  growth: 3,  max: 12 },
+    { id: 'repair',    zone: -1, name: '수리공', desc: '정해 둔 수까지 방어 수단을 알아서 산다 · 올릴수록 빨라진다', key: 'repair', per: 1, baseCost: 1e5, growth: 10, max: 5 },
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
@@ -486,6 +490,7 @@
       buildings: {}, defenses: {}, upgrades: {},
       // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
       sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
+      autoDef: {}, repairClock: 0,      // 수리공: 방어 수단마다 자동 구입 목표(0 은 끔), 다음 구입까지의 시계
       // 2구역 거래
       sellClock: 0,                        // 흥정꾼이 마지막으로 판 뒤 흐른 시간(초)
       hands: { porter: 0, crier: 0 },      // 시장의 일손(HANDS)
@@ -528,7 +533,7 @@
       lastSeen: safeNum(now, 0)
     };
     BUILDINGS.forEach(function (b) { s.buildings[b.id] = 0; });
-    DEFENSES.forEach(function (d) { s.defenses[d.id] = 0; });
+    DEFENSES.forEach(function (d) { s.defenses[d.id] = 0; s.autoDef[d.id] = 0; });
     MACHINES.forEach(function (d) { s.machines[d.id] = 0; });
     ROUTES.forEach(function (d) { s.routes[d.id] = 0; s.routeClock[d.id] = 0; s.routeLoad[d.id] = 0; });
     PROJECTS.forEach(function (d) { s.research[d.id] = 0; });
@@ -553,6 +558,8 @@
     s.gate = !!raw.gate;
     s.stalls = Math.min(s.stalls, COUNT_MAX);
     s.sellClock = clamp(safeNum(raw.sellClock, 0), 0, SELL_AUTO_SECONDS);
+    DEFENSES.forEach(function (d) { var t = raw.autoDef && typeof raw.autoDef === 'object' ? raw.autoDef[d.id] : 0; s.autoDef[d.id] = AUTO_DEF_STEPS.indexOf(t) >= 0 ? t : 0; });
+    s.repairClock = clamp(safeNum(raw.repairClock, 0), 0, 10);
     HANDS.forEach(function (d) { s.hands[d.id] = clamp(safeCount(raw.hands && typeof raw.hands === 'object' ? raw.hands[d.id] : 0), 0, d.max); });
     s.day = Math.max(1, safeCount(raw.day));
     s.dayClock = clamp(safeNum(raw.dayClock, 0), 0, DAY_SECONDS);
@@ -650,8 +657,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -669,6 +676,7 @@
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
     m.labcost = Math.max(0.3, m.labcost); m.staffcost = Math.max(0.2, m.staffcost);
     m.cost = Math.max(0.2, m.cost);
+    m.defcost = Math.max(0.2, m.defcost);
     m.z1cost = Math.max(0.2, m.z1cost);
     m.z3cost = Math.max(0.2, m.z3cost);
     m.routecost = Math.max(0.2, m.routecost); m.traincost = Math.max(0.2, m.traincost);
@@ -1387,16 +1395,44 @@
   /* ---------- 밤과 방벽 ---------- */
   function defenseCost(state, id, qty) {
     var def = findById(DEFENSES, id);
-    return def ? seriesCost(def.baseCost * mods(state).cost, DEFENSE_GROWTH, state.defenses[id], qty) : Infinity;
+    var m = mods(state);
+    return def ? seriesCost(def.baseCost * m.cost * m.defcost, DEFENSE_GROWTH, state.defenses[id], qty) : Infinity;
   }
   function maxDefenses(state, id) {
     var def = findById(DEFENSES, id);
-    return def ? seriesMax(def.baseCost * mods(state).cost, DEFENSE_GROWTH, state.defenses[id], state.supplies, 1e6) : 0;
+    var m = mods(state);
+    return def ? seriesMax(def.baseCost * m.cost * m.defcost, DEFENSE_GROWTH, state.defenses[id], state.supplies, 1e6) : 0;
   }
   function buyDefense(state, id, qty) {
     qty = Math.floor(qty);
     if (!findById(DEFENSES, id) || !(qty >= 1)) return fail('unknown');
     return pay(state, defenseCost(state, id, qty), function () { state.defenses[id] += qty; });
+  }
+  /*
+   * 수리공(방벽 개조): 방어 수단마다 "몇 개까지 알아서 살지"(autoDef)를 정해 두면, 일정한 간격으로 하나씩 사 준다.
+   *   AUTO_DEF_STEPS : 고를 수 있는 수. 0 은 끔.
+   *   repairInterval : 수리공 레벨이 오를수록 짧아진다(5초 → 1초).
+   * 물자가 모자라면 그 차례는 건너뛴다. 자리를 비운 동안에는 사지 않는다(돌아와서 물자가 사라져 있으면 놀라니까).
+   */
+  var AUTO_DEF_STEPS = [0, 10, 25, 50, 100, 200, 500];
+  function repairInterval(state) { return Math.max(1, 6 - Math.floor(mods(state).repair)); }
+  /** 방어 수단 id 의 자동 구입 목표를 다음 단계로 넘긴다(끝이면 끔으로 돌아간다). 수리공이 없으면 실패. */
+  function cycleAutoDef(state, id) {
+    if (!findById(DEFENSES, id)) return fail('unknown');
+    if (!(mods(state).repair >= 1)) return fail('locked');
+    var i = AUTO_DEF_STEPS.indexOf(state.autoDef[id] || 0);
+    state.autoDef[id] = AUTO_DEF_STEPS[(i + 1) % AUTO_DEF_STEPS.length];
+    return { ok: true, target: state.autoDef[id] };
+  }
+  function stepRepair(state, dt) {
+    if (!(mods(state).repair >= 1)) return;
+    state.repairClock += dt;
+    var every = repairInterval(state);
+    if (state.repairClock < every) return;
+    state.repairClock = dt > every * 3 ? 0 : state.repairClock - every;      // 긴 dt 는 한 번으로 친다
+    DEFENSES.forEach(function (d) {
+      if ((state.autoDef[d.id] || 0) > state.defenses[d.id] && defenseCost(state, d.id, 1) <= state.supplies) buyDefense(state, d.id, 1);
+    });
   }
   function defensePower(state) {
     var total = BASE_DEFENSE;
@@ -1825,6 +1861,7 @@
     if (autoOn(state, 2) && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
 
     stepSweep(state, dt, events);
+    stepRepair(state, dt);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
@@ -2005,7 +2042,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

@@ -211,6 +211,12 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .oz-main { font-size: 14px; line-height: 1.4; word-break: keep-all; }
 .oz-sub { font: 600 13px/1.4 var(--font-mono); }
 .oz-bar { display: block; width: 100%; height: 5px; border-radius: 999px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
+/* 방벽 화면의 자동 구입 단추들과 방벽 개조 */
+.wall-label { margin: 16px 0 6px; }
+.auto-defs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.auto-defs[hidden] { display: none; }
+.auto-def { padding: 9px 8px; border: 1px solid var(--rule); border-radius: var(--r-s, 8px); background: transparent; color: var(--ink-soft); font: 600 13px/1.3 var(--font-body); cursor: pointer; word-break: keep-all; }
+.auto-def[aria-pressed="true"] { background: var(--hazard); color: var(--on-hazard); border-color: var(--hazard); }
 .retreat-bar { margin: 6px 0; color: var(--ink-soft); }
 .retreat-bar[hidden] { display: none; }
 #retreat-sub:empty { display: none; }
@@ -942,7 +948,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.10</div>
+  <div class="boot-ver">7구역 알파 0.9.11</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1133,8 +1139,8 @@ setTimeout(function () {
       <span id="zone-trait"></span>
     </div>
     <div>
-      <div class="label">최근 일지</div>
-      <p id="story-latest"></p>
+      <div class="label">최근 무전</div>
+      <p id="story-latest">아직 조용해요.</p>
       <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
     </div>
   </section>
@@ -1265,6 +1271,13 @@ setTimeout(function () {
       <div class="rows" id="ups-z3" hidden></div>
       <div class="rows" id="ups-z4" hidden></div>
       <div class="rows" id="rows-wall" hidden></div>
+      <div id="wall-extra" hidden>
+        <div class="label wall-label">자동 구입</div>
+        <p class="hint" id="auto-def-note"></p>
+        <div class="auto-defs" id="auto-defs" hidden></div>
+        <div class="label wall-label">방벽 개조</div>
+        <div class="rows" id="ups-wall"></div>
+      </div>
       <p class="hint soon" id="soon" hidden></p>
     </section>
   </div>
@@ -1377,7 +1390,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.10 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.11 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1501,7 +1514,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.11";
 </script>
 <script>
 /*
@@ -1520,6 +1533,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.11', date: '2026-11-17', at: '2026-11-17 23:58:00', title: '방벽을 맡길 사람들',
+      items: [
+        '방벽 화면에 개조 셋이 생겼어요. 건축가는 방어력을 올리고, 건설자는 방어 수단 값을 내려요.',
+        '수리공을 사면 방어 수단을 알아서 사 줘요. 방어 수단마다 단추를 눌러 끔, 10개, 25개… 500개까지 몇 개까지 살지 정해요. 올릴수록 빨리 사요.',
+        '상황 화면의 "최근 일지" 자리에 가장 최근 무전이 보여요.',
+        '통계 맨 아래의 "지난 판"을 "지난번 철수"로 바꿨어요. 개조 설명의 "지금"도 "현재"로 바꿨어요.'
+      ] },
     { ver: '알파 0.9.10', date: '2026-11-17', at: '2026-11-17 23:55:00', title: '철수 칸 손질',
       items: [
         '철수 칸의 설명을 단추 위로 올렸어요. 철수할 수 있게 된 뒤에도 다음 항체 샘플까지 얼마나 찼는지 막대로 보여요.',
@@ -2553,6 +2573,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
+    // 방벽 개조(zone -1: 구역이 아니라 방벽 화면에 놓인다. 처음부터 살 수 있다)
+    { id: 'architect', zone: -1, name: '건축가', desc: '방어력 +20%',              key: 'defense', per: 0.2,   baseCost: 5000, growth: 3,  max: 30 },
+    { id: 'builder',   zone: -1, name: '건설자', desc: '방어 수단 값 -5%',         key: 'defcost', per: -0.05, baseCost: 2e4,  growth: 3,  max: 12 },
+    { id: 'repair',    zone: -1, name: '수리공', desc: '정해 둔 수까지 방어 수단을 알아서 산다 · 올릴수록 빨라진다', key: 'repair', per: 1, baseCost: 1e5, growth: 10, max: 5 },
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
@@ -2636,6 +2660,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
       buildings: {}, defenses: {}, upgrades: {},
       // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
       sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
+      autoDef: {}, repairClock: 0,      // 수리공: 방어 수단마다 자동 구입 목표(0 은 끔), 다음 구입까지의 시계
       // 2구역 거래
       sellClock: 0,                        // 흥정꾼이 마지막으로 판 뒤 흐른 시간(초)
       hands: { porter: 0, crier: 0 },      // 시장의 일손(HANDS)
@@ -2678,7 +2703,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
       lastSeen: safeNum(now, 0)
     };
     BUILDINGS.forEach(function (b) { s.buildings[b.id] = 0; });
-    DEFENSES.forEach(function (d) { s.defenses[d.id] = 0; });
+    DEFENSES.forEach(function (d) { s.defenses[d.id] = 0; s.autoDef[d.id] = 0; });
     MACHINES.forEach(function (d) { s.machines[d.id] = 0; });
     ROUTES.forEach(function (d) { s.routes[d.id] = 0; s.routeClock[d.id] = 0; s.routeLoad[d.id] = 0; });
     PROJECTS.forEach(function (d) { s.research[d.id] = 0; });
@@ -2703,6 +2728,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
     s.gate = !!raw.gate;
     s.stalls = Math.min(s.stalls, COUNT_MAX);
     s.sellClock = clamp(safeNum(raw.sellClock, 0), 0, SELL_AUTO_SECONDS);
+    DEFENSES.forEach(function (d) { var t = raw.autoDef && typeof raw.autoDef === 'object' ? raw.autoDef[d.id] : 0; s.autoDef[d.id] = AUTO_DEF_STEPS.indexOf(t) >= 0 ? t : 0; });
+    s.repairClock = clamp(safeNum(raw.repairClock, 0), 0, 10);
     HANDS.forEach(function (d) { s.hands[d.id] = clamp(safeCount(raw.hands && typeof raw.hands === 'object' ? raw.hands[d.id] : 0), 0, d.max); });
     s.day = Math.max(1, safeCount(raw.day));
     s.dayClock = clamp(safeNum(raw.dayClock, 0), 0, DAY_SECONDS);
@@ -2800,8 +2827,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -2819,6 +2846,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
     m.labcost = Math.max(0.3, m.labcost); m.staffcost = Math.max(0.2, m.staffcost);
     m.cost = Math.max(0.2, m.cost);
+    m.defcost = Math.max(0.2, m.defcost);
     m.z1cost = Math.max(0.2, m.z1cost);
     m.z3cost = Math.max(0.2, m.z3cost);
     m.routecost = Math.max(0.2, m.routecost); m.traincost = Math.max(0.2, m.traincost);
@@ -3537,16 +3565,44 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
   /* ---------- 밤과 방벽 ---------- */
   function defenseCost(state, id, qty) {
     var def = findById(DEFENSES, id);
-    return def ? seriesCost(def.baseCost * mods(state).cost, DEFENSE_GROWTH, state.defenses[id], qty) : Infinity;
+    var m = mods(state);
+    return def ? seriesCost(def.baseCost * m.cost * m.defcost, DEFENSE_GROWTH, state.defenses[id], qty) : Infinity;
   }
   function maxDefenses(state, id) {
     var def = findById(DEFENSES, id);
-    return def ? seriesMax(def.baseCost * mods(state).cost, DEFENSE_GROWTH, state.defenses[id], state.supplies, 1e6) : 0;
+    var m = mods(state);
+    return def ? seriesMax(def.baseCost * m.cost * m.defcost, DEFENSE_GROWTH, state.defenses[id], state.supplies, 1e6) : 0;
   }
   function buyDefense(state, id, qty) {
     qty = Math.floor(qty);
     if (!findById(DEFENSES, id) || !(qty >= 1)) return fail('unknown');
     return pay(state, defenseCost(state, id, qty), function () { state.defenses[id] += qty; });
+  }
+  /*
+   * 수리공(방벽 개조): 방어 수단마다 "몇 개까지 알아서 살지"(autoDef)를 정해 두면, 일정한 간격으로 하나씩 사 준다.
+   *   AUTO_DEF_STEPS : 고를 수 있는 수. 0 은 끔.
+   *   repairInterval : 수리공 레벨이 오를수록 짧아진다(5초 → 1초).
+   * 물자가 모자라면 그 차례는 건너뛴다. 자리를 비운 동안에는 사지 않는다(돌아와서 물자가 사라져 있으면 놀라니까).
+   */
+  var AUTO_DEF_STEPS = [0, 10, 25, 50, 100, 200, 500];
+  function repairInterval(state) { return Math.max(1, 6 - Math.floor(mods(state).repair)); }
+  /** 방어 수단 id 의 자동 구입 목표를 다음 단계로 넘긴다(끝이면 끔으로 돌아간다). 수리공이 없으면 실패. */
+  function cycleAutoDef(state, id) {
+    if (!findById(DEFENSES, id)) return fail('unknown');
+    if (!(mods(state).repair >= 1)) return fail('locked');
+    var i = AUTO_DEF_STEPS.indexOf(state.autoDef[id] || 0);
+    state.autoDef[id] = AUTO_DEF_STEPS[(i + 1) % AUTO_DEF_STEPS.length];
+    return { ok: true, target: state.autoDef[id] };
+  }
+  function stepRepair(state, dt) {
+    if (!(mods(state).repair >= 1)) return;
+    state.repairClock += dt;
+    var every = repairInterval(state);
+    if (state.repairClock < every) return;
+    state.repairClock = dt > every * 3 ? 0 : state.repairClock - every;      // 긴 dt 는 한 번으로 친다
+    DEFENSES.forEach(function (d) {
+      if ((state.autoDef[d.id] || 0) > state.defenses[d.id] && defenseCost(state, d.id, 1) <= state.supplies) buyDefense(state, d.id, 1);
+    });
   }
   function defensePower(state) {
     var total = BASE_DEFENSE;
@@ -3975,6 +4031,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
     if (autoOn(state, 2) && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
 
     stepSweep(state, dt, events);
+    stepRepair(state, dt);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
@@ -4155,7 +4212,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
@@ -6330,6 +6387,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
     li.appendChild(el('span', 'log-day', 'D+' + pad3(state ? state.day : 1)));
     li.appendChild(el('span', 'log-text', text));
     list.insertBefore(li, list.firstChild);
+    setText($('story-latest'), text);      // 상황 화면의 '최근 무전' 한 줄
     while (list.children.length > LOG_MAX) list.removeChild(list.lastChild);
   }
   /** 화면 구석에 잠깐 떴다 사라지는 쪽지. 무전 로그를 안 보고 있어도 알아챌 일(업적, 유물 등)에 쓴다. */
@@ -6801,11 +6859,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id)); });
       r.btn.classList.add('row-zone');
-      rows.upgrades[u.id] = r; $('ups-z' + u.zone).appendChild(r.btn);
+      rows.upgrades[u.id] = r; $(u.zone < 0 ? 'ups-wall' : 'ups-z' + u.zone).appendChild(r.btn);      // zone -1 은 방벽 개조
     });
     C.DEFENSES.forEach(function (d) {
       var r = buildRow(d, function () { buy(C.buyDefense(state, d.id, qtyFor(C.maxDefenses(state, d.id), 1e6))); });
       rows.defenses[d.id] = r; $('rows-wall').appendChild(r.btn);
+      // 수리공의 자동 구입 목표: 누를 때마다 끔 → 10 → 25 → … 로 넘어간다
+      var ab = el('button', 'auto-def'); ab.type = 'button'; ab.id = 'auto-def-' + d.id;
+      ab.addEventListener('click', function () { var res = C.cycleAutoDef(state, d.id); if (res.ok) { sfx('click'); Store.save(); render(); } });
+      rows.autoDef = rows.autoDef || {}; rows.autoDef[d.id] = ab; $('auto-defs').appendChild(ab);
     });
     C.TRAITS.forEach(function (t) {
       var r = buildRow(t, function () { var res = C.buyTrait(state, t.id); if (res.ok) { sfx('buy'); Store.save(); render(); } });
@@ -7078,7 +7140,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
       list.appendChild(li);
     });
     if (st.runs.length) {
-      var last = st.runs[0], note = el('li', 'hint', '지난 판: ' + (last.zone + 1) + '구역까지 · ' + d(last.seconds) + ' · 항체 +' + fmt(last.antibodies));
+      var last = st.runs[0], note = el('li', 'hint', '지난번 철수: ' + (last.zone + 1) + '구역까지 · ' + d(last.seconds) + ' · 항체 +' + fmt(last.antibodies));
       list.appendChild(note);
     }
   }
@@ -7213,6 +7275,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
     $('rows-z4').hidden = !(tab === 'z4' && open);
     $('lab').hidden = !(tab === 'z4' && open);
     $('rows-wall').hidden = tab !== 'wall';
+    $('wall-extra').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
     $('line').hidden = !(tab === 'z2' && open);
     ['rows-z1', 'rows-z2', 'rows-z3', 'rows-z4', 'trade', 'line', 'rail', 'lab'].forEach(function (id) { if (!play) $(id).hidden = true; });
@@ -7336,7 +7399,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
       C.HANDS.forEach(function (d) {
         var r = rows.hands[d.id], n = state.hands[d.id], q = qtyFor(C.maxHands(state, d.id), d.max - n), cost = C.handCost(state, d.id, q);
         setText(r.count, n + ' / ' + d.max);
-        setText(r.info, '지금 +' + Math.round((C.handBonus(state, d.id) - 1) * 100) + '%');
+        setText(r.info, '현재 +' + Math.round((C.handBonus(state, d.id) - 1) * 100) + '%');
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies);
       });
@@ -7436,10 +7499,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
         setText(r.info, '하나에 방어력 +' + fmt(d.power * m.defense));
         setText(r.cost, '×' + q + ' ' + fmt(cost));
         r.btn.disabled = !(cost <= state.supplies);
+        setText(rows.autoDef[d.id], d.name + ' · ' + (state.autoDef[d.id] ? state.autoDef[d.id] + '개까지' : '끔'));
+        rows.autoDef[d.id].setAttribute('aria-pressed', state.autoDef[d.id] ? 'true' : 'false');
       });
+      var fixer = m.repair >= 1;
+      $('auto-defs').hidden = !fixer;
+      setText($('auto-def-note'), fixer ? '수리공이 ' + secs(C.repairInterval(state)) + '마다 하나씩 사요. 눌러서 몇 개까지 살지 정해요.' : '개조에서 수리공을 사면 방어 수단을 알아서 사 줘요.');
     }
     C.UPGRADES.forEach(function (u) {
-      if ('z' + u.zone !== tab) return;
+      if ((u.zone < 0 ? 'wall' : 'z' + u.zone) !== tab) return;
       var r = rows.upgrades[u.id], lv = state.upgrades[u.id], cost = C.upgradeCost(state, u.id);
       setText(r.count, 'Lv ' + lv + ' / ' + u.max);
       // 순찰조: 지금 몇 초마다 뒤지는지와 사고 난 뒤의 초를 함께 보여 준다
@@ -7447,13 +7515,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
       if (u.id === 'patrol') {
         var probe = Object.create(state); probe.upgrades = Object.create(state.upgrades); probe.upgrades.patrol = lv + 1;
         var nowS = secs(C.sweepInterval(state)), nextS = secs(C.sweepInterval(probe));
-        infoText = !lv ? '사면 ' + nextS + '마다 한 칸' : lv >= u.max ? '지금 ' + nowS + '마다 한 칸' : '지금 ' + nowS + ' → ' + nextS;
+        infoText = !lv ? '사면 ' + nextS + '마다 한 칸' : lv >= u.max ? '현재 ' + nowS + '마다 한 칸' : '현재 ' + nowS + ' → ' + nextS;
       }
       if (u.id === 'broker') {             // 흥정꾼: 몇 초마다 파는지(지금 → 산 뒤)
         var bp = Object.create(state); bp.upgrades = Object.create(state.upgrades); bp.upgrades.broker = lv + 1;
         var bNow = secs(C.sellInterval(state)), bNext = secs(C.sellInterval(bp));
-        infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '지금 ' + bNow + '마다 판매' : '지금 ' + bNow + ' → ' + bNext;
+        infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '현재 ' + bNow + '마다 판매' : '현재 ' + bNow + ' → ' + bNext;
       }
+      if (u.id === 'repair') infoText = !lv ? '사면 5초마다 하나' : '현재 ' + secs(C.repairInterval(state)) + '마다 하나';
       setText(r.info, infoText);
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');
       r.btn.disabled = !(cost <= state.supplies);
@@ -7577,9 +7646,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.10";
       list.appendChild(li);
     });
     setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
-    // 상황 화면의 한 줄: 가장 최근 글의 제목과 첫 문단
-    var line = latest ? '〈' + latest.title + '〉 ' + C.fillStory(latest.text, state.heroName, state.heroGender).split('\n\n')[0] : '아직 적힌 것이 없어요.';
-    setText($('story-latest'), line);
     setText($('m-story'), line);
   }
 

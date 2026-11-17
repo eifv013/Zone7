@@ -601,7 +601,7 @@ test('정의표: id 가 겹치지 않고, 강화·특전·특성이 쓰는 항�
   for (const list of [C.BUILDINGS, C.DEFENSES, C.UPGRADES, C.PERKS, C.TRAITS]) assert.equal(new Set(list.map(d => d.id)).size, list.length);
   const keys = Object.keys(C.mods(fresh()));
   for (const d of [...C.UPGRADES, ...C.PERKS, ...C.TRAITS]) assert.ok(keys.includes(d.key), `${d.id} 의 ${d.key}`);
-  C.UPGRADES.forEach(u => assert.ok(u.zone >= 0 && u.zone < C.ZONES.length && C.ZONES[u.zone].kind !== 'soon', u.id));
+  C.UPGRADES.forEach(u => assert.ok(u.zone === -1 || (u.zone >= 0 && u.zone < C.ZONES.length && C.ZONES[u.zone].kind !== 'soon'), u.id));
   assert.equal(C.GOALS.length, C.ZONES.filter(z => z.kind !== 'soon').length);
 });
 
@@ -1882,4 +1882,34 @@ test('다음 항체 샘플까지: 그만큼 모으면 정말 하나가 더 나�
     s.runEarned = at * 0.999;
     assert.ok(C.antibodiesOnRetreat(s) <= now + 1);
   });
+});
+
+test('방벽 개조: 건축가는 방어력을, 건설자는 방어 수단 값을 바꾼다', () => {
+  const s = fresh(); s.supplies = 1e12; s.defenses.wire = 10;
+  const p0 = C.defensePower(s), c0 = C.defenseCost(s, 'wire', 1);
+  assert.ok(C.buyUpgrade(s, 'architect').ok);
+  assert.ok(C.defensePower(s) > p0);
+  assert.ok(C.buyUpgrade(s, 'builder').ok);
+  assert.ok(C.defenseCost(s, 'wire', 1) < c0 && C.defenseCost(s, 'wire', 1) > c0 * 0.9);
+});
+
+test('수리공: 없으면 목표를 못 정하고, 있으면 정한 수까지만 하나씩 산다', () => {
+  const s = fresh(); s.supplies = 1e12;
+  assert.equal(C.cycleAutoDef(s, 'wire').ok, false);
+  assert.equal(C.cycleAutoDef(s, '없는것').ok, false);
+  C.tick(s, 30, Math.random);
+  assert.equal(s.defenses.wire, 0, '수리공이 없으면 사지 않는다');
+  assert.ok(C.buyUpgrade(s, 'repair').ok);
+  assert.equal(C.cycleAutoDef(s, 'wire').target, 10);
+  assert.equal(C.repairInterval(s), 5);
+  for (let i = 0; i < 200; i++) C.tick(s, 1, Math.random);
+  assert.equal(s.defenses.wire, 10, '목표에서 멈춘다');
+  assert.equal(s.defenses.tower, 0, '끈 것은 사지 않는다');
+  s.supplies = 0; s.autoDef.tower = 10;
+  for (let i = 0; i < 20; i++) C.tick(s, 1, () => 0.99);
+  assert.equal(s.defenses.tower, 0, '물자가 없으면 건너뛴다');
+  const back = C.sanitizeState(JSON.parse(JSON.stringify(Object.assign({}, s, { autoDef: { wire: 25, tower: 7, 가짜: 3 } }))), 0);
+  assert.equal(back.autoDef.wire, 25); assert.equal(back.autoDef.tower, 0); assert.equal(back.autoDef['가짜'], undefined);
+  for (let k = 0; k < C.AUTO_DEF_STEPS.length; k++) C.cycleAutoDef(s, 'rail');
+  assert.equal(s.autoDef.rail, 0, '한 바퀴 돌면 끔');
 });

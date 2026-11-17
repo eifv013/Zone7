@@ -617,6 +617,7 @@
     li.appendChild(el('span', 'log-day', 'D+' + pad3(state ? state.day : 1)));
     li.appendChild(el('span', 'log-text', text));
     list.insertBefore(li, list.firstChild);
+    setText($('story-latest'), text);      // 상황 화면의 '최근 무전' 한 줄
     while (list.children.length > LOG_MAX) list.removeChild(list.lastChild);
   }
   /** 화면 구석에 잠깐 떴다 사라지는 쪽지. 무전 로그를 안 보고 있어도 알아챌 일(업적, 유물 등)에 쓴다. */
@@ -1088,11 +1089,15 @@
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id)); });
       r.btn.classList.add('row-zone');
-      rows.upgrades[u.id] = r; $('ups-z' + u.zone).appendChild(r.btn);
+      rows.upgrades[u.id] = r; $(u.zone < 0 ? 'ups-wall' : 'ups-z' + u.zone).appendChild(r.btn);      // zone -1 은 방벽 개조
     });
     C.DEFENSES.forEach(function (d) {
       var r = buildRow(d, function () { buy(C.buyDefense(state, d.id, qtyFor(C.maxDefenses(state, d.id), 1e6))); });
       rows.defenses[d.id] = r; $('rows-wall').appendChild(r.btn);
+      // 수리공의 자동 구입 목표: 누를 때마다 끔 → 10 → 25 → … 로 넘어간다
+      var ab = el('button', 'auto-def'); ab.type = 'button'; ab.id = 'auto-def-' + d.id;
+      ab.addEventListener('click', function () { var res = C.cycleAutoDef(state, d.id); if (res.ok) { sfx('click'); Store.save(); render(); } });
+      rows.autoDef = rows.autoDef || {}; rows.autoDef[d.id] = ab; $('auto-defs').appendChild(ab);
     });
     C.TRAITS.forEach(function (t) {
       var r = buildRow(t, function () { var res = C.buyTrait(state, t.id); if (res.ok) { sfx('buy'); Store.save(); render(); } });
@@ -1365,7 +1370,7 @@
       list.appendChild(li);
     });
     if (st.runs.length) {
-      var last = st.runs[0], note = el('li', 'hint', '지난 판: ' + (last.zone + 1) + '구역까지 · ' + d(last.seconds) + ' · 항체 +' + fmt(last.antibodies));
+      var last = st.runs[0], note = el('li', 'hint', '지난번 철수: ' + (last.zone + 1) + '구역까지 · ' + d(last.seconds) + ' · 항체 +' + fmt(last.antibodies));
       list.appendChild(note);
     }
   }
@@ -1500,6 +1505,7 @@
     $('rows-z4').hidden = !(tab === 'z4' && open);
     $('lab').hidden = !(tab === 'z4' && open);
     $('rows-wall').hidden = tab !== 'wall';
+    $('wall-extra').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
     $('line').hidden = !(tab === 'z2' && open);
     ['rows-z1', 'rows-z2', 'rows-z3', 'rows-z4', 'trade', 'line', 'rail', 'lab'].forEach(function (id) { if (!play) $(id).hidden = true; });
@@ -1623,7 +1629,7 @@
       C.HANDS.forEach(function (d) {
         var r = rows.hands[d.id], n = state.hands[d.id], q = qtyFor(C.maxHands(state, d.id), d.max - n), cost = C.handCost(state, d.id, q);
         setText(r.count, n + ' / ' + d.max);
-        setText(r.info, '지금 +' + Math.round((C.handBonus(state, d.id) - 1) * 100) + '%');
+        setText(r.info, '현재 +' + Math.round((C.handBonus(state, d.id) - 1) * 100) + '%');
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies);
       });
@@ -1723,10 +1729,15 @@
         setText(r.info, '하나에 방어력 +' + fmt(d.power * m.defense));
         setText(r.cost, '×' + q + ' ' + fmt(cost));
         r.btn.disabled = !(cost <= state.supplies);
+        setText(rows.autoDef[d.id], d.name + ' · ' + (state.autoDef[d.id] ? state.autoDef[d.id] + '개까지' : '끔'));
+        rows.autoDef[d.id].setAttribute('aria-pressed', state.autoDef[d.id] ? 'true' : 'false');
       });
+      var fixer = m.repair >= 1;
+      $('auto-defs').hidden = !fixer;
+      setText($('auto-def-note'), fixer ? '수리공이 ' + secs(C.repairInterval(state)) + '마다 하나씩 사요. 눌러서 몇 개까지 살지 정해요.' : '개조에서 수리공을 사면 방어 수단을 알아서 사 줘요.');
     }
     C.UPGRADES.forEach(function (u) {
-      if ('z' + u.zone !== tab) return;
+      if ((u.zone < 0 ? 'wall' : 'z' + u.zone) !== tab) return;
       var r = rows.upgrades[u.id], lv = state.upgrades[u.id], cost = C.upgradeCost(state, u.id);
       setText(r.count, 'Lv ' + lv + ' / ' + u.max);
       // 순찰조: 지금 몇 초마다 뒤지는지와 사고 난 뒤의 초를 함께 보여 준다
@@ -1734,13 +1745,14 @@
       if (u.id === 'patrol') {
         var probe = Object.create(state); probe.upgrades = Object.create(state.upgrades); probe.upgrades.patrol = lv + 1;
         var nowS = secs(C.sweepInterval(state)), nextS = secs(C.sweepInterval(probe));
-        infoText = !lv ? '사면 ' + nextS + '마다 한 칸' : lv >= u.max ? '지금 ' + nowS + '마다 한 칸' : '지금 ' + nowS + ' → ' + nextS;
+        infoText = !lv ? '사면 ' + nextS + '마다 한 칸' : lv >= u.max ? '현재 ' + nowS + '마다 한 칸' : '현재 ' + nowS + ' → ' + nextS;
       }
       if (u.id === 'broker') {             // 흥정꾼: 몇 초마다 파는지(지금 → 산 뒤)
         var bp = Object.create(state); bp.upgrades = Object.create(state.upgrades); bp.upgrades.broker = lv + 1;
         var bNow = secs(C.sellInterval(state)), bNext = secs(C.sellInterval(bp));
-        infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '지금 ' + bNow + '마다 판매' : '지금 ' + bNow + ' → ' + bNext;
+        infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '현재 ' + bNow + '마다 판매' : '현재 ' + bNow + ' → ' + bNext;
       }
+      if (u.id === 'repair') infoText = !lv ? '사면 5초마다 하나' : '현재 ' + secs(C.repairInterval(state)) + '마다 하나';
       setText(r.info, infoText);
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');
       r.btn.disabled = !(cost <= state.supplies);
@@ -1864,9 +1876,6 @@
       list.appendChild(li);
     });
     setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
-    // 상황 화면의 한 줄: 가장 최근 글의 제목과 첫 문단
-    var line = latest ? '〈' + latest.title + '〉 ' + C.fillStory(latest.text, state.heroName, state.heroGender).split('\n\n')[0] : '아직 적힌 것이 없어요.';
-    setText($('story-latest'), line);
     setText($('m-story'), line);
   }
 

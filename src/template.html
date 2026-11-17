@@ -199,6 +199,12 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .oz-main { font-size: 14px; line-height: 1.4; word-break: keep-all; }
 .oz-sub { font: 600 13px/1.4 var(--font-mono); }
 .oz-bar { display: block; width: 100%; height: 5px; border-radius: 999px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden; }
+/* 방벽 화면의 자동 구입 단추들과 방벽 개조 */
+.wall-label { margin: 16px 0 6px; }
+.auto-defs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.auto-defs[hidden] { display: none; }
+.auto-def { padding: 9px 8px; border: 1px solid var(--rule); border-radius: var(--r-s, 8px); background: transparent; color: var(--ink-soft); font: 600 13px/1.3 var(--font-body); cursor: pointer; word-break: keep-all; }
+.auto-def[aria-pressed="true"] { background: var(--hazard); color: var(--on-hazard); border-color: var(--hazard); }
 .retreat-bar { margin: 6px 0; color: var(--ink-soft); }
 .retreat-bar[hidden] { display: none; }
 #retreat-sub:empty { display: none; }
@@ -930,7 +936,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.10</div>
+  <div class="boot-ver">7구역 알파 0.9.11</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -986,8 +992,8 @@ setTimeout(function () {
       <span id="zone-trait"></span>
     </div>
     <div>
-      <div class="label">최근 일지</div>
-      <p id="story-latest"></p>
+      <div class="label">최근 무전</div>
+      <p id="story-latest">아직 조용해요.</p>
       <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
     </div>
   </section>
@@ -1118,6 +1124,13 @@ setTimeout(function () {
       <div class="rows" id="ups-z3" hidden></div>
       <div class="rows" id="ups-z4" hidden></div>
       <div class="rows" id="rows-wall" hidden></div>
+      <div id="wall-extra" hidden>
+        <div class="label wall-label">자동 구입</div>
+        <p class="hint" id="auto-def-note"></p>
+        <div class="auto-defs" id="auto-defs" hidden></div>
+        <div class="label wall-label">방벽 개조</div>
+        <div class="rows" id="ups-wall"></div>
+      </div>
       <p class="hint soon" id="soon" hidden></p>
     </section>
   </div>
@@ -1230,7 +1243,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.10 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.11 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
