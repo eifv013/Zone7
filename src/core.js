@@ -458,7 +458,7 @@
       // 기다리기만 하면 되는 목표(밤 30번)는 뺐다: 손을 움직이는 만큼 빨리 끝나는 것으로 바꿨다
       { id: 'z1c', text: '동네 12곳 다 수색하기', need: 12, value: function (s) { return s.sweeps; } } ],
     [ { id: 'z2a', text: '좌판 50곳', need: 50, value: function (s) { return s.stalls; } },
-      { id: 'z2b', text: '시세 ' + PEAK_PRICE + ' 이상에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
+      { id: 'z2b', text: '고점 시세에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
       { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
     [ { id: 'z3a', text: '기계 레벨 합계 120', need: 120, value: function (s) { return machineLevels(s); } },
       { id: 'z3b', text: '정속 가동 누적 3분', need: 180, unit: 'time', value: function (s) { return s.steadySeconds; } },
@@ -776,6 +776,12 @@
    * 직접 높은 시세를 골라 팔면 그보다 더 번다. 적극적으로 하는 사람의 이득은 평균의 1.5배 안팎이다.
    */
   function zoneOpen(state, index) { return state.zone >= index; }
+  /**
+   * '고점'으로 치는 시세. 시세 범위가 개조로 넓어지면 고점도 따라 올라간다(평균과 최고가 사이의 PEAK_SHARE 지점).
+   * 기본 범위(0.5~2)에서는 PEAK_PRICE(1.8)와 같다. 전에는 1.8 로 고정돼 있어서, 범위를 넓히면 고점이 평균보다 낮아졌다.
+   */
+  var PEAK_SHARE = (PEAK_PRICE - (PRICE_FLOOR + PRICE_CEIL) / 2) / (PRICE_CEIL - (PRICE_FLOOR + PRICE_CEIL) / 2);
+  function peakPrice(state) { var r = priceRange(state); return Math.round((r.mean + (r.ceil - r.mean) * PEAK_SHARE) * 100) / 100; }
   function priceRange(state) {
     var m = mods(state), floor = PRICE_FLOOR + m.floor, ceil = PRICE_CEIL + m.ceil;
     return { floor: Math.min(floor, ceil), ceil: ceil, mean: (Math.min(floor, ceil) + ceil) / 2 };
@@ -836,12 +842,12 @@
     var gain = state.goods * price * goodsValue(state) * bonus;
     earn(state, gain);
     state.tradeEarned += gain;
-    if (price >= PEAK_PRICE) state.peakSales++;
+    if (price >= peakPrice(state)) state.peakSales++;
     state.goods = 0;
     var below = price < priceRange(state).mean;
     if (below) { if (!auto) state.streak = 0; }      // 자동 판매는 낮은 시세에 팔아도 끊지 않는다(창고가 차서 어쩔 수 없이 판 것이다)
     else if (!state.streakUsed) { state.streak = Math.min(STREAK_MAX, state.streak + 1); state.streakUsed = true; }
-    return { ok: true, gain: gain, price: price, peak: price >= PEAK_PRICE, bonus: bonus, streak: state.streak };
+    return { ok: true, gain: gain, price: price, peak: price >= peakPrice(state), bonus: bonus, streak: state.streak };
   }
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
   /** 2구역이 가만히 둘 때 초당 버는 물자(평균 시세 기준). 화면의 '초당' 표시와 자리 비움 계산에 쓴다. */
@@ -2058,7 +2064,7 @@
     PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND,
     cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, breedDesc: breedDesc, petInfo: petInfo,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
-    PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
+    PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE, peakPrice: peakPrice,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,

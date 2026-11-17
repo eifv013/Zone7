@@ -278,7 +278,12 @@
       }, true);
       document.addEventListener('touchstart', function (e) {
         if (e.touches.length > 1) multi = true;
-        for (var i = 0; i < e.changedTouches.length; i++) { var t = e.changedTouches[i]; starts[t.identifier] = { x: t.clientX, y: t.clientY, at: Date.now(), target: t.target }; }
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          var t = e.changedTouches[i]; starts[t.identifier] = { x: t.clientX, y: t.clientY, at: Date.now(), target: t.target };
+          // 누름 표시(노란 채움)를 직접 켠다: 브라우저의 :active 는 빠르게 누르거나 두 손가락으로 누를 때 빠지곤 했다
+          var pr = t.target && t.target.closest ? t.target.closest('button.row:not(:disabled)') : null;
+          if (pr) { pr.classList.add('pressed'); (function (b) { setTimeout(function () { b.classList.remove('pressed'); }, 160); })(pr); }
+        }
       }, { passive: true });
       document.addEventListener('touchend', function (e) {
         var made = false, now = Date.now(), quick = now - lastEnd < 350;      // quick: 빠르게 두 번 누름(아이폰은 이때 화면을 키운다)
@@ -288,7 +293,7 @@
           delete starts[t.identifier];
           // 살 수 없는 줄(물자 부족)을 눌렀으면 값이 붉게 흔들린다: 눌리긴 했는데 물자가 모자라다는 것을 알려 준다
           var off = s && s.target && s.target.closest ? s.target.closest('button.row:disabled') : null;
-          if (off && C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) { off.classList.remove('nope'); void off.offsetWidth; off.classList.add('nope'); }
+          if (off && C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) { off.classList.remove('nope'); void off.offsetWidth; off.classList.add('nope'); (function (b) { setTimeout(function () { b.classList.remove('nope'); }, 350); })(off); }
           if (!(multi || quick) || !s || !C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) continue;
           var btn = s.target && s.target.closest ? s.target.closest('button') : null, under = document.elementFromPoint(t.clientX, t.clientY);
           if (btn && !btn.disabled && under && btn.contains(under)) { synth = { btn: btn, at: Date.now() }; btn.click(); made = true; }
@@ -620,7 +625,7 @@
     li.appendChild(el('span', 'log-day', 'D+' + pad3(state ? state.day : 1)));
     li.appendChild(el('span', 'log-text', text));
     list.insertBefore(li, list.firstChild);
-    setText($('story-latest'), text);      // 상황 화면의 '최근 무전' 한 줄
+    setText($('story-latest'), li.lastChild.textContent);      // 상황 화면의 '최근 무전' 한 줄(글 대신 요소가 넘어오는 로그도 있어서, 화면에 찍힌 글을 읽는다)
     while (list.children.length > LOG_MAX) list.removeChild(list.lastChild);
   }
   /** 화면 구석에 잠깐 떴다 사라지는 쪽지. 무전 로그를 안 보고 있어도 알아챌 일(업적, 유물 등)에 쓴다. */
@@ -1172,7 +1177,7 @@
    */
   var achTab = 'all', achShown = '';
   var ACH_GROUPS = [['all', '공통'], ['z1', '1구역'], ['z2', '2구역'], ['z3', '3구역'], ['z4', '4구역'], ['z5', '5구역']];
-  var TIER_NAMES = ['', '쉬움', '되풀이', '어려움', '아주 어려움'];
+  var TIER_NAMES = ['', '쉬움', '반복', '어려움', '아주 어려움'];
   function renderAch() {
     var list = C.ACHIEVEMENTS.filter(function (a) { return a.group === achTab; });
     var prog = list.map(function (a) { return C.achProgress(state, a); });
@@ -1607,7 +1612,7 @@
     if (tab === 'z1' && open) {
       var range = C.priceRange(state), cap = C.goodsCap(state), pr = $('price');
       setText(pr, '×' + state.price.toFixed(2));
-      pr.className = 'trade-price num' + (state.price >= C.PEAK_PRICE ? ' high' : state.price < range.mean * 0.8 ? ' low' : '');
+      pr.className = 'trade-price num' + (state.price >= C.peakPrice(state) ? ' high' : state.price < range.mean * 0.8 ? ' low' : '');
       setText($('price-range'), '범위 ' + range.floor.toFixed(1) + ' ~ ' + range.ceil.toFixed(1) + ' · 평균 ' + range.mean.toFixed(2));
       setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀌어요');
       setText($('goods'), fmt(state.goods) + ' / ' + fmt(cap));
@@ -1615,7 +1620,7 @@
       // 시세판: 막대의 높이는 시세 범위 안에서의 위치(바닥 8% ~ 천장 100%). 맨 오른쪽이 지금 시세다.
       var span = Math.max(0.01, range.ceil - range.floor);
       var height = function (p) { return (8 + 92 * Math.max(0, Math.min(1, (p - range.floor) / span))).toFixed(1) + '%'; };
-      var tone = function (p) { return p >= C.PEAK_PRICE ? ' high' : p < range.mean ? ' low' : ''; };
+      var tone = function (p) { return p >= C.peakPrice(state) ? ' high' : p < range.mean ? ' low' : ''; };
       var hist = state.priceHistory, pad = C.PRICE_HISTORY - hist.length;
       rows.bars.forEach(function (b, i) {
         var now = i === C.PRICE_HISTORY, p = now ? state.price : hist[i - pad];
@@ -1625,8 +1630,8 @@
         if (b.className !== cls) b.className = cls;
       });
       $('board-mean').style.bottom = height(range.mean);
-      $('board-peak').style.bottom = height(C.PEAK_PRICE);
-      $('board-peak').hidden = C.PEAK_PRICE > range.ceil;
+      $('board-peak').style.bottom = height(C.peakPrice(state));
+      $('board-peak').hidden = C.peakPrice(state) > range.ceil;
       // 연속 호가
       rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
       var mult = C.streakMult(state);
@@ -1635,7 +1640,7 @@
         : '평균 이상에서 팔리면 연속 호가가 쌓여요');
       var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
-      setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
+      setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.peakPrice(state) ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
       // 자동 판매: 흥정꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
       var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= C.priceRange(state).mean;

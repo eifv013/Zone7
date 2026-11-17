@@ -204,6 +204,10 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .row-mile .st.on { opacity: 1; }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
+.row-mile[hidden] { display: none; }      /* 2배가 없는 줄(짐꾼, 호객꾼 등)에서는 딱지를 숨긴다. inline-flex 가 hidden 을 덮어써서 빈 테두리가 보였다 */
+/* 누름 표시: 터치에서는 직접 켠 .pressed 만 쓴다(:active 는 들쭉날쭉했다) */
+.row.pressed, .row.pressed .row-desc, .row.pressed .row-cost { background: var(--hazard); color: var(--on-hazard); }
+@media (hover: none) { .row:not(:disabled):active:not(.pressed), .row:not(:disabled):active:not(.pressed) .row-desc, .row:not(:disabled):active:not(.pressed) .row-cost { background: transparent; color: inherit; } }
 /* 물자가 모자란 줄을 눌렀을 때: 값이 붉게 흔들린다 */
 .row.nope .row-cost { color: var(--blood); animation: nope .3s ease-in-out; }
 @keyframes nope { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
@@ -964,7 +968,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.17</div>
+  <div class="boot-ver">7구역 알파 0.9.18</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1408,7 +1412,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.17 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.18 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1533,7 +1537,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.18";
 </script>
 <script>
 /*
@@ -1552,6 +1556,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.18', date: '2026-11-17', at: '2026-11-17 23:59:58', title: '버그 잡기',
+      items: [
+        '상황 화면의 최근 무전에 글 대신 이상한 문자가 나오던 것을 고쳤어요.',
+        '줄을 누를 때 노란 채움이 나왔다 안 나왔다 하던 것을 고쳤어요. 이제 누를 때마다 나와요. 물자가 모자란 줄의 값이 계속 붉게 남던 것도 고쳤어요.',
+        '짐꾼, 호객꾼처럼 2배가 없는 줄에 빈 딱지가 보이던 것을 없앴어요.',
+        '시세판의 고점이 평균보다 낮게 그려지던 것을 고쳤어요. 시세 범위를 개조로 넓히면 고점도 같이 올라가요. 2구역 목표는 "고점 시세에서 10번 팔기"로 적혀요.',
+        '업적의 "되풀이"를 "반복"으로 바꿨어요.',
+        '안드로이드 앱에서 진동이 울리지 않던 것을 고쳤어요. 설치 파일을 새로 받아 다시 깔아야 적용돼요. 아이폰은 웹 앱에서 진동을 쓸 수 없어요.'
+      ] },
     { ver: '알파 0.9.17', date: '2026-11-17', at: '2026-11-17 23:59:57', title: '짧게',
       items: [
         '철수 칸과 농성 중 설명을 한 줄로 줄였어요.'
@@ -2675,7 +2688,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
       // 기다리기만 하면 되는 목표(밤 30번)는 뺐다: 손을 움직이는 만큼 빨리 끝나는 것으로 바꿨다
       { id: 'z1c', text: '동네 12곳 다 수색하기', need: 12, value: function (s) { return s.sweeps; } } ],
     [ { id: 'z2a', text: '좌판 50곳', need: 50, value: function (s) { return s.stalls; } },
-      { id: 'z2b', text: '시세 ' + PEAK_PRICE + ' 이상에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
+      { id: 'z2b', text: '고점 시세에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
       { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
     [ { id: 'z3a', text: '기계 레벨 합계 120', need: 120, value: function (s) { return machineLevels(s); } },
       { id: 'z3b', text: '정속 가동 누적 3분', need: 180, unit: 'time', value: function (s) { return s.steadySeconds; } },
@@ -2993,6 +3006,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
    * 직접 높은 시세를 골라 팔면 그보다 더 번다. 적극적으로 하는 사람의 이득은 평균의 1.5배 안팎이다.
    */
   function zoneOpen(state, index) { return state.zone >= index; }
+  /**
+   * '고점'으로 치는 시세. 시세 범위가 개조로 넓어지면 고점도 따라 올라간다(평균과 최고가 사이의 PEAK_SHARE 지점).
+   * 기본 범위(0.5~2)에서는 PEAK_PRICE(1.8)와 같다. 전에는 1.8 로 고정돼 있어서, 범위를 넓히면 고점이 평균보다 낮아졌다.
+   */
+  var PEAK_SHARE = (PEAK_PRICE - (PRICE_FLOOR + PRICE_CEIL) / 2) / (PRICE_CEIL - (PRICE_FLOOR + PRICE_CEIL) / 2);
+  function peakPrice(state) { var r = priceRange(state); return Math.round((r.mean + (r.ceil - r.mean) * PEAK_SHARE) * 100) / 100; }
   function priceRange(state) {
     var m = mods(state), floor = PRICE_FLOOR + m.floor, ceil = PRICE_CEIL + m.ceil;
     return { floor: Math.min(floor, ceil), ceil: ceil, mean: (Math.min(floor, ceil) + ceil) / 2 };
@@ -3053,12 +3072,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
     var gain = state.goods * price * goodsValue(state) * bonus;
     earn(state, gain);
     state.tradeEarned += gain;
-    if (price >= PEAK_PRICE) state.peakSales++;
+    if (price >= peakPrice(state)) state.peakSales++;
     state.goods = 0;
     var below = price < priceRange(state).mean;
     if (below) { if (!auto) state.streak = 0; }      // 자동 판매는 낮은 시세에 팔아도 끊지 않는다(창고가 차서 어쩔 수 없이 판 것이다)
     else if (!state.streakUsed) { state.streak = Math.min(STREAK_MAX, state.streak + 1); state.streakUsed = true; }
-    return { ok: true, gain: gain, price: price, peak: price >= PEAK_PRICE, bonus: bonus, streak: state.streak };
+    return { ok: true, gain: gain, price: price, peak: price >= peakPrice(state), bonus: bonus, streak: state.streak };
   }
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
   /** 2구역이 가만히 둘 때 초당 버는 물자(평균 시세 기준). 화면의 '초당' 표시와 자리 비움 계산에 쓴다. */
@@ -4275,7 +4294,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
     PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND,
     cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, breedDesc: breedDesc, petInfo: petInfo,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
-    PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
+    PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE, peakPrice: peakPrice,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
@@ -6115,7 +6134,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
       }, true);
       document.addEventListener('touchstart', function (e) {
         if (e.touches.length > 1) multi = true;
-        for (var i = 0; i < e.changedTouches.length; i++) { var t = e.changedTouches[i]; starts[t.identifier] = { x: t.clientX, y: t.clientY, at: Date.now(), target: t.target }; }
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          var t = e.changedTouches[i]; starts[t.identifier] = { x: t.clientX, y: t.clientY, at: Date.now(), target: t.target };
+          // 누름 표시(노란 채움)를 직접 켠다: 브라우저의 :active 는 빠르게 누르거나 두 손가락으로 누를 때 빠지곤 했다
+          var pr = t.target && t.target.closest ? t.target.closest('button.row:not(:disabled)') : null;
+          if (pr) { pr.classList.add('pressed'); (function (b) { setTimeout(function () { b.classList.remove('pressed'); }, 160); })(pr); }
+        }
       }, { passive: true });
       document.addEventListener('touchend', function (e) {
         var made = false, now = Date.now(), quick = now - lastEnd < 350;      // quick: 빠르게 두 번 누름(아이폰은 이때 화면을 키운다)
@@ -6125,7 +6149,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
           delete starts[t.identifier];
           // 살 수 없는 줄(물자 부족)을 눌렀으면 값이 붉게 흔들린다: 눌리긴 했는데 물자가 모자라다는 것을 알려 준다
           var off = s && s.target && s.target.closest ? s.target.closest('button.row:disabled') : null;
-          if (off && C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) { off.classList.remove('nope'); void off.offsetWidth; off.classList.add('nope'); }
+          if (off && C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) { off.classList.remove('nope'); void off.offsetWidth; off.classList.add('nope'); (function (b) { setTimeout(function () { b.classList.remove('nope'); }, 350); })(off); }
           if (!(multi || quick) || !s || !C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) continue;
           var btn = s.target && s.target.closest ? s.target.closest('button') : null, under = document.elementFromPoint(t.clientX, t.clientY);
           if (btn && !btn.disabled && under && btn.contains(under)) { synth = { btn: btn, at: Date.now() }; btn.click(); made = true; }
@@ -6457,7 +6481,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
     li.appendChild(el('span', 'log-day', 'D+' + pad3(state ? state.day : 1)));
     li.appendChild(el('span', 'log-text', text));
     list.insertBefore(li, list.firstChild);
-    setText($('story-latest'), text);      // 상황 화면의 '최근 무전' 한 줄
+    setText($('story-latest'), li.lastChild.textContent);      // 상황 화면의 '최근 무전' 한 줄(글 대신 요소가 넘어오는 로그도 있어서, 화면에 찍힌 글을 읽는다)
     while (list.children.length > LOG_MAX) list.removeChild(list.lastChild);
   }
   /** 화면 구석에 잠깐 떴다 사라지는 쪽지. 무전 로그를 안 보고 있어도 알아챌 일(업적, 유물 등)에 쓴다. */
@@ -7009,7 +7033,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
    */
   var achTab = 'all', achShown = '';
   var ACH_GROUPS = [['all', '공통'], ['z1', '1구역'], ['z2', '2구역'], ['z3', '3구역'], ['z4', '4구역'], ['z5', '5구역']];
-  var TIER_NAMES = ['', '쉬움', '되풀이', '어려움', '아주 어려움'];
+  var TIER_NAMES = ['', '쉬움', '반복', '어려움', '아주 어려움'];
   function renderAch() {
     var list = C.ACHIEVEMENTS.filter(function (a) { return a.group === achTab; });
     var prog = list.map(function (a) { return C.achProgress(state, a); });
@@ -7444,7 +7468,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
     if (tab === 'z1' && open) {
       var range = C.priceRange(state), cap = C.goodsCap(state), pr = $('price');
       setText(pr, '×' + state.price.toFixed(2));
-      pr.className = 'trade-price num' + (state.price >= C.PEAK_PRICE ? ' high' : state.price < range.mean * 0.8 ? ' low' : '');
+      pr.className = 'trade-price num' + (state.price >= C.peakPrice(state) ? ' high' : state.price < range.mean * 0.8 ? ' low' : '');
       setText($('price-range'), '범위 ' + range.floor.toFixed(1) + ' ~ ' + range.ceil.toFixed(1) + ' · 평균 ' + range.mean.toFixed(2));
       setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀌어요');
       setText($('goods'), fmt(state.goods) + ' / ' + fmt(cap));
@@ -7452,7 +7476,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
       // 시세판: 막대의 높이는 시세 범위 안에서의 위치(바닥 8% ~ 천장 100%). 맨 오른쪽이 지금 시세다.
       var span = Math.max(0.01, range.ceil - range.floor);
       var height = function (p) { return (8 + 92 * Math.max(0, Math.min(1, (p - range.floor) / span))).toFixed(1) + '%'; };
-      var tone = function (p) { return p >= C.PEAK_PRICE ? ' high' : p < range.mean ? ' low' : ''; };
+      var tone = function (p) { return p >= C.peakPrice(state) ? ' high' : p < range.mean ? ' low' : ''; };
       var hist = state.priceHistory, pad = C.PRICE_HISTORY - hist.length;
       rows.bars.forEach(function (b, i) {
         var now = i === C.PRICE_HISTORY, p = now ? state.price : hist[i - pad];
@@ -7462,8 +7486,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
         if (b.className !== cls) b.className = cls;
       });
       $('board-mean').style.bottom = height(range.mean);
-      $('board-peak').style.bottom = height(C.PEAK_PRICE);
-      $('board-peak').hidden = C.PEAK_PRICE > range.ceil;
+      $('board-peak').style.bottom = height(C.peakPrice(state));
+      $('board-peak').hidden = C.peakPrice(state) > range.ceil;
       // 연속 호가
       rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
       var mult = C.streakMult(state);
@@ -7472,7 +7496,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.17";
         : '평균 이상에서 팔리면 연속 호가가 쌓여요');
       var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
-      setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
+      setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.peakPrice(state) ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
       // 자동 판매: 흥정꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
       var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= C.priceRange(state).mean;

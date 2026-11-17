@@ -4,6 +4,7 @@
     <!-- 인터넷: 게임 파일을 받아 오는 데 쓴다. 알림: 창고가 가득 찼을 때와 오래 비웠을 때 알려 준다(하루에 많아야 두 번, 설정에서 끌 수 있다). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
