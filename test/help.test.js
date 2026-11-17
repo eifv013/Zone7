@@ -36,8 +36,9 @@ test('도움말: 효과의 크기(몇 %, 몇 배)는 적지 않고, 시간과 �
 test('도움말: 만들어진 구역과 다음 구역을 정의표에서 읽어 적는다', () => {
   const flow = find('flow');
   C.ZONES.filter(z => z.kind !== 'soon').forEach(z => assert.ok(flow.includes(z.no + '구역 ' + z.name), z.name));
-  const next = C.ZONES.find(z => z.kind === 'soon');
-  assert.ok(flow.includes(next.no + '구역 ' + next.name));
+  // 1.2.0: 일곱 구역이 모두 만들어졌다. '다음 버전에서 열려요' 안내는 더 없다
+  assert.equal(C.ZONES.find(z => z.kind === 'soon'), undefined);
+  assert.ok(!flow.includes('다음 버전'));
 });
 
 test('도움말: 규칙 모듈이 없거나 상수가 빠지면 오류를 낸다', () => {
@@ -56,8 +57,7 @@ test('도움말: 받침에 따라 은/는을 고른다', () => {
   assert.equal(H.topic('송신탑'), '송신탑은');
   assert.equal(H.topic('Zone'), 'Zone는');
   assert.doesNotThrow(() => H.topic(''));
-  const next = C.ZONES.find(z => z.kind === 'soon');
-  assert.ok(find('flow').includes(H.topic(next.name) + ' 문 앞까지만'));
+  assert.ok(find('flow').includes('7구역까지 만들어져'));
 });
 
 test('도움말 항목마다 탭에 쓸 짧은 이름이 있고 서로 겹치지 않는다', () => {

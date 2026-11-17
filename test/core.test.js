@@ -62,8 +62,8 @@ test('저장: 직렬화를 거쳐도 같고, 깨진 값과 모르는 항목을 �
     traits: { immune: 9999 }, pendingPerks: ['harvest', 'nothing', 42], goalsDone: { z1a: 1, fake: 1 }, story: { 'z1-0': true, fake: true },
     runLog: [null, { zone: 1, seconds: 5, antibodies: 2 }, 'x'], buff: { mult: 99, left: 1e9 } }, 0);
   assert.equal(bad.supplies, 0);
-  assert.equal(bad.zone, 5, '아직 없는 구역(7구역)에는 들어가 있을 수 없다');
-  assert.equal(C.ZONES[6].kind, 'soon');
+  assert.equal(bad.zone, 6, '구역 번호는 마지막 구역을 넘지 못한다');
+  assert.equal(C.ZONES.find(z => z.kind === 'soon'), undefined);
   assert.equal(bad.buildings.scouts, 0);
   assert.equal(bad.buildings.nothing, undefined);
   assert.equal(bad.stalls, C.COUNT_MAX);
@@ -210,27 +210,19 @@ test('다음 구역: 목표를 다 채우고 값을 치러야 열리고, 열어�
   assert.equal(C.searchRate(s), before, '1구역은 계속 번다');
 });
 
-test('다음 구역: 아직 만들지 않은 구역은 문 앞까지만 간다', () => {
+test('다음 구역: 7구역까지 차례로 열리고, 그 뒤로는 다음 구역이 없다', () => {
   const s = inLab();
   C.GOALS[4].forEach(g => { s.goalsDone[g.id] = true; });
-  // 6구역(강변 검문소)은 이제 열린다
   s.supplies = C.nextZone(s).cost;
   assert.equal(C.nextZone(s).soon, false);
   assert.ok(C.openZone(s).ok); assert.equal(s.zone, 5);
   C.GOALS[5].forEach(g => { s.goalsDone[g.id] = true; });
-  const n = C.nextZone(s);
-  assert.equal(n.soon, true);
-  s.supplies = n.cost;
-  const r = C.openZone(s);
-  assert.ok(r.ok && r.soon);
-  assert.equal(s.zone, 5, '들어가지는 못한다');
-  assert.equal(s.gate, true);
-  assert.equal(s.bestZone, 6);
-  assert.equal(s.supplies, 0);
+  s.supplies = C.nextZone(s).cost;
+  assert.equal(C.nextZone(s).soon, false);
+  assert.ok(C.openZone(s).ok); assert.equal(s.zone, 6); assert.equal(s.gate, false);
+  assert.equal(C.nextZone(s), null, '7구역이 마지막이다');
   s.supplies = 1e60;
-  assert.equal(C.openZone(s).reason, 'soon', '두 번 치르지 않는다');
-  s.buildings.scouts = 1; s.defenses.rail = 1e5; s.clicks = 1;
-  assert.equal(C.guide(s).id, 'retreat');
+  assert.equal(C.openZone(s).ok, false);
 });
 
 /* ================= 2구역: 거래 ================= */
@@ -789,9 +781,9 @@ test('저장: 기계와 라인 기록을 안전하게 읽고, 문 앞에 있던 
   // 1.0.4: 6구역이 열렸다. 6구역 문 앞에 있던 저장은 6구역으로 들어간다
   const old6 = C.sanitizeState({ version: 2, zone: 4, gate: true, story: { 'gate-6': true } }, 0);
   assert.equal(old6.zone, 5); assert.equal(old6.gate, false);
-  // 지금의 문 앞(7구역)은 그대로 둔다
-  const now = C.sanitizeState({ version: 2, zone: 5, gate: true }, 0);
-  assert.equal(now.zone, 5); assert.equal(now.gate, true);
+  // 1.2.0: 7구역이 열렸다. 7구역 문 앞에 있던 저장은 7구역으로 들어간다
+  const old7 = C.sanitizeState({ version: 2, zone: 5, gate: true }, 0);
+  assert.equal(old7.zone, 6); assert.equal(old7.gate, false);
 });
 
 /* ================= 4구역: 노선 ================= */
@@ -1695,9 +1687,9 @@ test('구조 신호의 보상: 물자, 간식, 생산 배수 가운데 하나', 
 test('업적: 구역마다 15개, 공통 30개. 이름과 조건이 있고 id 가 겹치지 않는다', () => {
   const by = {};
   for (const a of C.ACHIEVEMENTS) { by[a.group] = (by[a.group] || 0) + 1; assert.ok(a.name && a.text && a.need > 0 && a.tier >= 1 && a.tier <= 4, a.id); assert.ok(!/undefined|NaN/.test(a.text), a.text); }
-  assert.deepEqual(by, { z1: 15, z2: 15, z3: 15, z4: 15, z5: 15, z6: 15, all: 30 });
-  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.id)).size, 120);
-  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.name)).size, 120);
+  assert.deepEqual(by, { z1: 15, z2: 15, z3: 15, z4: 15, z5: 15, z6: 15, z7: 15, all: 30 });
+  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.id)).size, 135);
+  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.name)).size, 135);
   for (const g of Object.keys(by)) assert.ok(new Set(C.ACHIEVEMENTS.filter(a => a.group === g).map(a => a.tier)).size >= 3, g + ' 에 여러 난이도가 있다');
 });
 
@@ -2131,4 +2123,36 @@ test('병원 서류: 과제를 끝낼 때 가끔 한 장을 찾고, 간식·도�
   assert.equal(back.records[r.record.id], 1); assert.equal(back.recordsRun, 0);
   const bad = C.sanitizeState({ version: 2, records: { desk: -1, 가짜: 2 }, recordsRun: 'x' }, 0);
   assert.equal(bad.records.desk, undefined); assert.equal(bad.records['가짜'], undefined); assert.equal(bad.recordsRun, 0);
+});
+
+test('7구역 송신탑: 안테나가 생존자를 모으고, 모인 만큼 전체 생산이 늘고, 혈청을 끝내면 이야기가 끝난다', () => {
+  const s = inLab(); s.zone = 6; s.supplies = 1e60;
+  assert.equal(C.towerMult(s), 1, '생존자가 없으면 그대로');
+  assert.equal(C.survivorRate(s), 0);
+  assert.ok(C.buyAntenna(s, 30).ok); assert.equal(s.antennas, 30);
+  assert.ok(C.survivorRate(s) > 30, '2배 문턱이 붙는다');
+  C.tick(s, 10, () => 0.5);
+  assert.ok(s.survivors > 0);
+  s.survivors = 1e5; near(C.towerMult(s), 1 + 0.5 * Math.log10(1 + 1e5));
+  const closed = inLab(); closed.supplies = 1e60;
+  assert.equal(C.buyAntenna(closed, 1).reason, 'locked'); assert.equal(C.buySerum(closed).reason, 'locked'); assert.equal(C.towerMult(closed), 1);
+  // 혈청 세 단계
+  const costs = []; for (let i = 0; i < 3; i++) { costs.push(C.serumCost(s)); assert.ok(C.buySerum(s).ok); }
+  assert.ok(costs[0] < costs[1] && costs[1] < costs[2]);
+  assert.equal(s.serumStage, 3); assert.equal(C.buySerum(s).reason, 'done'); assert.equal(C.serumCost(s), Infinity);
+  // 목표 셋을 채우면 끝난다(특전 고르기가 끼어들 수 있으므로 골라 가며 돌린다)
+  let ending = null;
+  for (let i = 0; i < 12 && !ending; i++) { const ev = C.tick(s, 1, () => 0.5); ending = ev.find((e) => e.type === 'ending') || null; if (s.pendingPerks.length) C.choosePerk(s, s.pendingPerks[0]); }
+  assert.ok(ending, '끝이 온다'); assert.equal(s.ended, 1); assert.ok(s.endedAt > 0);
+  for (let i = 0; i < 5; i++) assert.ok(!C.tick(s, 1, () => 0.5).some((e) => e.type === 'ending'), '한 회차에 한 번만');
+  s.runEarned = 1e30; const back = C.retreat(s, 1).state;
+  assert.equal(back.ended, 1); assert.equal(back.endedRun, false); assert.equal(back.antennas, 0); assert.equal(back.survivors, 0); assert.equal(back.serumStage, 0);
+  const bad = C.sanitizeState({ version: 2, zone: 2, antennas: 50, survivors: 1e9, serumStage: 3, ended: 'x' }, 0);
+  assert.equal(bad.antennas, 0); assert.equal(bad.survivors, 0); assert.equal(bad.serumStage, 0); assert.equal(bad.ended, 0);
+});
+
+test('일지의 신호는 처음부터 끝까지 같다: 길게, 짧게, 길게', () => {
+  const texts = C.BEATS.map((b) => b.text).join('\n');
+  assert.ok(!/길게 한 번, 짧게 두 번/.test(texts), '6장에서 신호가 달라져 있었다');
+  ['z4-2', 'z5-2', 'z6-1', 'z7-0', 'z7-2'].forEach((id) => assert.ok(C.BEATS.find((b) => b.id === id).text.includes('길게, 짧게, 길게'), id));
 });

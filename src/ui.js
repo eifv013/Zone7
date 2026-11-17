@@ -935,6 +935,7 @@
     if (zi > state.zone) return '잠김';
     if (zi === 4) return '점수 +' + fmt(C.researchRate(state)) + '/초';
     if (zi === 5) return '+' + fmt(C.guardRate(state)) + '/초';
+    if (zi === 6) return '생산 ×' + C.towerMult(state).toFixed(2);
     return zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '';
   }
   function renderZoneMap() {
@@ -1075,10 +1076,12 @@
     z3: '환승역 · 먼 노선일수록 많이 실어 와요.',
     z4: '대학 병원 · 과제를 끝내면 다른 구역이 강해져요.',
     z5: '강변 검문소 · 방어력이 무리보다 넉넉할수록 더 벌어요.',
+    z6: '송신탑 · 사람이 모일수록 모든 구역이 더 벌어요.',
     wall: '방어력이 무리 규모보다 커야 밤을 넘겨요.'
   };
   var perkShown = '', journalShown = '', statsShown = '';
-  var ZONE_TABS = 6;   // 탭으로 만들어 둘 구역 수: 만든 구역 넷 + 문 앞까지 갈 수 있는 다음 구역 하나. 화면에는 연 구역과 그다음 구역까지만 보인다
+  var pendingEnding = null;      // 끝 화면에 띄울 사건(이야기를 끝낸 순간의 날짜·철수 수·시간)
+  var ZONE_TABS = C.ZONES.length;   // 구역마다 탭 하나. 화면에는 연 구역과 그다음 구역까지만 보인다
 
   /* ---------- 목록 만들기(처음 한 번) ---------- */
   function build() {
@@ -1152,6 +1155,15 @@
     // 6구역: 초소
     rows.post = buildRow({ id: 'post', name: '초소', desc: '다리를 건너오는 사람들에게서 통행 물자를 받는다. 10·25·50곳마다 2배' }, function () { buy(C.buyPost(state, qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts)), 'defense'); });
     $('rows-z5').appendChild(rows.post.btn);
+    // 7구역: 안테나와 혈청
+    rows.antenna = buildRow({ id: 'antenna', name: '안테나', desc: '방송을 멀리 보내 생존자를 부른다. 10·25·50기마다 2배' }, function () { buy(C.buyAntenna(state, qtyFor(C.maxAntennas(state), C.COUNT_MAX - state.antennas)), 'route'); });
+    $('rows-z6').appendChild(rows.antenna.btn);
+    $('serum').addEventListener('click', function () {
+      var r = C.buySerum(state);
+      if (!r.ok) return;
+      log('혈청 ' + state.serumStage + '단계를 끝냈다.', 'good'); sfx('perk'); buzz(30); Store.save(); render();
+    });
+    $('ending-ok').addEventListener('click', function () { $('ending').hidden = true; pendingEnding = null; sfx('story'); });
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id), 'upgrade'); });
       r.btn.classList.add('row-zone');
@@ -1228,7 +1240,7 @@
    *   달성한 것은 노란 표시, 아직인 것은 진행 막대와 '지금 / 목표'. 머리줄에는 달성 수와 지금의 생산 보너스.
    */
   var achTab = 'all', achShown = '';
-  var ACH_GROUPS = [['all', '공통'], ['z1', '1구역'], ['z2', '2구역'], ['z3', '3구역'], ['z4', '4구역'], ['z5', '5구역'], ['z6', '6구역']];
+  var ACH_GROUPS = [['all', '공통'], ['z1', '1구역'], ['z2', '2구역'], ['z3', '3구역'], ['z4', '4구역'], ['z5', '5구역'], ['z6', '6구역'], ['z7', '7구역']];
   var TIER_NAMES = ['', '쉬움', '반복', '어려움', '아주 어려움'];
   function renderAch() {
     var list = C.ACHIEVEMENTS.filter(function (a) { return a.group === achTab; });
@@ -1573,6 +1585,14 @@
 
     // 다음 할 일
     guideNow = C.guide(state);
+    // 끝 화면: 일지와 특전 창이 모두 닫힌 뒤에 띄운다(겹치지 않게)
+    if (pendingEnding && $('ending').hidden && $('story').hidden && $('perk').hidden) {
+      setText($('ending-text'), '끝까지 왔어요.\n노란 우비는 탑 꼭대기에 걸려 있어요.');
+      setText($('ending-stats'), 'D+' + pendingEnding.day + ' · 철수 ' + pendingEnding.retreats + '번 · 켜 둔 시간 ' + duration(pendingEnding.seconds) + (pendingEnding.count > 1 ? ' · ' + pendingEnding.count + '번째 끝' : ''));
+      setText($('ending-after'), '거점은 계속 돌아가요.\n철수하면 처음부터 다시, 더 강하게 시작할 수 있어요.');
+      $('ending').hidden = false; sfx('goal');
+      try { $('ending-ok').focus(); } catch (e) { /* 초점을 못 옮겨도 된다 */ }
+    }
     // 아래 탭의 붉은 점: 살 것이 있는데 다른 화면을 보느라 놓치지 않게 한다
     var feedCost = state.pet ? C.petFeedCost(state) : Infinity;
     var canFeed = isFinite(feedCost) && feedCost <= state.treats;
@@ -1657,7 +1677,7 @@
     var play = pane === 'play', zoneTab = zi >= 0 && open;
     $('zone-panes').hidden = !zoneTab;
     Array.prototype.forEach.call($('zone-panes').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.pane === pane)); });
-    for (var uz = 0; uz < 5; uz++) $('ups-z' + uz).hidden = !(tab === 'z' + uz && open && pane === 'up');
+    for (var uz = 0; uz < C.ZONES.length; uz++) $('ups-z' + uz).hidden = !(tab === 'z' + uz && open && pane === 'up');
     $('search').hidden = !(tab === 'z0' && play);
     $('rows-z0').hidden = !(tab === 'z0' && play);
     $('rows-z1').hidden = !(tab === 'z1' && open);
@@ -1668,11 +1688,13 @@
     $('lab').hidden = !(tab === 'z4' && open);
     $('rows-z5').hidden = !(tab === 'z5' && open);
     $('guard').hidden = !(tab === 'z5' && open);
+    $('rows-z6').hidden = !(tab === 'z6' && open);
+    $('tower').hidden = !(tab === 'z6' && open);
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-extra').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
     $('line').hidden = !(tab === 'z2' && open);
-    ['rows-z1', 'rows-z2', 'rows-z3', 'rows-z4', 'rows-z5', 'trade', 'line', 'rail', 'lab', 'guard'].forEach(function (id) { if (!play) $(id).hidden = true; });
+    ['rows-z1', 'rows-z2', 'rows-z3', 'rows-z4', 'rows-z5', 'rows-z6', 'trade', 'line', 'rail', 'lab', 'guard', 'tower'].forEach(function (id) { if (!play) $(id).hidden = true; });
     $('pane-goals').hidden = !(zi >= 0) || (open && pane !== 'goal');
     $('qty').hidden = soon || (zi > state.zone) || (zoneTab && !play);
     // 강화나 목표에 볼 것이 생기면 전환 단추에 점을 찍는다
@@ -1897,6 +1919,22 @@
       setText(rows.train.info, '대당 초당 화물 ' + fmt(cargo) + (plan.idle ? ' · 탈 노선이 없음' : ''));
       setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + fmt(tcost) : '최대');
       rows.train.btn.disabled = !(tcost <= state.supplies);
+    }
+    if (tab === 'z6' && open) {
+      // 7구역: 모인 생존자와 전체 배수, 혈청, 안테나
+      var sRate = C.survivorRate(state), stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state);
+      setText($('tower-people'), fmt(Math.floor(state.survivors)) + '명');
+      setText($('tower-rate'), sRate > 0 ? '초당 +' + fmt(sRate) + '명' : '안테나를 세우면 사람이 모여요');
+      setText($('tower-mult'), '모든 구역의 생산 ×' + C.towerMult(state).toFixed(2));
+      setText($('serum'), stage >= sMax ? '혈청을 완성했다' : '혈청 ' + (stage + 1) + '단계 · 물자 ' + fmt(sCost));
+      $('serum').disabled = stage >= sMax || !(sCost <= state.supplies);
+      setText($('serum-note'), '혈청 ' + stage + ' / ' + sMax + '단계');
+      var aq = qtyFor(C.maxAntennas(state), C.COUNT_MAX - state.antennas), acost = C.antennaCost(state, aq);
+      setText(rows.antenna.count, state.antennas + ' / ' + C.COUNT_MAX);
+      setMile(rows.antenna, state.antennas, aq, acost <= state.supplies);
+      setText(rows.antenna.info, state.antennas ? '초당 ' + fmt(sRate) + '명' : '세우면 생존자가 모여요');
+      setText(rows.antenna.cost, isFinite(acost) ? '×' + aq + ' ' + fmt(acost) : '최대');
+      rows.antenna.btn.disabled = !(acost <= state.supplies);
     }
     if (tab === 'z5' && open) {
       // 6구역: 다리 안전도(방어력 ÷ 무리)와 초소
@@ -2147,6 +2185,10 @@
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
+          break;
+        case 'ending':
+          pendingEnding = ev;      // 일지 창과 특전 창이 닫힌 뒤에 끝 화면을 띄운다(render 가 본다)
+          log('혈청을 완성했다. 7구역에 닿았다.', 'story');
           break;
         case 'salvage':
           toast('표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); sfx('signal');

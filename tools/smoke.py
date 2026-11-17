@@ -62,6 +62,14 @@ def guard(**over):
     s.update(over)
     return s
 
+def tower(**over):
+    """7구역(송신탑)까지 연 판: 안테나는 없고 물자는 넉넉하다."""
+    s = guard(zone=6, supplies=5e45, runEarned=5e45, posts=40)
+    s["goalsDone"].update({"z6a": True, "z6b": True, "z6c": True})
+    s["story"].update({"z6-1": True, "z6-2": True, "z7-0": True})
+    s.update(over)
+    return s
+
 CASES = [
     ('폰 · 2구역, 못 막는 밤', (390, 760), market(), 'full'),
     ('PC · 2구역, 막는 밤', (1280, 900), market(defenses={"wire": 60, "tower": 40, "turret": 30, "flame": 10}, autoSell=True), 'full'),
@@ -74,6 +82,8 @@ CASES = [
     ('PC · 5구역 연구', (1280, 900), lab(), 'lab'),
     ('폰 · 6구역 검문소', (390, 760), guard(), 'guard'),
     ('PC · 6구역 검문소', (1280, 900), guard(), 'guard'),
+    ('폰 · 7구역 송신탑과 끝', (390, 760), tower(survivors=99000), 'tower'),
+    ('PC · 7구역 송신탑과 끝', (1280, 900), tower(survivors=99000), 'tower'),
 ]
 
 def run_case(browser, name, size, state, mode):
@@ -156,11 +166,11 @@ def run_case(browser, name, size, state, mode):
         for t in ['radio', 'stats', 'notes', 'help', 'journal', 'save']: tap('[data-rtab-set=%s]' % t)
         # 0.9.0 업적: 탭 여섯, 고른 묶음의 업적 카드, 머리줄의 달성 수
         tap('[data-mview-set=record]'); tap('[data-rtab-set=ach]')
-        if page.locator('#ach-tabs button').count() != 7: problems.append('업적 탭이 일곱이 아니다')
+        if page.locator('#ach-tabs button').count() != 8: problems.append('업적 탭이 여덟이 아니다')
         if page.locator('#ach .ach-card').count() != 30: problems.append('공통 업적 30개가 보이지 않는다: %d' % page.locator('#ach .ach-card').count())
         page.locator('#ach-tabs button').nth(2).click(); page.wait_for_timeout(100)
         if page.locator('#ach .ach-card').count() != 15: problems.append('구역 업적 15개가 보이지 않는다')
-        if '/ 120' not in text('ach-count'): problems.append('업적 달성 수가 없다: ' + text('ach-count'))
+        if '/ 135' not in text('ach-count'): problems.append('업적 달성 수가 없다: ' + text('ach-count'))
         # 0.9.0 업데이트 알림 띠: '나중에'를 누르면 사라진다(단추가 연결돼 있는지 본다)
         page.evaluate("document.getElementById('update-bar').hidden = false")
         if page.locator('#update-bar button').count() != 1 or not page.locator('#update-now').is_visible(): problems.append('업데이트 알림에는 단추가 하나(지금 업데이트)만 있어야 한다')
@@ -267,6 +277,34 @@ def run_case(browser, name, size, state, mode):
         if page.locator('[data-tab=z4]').is_visible(): problems.append('아직 먼 5구역 탭이 보인다')
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
+    elif mode == 'tower':
+        # 7구역: 안테나를 사면 생존자가 모이고 → 혈청 세 단계를 끝내고 목표를 채우면 → 일지 뒤에 끝 화면이 뜨고 → 닫으면 게임이 이어진다
+        tap('[data-mview-set=manage]'); tap('[data-tab=z6]')
+        if not page.locator('#tower').is_visible(): problems.append('7구역 탭에 송신탑 칸이 없다')
+        for _ in range(3):      # 혈청부터(안테나를 한꺼번에 사면 물자가 바닥난다)
+            if not tap('#serum'): break
+            page.wait_for_timeout(150)
+        if '완성' not in text('serum'): problems.append('혈청 세 단계를 끝내지 못했다: ' + text('serum'))
+        tap('[data-qty="10"]')
+        for _ in range(4): tap('#row-antenna'); page.wait_for_timeout(120)
+        if text('row-antenna').find('40 / 500') < 0: problems.append('안테나를 40기 사지 못했다: ' + text('row-antenna')[:40].replace(chr(10), ' '))
+        if not fits(): problems.append('한 화면에 들어오지 않는다(7구역)')
+        # 생존자 목표(10만 명)를 채워서 끝을 본다
+        ended = False
+        for _ in range(60):
+            close_story()
+            for b2 in page.locator('#perk-list button').all()[:1]:
+                try:
+                    if b2.is_visible(): b2.click()
+                except Exception: pass
+            if page.locator('#ending').is_visible(): ended = True; break
+            page.wait_for_timeout(500)
+        if not ended: problems.append('목표를 채웠는데 끝 화면이 뜨지 않았다(안테나 %s, 생존자 %s)' % (text('row-antenna')[:30].replace(chr(10), ' '), text('tower-people')))
+        else:
+            if '철수' not in text('ending-stats'): problems.append('끝 화면에 기록이 없다: ' + text('ending-stats'))
+            if page.evaluate("document.documentElement.scrollWidth > window.innerWidth"): problems.append('끝 화면이 옆으로 넘친다')
+            page.click('#ending-ok'); page.wait_for_timeout(200)
+            if page.locator('#ending').is_visible(): problems.append('끝 화면이 닫히지 않는다')
     elif mode == 'guard':
         # 6구역: 안전도 칸이 보이고 → 초소를 사면 통행 물자가 들어오고 → 한 화면에 들어온다(긴 구역 이름이 머리띠를 밀어내지 않는다)
         tap('[data-mview-set=manage]'); tap('[data-tab=z5]')

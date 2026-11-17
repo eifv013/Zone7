@@ -324,8 +324,8 @@
           "그때 건너편 탐조등이 돌던 것을 멈추고 이쪽으로 내려왔다. 빛이 차들을 훑고, 놈들을 훑고, 차단기 앞의 나한테 와서 섰다. 노란 우비가 대낮처럼 환해졌다.",
           "불빛이 한 번 꺼졌다 켜졌다. 그리고 또 한 번. 누가 저기서 나를 보고 있다. 다리를 건너려면 여기를 먼저 지켜야 한다."] },
         { title: "깜박임", text: [
-          "탐조등은 밤마다 온다. 길게 한 번, 짧게 두 번. 매번 같다. 아저씨는 그게 신호라고 했다. 뜻은 모른다고 했다.",
-          "나는 초소 지붕에 올라가 손전등으로 똑같이 돌려보냈다. 길게 한 번, 짧게 두 번. 건너편 불빛이 한참 멈춰 있다가, 처음으로 다르게 깜박였다. 짧게 세 번.",
+          "탐조등은 밤마다 온다. 길게, 짧게, 길게. 매번 같다. 아저씨는 그게 신호라고 했다. 뜻은 모른다고 했다. 나는 모른다고 하지 않았다.",
+          "나는 초소 지붕에 올라가 손전등으로 똑같이 돌려보냈다. 길게, 짧게, 길게. 건너편 불빛이 한참 멈춰 있다가, 처음으로 다르게 깜박였다. 짧게 세 번.",
           "다리 위의 놈들은 불빛을 보지 않는다. 소리만 따라간다. 방송이 나오는 쪽으로 서 있을 뿐이다. 그러니까 저 불빛은 놈들한테 보내는 게 아니다.",
           "초소를 하나 더 세웠다. 차단기 옆에 모래주머니를 쌓으면서 건너편을 자꾸 봤다. 누가 보고 있다는 건, 누가 기다리고 있다는 뜻일지도 모른다."] },
         { title: "차단기", text: [
@@ -333,7 +333,29 @@
           "새벽에 건너편에서 쇠 긁는 소리가 났다. 차단기가 올라가는 소리였다. 저쪽 차단기다. 절반쯤 올라가다 멈췄다.",
           "탐조등이 다리 한가운데를 비췄다. 버려진 버스 한 대가 가로로 서 있다. 그 지붕 위에 밧줄 뭉치가 놓여 있었다. 어제는 없던 것이다.",
           "아저씨가 말했다. “저쪽에서도 길을 내고 있는 거야. 우리가 여기서 버티는 걸 보고.” 나는 냉장 상자를 고쳐 멨다. 강은 넓고, 다리는 하나뿐이다."] }] },
-    { no: 7, name: '송신탑', kind: 'soon', cost: 1e38, lead: '', story: [] }
+    { no: 7, name: '송신탑', kind: 'tower', cost: 1e38, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
+      story: [
+        { title: "밧줄", text: [
+          "7구역. 버스 지붕의 밧줄을 잡고 건넜다. 밧줄은 저쪽에서 당겨 주었다. 당긴 손은 작았다. 여럿이었다.",
+          "차단기 아래에서 아이들이 쏟아져 나왔다. 세어 볼 것도 없었다. 열여섯. 받침을 네모나게 쓰는 애는 없다. 나는 쪽지를 펴서 줄 그은 이름을 보여 줬다. 아무도 묻지 않았다. 다들 알고 있었다.",
+          "송신탑은 강둑 끝에 서 있다. 밑동을 놈들이 빙 둘러싸고 있다. 걷지 않는다. 스피커를 올려다보고 서 있을 뿐이다. 아이들은 그 사이를 지나다닌다. 소리만 내지 않으면 된다고 했다.",
+          "어른은 어디 있느냐고 물었다. 일지에는 열일곱이 건넜다고 적혀 있었다. 아이들이 탑 꼭대기를 가리켰다. “간호사 선생님. 공단에서부터 우리를 데리고 왔어. 올라오지 말래. 밤에 불만 켜 줘.”",
+          "꼭대기 창에 불이 들어왔다. 길게, 짧게, 길게. 나는 냉장 상자 손잡이를 쥔 손에 힘이 들어가는 걸 한참 뒤에야 알았다."] },
+        { title: "딸깍", text: [
+          "안테나를 세울수록 방송이 멀리 간다. 사람들이 온다. 강을 따라, 선로를 따라, 지붕 위의 7을 따라. 어제는 마흔, 오늘은 백이 넘었다. 아저씨는 문마다 분필로 썼다. “쓰고 채워 놓을 것.”",
+          "방송실은 탑의 중간에 있다. 테이프가 혼자 돌고 있었다. 헤드폰을 쓰니 무전기로는 들리지 않던 것이 들렸다. 문장과 문장 사이, 딸깍 소리 바로 앞에, 아주 작게 녹음된 목소리.",
+          "“{hero:야}. 우비 벗지 마. 멀리서도 엄마가 알아볼 수 있게.”",
+          "숨 쉴 틈도 없이 말하던 그 목소리가 거기서만 느렸다. 테이프가 돌 때마다 그 말이 나왔다. 사태 9일째부터 지금까지. 나는 그 방송을 매일 들으면서 한 번도 듣지 못했다.",
+          "책상에는 빈 관이 하나 놓여 있었다. 라벨은 114-1. 그 옆에 주사기. 수첩의 마지막 장에는 글씨가 아니라 삐뚤빼뚤한 선만 있었다. 손이 말을 듣지 않는 사람이 쓴 것처럼. 겨우 읽을 수 있는 건 한 줄이었다. “물렸다. 다리에서. 한 대로는 멈추기만 한다.”"] },
+        { title: "길게, 짧게, 길게", text: [
+          "꼭대기까지 계단이 백마흔 개였다. 아이들은 올라오지 말랬다고 했지만, 나를 막지는 않았다.",
+          "탐조등 옆에 간호사복을 입은 사람이 등을 돌리고 서 있었다. 살갗이 잿빛이다. 강 건너를 보고 있다. 놈들이 서 있는 것처럼 서 있다. 나는 엄마라고 부르지 못하고 우비의 모자를 벗었다.",
+          "그 사람이 돌아봤다. 아주 천천히. 반장이 그랬던 것처럼. 다가와서 내 왼쪽 소매에 코를 대고 한참 있었다. 그러고는 소매를 끝까지 내려 주었다. 떨리는 손으로. 그 손을 나는 안다.",
+          "엄마는 말을 하지 못했다. 대신 탐조등 스위치에 손을 올렸다. 길게, 짧게, 길게. 저녁밥이 다 됐을 때 현관 불을 그렇게 깜박이던 사람이다. 나는 그게 무슨 신호인지 처음부터 알고 있었다. 모르는 척하고 여기까지 온 것이다.",
+          "냉장 상자를 열었다. 114-2부터 114-7. 아주머니가 관을 받아 들고 말했다. “여섯 대면 돼. 멈춘 걸 되돌릴 수 있어.” 엄마가 고개를 저었다. 수첩에 선을 그었다. 겨우 읽었다. “애들 먼저.” 열여섯 가운데 열이 나는 애가 넷 있었다.",
+          "그래서 나는 팔을 걷었다. 이번에는 오른쪽도. “114번은 여기 있어. 모자라면 더 뽑으면 돼.” 엄마의 입이 한 번 움직였다. 소리는 없었지만 나는 그 모양을 안다.",
+          "그날 밤 방송실에서 테이프를 새로 녹음했다. 엄마 목소리는 지우지 않고, 그 뒤에 이어 붙였다. “여기는 7구역. 생존자는 7구역으로 오라. 물린 사람도 오라.” 딸깍.",
+          "노란 우비는 탑 꼭대기에 걸어 두었다. 멀리서도 보이게. 길 잃을 일은 없게."] }] }
   ];
 
   // 1구역의 시설: 가만히 있어도 물자를 만든다
@@ -413,6 +435,7 @@
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
     { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 3e31, growth: 2.4, max: 40 },
     { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 1e32, growth: 6,   max: 4 },
+    { id: 'amp',     zone: 6, name: '증폭기',    desc: '생존자가 모이는 속도 +25%', key: 'z7',    per: 0.25, baseCost: 3e38, growth: 2.4, max: 40 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
     // 방벽 개조(zone -1: 구역이 아니라 방벽 화면에 놓인다. 처음부터 살 수 있다)
@@ -483,7 +506,10 @@
       { id: 'z5c', text: '혈청 배양 3번 끝내기', need: 3, value: function (s) { return s.research.serum; } } ],
     [ { id: 'z6a', text: '초소 40곳', need: 40, value: function (s) { return s.posts; } },
       { id: 'z6b', text: '무리의 2배 방어력으로 밤 15번 방어', need: 15, value: function (s) { return s.safeNights; } },
-      { id: 'z6c', text: '통행 물자 누적 100구', need: 1e34, value: function (s) { return s.guardEarned; } } ]
+      { id: 'z6c', text: '통행 물자 누적 100구', need: 1e34, value: function (s) { return s.guardEarned; } } ],
+    [ { id: 'z7a', text: '안테나 30기', need: 30, value: function (s) { return s.antennas; } },
+      { id: 'z7b', text: '생존자 10만 명 모으기', need: 1e5, value: function (s) { return s.survivors; } },
+      { id: 'z7c', text: '혈청 3단계 완성', need: 3, value: function (s) { return s.serumStage; } } ]
   ];
 
   /* ---------- 작은 도우미 ---------- */
@@ -521,6 +547,8 @@
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
+      antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
+      ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
       // 밤
       day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false, siegeNights: 0,
@@ -627,6 +655,10 @@
     s.staff = Math.min(s.staff, COUNT_MAX);
     s.posts = clamp(safeCount(raw.posts), 0, COUNT_MAX); s.guardEarned = Math.max(0, safeNum(raw.guardEarned, 0)); s.safeNights = clamp(safeCount(raw.safeNights), 0, 1e9);
     if (s.zone < 5) { s.posts = 0; }
+    s.antennas = s.zone >= 6 ? clamp(safeCount(raw.antennas), 0, COUNT_MAX) : 0; s.survivors = s.zone >= 6 ? clamp(safeNum(raw.survivors, 0), 0, 1e15) : 0;
+    s.serumStage = s.zone >= 6 ? clamp(safeCount(raw.serumStage), 0, SERUM_COSTS.length) : 0;
+    s.endedRun = !!raw.endedRun && s.zone >= 6;
+    s.ended = clamp(safeCount(raw.ended), 0, 1e6); s.endedAt = Math.max(0, safeNum(raw.endedAt, 0));
     s.research = counts(PROJECTS, raw.research, 200);
     s.offers = [];
     (Array.isArray(raw.offers) ? raw.offers : []).forEach(function (id) { if (findById(PROJECTS, id) && s.offers.indexOf(id) < 0 && s.offers.length < OFFER_COUNT) s.offers.push(id); });
@@ -706,7 +738,7 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
     var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
@@ -733,8 +765,35 @@
     return m;
   }
   /** 전체 생산 배수: 특성·특전 × 막아낸 밤 보너스 × 지원 효과. */
+  /*
+   * 7구역 송신탑: 안테나를 세워 방송을 멀리 보내면 생존자가 모이고, 모인 사람만큼 모든 구역의 생산이 는다.
+   *   생존자 = 초당 (안테나 수 × 2배 문턱 배수 × 개조) 명씩 모인다.
+   *   전체 생산 배수 = 1 + TOWER_GAIN × log10(1 + 생존자).  10만 명이면 3.5배.
+   *   혈청: 물자를 들여 세 단계로 완성한다(SERUM_COSTS). 마지막 단계를 끝내면 이야기가 끝난다(ended).
+   */
+  var ANTENNA_COST = 1e37, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [1e40, 1e42, 1e44];
+  function towerMult(state) { return zoneOpen(state, 6) ? 1 + TOWER_GAIN * Math.log(1 + Math.max(0, state.survivors || 0)) / Math.LN10 : 1; }
   function globalMult(state) {
-    return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state);
+    return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state) * towerMult(state);
+  }
+  function antennaCost(state, qty) {
+    if (!zoneOpen(state, 6) || state.antennas + qty > COUNT_MAX) return Infinity;
+    return seriesCost(ANTENNA_COST * mods(state).cost, ANTENNA_GROWTH, state.antennas, qty);
+  }
+  function maxAntennas(state) { return zoneOpen(state, 6) ? seriesMax(ANTENNA_COST * mods(state).cost, ANTENNA_GROWTH, state.antennas, state.supplies, COUNT_MAX) : 0; }
+  function buyAntenna(state, qty) {
+    qty = Math.floor(qty);
+    if (!zoneOpen(state, 6)) return fail('locked');
+    if (!(qty >= 1)) return fail('unknown');
+    return pay(state, antennaCost(state, qty), function () { state.antennas += qty; });
+  }
+  function survivorRate(state) { return zoneOpen(state, 6) && state.antennas > 0 ? state.antennas * milestoneMult(state.antennas) * mods(state).z7 : 0; }
+  function serumCost(state) { return state.serumStage < SERUM_COSTS.length && zoneOpen(state, 6) ? Math.ceil(SERUM_COSTS[state.serumStage] * mods(state).cost) : Infinity; }
+  /** 혈청을 한 단계 진행한다. 마지막 단계를 끝내면 last 가 참이다. */
+  function buySerum(state) {
+    if (!zoneOpen(state, 6)) return fail('locked');
+    if (state.serumStage >= SERUM_COSTS.length) return fail('done');
+    return pay(state, serumCost(state), function () { state.serumStage++; });
   }
 
   /* ---------- 값 계산(공통) ---------- */
@@ -1650,6 +1709,13 @@
         events.push({ type: 'goal', zone: z, id: g.id, text: g.text });
       }
     }
+    // 7구역의 목표를 모두 채우면 이야기가 끝난다. 한 회차에 한 번만 센다(endedRun). 끝낸 횟수(ended)는 철수해도 남는다
+    if (state.zone >= ZONES.length - 1 && !state.endedRun && goalsComplete(state, ZONES.length - 1)) {
+      state.endedRun = true;
+      state.ended = (state.ended || 0) + 1;
+      if (!state.endedAt) state.endedAt = Date.now();
+      events.push({ type: 'ending', count: state.ended, day: state.day, retreats: state.retreats, seconds: state.playSeconds });
+    }
   }
   /** 다음 구역의 상태 { index, zone, cost, ready(목표를 다 채웠는가), soon(아직 없는 구역인가) }. 마지막 구역이면 null. */
   function nextZone(state) {
@@ -1901,7 +1967,7 @@
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos; next.records = state.records;
+    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos; next.records = state.records; next.ended = state.ended; next.endedAt = state.endedAt;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -2110,7 +2176,14 @@
     { id: 'z6earn', group: 'z6', name: '다리지기', needs: [1e32, 1e35, 1e38], value: function (s) { return s.guardEarned; }, text: function (n) { return '한 회차에 통행 물자 ' + formatNumber(n) + ' 벌기'; } },
     { id: 'z6up', group: 'z6', name: '검문 장비', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 5); }, text: function (n) { return '6구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z6max', group: 'z6', name: '철통', tier: 3, needs: [1], value: function (s) { return s.zone >= 5 && s.posts > 0 && bridgeSafety(s) >= SAFETY_MAX + mods(s).margin ? 1 : 0; }, text: function () { return '다리 안전도를 끝까지 채우기'; } },
-    { id: 'z6gate', group: 'z6', name: '송신탑 앞에서', tier: 4, needs: [1], value: function (s) { return s.gate && s.zone >= 5 ? 1 : 0; }, text: function () { return '7구역의 문 앞에 닿기'; } },
+    { id: 'z6gate', group: 'z6', name: '송신탑 앞에서', tier: 4, needs: [1], value: function (s) { return s.zone >= 6 ? 1 : 0; }, text: function () { return '7구역의 문 열기'; } },
+    // 7구역 송신탑(1.2.0)
+    { id: 'z7ant', group: 'z7', name: '송신소장', needs: [5, 25, 100, 250], value: function (s) { return s.antennas; }, text: function (n) { return '안테나 ' + n + '기 세우기'; } },
+    { id: 'z7crowd', group: 'z7', name: '모여든 사람들', needs: [1000, 1e5, 1e7, 1e9], value: function (s) { return s.survivors; }, text: function (n) { return '한 회차에 생존자 ' + formatNumber(n) + '명 모으기'; } },
+    { id: 'z7serum', group: 'z7', name: '혈청', needs: [1, 2, 3], value: function (s) { return s.serumStage; }, text: function (n) { return '한 회차에 혈청 ' + n + '단계 끝내기'; } },
+    { id: 'z7up', group: 'z7', name: '송신 장비', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 6); }, text: function (n) { return '7구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
+    { id: 'z7end', group: 'z7', name: '7구역', tier: 4, needs: [1], value: function (s) { return s.ended; }, text: function () { return '이야기의 끝을 보기'; } },
+    { id: 'z7again', group: 'z7', name: '다시, 7구역', tier: 4, needs: [3], value: function (s) { return s.ended; }, text: function (n) { return '이야기의 끝을 ' + n + '번 보기'; } },
     // 공통
     { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 회차에 방어 성공 ' + n + '번'; } },
     { id: 'retreat', group: 'all', name: '다시, 1구역', needs: [1, 5, 20, 50], value: function (s) { return s.retreats; }, text: function (n) { return '철수 ' + n + '번 하기'; } },
@@ -2179,6 +2252,7 @@
     if (line > 0 && state.surgeLeft > 0) line *= 1 + (SURGE_MULT - 1) * Math.min(dt, state.surgeLeft) / dt;
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
     stepContracts(state, dt, line > 0 ? line / productValue(state) : 0, rng, events);      // 3구역 납품 의뢰: 이번 틱에 만든 완제품 수를 넘긴다
+    if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * dt);      // 7구역: 방송을 듣고 생존자가 모인다
     var guard = guardRate(state) * dt;      // 6구역 통행 물자
     if (guard > 0) { earn(state, guard); state.guardEarned += guard; }
     if (state.surgeLeft > 0 || state.surgeCool > 0) {
@@ -2238,6 +2312,7 @@
     state.surgeLeft = 0; state.surgeCool = Math.max(0, state.surgeCool - elapsed);      // 전력 투입은 자리를 비우면 끝난 것으로 친다
     var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
     report.gain = (searchRate(state) + sweepRate(state)) * counted * rate + trade + line;      // 순찰조는 자리를 비운 동안에도 돈다
+    if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * counted * rate);
     var guardAway = guardRate(state) * counted * rate;
     report.gain += guardAway;
     earn(state, report.gain);
@@ -2376,7 +2451,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
