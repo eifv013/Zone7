@@ -776,11 +776,26 @@
     var u = view.upgrades || {}, h = model.hero, t = model.time, back = h.face < 0 ? 6 : 0;
     if (u.backpack) { ctx.fillStyle = '#5d6b4a'; ctx.fillRect(hx + back, GROUND - 7, 2, 4); }
     if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 7, GROUND - 5 - Math.floor(t * 6) % 2, 1, 4); }
-    if (u.dog) {
-      var dx = Math.round(h.x) - 4 - h.face * 9, hop = h.state === 'out' || h.state === 'back' ? Math.floor(t * 8) % 2 : 0;
-      ctx.fillStyle = '#8a5a34'; ctx.fillRect(dx, GROUND - 4 - hop, 5, 2); ctx.fillRect(dx + (h.face > 0 ? 4 : -1), GROUND - 6 - hop, 2, 2);  // 몸과 머리
-      ctx.fillRect(dx, GROUND - 2, 1, 2); ctx.fillRect(dx + 4, GROUND - 2, 1, 2);                                                           // 다리
-      ctx.fillRect(dx + (h.face > 0 ? -1 : 5), GROUND - 5 - hop - Math.floor(t * 6) % 2, 1, 2);                                              // 흔드는 꼬리
+    var pet = view.pet;
+    if (pet) {
+      // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다. 몸 색과 무늬 색은 품종마다 다르다.
+      var f = h.face > 0 ? 1 : -1, moving = h.state === 'out' || h.state === 'back', hop = moving ? Math.floor(t * 8) % 2 : 0, wag = Math.floor(t * 6) % 2;
+      var body = pet.body || '#8a5a34', patch = pet.patch || body, by = GROUND - 4 - hop;
+      if (pet.kind === 'cat') {
+        var cx = Math.round(h.x) - 3 - f * 8;
+        ctx.fillStyle = body; ctx.fillRect(cx, by + 1, 4, 2);                                    // 몸
+        ctx.fillRect(cx + (f > 0 ? 3 : -1), by - 1, 2, 2);                                       // 머리
+        ctx.fillRect(cx + (f > 0 ? 3 : -1), by - 2, 1, 1); ctx.fillRect(cx + (f > 0 ? 4 : 0), by - 2, 1, 1);   // 귀 둘
+        ctx.fillRect(cx, GROUND - 1, 1, 1); ctx.fillRect(cx + 3, GROUND - 1, 1, 1);              // 다리
+        ctx.fillRect(cx + (f > 0 ? -1 : 4), by - 1 - wag, 1, 3);                                 // 세운 꼬리
+        ctx.fillStyle = patch; ctx.fillRect(cx + 1, by + 2, 2, 1); ctx.fillRect(cx + (f > 0 ? -1 : 4), by - 1 - wag, 1, 1);   // 배와 꼬리 끝
+      } else {
+        var dx = Math.round(h.x) - 4 - f * 9;
+        ctx.fillStyle = body; ctx.fillRect(dx, by, 5, 2); ctx.fillRect(dx + (f > 0 ? 4 : -1), by - 2, 2, 2);   // 몸과 머리
+        ctx.fillRect(dx, GROUND - 2, 1, 2); ctx.fillRect(dx + 4, GROUND - 2, 1, 2);                             // 다리
+        ctx.fillRect(dx + (f > 0 ? -1 : 5), by - 1 - wag, 1, 2);                                                // 흔드는 꼬리
+        ctx.fillStyle = patch; ctx.fillRect(dx + 2, by, 2, 1); ctx.fillRect(dx + (f > 0 ? 4 : 0), by - 3, 1, 1); // 등의 무늬와 귀
+      }
     }
     if (u.drone) {
       var qx = Math.round(h.x) + Math.round(Math.sin(t * 1.3) * 6) - 2, qy = GROUND - 24 + Math.round(Math.sin(t * 2.1) * 2);

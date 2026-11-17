@@ -93,6 +93,27 @@
   var OFFER_COUNT = 3;             // 한 번에 내미는 과제 수
   var REROLL_SHARE = 0.25;         // 과제를 다시 뽑는 데 드는 점수: 지금 과제 값의 이 비율
   var SUPPLY_DROP_SECONDS = 600;   // '보급 요청' 과제가 주는 물자: 생산 이만큼의 초치
+  // 동물 친구
+  var PET_NAME_MAX = 8;            // 이름의 최대 글자 수
+  /*
+   * 동물 친구: 강아지나 고양이 가운데 하나를 고르면, 그 종류 안에서 어떤 아이가 올지는 무작위다.
+   *   kind 에 따라 효과가 다르다(PET_KINDS). 품종은 생김새와 기본 이름만 다르다. 철수해도 함께 간다.
+   *   body·patch 는 도트 그림의 몸 색과 무늬 색이다.
+   */
+  var PET_KINDS = {
+    dog: { name: '강아지', desc: '밤마다 방벽을 지킨다 · 방어력 +10%', key: 'defense', mult: 1.1 },
+    cat: { name: '고양이', desc: '창고의 쥐를 잡는다 · 전체 생산 +5%', key: 'prod', mult: 1.05 }
+  };
+  var PET_BREEDS = [
+    { id: 'jindo',   kind: 'dog', name: '흰둥이', body: '#e9e4d6', patch: '#e9e4d6' },
+    { id: 'nureong', kind: 'dog', name: '누렁이', body: '#b9853f', patch: '#e9d9b0' },
+    { id: 'black',   kind: 'dog', name: '검둥이', body: '#2b2a28', patch: '#2b2a28' },
+    { id: 'spot',    kind: 'dog', name: '바둑이', body: '#e9e4d6', patch: '#2b2a28' },
+    { id: 'cheese',  kind: 'cat', name: '치즈',   body: '#e0a04a', patch: '#f3e3c3' },
+    { id: 'tabby',   kind: 'cat', name: '고등어', body: '#7d7f84', patch: '#3c3e44' },
+    { id: 'tuxedo',  kind: 'cat', name: '턱시도', body: '#26262a', patch: '#f1efe8' },
+    { id: 'calico',  kind: 'cat', name: '삼색이', body: '#f1efe8', patch: '#d0782e' }
+  ];
   // 철수
   var RETREAT_MIN = 1e8;           // 이번 판에서 이만큼은 모아야 철수할 수 있다(2구역에 들어선 무렵)
   var RETREAT_K = 2, RETREAT_POW = 0.4;  // 항체 = K × (이번 판 누적 물자 ÷ RETREAT_MIN)^POW. 물자를 100배 더 모으면 항체는 6배쯤
@@ -302,6 +323,7 @@
       // 특전(이번 판)
       perks: {}, pendingPerks: [], goalsDone: {},
       // 영구
+      pet: null,             // 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
       antibodies: 0,         // 쓰지 않은 항체 샘플
       antibodyTotal: 0,      // 지금까지 얻은 항체 샘플
       traits: {},
@@ -357,6 +379,11 @@
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
     s.autoAssist = raw.autoAssist !== false;
+    s.pet = null;
+    if (raw.pet && typeof raw.pet === 'object') {
+      var breed = findById(PET_BREEDS, raw.pet.breed);
+      if (breed) s.pet = { kind: breed.kind, breed: breed.id, name: cleanPetName(raw.pet.name, breed.name) };
+    }
     s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
     s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
     s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
@@ -422,6 +449,7 @@
     apply(UPGRADES, state.upgrades);
     apply(PERKS, state.perks);
     apply(TRAITS, state.traits);
+    if (state.pet && PET_KINDS[state.pet.kind]) m[PET_KINDS[state.pet.kind].key] *= PET_KINDS[state.pet.kind].mult;      // 동물 친구
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
     m.labcost = Math.max(0.3, m.labcost); m.staffcost = Math.max(0.2, m.staffcost);
@@ -817,6 +845,38 @@
     return { ok: true, arrivals: events };
   }
 
+  /* ---------- 동물 친구 ---------- */
+  /** 이름을 다듬는다: 글이 아니거나 비면 fallback, 줄바꿈·꺾쇠 같은 글자는 빼고, PET_NAME_MAX 글자까지. */
+  function cleanPetName(name, fallback) {
+    var t = (typeof name === 'string' ? name : '').replace(/[\u0000-\u001f\u007f<>&"'`\\]/g, ' ').replace(/\s+/g, ' ').trim();
+    t = Array.from(t).slice(0, PET_NAME_MAX).join('').trim();
+    return t || fallback || '';
+  }
+  /** 강아지('dog')나 고양이('cat')를 맞이한다. 그 종류 안에서 어떤 아이가 올지는 무작위다. 이미 있으면 바꿀 수 없다. */
+  function adoptPet(state, kind, rng) {
+    if (!PET_KINDS[kind]) return fail('unknown');
+    if (state.pet) return fail('have');
+    var pool = PET_BREEDS.filter(function (b) { return b.kind === kind; });
+    var r = typeof rng === 'function' ? rng() : Math.random();
+    var breed = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(safeNum(r, 0) * pool.length)))];
+    state.pet = { kind: kind, breed: breed.id, name: breed.name };
+    return { ok: true, pet: state.pet, breed: breed };
+  }
+  function renamePet(state, name) {
+    if (!state.pet) return fail('none');
+    var clean = cleanPetName(name, '');
+    if (!clean) return fail('empty');
+    state.pet.name = clean;
+    return { ok: true, name: clean };
+  }
+  /** 지금 친구의 정보 { kind, kindName, breed(생김새), name, desc }. 없으면 null. */
+  function petInfo(state) {
+    if (!state.pet) return null;
+    var breed = findById(PET_BREEDS, state.pet.breed), kind = PET_KINDS[state.pet.kind];
+    if (!breed || !kind) return null;
+    return { kind: state.pet.kind, kindName: kind.name, breed: breed, name: state.pet.name, desc: kind.desc };
+  }
+
   /* ---------- 구역 강화 ---------- */
   function upgradeCost(state, id) {
     var def = findById(UPGRADES, id);
@@ -975,7 +1035,7 @@
   }
   /** 오늘 밤을 막는 데 가장 싼 보강 { cost, picks: [{ id, qty }], enough }. 이미 막을 수 있으면 cost 0. */
   function defensePlan(state) {
-    var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, research: state.research, zone: state.zone };   // defensePower 가 읽는 것만 담는다(연구 과제 '방어 교범' 포함)
+    var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, research: state.research, pet: state.pet, zone: state.zone };   // defensePower 가 읽는 것만 담는다(연구 과제 '방어 교범' 포함)
     DEFENSES.forEach(function (d) { tmp.defenses[d.id] = state.defenses[d.id]; });
     var need = nightStrength(state), cost = 0, picked = {}, guard = 0;
     while (defensePower(tmp) < need && guard++ < 3000) {
@@ -1077,6 +1137,8 @@
     next.antibodyTotal = state.antibodyTotal + gained;
     TRAITS.forEach(function (t) { next.traits[t.id] = state.traits[t.id]; });
     next.retreats = state.retreats + 1;
+    next.pet = state.pet;                                   // 동물 친구는 함께 간다
+    next.autoAssist = state.autoAssist;
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     next.lifetimeEarned = state.lifetimeEarned;
@@ -1328,6 +1390,7 @@
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
+    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, cleanPetName: cleanPetName, adoptPet: adoptPet, renamePet: renamePet, petInfo: petInfo,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,

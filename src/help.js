@@ -120,6 +120,11 @@
         '특전은 이번 판에만 쓰여요. 같은 특전을 또 고르면 레벨이 올라요.',
         '특전: ' + core.PERKS.map(function (p) { return p.name + '(' + p.desc + ')'; }).join(', ') + '.' ] },
 
+      { id: 'pet', title: '동물 친구', items: [
+        '특성 화면에서 강아지나 고양이 가운데 하나를 맞이할 수 있어요. 그 안에서 어떤 아이가 올지는 무작위예요(' + core.PET_BREEDS.map(function (b) { return b.name; }).join(', ') + ').',
+        '강아지: ' + core.PET_KINDS.dog.desc + '. 고양이: ' + core.PET_KINDS.cat.desc + '.',
+        '이름은 언제든 바꿀 수 있어요(' + core.PET_NAME_MAX + '글자까지). 도트 화면에서 주인공을 따라다니고, 철수해도 함께 가요.' ] },
+
       { id: 'signal', title: '구조 신호', items: [
         '가끔 무전기에 구조 신호가 잡혀요. 보유 물자 아래에 단추가 뜨는데, ' + span(core.SIGNAL_WINDOW) + ' 안에 누르면 응답할 수 있어요.',
         '응답하면 둘 중 하나를 얻어요(반반). 생산 ' + span(core.SIGNAL_SUPPLY_SECONDS) + '치 물자, 또는 ' + span(core.BUFF_SECONDS) + ' 동안 생산 ' + core.BUFF_MULT + '배예요. 놓쳐도 잃는 것은 없어요.' ] },

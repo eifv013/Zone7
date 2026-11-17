@@ -473,7 +473,13 @@ test('산 것들이 거점에 보인다: 연구, 수색 장비, 제작한 담당
     assert.ok(count({ research: { alarm: true } }) > base);
     assert.ok(count({ research: { shift: true } }, 0.95) > count({ research: { shift: true } }), '교대 근무의 작업등은 밤에 빛이 번진다');
     assert.ok(count({ research: { serum: true } }) > base);
-    for (const id of ['backpack', 'dog', 'drone']) assert.ok(count({ upgrades: { [id]: true } }) > base, `장비 ${id}`);
+    for (const id of ['backpack', 'drone']) assert.ok(count({ upgrades: { [id]: true } }) > base, `장비 ${id}`);
+    // 동물 친구: 강아지와 고양이는 생김새가 다르고, 품종의 색으로 칠해진다. 이상한 값이 와도 죽지 않는다
+    const pet = (p) => { const ctx = recorder(); S.draw(ctx, S.create(W), { ...full, t: 0.3, pet: p }); return ctx; };
+    const dog = pet({ kind: 'dog', body: '#b9853f', patch: '#e9d9b0' }), cat = pet({ kind: 'cat', body: '#26262a', patch: '#f1efe8' });
+    assert.ok(dog.calls.length > base && cat.calls.length > base, '친구가 그려진다');
+    assert.notEqual(dog.calls.length, cat.calls.length, '강아지와 고양이는 다르게 그려진다');
+    for (const junk of [{}, { kind: 'bird' }, { kind: 'cat' }, 'x', 7]) assert.doesNotThrow(() => pet(junk));
     for (const id of ['operator', 'warden', 'builder']) assert.ok(count({ gear: { [id]: 1 } }) > base, `담당 ${id}`);
     assert.ok(count({ gear: { barricade: 5 } }) > base);
     assert.ok(count({ buildings: { scouts: 30 } }) > count({ buildings: { scouts: 5 } }), '시설이 늘면 생존자가 보인다');

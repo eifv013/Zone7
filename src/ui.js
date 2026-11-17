@@ -1157,7 +1157,19 @@
     });
   }
 
+  /** 동물 친구 칸: 아직 없으면 고르는 단추 둘, 있으면 이름·효과와 이름 바꾸기. */
+  function renderPet() {
+    var p = C.petInfo(state);
+    $('pet-empty').hidden = !!p; $('pet-card').hidden = !p;
+    setText($('pet-kind'), p ? p.kindName + ' · ' + p.breed.name : '아직 없어요');
+    if (!p) return;
+    setText($('pet-name'), p.name);
+    setText($('pet-desc'), p.desc);
+    var face = $('pet-face');
+    face.style.background = 'linear-gradient(135deg, ' + p.breed.body + ' 0 62%, ' + p.breed.patch + ' 62%)';      // 몸 색과 무늬 색
+  }
   function renderTraits() {
+    renderPet();
     setText($('trait-points'), '항체 샘플 ' + fmt(state.antibodies) + ' · 쓴 것 ' + fmt(C.traitsSpent(state)));
     C.TRAITS.forEach(function (t) {
       var r = rows.traits[t.id], lv = state.traits[t.id], cost = C.traitCost(state, t.id);
@@ -1211,7 +1223,8 @@
       safe: C.defensePower(state) >= C.nightStrength(state), boss: C.isBossWave(C.currentWave(state)), def: state.defenses, buildings: b,
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker',
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },
-      upgrades: { crowbar: state.upgrades.crowbar > 0, backpack: state.upgrades.cart > 0 }, gear: {} };
+      upgrades: { crowbar: state.upgrades.crowbar > 0, backpack: state.upgrades.cart > 0 }, gear: {},
+      pet: (function () { var p = C.petInfo(state); return p ? { kind: p.kind, body: p.breed.body, patch: p.breed.patch } : null; })() };
   }
 
   /* ---------- 일어난 일 알리기 ---------- */
@@ -1401,6 +1414,28 @@
       handleEvents(r.arrivals);
       sfx('click'); render();
     });
+    // 동물 친구: 맞이하기와 이름 바꾸기
+    ['dog', 'cat'].forEach(function (kind) {
+      var b = $('adopt-' + kind), k = C.PET_KINDS[kind], small = el('small', '', k.desc);
+      setText(b, k.name); b.appendChild(small);
+      b.addEventListener('click', function () {
+        var r = C.adoptPet(state, kind);
+        if (!r.ok) return;
+        log(r.breed.name + '(이)가 거점에 눌러앉았다. ' + k.name + '다.', 'good');
+        toast(k.name + ' ' + r.breed.name + ' · 새 친구가 생겼어요');
+        $('pet-input').value = '';
+        sfx('defended'); Store.save(); render();
+      });
+    });
+    var rename = function () {
+      var r = C.renamePet(state, $('pet-input').value);
+      if (!r.ok) { toast(r.reason === 'empty' ? '이름을 적어 주세요' : '아직 친구가 없어요'); return; }
+      $('pet-input').value = '';
+      toast('이제 ' + r.name + ' (이)라고 불러요');
+      sfx('buy'); Store.save(); render();
+    };
+    $('pet-rename').addEventListener('click', rename);
+    $('pet-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); rename(); } });
     // 3구역: 전력 투입
     $('surge').addEventListener('click', function () {
       if (!C.surge(state).ok) return;

@@ -132,7 +132,14 @@ def run_case(browser, name, size, state, mode):
         tap('[data-tab=wall]')
         if not tap('#row-wire'): problems.append('첫 철조망을 살 수 없다')
         tap('[data-tab=z1]'); tap('[data-tab=z2]'); tap('[data-tab=z0]')
-        tap('[data-mview-set=exped]'); tap('[data-mview-set=record]')
+        # 동물 친구: 고양이를 맞이하고 이름을 바꾼다
+        tap('[data-mview-set=exped]')
+        if not tap('#adopt-cat'): problems.append('고양이를 맞이할 수 없다')
+        if not page.locator('#pet-card').is_visible() or '고양이' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))
+        page.fill('#pet-input', '나비'); page.click('#pet-rename'); page.wait_for_timeout(150)
+        if text('pet-name') != '나비': problems.append('이름이 바뀌지 않았다: ' + text('pet-name'))
+        if not fits(): problems.append('한 화면에 들어오지 않는다(특성)')
+        tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'journal', 'save']: tap('[data-rtab-set=%s]' % t)
         # 의견 보내기: 빈 글로는 못 보내고, 글을 쓰면 단추가 켜지고, 복사하면 안내가 뜨고, 닫힌다
         if not tap('#feedback-open'): problems.append('의견 보내기 단추를 누를 수 없다')
