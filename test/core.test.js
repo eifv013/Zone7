@@ -1469,7 +1469,7 @@ test('동물 친구: 강아지는 방어력을, 고양이는 생산을 등급만
 
 test('이름: 친구와 주인공의 이름을 바꾼다', () => {
   const s = fresh();
-  assert.equal(s.heroName, '생존자');
+  assert.equal(s.heroName, '라라');
   assert.equal(C.renamePet(s, '초코').reason, 'none');
   C.adoptPet(s, 'dog', half);
   assert.equal(C.renamePet(s, '  초코  ').name, '초코');
@@ -1498,10 +1498,10 @@ test('동물 친구와 이름: 철수해도 함께 가고, 저장을 안전하�
   assert.deepEqual(old.pet, { kind: 'cat', breed: 'cheese', name: 'script' });
   assert.deepEqual(old.kennel, { cheese: 'script' });
   const bad = C.sanitizeState({ version: 2, heroName: '<<>>', kennel: { jindo: '', ghost: 'x', nero: 5 }, pet: { breed: 'jindo', name: '다른 이름' } }, 0);
-  assert.equal(bad.heroName, '생존자');
+  assert.equal(bad.heroName, '라라');
   assert.deepEqual(bad.kennel, { jindo: '흰둥이', nero: '네로' });
   assert.equal(bad.pet.name, '흰둥이', '일행 목록의 이름을 따른다');
-  for (const junk of ['x', 5, [], true]) { const j = C.sanitizeState({ version: 2, pet: junk, kennel: junk, heroName: typeof junk === 'string' ? '' : junk }, 0); assert.equal(j.pet, null); assert.deepEqual(j.kennel, {}); assert.equal(j.heroName, '생존자'); }
+  for (const junk of ['x', 5, [], true]) { const j = C.sanitizeState({ version: 2, pet: junk, kennel: junk, heroName: typeof junk === 'string' ? '' : junk }, 0); assert.equal(j.pet, null); assert.deepEqual(j.kennel, {}); assert.equal(j.heroName, '라라'); }
 });
 
 test('자동화: 레벨이 오를수록 대기 시간이 줄고, 절반 아래로는 내려가지 않는다', () => {
@@ -1586,4 +1586,21 @@ test('시장의 일손: 짐꾼은 창고를, 호객꾼은 상품 값을 올린�
   const raw = JSON.parse(C.serialize(s)); raw.hands = { porter: -4, crier: 1e9, fake: 3 };
   assert.deepEqual(C.sanitizeState(raw).hands, { porter: 0, crier: 200 });
   raw.hands = 'x'; assert.deepEqual(C.sanitizeState(raw).hands, { porter: 0, crier: 0 });
+});
+
+test('일지의 이름 자리: 주인공 이름과 받침에 맞는 조사가 들어간다. 기본 이름은 라라', () => {
+  assert.equal(C.createState().heroName, '라라');
+  assert.equal(C.fillStory('{hero:야}, {hero:은} {hero:을} {hero:이} {hero}', '라라'), '라라야, 라라는 라라를 라라가 라라');
+  assert.equal(C.fillStory('{hero:야}, {hero:은} {hero:을} {hero:이}', '민준'), '민준아, 민준은 민준을 민준이');
+  assert.equal(C.fillStory('{hero:야}', 'Zoe'), 'Zoe야');
+  for (const bad of ['', '   ', null, undefined, 42]) assert.equal(C.fillStory('{hero}', bad), '라라');
+  assert.equal(C.fillStory(null, '라라'), '');
+  assert.equal(C.fillStory('{hero:x}', '라라'), '라라');
+  assert.ok(C.BEATS.filter(b => b.text.includes('{hero')).length >= 5);
+  for (const b of C.BEATS) assert.ok(!/[{}]/.test(C.fillStory(b.text, '딩동')), b.id);
+  const s = C.createState(); s.heroName = '민준';
+  const ev = C.tick(s, 0.1, () => 0.5).find(e => e.type === 'story');
+  assert.ok(!ev.text.includes('{hero'));
+  const raw = JSON.parse(C.serialize(C.createState())); raw.heroName = '생존자';
+  assert.equal(C.sanitizeState(raw).heroName, '라라');
 });

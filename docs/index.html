@@ -696,15 +696,7 @@ body { font-size: 15.5px; line-height: 1.55; }
 .brief, .scene-wrap { overflow: hidden; }
 .trade { background: var(--soft); box-shadow: none; }
 .panel { position: relative; }
-/* 덩굴: 면의 오른쪽 위 모서리와 도트 화면 틀 */
-/* 글자를 가리지 않게 작고 옅게, 테두리 위로 조금 걸쳐서 둔다 */
-.panel::before { content: ''; position: absolute; top: -5px; right: 6px; width: 48px; height: 24px; background: var(--art-vine) no-repeat right top / contain; image-rendering: pixelated; pointer-events: none; opacity: .5; }
-.panel > * { position: relative; }
-/* 패널마다 덩굴이 다르다: 오른쪽 위의 넝쿨 / 왼쪽 위에서 길게 늘어진 가닥 / 오른쪽 위의 작은 잎 뭉치 / 없음. 도트 화면에는 달지 않는다 */
-.panel:nth-of-type(4n+2)::before { right: auto; left: 10px; top: -3px; width: 42px; height: 36px; background-image: var(--art-vine2); background-position: left top; opacity: .55; }
-.panel:nth-of-type(4n+3)::before { right: 14px; top: -3px; width: 33px; height: 18px; background-image: var(--art-vine3); opacity: .6; }
-.panel:nth-of-type(4n)::before { content: none; }
-.foot .panel:nth-of-type(odd)::before { transform: scaleX(-1); right: auto; left: 8px; }
+/* 덩굴은 뺐다(0.8.7): 자리가 어색하고 글자와 겹쳤다 */
 /* 마스코트: 머리띠의 우비 소년, 오늘 밤 패널의 담 너머 좀비, 시작 화면 */
 .mast h1::before { content: ''; display: inline-block; width: .62em; height: .71em; margin-right: .18em; background: var(--art-boy) no-repeat center / contain; image-rendering: pixelated; vertical-align: -.06em; }
 #night .panel-head h2::after { content: ''; display: inline-block; width: 28px; height: 18px; margin-left: 8px; background: var(--art-zombie) no-repeat center bottom / contain; image-rendering: pixelated; vertical-align: -3px; }
@@ -750,12 +742,19 @@ body { font-size: 15.5px; line-height: 1.55; }
 /* 구역 지도: 길로 이어진 일곱 구역 */
 .zmap-map { border-radius: 10px; overflow: hidden; border: 1px solid #4a4b40; }
 .zmap-svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; }
-.zm-land { fill: #2c3324; }
-.zm-river { fill: none; stroke: #2f5a78; stroke-width: 26; stroke-linejoin: round; }
-.zm-river-glint { fill: none; stroke: #4f86a8; stroke-width: 2; stroke-dasharray: 6 14; transform: translateY(-5px); }
-.zm-road { stroke: #6d6a5c; stroke-width: 5; stroke-dasharray: 3 6; stroke-linecap: square; }
-.zm-road-open { stroke: #d9c9a0; stroke-dasharray: none; }
-.zm-tree { fill: #4f6b33; } .zm-trunk { fill: #4a3a2a; } .zm-ruin { fill: #55574a; }
+.zm-land { fill: #39432c; }
+.zm-grass { fill: #465233; } .zm-dirt { fill: #4a4630; }
+.zm-bank { fill: none; stroke: #2a2f20; stroke-width: 32; stroke-linejoin: round; }
+.zm-river { fill: none; stroke: #2f5a78; stroke-width: 24; stroke-linejoin: round; }
+.zm-river-glint { fill: none; stroke: #5b93b3; stroke-width: 2; stroke-dasharray: 5 13; transform: translateY(-5px); animation: zm-flow 2.4s linear infinite; }
+.zm-glint2 { stroke: #24485f; stroke-dasharray: 8 17; transform: translateY(5px); animation-duration: 3.4s; }
+@keyframes zm-flow { to { stroke-dashoffset: -36; } }
+.zm-road { stroke: #5d5a48; stroke-width: 6; stroke-dasharray: 2 5; stroke-linecap: butt; }
+.zm-road-open { stroke: #cbb98a; stroke-dasharray: none; stroke-linecap: round; }
+.zm-plank { fill: #8a6a44; } .zm-plank2 { fill: #6b4f30; }
+.zm-tree { fill: #3f6a36; } .zm-tree2 { fill: #2f5330; } .zm-leaf { fill: #7da35a; } .zm-trunk { fill: #4a3a2a; }
+.zm-ruin { fill: #6a6b5e; } .zm-win { fill: #1e1f18; } .zm-car { fill: #7a4a3a; }
+.zm-ink { fill: #cfcebf; } .zm-here-c { fill: #f0b400; } .zm-compass { font: 700 7px/1 var(--font-mono); fill: #cfcebf; }
 .zm-node { cursor: pointer; outline: none; }
 .zm-hit { fill: transparent; }
 .zm-plot { fill: rgba(0, 0, 0, .35); }
@@ -776,7 +775,7 @@ body { font-size: 15.5px; line-height: 1.55; }
 .zmap-info .label { color: #a09f8e; }
 .story-card .zmap-info button { align-self: stretch; padding: 10px; background: #f0b400; color: #17180f; border: 0; font-weight: 700; }
 .story-card .zmap-info button:disabled { background: #33342a; color: #a09f8e; }
-@media (prefers-reduced-motion: reduce) { .zm-here { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .zm-here, .zm-river-glint { animation: none; } }
 /* 시작 화면: 로딩 바 위를 우비 소년이 달리고 좀비 셋이 쫓아간다(바의 왼쪽 끝에서 오른쪽 끝으로, 되풀이) */
 #boot .boot-run { position: relative; width: min(280px, 72vw); height: 36px; overflow: hidden; }
 #boot .boot-run i { position: absolute; bottom: 0; left: -12%; width: 24px; height: 33px; background: var(--art-zrun) no-repeat center bottom / contain; image-rendering: pixelated; animation: boot-run 3.4s linear infinite, boot-hop .26s steps(2, start) infinite; }
@@ -808,14 +807,40 @@ body { font-size: 15.5px; line-height: 1.55; }
 #back .boot-track { width: min(280px, 72vw); height: 18px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
 #back #back-bar { height: 100%; width: 0; background: repeating-linear-gradient(-45deg, #f0b400 0 8px, #17180f 8px 16px); }
 #back #back-text { margin: 12px 0 0; font: 600 13px/1.5 var(--font-mono); }
-/* 도트 화면의 이름표: 주인공 머리 위와 동물 친구 발밑. 작고 반투명해서 그림을 가리지 않는다 */
+/* 도트 화면의 이름표: 캐릭터를 가리지 않게 발밑(땅 부분)에 한 줄로. '주인공 · 동물 친구' */
 .scene-wrap { position: relative; }
-.tag { position: absolute; transform: translateX(-50%); padding: 0 5px; border-radius: 99px; font: 600 10px/1.5 var(--font-body); white-space: nowrap; pointer-events: none; transition: left .1s linear; }
+/* 바탕 띠 없이 글자에 검은 테두리만 둘러서 도트 그림에 얹힌 글씨처럼 보이게 한다 */
+.tag { position: absolute; top: 81%; transform: translateX(-50%); font: 700 10.5px/1.4 var(--font-body); white-space: nowrap; pointer-events: none; transition: left .1s linear; text-shadow: -1px 0 #17180f, 1px 0 #17180f, 0 -1px #17180f, 0 1px #17180f, -1px -1px #17180f, 1px 1px #17180f, -1px 1px #17180f, 1px -1px #17180f; }
 .tag[hidden] { display: none; }
-/* 캐릭터를 가리지 않게 둘 다 발밑(땅 부분)에 둔다: 주인공 이름이 윗줄, 동물 친구 이름이 아랫줄 */
-.tag { font-size: 9.5px; line-height: 1.35; }
-.tag-hero { top: 81.5%; background: rgba(23, 24, 15, .72); color: #f0b400; }
-.tag-pet { top: 91%; background: rgba(23, 24, 15, .55); color: #e6e5db; font-weight: 500; }
+.tag b { color: #f0b400; font-weight: 600; } .tag i { color: #e6e5db; font-style: normal; font-weight: 500; }
+/* 0.8.7 간격 손질: 붙어 있던 것들을 띄운다 */
+.pet-top { margin-top: 12px; }
+.pet-rename { margin-bottom: 12px; }
+.pet-pick { margin-top: 12px; gap: 10px; }
+.pet-pick button { padding: 12px 12px; }
+.pet-pick button small { margin-top: 2px; }
+.set-rows { gap: 0; }
+.set-row { padding: 10px 0; }
+.save-actions { gap: 10px; margin-top: 8px; }
+.save-actions button { padding: 9px 14px; }
+#save-code { margin-top: 6px; }
+.reset-row { display: grid; justify-items: start; gap: 6px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--rule); }
+.reset-row .danger { padding: 9px 14px; background: transparent; border: 1px solid var(--blood); color: var(--blood); border-radius: var(--r-s); font-weight: 600; cursor: pointer; }
+.reset-row .danger[data-armed] { background: var(--blood); color: #fff; }
+.reset-row p { margin: 0; }
+.ver { margin-top: 14px; }
+.relocate { border-radius: var(--r-s); }
+.row-info:empty { display: none; }
+.stats-h { margin: 22px 0 8px; }
+.panel-head { margin-bottom: 14px; }
+#search-note.flash { color: var(--hazard); font-weight: 600; }
+/* 개조 줄: 구역 화면 안에서는 '이 구역 전용' 딱지가 군더더기라 뺀다 */
+.row-zone .row-name::after { content: none; }
+/* 구역 머리줄: 제목·구역 지도 단추·수량 단추를 가운데 줄에 맞추고 두 단추의 높이를 같게 한다 */
+.panel-head:has(.zmap-open) { align-items: center; flex-wrap: nowrap; }
+.panel-head:has(.zmap-open) h2 { line-height: 1; }
+.zmap-open, .panel-head .qty button { height: 30px; padding: 0 12px; font: 600 13px/28px var(--font-body); }
+.zmap-open { border-radius: 999px; margin-left: 10px; white-space: nowrap; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -831,7 +856,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.6</div>
+  <div class="boot-ver">7구역 알파 0.8.7</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1010,7 +1035,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
     </div>
   </section>
-  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="tag tag-hero" id="tag-hero" aria-hidden="true" hidden></span><span class="tag tag-pet" id="tag-pet" aria-hidden="true" hidden></span></div>
+  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="tag" id="tag-hero" aria-hidden="true" hidden><b id="tag-hero-name"></b><i id="tag-pet-name"></i></span></div>
   <div class="col col-main">
     <div class="notice" id="notice" role="status" hidden>
       <p id="notice-text"></p>
@@ -1154,7 +1179,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     </section>
     <section class="panel" aria-labelledby="h-traits">
       <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label" id="trait-points">항체 샘플 0</span></div>
-      <p class="hint">항체 샘플로 찍는 특성이에요. 철수해도 그대로 남고, 언제든 되돌려서 샘플을 전부 돌려받을 수 있어요.</p>
+      <p class="hint">철수해도 남아요. 언제든 되돌려서 샘플을 돌려받을 수 있어요.</p>
       <div class="rows" id="traits"></div>
       <button type="button" class="recall trait-reset" id="trait-reset">특성 되돌리기</button>
     </section>
@@ -1200,7 +1225,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="notes" id="help"></div>
   </section>
   <section class="panel" data-rpane="save" aria-labelledby="h-save">
-    <div class="panel-head"><h2 id="h-save">설정</h2><span class="label" id="cloud-status">10초마다 이 브라우저에 자동 저장</span></div>
+    <div class="panel-head"><h2 id="h-save">설정</h2><span class="label" id="cloud-status">자동으로 저장돼요</span></div>
     <div class="set-rows">
       <div class="set-row"><span class="label">화면 테마</span>
         <div class="qty" role="group" aria-label="화면 테마"><button type="button" data-skin-set="light" aria-pressed="true">라이트</button><button type="button" data-skin-set="dark" aria-pressed="false">다크</button></div></div>
@@ -1227,8 +1252,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
-    <p class="ver">7구역 알파 0.8.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
+    <p class="ver">7구역 알파 0.8.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1352,7 +1377,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.7";
 </script>
 <script>
 /*
@@ -1371,6 +1396,17 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.7', date: '2026-11-17', at: '2026-11-17 15:40:00', title: '화면 손질과 새 지도',
+      items: [
+        '구역 지도를 다시 그렸어요. 숲과 덤불, 무너진 집, 버려진 차, 강둑과 흐르는 물, 다리가 생겼어요.',
+        '덩굴 장식을 모두 뺐어요.',
+        '이름표를 발밑 한 줄로 합쳤어요("주인공 · 동물 친구").',
+        '"동네 하나를 다 뒤졌다" 알림 띠를 없앴어요. 대신 수색 지도 머리줄에 잠깐 표시돼요.',
+        '화면 곳곳의 간격과 줄 맞춤을 손봤어요: 구역 머리줄의 단추 높이, 일행 칸의 이름 바꾸기와 데려오기 사이, 설정의 줄 간격, "처음부터 다시"와 그 설명.',
+        '설명을 더 줄였어요: 상황판 첫 줄, 데려오기 단추, 영구 특성 안내, 개조 줄의 군더더기 딱지.',
+        '주인공의 기본 이름이 "라라"가 됐어요. 일지 속 사람들이 주인공을 이름으로 불러요. 이름을 바꾸면 일지에도 바뀐 이름이 나와요.',
+        '설정의 저장 안내를 "자동으로 저장돼요"로 바꿨어요.'
+      ] },
     { ver: '알파 0.8.6', date: '2026-11-17', at: '2026-11-17 15:00:00', title: '소리를 키우고 이름표를 발밑으로',
       items: [
         '효과음 전체를 2.6배쯤 키웠어요.',
@@ -1878,6 +1914,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
   else root.GameCore = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  var HERO_DEFAULT = '라라';      // 주인공의 기본 이름. 일지 속에서 사람들이 이 이름으로 부른다
 
   /* ---------- 상수 ---------- */
   var SAVE_VERSION = 2;            // 구조가 달라져 알파 0.5 까지의 저장(버전 1)은 읽지 않는다
@@ -2006,18 +2043,18 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
           "엄마는 사흘 전 밤에 나갔다. 병원에 다녀온다고 했다. 현관에서 노란 우비를 내 어깨에 걸쳐 주고, 파란 냉장 상자를 내 무릎에 올려놓았다. “열지 마. 엄마가 안 오면 이걸 들고 7구역으로 가.”",
           "나는 왜냐고 묻지 않았다. 엄마의 손이 떨리고 있었기 때문이다. 그 손이 내 왼쪽 소매를 끝까지 내려 주었다. 그 아래에 뭐가 있는지는 엄마와 나만 안다.",
           "통조림은 엿새 치가 남았다. 창밖 골목에는 어제보다 하나가 더 서 있다. 지도를 펴 보니 여기는 1구역이다. 7은 강 건너, 지도의 맨 끝에 있다.",
-          "기다리는 건 오늘까지만 하기로 했다. 내일부터는 뒤진다. 옆집부터."] },
+          "기다리는 건 오늘까지만 하기로 했다. 내일부터는 내가 찾으러 나간다. 옆집부터, 한 집씩."] },
         { title: "지붕 위의 7", text: [
           "옆집 지붕에 누가 흰 페인트로 숫자를 써 놓았다. 7, 그리고 화살표. 화살표는 강 쪽을 가리킨다. 다음 집 지붕에도, 그다음 집에도 있다. 누군가 지붕을 타고 가면서 길을 남긴 것이다.",
-          "세 번째 집 다락에서 사람들을 만났다. 정수기 기사였다는 아저씨, 쌍둥이를 데리고 있는 아주머니, 말이 없는 고등학생 형. 다들 같은 방송을 듣고 있었다.",
-          "아저씨가 물었다. “꼬마야, 그 상자엔 뭐가 들었냐.” 나는 모른다고 했다. 정말로 모른다. 아저씨는 더 묻지 않고 내 우비의 모자를 씌워 주었다. “비 온다. 노란색이라 멀리서도 보이겠네. 길 잃을 일은 없겠다.”",
+          "세 번째 집 다락에서 사람들을 만났다. 정수기 기사였다는 아저씨, 쌍둥이를 데리고 있는 아주머니, 말이 없는 고등학생. 다들 같은 방송을 듣고 있었다.",
+          "아저씨가 물었다. “{hero:야}, 그 상자엔 뭐가 들었냐.” 나는 모른다고 했다. 정말로 모른다. 아저씨는 더 묻지 않고 내 우비의 모자를 씌워 주었다. “비 온다. 노란색이라 멀리서도 보이겠네. 길 잃을 일은 없겠다.”",
           "밤에 방벽 너머에서 손톱으로 철판을 긁는 소리가 났다. 사람들이 숨을 죽였다. 나는 왼쪽 소매를 꼭 쥐고 있었다. 아홉 번째 날에 물린 자리가 가려웠다.",
           "물리면 반나절이라고들 한다. 나는 사흘째 멀쩡하다."] },
         { title: "남겨 두는 것", text: [
-          "동네의 통조림이 바닥을 보인다. 뒤질 집이 이제 없다. 골목 끝에 셔터 내린 시장이 보인다. 다음은 거기다.",
+          "동네의 통조림이 바닥을 보인다. 찾아볼 집이 이제 없다. 골목 끝에 셔터 내린 시장이 보인다. 다음은 거기다.",
           "떠나기 전에 아저씨가 이상한 일을 시켰다. 창고의 절반을 그대로 두고 가자는 것이다. 물, 통조림, 건전지. 문에는 분필로 썼다. “쓰고 채워 놓을 것.”",
-          "고등학생 형이 화를 냈다. 우리도 모자란데 누굴 주느냐고. 아저씨는 지붕을 가리켰다. “저 숫자 써 놓은 사람도 모자랐을 거다. 그래도 썼잖냐.”",
-          "나는 우리 집 현관에 쪽지를 붙였다. “엄마, 나 7구역으로 가. 상자는 잘 들고 있어.” 붙이고 나서 한참 서 있었다. 엄마가 이걸 읽을 일이 있을까.",
+          "고등학생이 화를 냈다. 우리도 모자란데 누굴 주느냐고. 아저씨는 지붕을 가리켰다. “저 숫자 써 놓은 사람도 모자랐을 거다. 그래도 썼잖냐.”",
+          "나는 우리 집 현관에 쪽지를 붙였다. “엄마, 나 7구역으로 가. 상자는 잘 들고 있어. — {hero}” 붙이고 나서 한참 서 있었다. 엄마가 이걸 읽을 일이 있을까.",
           "돌아보지 않으려고 했는데 한 번 돌아봤다. 지붕 위의 7이 비에 젖어 번들거렸다."] }] },
     { no: 2, name: '재래시장', kind: 'trade', cost: 5e7, lead: '좌판을 열고 시세를 봐 가며 판다',
       story: [
@@ -2030,12 +2067,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
         { title: "3반 일동", text: [
           "생선 가게 냉동고를 열었다가 쪽지를 찾았다. 비닐에 싸서 얼음 틈에 끼워 놓았다. “먼저 갑니다. 7구역에서 만나요. 3반 일동.”",
           "글씨를 알아봤다. 반장 글씨다. 받침을 꼭 네모나게 쓴다. 3반은 우리 반이다.",
-          "쪽지 뒷면에는 이름이 적혀 있었다. 열일곱 명. 내 이름은 없다. 나는 그 주에 학교에 가지 않았다. 열이 나서. 엄마가 밤새 내 팔에서 피를 뽑던 그 주다.",
+          "쪽지 뒷면에는 이름이 적혀 있었다. 열일곱 명. {hero}, 내 이름은 없다. 나는 그 주에 학교에 가지 않았다. 열이 나서. 엄마가 밤새 내 팔에서 피를 뽑던 그 주다.",
           "할머니가 쪽지를 들여다보고 말했다. “애들끼리 갔구나. 어른 이름이 하나도 없네.” 그러고는 멸치를 한 줌 더 싸 주었다. 장부에는 적지 않았다.",
           "열일곱 명이 이 길을 먼저 지나갔다. 그러니까 이 길은 갈 수 있는 길이다. 나는 쪽지를 접어서 냉장 상자 손잡이에 묶었다."] },
         { title: "같은 방향", text: [
           "시장이 다시 시끄럽다. 좌판이 스무 개를 넘었다. 할머니는 목이 쉬었다.",
-          "그런데 밤마다 무리가 불어난다. 망을 보던 형이 이상한 걸 알아챘다. 놈들은 우리를 보고 오는 게 아니다. 시장 앞을 그냥 지나간다. 우리가 소리를 내면 그때 고개를 돌린다.",
+          "그런데 밤마다 무리가 불어난다. 망을 보던 고등학생이 이상한 걸 알아챘다. 놈들은 우리를 보고 오는 게 아니다. 시장 앞을 그냥 지나간다. 우리가 소리를 내면 그때 고개를 돌린다.",
           "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
           "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
           "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
@@ -2057,27 +2094,27 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
           "라인이 돈다. 밤에도 공단에 불이 켜진다. 불빛을 보고 사람이 온다. 어제는 여섯, 오늘은 열하나.",
           "소리를 듣고 무리도 온다. 오늘 밤 철망 앞에 선 것들 가운데 하나가 체육복을 입고 있었다. 우리 학교 체육복이다. 가슴에 이름표가 그대로 달려 있다.",
           "반장이었다. 받침을 네모나게 쓰던 애. 쪽지에 제일 먼저 이름을 적은 애.",
-          "반장은 철망을 잡고 흔들지 않았다. 그냥 서서 강 쪽을 보고 있었다. 내가 이름을 불렀다. 고개가 아주 천천히 돌아왔다. 그리고 내 노란 우비를 한참 봤다. 나는 그 눈이 나를 알아봤다고 지금도 생각한다.",
+          "반장은 철망을 잡고 흔들지 않았다. 그냥 서서 강 쪽을 보고 있었다. 내가 이름을 불렀다. 고개가 아주 천천히 돌아왔다. 입이 한 번 움직였다. 소리는 없었지만 나는 그 모양을 안다. {hero}. 그리고 내 노란 우비를 한참 봤다. 나는 그 눈이 나를 알아봤다고 지금도 생각한다.",
           "새벽에 무리가 움직이자 반장도 따라갔다. 선로 쪽으로. 열일곱 명 중에 몇이나 건넜을까. 나는 쪽지 뒷면의 이름 하나에 줄을 그었다. 선로를 따라가면 환승역이다."] }] },
     { no: 4, name: '환승역', kind: 'rail', cost: 1e19, lead: '끊긴 노선을 잇고 열차를 보낸다',
       story: [
         { title: "행선지", text: [
           "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
           "승강장에 열차 한 대가 문을 연 채 서 있다. 좌석마다 가방이 놓여 있다. 사람은 없다. 가방들만 줄 맞춰 앉아서 출발을 기다리고 있다.",
-          "맨 앞 칸에서 기관사를 찾았다. 살아 있었다. 운전석에 앉아서 컵라면을 먹고 있었다. “손님이네. 표는 없어도 돼.”",
-          "기관사 누나는 열이틀째 여기 있었다고 했다. 전기가 나갔는데 왜 안 떠났느냐고 물으니 전광판을 가리켰다. “저게 안 꺼지잖아. 저게 켜져 있는 동안은 운행 중인 거야. 내가 정한 건 아니고.”",
-          "아저씨가 변전실을 보러 갔다. 나는 누나 옆에 앉아서 전광판을 봤다. --분. 숫자가 들어갈 자리가 비어 있다."] },
+          "맨 앞 칸에서 기관사를 찾았다. 살아 있었다. 운전석에 앉아서 컵라면을 먹고 있었다. “손님이네. 표는 없어도 돼. 이름이 뭐야?” {hero}라고 했더니 승무 일지에 그대로 받아 적었다.",
+          "기관사는 열이틀째 여기 있었다고 했다. 전기가 나갔는데 왜 안 떠났느냐고 물으니 전광판을 가리켰다. “저게 안 꺼지잖아. 저게 켜져 있는 동안은 운행 중인 거야. 내가 정한 건 아니고.”",
+          "아저씨가 변전실을 보러 갔다. 나는 기관사 옆에 앉아서 전광판을 봤다. --분. 숫자가 들어갈 자리가 비어 있다."] },
         { title: "막차", text: [
           "역무실 칠판에 분필 글씨가 남아 있다. “막차는 7구역행. 못 탄 사람은 선로를 따라 걸을 것. 터널 안에서는 소리 내지 말 것.” 마지막 줄에는 밑줄이 세 번 그어져 있다.",
-          "끊긴 선로를 보러 터널에 들어갔다. 누나가 앞장서고 내가 손전등을 들었다. 터널 벽에 손자국이 있다. 어른 것, 그리고 그 아래 내 손만 한 것들. 열 몇 개. 벽을 짚으며 걸어간 자국이다.",
-          "한가운데쯤 왔을 때 가방 속 무전기가 저절로 켜졌다. “여기는 7구역. 생존자는—” 누나가 내 입을 막았다. 입을 막을 건 내가 아닌데. 나는 가방을 끌어안고 스위치를 더듬었다.",
+          "끊긴 선로를 보러 터널에 들어갔다. 기관사가 앞장서고 내가 손전등을 들었다. 터널 벽에 손자국이 있다. 어른 것, 그리고 그 아래 내 손만 한 것들. 열 몇 개. 벽을 짚으며 걸어간 자국이다.",
+          "한가운데쯤 왔을 때 가방 속 무전기가 저절로 켜졌다. “여기는 7구역. 생존자는—” 기관사가 내 입을 막았다. 입을 막을 건 내가 아닌데. 나는 가방을 끌어안고 스위치를 더듬었다.",
           "끄기 직전에 들었다. 문장과 문장 사이에 아주 작은 소리가 있다. 딸깍. 테이프가 처음으로 돌아가는 소리다. 방송은 누가 말하고 있는 게 아니다. 녹음이다.",
-          "터널 저쪽 어둠에서 수십 개의 발이 한꺼번에 멈췄다가, 한참 뒤에 다시 걷기 시작했다. 우리는 그 자리에서 삼십 분을 서 있었다. 누나의 손이 내 입 위에서 계속 떨렸다."] },
+          "터널 저쪽 어둠에서 수십 개의 발이 한꺼번에 멈췄다가, 한참 뒤에 다시 걷기 시작했다. 우리는 그 자리에서 삼십 분을 서 있었다. 기관사의 손이 내 입 위에서 계속 떨렸다."] },
         { title: "옥상의 불", text: [
-          "열차가 다시 다닌다. 멀리 간 열차일수록 많이 싣고 돌아온다. 전광판의 --분 자리에 처음으로 숫자가 들어갔다. 누나가 그걸 보고 울었다. 컵라면을 먹으면서.",
-          "심야 급행에서 돌아온 누나가 말했다. 강 건너 병원 옥상에 불이 켜져 있다고. 깜박이는 불이라고. 길게, 짧게, 길게.",
+          "열차가 다시 다닌다. 멀리 간 열차일수록 많이 싣고 돌아온다. 전광판의 --분 자리에 처음으로 숫자가 들어갔다. 기관사가 그걸 보고 울었다. 컵라면을 먹으면서.",
+          "심야 급행에서 돌아온 기관사가 말했다. 강 건너 병원 옥상에 불이 켜져 있다고. 깜박이는 불이라고. 길게, 짧게, 길게.",
           "아저씨가 그건 신호라고 했다. 누가 거기서 손으로 켰다 껐다 하는 거라고. 녹음이 아니라 사람이라고.",
-          "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. 고등학생 형이 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
+          "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. 고등학생이 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
           "아무도 대답하지 못했다. 나는 방송의 목소리를 한 번 더 떠올렸다. 숨 쉴 틈 없이 말하는 여자. 엄마는 급할 때 그렇게 말한다. 그 생각은 입 밖에 내지 않았다. 다음 급행은 병원 앞까지 간다."] }] },
     { no: 5, name: '대학 병원', kind: 'lab', cost: 1e24, lead: '남은 연구를 이어 가며 과제를 고른다',
       story: [
@@ -2090,9 +2127,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
         { title: "114번", text: [
           "수첩은 실험 노트였다. 엄마 글씨다. 마지막 쪽. “샘플 114번에서 반응. 양이 모자란다. 사람이 더 필요하다. 살아서 여기까지 온 사람들의 피가.” 날짜는 사태 9일째.",
           "9일째는 내가 물린 날이다.",
-          "앞쪽을 넘겨 봤다. 1번부터 113번까지는 전부 한 줄씩이고, 끝에 같은 말이 적혀 있다. 반응 없음. 114번만 세 쪽이다. “물린 지 6시간, 열 39도. 12시간, 열 내림. 24시간, 밥을 달라고 함.” 그리고 줄을 벅벅 그어 지운 한 줄. 불빛에 비춰 보니 읽을 수 있었다. “내 아들을 숫자로 적고 있다.”",
+          "앞쪽을 넘겨 봤다. 1번부터 113번까지는 전부 한 줄씩이고, 끝에 같은 말이 적혀 있다. 반응 없음. 114번만 세 쪽이다. “물린 지 6시간, 열 39도. 12시간, 열 내림. 24시간, 밥을 달라고 함.” 그리고 줄을 벅벅 그어 지운 한 줄. 불빛에 비춰 보니 읽을 수 있었다. “{hero:을} 숫자로 적고 있다. 내 아이를.”",
           "나는 왼쪽 소매를 걷었다. 처음으로 사람들 앞에서. 이빨 자국은 하얗게 아물어 있다. 아저씨는 한참 보다가 소매를 도로 내려 주었다. “그래서 비도 안 오는데 맨날 우비를 입고 있었구나.”",
-          "쌍둥이 중 하나가 물었다. “그럼 오빠는 안 변해?” 나는 모른다고 했다. 엄마도 몰랐을 것이다. 그래서 병원에 온 것이다."] },
+          "쌍둥이 중 하나가 물었다. “그럼 {hero:은} 안 변해?” 나는 모른다고 했다. 엄마도 몰랐을 것이다. 그래서 병원에 온 것이다."] },
         { title: "냉장 상자", text: [
           "연구가 다시 굴러간다. 아주머니는 알고 보니 임상병리사였다. 열이틀 동안 아무도 묻지 않아서 말하지 않았다고 했다.",
           "냉장 상자를 열었다. 엄마가 열지 말라고 했지만, 엄마의 노트가 열라고 하고 있었다. 안에는 피가 든 관이 여섯 개. 라벨은 114-2부터 114-7. 첫 번째 관은 엄마가 들고 간 것이다.",
@@ -2187,7 +2224,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
-    { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 뒤진다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
+    { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '거간꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
     { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 5e13, growth: 1, max: 1 },
     { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 5e20, growth: 1, max: 1 }
@@ -2291,7 +2328,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
       // 영구
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
       kennel: {},            // 함께 있는 친구들 { 품종: 이름 }. 한 번 데려온 아이는 계속 남고, 누구를 데리고 다닐지 고른다
-      heroName: '생존자',    // 주인공의 이름
+      heroName: HERO_DEFAULT,    // 주인공의 이름
       antibodies: 0,         // 쓰지 않은 항체 샘플
       antibodyTotal: 0,      // 지금까지 얻은 항체 샘플
       traits: {},
@@ -2349,7 +2386,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
     s.buildings = counts(BUILDINGS, raw.buildings, COUNT_MAX);
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
-    s.heroName = cleanName(raw.heroName, '생존자');
+    s.heroName = cleanName(raw.heroName, HERO_DEFAULT);
+    if (s.heroName === '생존자') s.heroName = HERO_DEFAULT;      // 예전 기본 이름은 새 기본 이름으로 옮긴다
     s.kennel = {};
     var rk = raw.kennel && typeof raw.kennel === 'object' && !Array.isArray(raw.kennel) ? raw.kennel : {};
     PET_BREEDS.forEach(function (b) { if (Object.prototype.hasOwnProperty.call(rk, b.id)) s.kennel[b.id] = cleanName(rk[b.id], b.name); });
@@ -3263,6 +3301,24 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
    * 일지: 조건이 맞으면 한 번씩 열린다. 읽은 일지는 철수해도 다시 뜨지 않는다.
    *   구역 일지 3편: 구역에 들어설 때 / 목표 둘 / 목표 셋. 그 밖에 첫 철수와 '문 앞' 일지.
    */
+  /** 마지막 글자에 받침이 있는가(한글이 아니면 false). */
+  function hasBatchim(word) {
+    var c = String(word || '').charCodeAt(String(word || '').length - 1);
+    return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
+  }
+  /**
+   * 일지 글의 이름 자리를 채운다. {hero} 는 이름 그대로, {hero:야}·{hero:은}·{hero:을}·{hero:이} 는 받침에 맞는 조사를 붙인다.
+   *   라라 → 라라야, 라라는, 라라를, 라라가 / 민준 → 민준아, 민준은, 민준을, 민준이.  이름이 비면 기본 이름을 쓴다.
+   */
+  var JOSA = { '야': ['아', '야'], '은': ['은', '는'], '을': ['을', '를'], '이': ['이', '가'] };
+  function fillStory(text, name) {
+    var hero = typeof name === 'string' && name.trim() ? name.trim() : HERO_DEFAULT;
+    return String(text == null ? '' : text).replace(/\{hero(?::(.))?\}/g, function (all, josa) {
+      if (!josa) return hero;
+      var pair = JOSA[josa];
+      return pair ? hero + (hasBatchim(hero) ? pair[0] : pair[1]) : hero;
+    });
+  }
   var BEATS = [];
   ZONES.forEach(function (z, zi) {
     z.story.forEach(function (ep, k) {
@@ -3291,7 +3347,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
       try { hit = !!b.when(state); } catch (e) { hit = false; }
       if (!hit) return;
       state.story[b.id] = true;
-      events.push({ type: 'story', id: b.id, zone: b.zone, zoneName: b.zoneName, title: b.title, text: b.text });
+      events.push({ type: 'story', id: b.id, zone: b.zone, zoneName: b.zoneName, title: b.title, text: fillStory(b.text, state.heroName) });
     });
   }
 
@@ -3473,7 +3529,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
@@ -5124,7 +5180,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
 
   /* ---------- 계정 저장 ---------- */
   var CLOUD_TEXT = {
-    none: '10초마다 이 브라우저에 자동 저장',
+    none: '자동으로 저장돼요',
     connecting: '계정 저장 연결 중…',
     on: '계정에 자동 저장 중 · 다른 기기에서 열면 이어진다',
     retry: '계정 저장이 잠시 안 된다. 곧 다시 시도한다',
@@ -5185,20 +5241,19 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
   }
   /*
    * 이름표: 도트 화면은 너무 작아서(80칸) 글자를 그릴 수 없으므로, 화면 위에 글자를 겹쳐 놓고 주인공을 따라다니게 한다.
-   *   캐릭터를 가리지 않게 둘 다 발밑(땅 부분)에 둔다: 주인공 이름이 윗줄, 동물 친구 이름이 아랫줄. 밤 싸움 중이거나 설정에서 끄면 숨긴다.
+   *   캐릭터를 가리지 않게 발밑(땅 부분)에 한 줄로 둔다: '주인공 · 동물 친구'. 밤 싸움 중이거나 설정에서 끄면 숨긴다.
    *   자리는 도트 화면 모델의 주인공 위치(hero.x)를 화면 너비에 대한 비율로 옮긴 것이다.
    */
   function renderNames() {
-    var heroTag = $('tag-hero'), petTag = $('tag-pet');
-    if (!heroTag || !petTag) return;
-    var m = scene && scene.model, show = prefs.names === 'on' && m && m.W > 0 && !C.dayPhase(state).phase.match(/battle/);
-    var pet = show ? C.petInfo(state) : null;
-    heroTag.hidden = !show; petTag.hidden = !pet;
+    var tag = $('tag-hero');
+    if (!tag) return;
+    var m = scene && scene.model, show = prefs.names === 'on' && m && m.W > 0 && C.dayPhase(state).phase !== 'battle';
+    tag.hidden = !show;
     if (!show) return;
-    var x = (m.hero.x + 4) / m.W * 100, back = m.hero.face > 0 ? -7 : 7;
-    setText(heroTag, state.heroName || '생존자');
-    heroTag.style.left = Math.max(6, Math.min(94, x)).toFixed(1) + '%';
-    if (pet) { setText(petTag, pet.name); petTag.style.left = Math.max(6, Math.min(94, x + back / m.W * 100)).toFixed(1) + '%'; }
+    var pet = C.petInfo(state), x = (m.hero.x + 4) / m.W * 100;
+    setText($('tag-hero-name'), state.heroName || C.HERO_DEFAULT);
+    setText($('tag-pet-name'), pet ? ' · ' + pet.name : '');
+    tag.style.left = Math.max(10, Math.min(90, x)).toFixed(1) + '%';
   }
   /** 짧은 진동. 설정에서 껐거나 기기가 지원하지 않으면 아무 일도 하지 않는다. */
   function buzz(ms) { try { if (prefs.vibrate === 'on' && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
@@ -5590,6 +5645,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
    * 직접 수색 한 번. index 를 주면 수색 지도의 그 칸을, 주지 않으면("잔해 수색" 단추) 다음 칸을 뒤진다.
    * 뒤진 칸이 잠깐 튀고, 은닉처나 동네 완료 때는 소리와 쪽지로 알린다.
    */
+  /** 동네를 다 뒤졌을 때: 수색 지도 머리줄의 글을 2초 동안 보너스로 바꿔 보여 준다(알림 띠 대신). */
+  var sweepFlashUntil = 0, sweepFlashText = '';
+  function flashSweep(bonus) { sweepFlashText = '동네 완료 · 물자 +' + fmt(bonus); sweepFlashUntil = Date.now() + 2000; }
   function search(index) {
     var r = C.scavenge(state, index);
     popNumber('+' + fmt(r.gain + r.bonus));
@@ -5598,7 +5656,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
     if (scene) scene.poke();
     buzz(r.swept ? 30 : 8);
     if (r.swept) {
-      toast('동네 하나를 다 뒤졌다 · 물자 +' + fmt(r.bonus));
+      // 동네를 다 뒤질 때마다 알림 띠를 띄우면 너무 잦다(순찰조가 돌면 30초마다). 수색 지도의 칸 수 옆에 잠깐 표시만 한다
+      flashSweep(r.bonus);
       var box = $('search'); box.classList.remove('swept'); void box.offsetWidth; box.classList.add('swept');
       sfx('defended');
     } else sfx(r.kind === 'cache' ? 'buy' : 'click');
@@ -5631,21 +5690,62 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
   }
   function buildZoneMap() {
     var svg = svgEl('svg', { viewBox: '0 0 320 330', 'class': 'zmap-svg', role: 'group', 'aria-label': '구역 지도' });
-    // 땅, 강(오른쪽 위에서 왼쪽 가운데로 흐른다), 다리
-    svg.appendChild(svgEl('rect', { x: 0, y: 0, width: 320, height: 330, 'class': 'zm-land' }));
-    svg.appendChild(svgEl('path', { d: 'M-10 78 L120 96 L210 84 L330 104', 'class': 'zm-river' }));
-    svg.appendChild(svgEl('path', { d: 'M-10 78 L120 96 L210 84 L330 104', 'class': 'zm-river-glint' }));
-    // 길: 구역을 차례로 잇는다. 연 구역까지는 실선(zm-road-open), 그 뒤는 점선
+    function add(name, attrs) { var n = svgEl(name, attrs); svg.appendChild(n); return n; }
+    function px(x, y, w, h, cls) { add('rect', { x: x, y: y, width: w, height: h, 'class': cls }); }
+    var RIVER = 'M-10 74 L60 86 L120 98 L170 92 L210 84 L270 92 L330 106';
+    // 강의 y 좌표(x 에 따라): 나무와 폐허를 강 위에 놓지 않으려고 쓴다
+    function riverY(x) { var pts = [[-10, 74], [60, 86], [120, 98], [170, 92], [210, 84], [270, 92], [330, 106]]; for (var k = 1; k < pts.length; k++) if (x <= pts[k][0]) { var a = pts[k - 1], b = pts[k]; return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]); } return 106; }
+    /* 땅: 풀밭 바탕에 얼룩(밝은 풀, 마른 흙)을 흩뿌린다. 자리는 늘 같다(씨앗이 고정된 난수). */
+    px(0, 0, 320, 330, 'zm-land');
+    var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (var gp = 0; gp < 90; gp++) px(Math.floor(rnd() * 316), Math.floor(rnd() * 326), 3 + Math.floor(rnd() * 6), 2, gp % 3 ? 'zm-grass' : 'zm-dirt');
+    /* 강: 어두운 둑, 물, 물결. 강 건너(위쪽)는 안개가 낀 듯 조금 어둡다 */
+    add('path', { d: RIVER, 'class': 'zm-bank' });
+    add('path', { d: RIVER, 'class': 'zm-river' });
+    add('path', { d: RIVER, 'class': 'zm-river-glint' });
+    add('path', { d: RIVER, 'class': 'zm-river-glint zm-glint2' });
+    /* 길: 구역을 차례로 잇는다. 흙길 바탕 위에 가운데 줄을 얹는다. 연 구역까지는 밝은 길(zm-road-open), 그 뒤는 흐린 점선 */
     rows.zmapRoad = []; rows.zmap = [];
     for (var k = 0; k < ZMAP_AT.length - 1; k++) {
       var seg = svgEl('line', { x1: ZMAP_AT[k][0], y1: ZMAP_AT[k][1], x2: ZMAP_AT[k + 1][0], y2: ZMAP_AT[k + 1][1], 'class': 'zm-road' });
       rows.zmapRoad.push(seg); svg.appendChild(seg);
     }
-    // 꾸밈: 나무와 폐허 몇 점(누를 수 없다)
-    [[20, 230], [110, 232], [292, 276], [226, 150], [22, 176], [298, 150], [104, 44], [36, 30]].forEach(function (p, n) {
-      svg.appendChild(svgEl('rect', { x: p[0], y: p[1], width: 6, height: 6, 'class': n % 3 ? 'zm-tree' : 'zm-ruin' }));
-      if (n % 3) svg.appendChild(svgEl('rect', { x: p[0] + 2, y: p[1] + 6, width: 2, height: 3, 'class': 'zm-trunk' }));
+    // 다리: 5구역과 6구역 사이, 길이 강을 건너는 자리에 널판을 깐다
+    for (var bp = 0; bp < 7; bp++) px(108 + bp * 5, 100 - bp * 2.3, 4, 9, bp % 2 ? 'zm-plank' : 'zm-plank2');
+    /* 숲과 폐허: 길·강·구역 표지를 피해 흩뿌린다. 아래쪽(가까운 곳)일수록 나중에 그려서 겹칠 때 앞에 온다 */
+    function clear(x, y) {
+      if (Math.abs(y - riverY(x)) < 22) return false;
+      for (var n = 0; n < ZMAP_AT.length; n++) if (Math.abs(x - ZMAP_AT[n][0]) < 34 && y > ZMAP_AT[n][1] - 36 && y < ZMAP_AT[n][1] + 34) return false;
+      for (var s = 0; s < ZMAP_AT.length - 1; s++) {          // 길과의 거리(선분까지)
+        var a = ZMAP_AT[s], b = ZMAP_AT[s + 1], dx = b[0] - a[0], dy = b[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy)));
+        var qx = a[0] + t * dx - x, qy = a[1] + t * dy - y;
+        if (qx * qx + qy * qy < 144) return false;
+      }
+      return true;
+    }
+    var decor = [];
+    for (var dn = 0; dn < 420 && decor.length < 95; dn++) {
+      var dx0 = 6 + Math.floor(rnd() * 306), dy0 = 14 + Math.floor(rnd() * 306);
+      if (clear(dx0, dy0)) decor.push([dx0, dy0, rnd()]);
+    }
+    decor.sort(function (a, b) { return a[1] - b[1]; });
+    decor.forEach(function (d) {
+      var x = d[0], y = d[1], r = d[2];
+      if (r < 0.62) {                    // 소나무: 세 단으로 쌓은 잎과 밑동
+        var dark = r < 0.3 ? 'zm-tree2' : 'zm-tree';
+        px(x - 1, y - 9, 2, 3, dark); px(x - 2, y - 7, 4, 3, dark); px(x - 3, y - 4, 6, 3, dark); px(x - 1, y - 1, 2, 2, 'zm-trunk');
+        px(x - 2, y - 7, 1, 1, 'zm-leaf');
+      } else if (r < 0.8) {              // 덤불
+        px(x - 3, y - 3, 6, 3, 'zm-tree'); px(x - 2, y - 4, 3, 1, 'zm-leaf');
+      } else if (r < 0.93) {             // 무너진 집: 벽과 어두운 창, 비스듬히 잘린 지붕
+        px(x - 4, y - 6, 8, 6, 'zm-ruin'); px(x - 4, y - 8, 4, 2, 'zm-ruin'); px(x - 2, y - 4, 2, 2, 'zm-win'); px(x + 1, y - 4, 2, 2, 'zm-win');
+      } else {                           // 버려진 차
+        px(x - 4, y - 3, 8, 3, 'zm-car'); px(x - 2, y - 5, 4, 2, 'zm-car'); px(x - 3, y, 2, 1, 'zm-win'); px(x + 1, y, 2, 1, 'zm-win');
+      }
     });
+    // 나침반(왼쪽 위 구석)
+    px(14, 12, 1, 9, 'zm-ink'); px(10, 16, 9, 1, 'zm-ink'); px(13, 10, 3, 2, 'zm-here-c');
+    svg.appendChild(svgEl('text', { x: 14.5, y: 8, 'class': 'zm-compass', 'text-anchor': 'middle' }, 'N'));
     C.ZONES.forEach(function (z, zi) {
       var at = ZMAP_AT[zi], g = svgEl('g', { id: 'zmap-z' + zi, 'class': 'zm-node', tabindex: '0', role: 'button' });
       g.appendChild(svgEl('circle', { cx: at[0], cy: at[1], r: 22, 'class': 'zm-hit' }));           // 누르는 넓은 자리
@@ -6051,7 +6151,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
     var label = C.zoneLabel(state);
     setText($('base-no'), label);
     setText($('zone-name'), label);
-    var lead = C.ZONES[state.zone].lead + (state.retreats ? ' · 철수 ' + state.retreats + '번' : '');
+    var lead = state.retreats ? '철수 ' + state.retreats + '번' : C.ZONES[state.zone].lead;      // 한 줄에 들어가게 둘 중 하나만 적는다
     setText($('zone-trait'), lead);
     setText($('m-zone-trait'), label + ' · ' + lead);
     var cells = $('route').children;
@@ -6179,7 +6279,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
       });
       setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
       var patrol = C.autoOn(state, 0), every = C.sweepInterval(state);
-      setText($('search-note'), (state.sweeps + 1) + '번째 동네 · ' + (patrol ? '수색조가 ' + every.toFixed(1).replace('.0', '') + '초마다 한 칸' : '개조에서 순찰조를 사면 알아서 뒤져요'));
+      var flashing = Date.now() < sweepFlashUntil;
+      setText($('search-note'), flashing ? sweepFlashText : (state.sweeps + 1) + '번째 동네 · ' + (patrol ? secs(every) + '마다 한 칸' : '개조에서 순찰조를 사요'));
+      $('search-note').classList.toggle('flash', flashing);
       fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
       $('search-bar').hidden = !patrol;
       $('search').classList.toggle('auto', patrol);          // 순찰조가 돌면 지도를 작게 접는다(눌러서 뒤질 일이 줄어드니까)
@@ -6350,7 +6452,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
       var r = rows.upgrades[u.id], lv = state.upgrades[u.id], cost = C.upgradeCost(state, u.id);
       setText(r.count, 'Lv ' + lv + ' / ' + u.max);
       // 순찰조: 지금 몇 초마다 뒤지는지와 사고 난 뒤의 초를 함께 보여 준다
-      var infoText = '개조';
+      var infoText = '';
       if (u.id === 'patrol') {
         var probe = Object.create(state); probe.upgrades = Object.create(state.upgrades); probe.upgrades.patrol = lv + 1;
         var nowS = secs(C.sweepInterval(state)), nextS = secs(C.sweepInterval(probe));
@@ -6377,10 +6479,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
     ['dog', 'cat'].forEach(function (kind) {
       var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
       setText(b.firstChild, k.name + (have ? ' 데려오기' : ' 맞이하기'));
-      setText(b.lastChild, k.what + ' · ' + (cost ? '항체 샘플 ' + fmt(cost) : '첫 친구는 그냥 와요'));
+      setText(b.lastChild, cost ? '항체 샘플 ' + fmt(cost) : '첫 친구는 그냥 와요');
       b.disabled = cost > state.antibodies;
     });
-    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 이미 있는 아이가 나오면 ' + Math.round(C.PET_DUP_REFUND * 100) + '% 를 돌려받아요');
+    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 절반 환불');
     if (!p) return;
     setText($('pet-name'), p.name);
     setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · ' + p.desc);
@@ -6414,7 +6516,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
       var r = rows.traits[t.id], lv = state.traits[t.id], cost = C.traitCost(state, t.id);
       setText(r.count, 'Lv ' + lv + ' / ' + t.max);
       // 자동화: 전력 투입 대기 시간이 지금 몇 초이고 찍으면 몇 초가 되는지 보여 준다(청신호도 같은 비율로 줄어든다)
-      var tInfo = '레벨당';
+      var tInfo = '';
       if (t.id === 'auto') {
         var lvNow = state.traits.auto || 0, tp = Object.create(state); tp.traits = Object.create(state.traits); tp.traits.auto = lvNow + 1;
         var cNow = secs(C.surgeCooldown(state)), cNext = secs(C.surgeCooldown(tp)), gNow = secs(C.greenCooldown(state)), gNext = secs(C.greenCooldown(tp));
@@ -6455,7 +6557,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
     C.BEATS.forEach(function (b) { if (!byZone[b.zone]) { byZone[b.zone] = []; chapters.push(b.zone); } byZone[b.zone].push(b); });
     // 처음에는 글이 적힌 장 가운데 가장 뒤의 장을 연다(철수 글은 1장에 있으므로 '마지막에 적힌 글'로 고르면 1장이 열린다)
     if (!journalTab || !byZone[journalTab]) { journalTab = chapters[0]; read.forEach(function (b) { if (b.zone > journalTab) journalTab = b.zone; }); }
-    var key = read.map(function (b) { return b.id; }).join(',') + '|' + journalTab;
+    var key = read.map(function (b) { return b.id; }).join(',') + '|' + journalTab + '|' + state.heroName;
     if (key === journalShown) return;
     journalShown = key;
     var tabs = $('journal-tabs'), list = $('journal'), latest = read.length ? read[read.length - 1] : null;
@@ -6476,13 +6578,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.6";
       } else {
         li.appendChild(el('span', 'j-no', b.zone + '장 ' + (k + 1) + '편'));
         li.appendChild(el('span', 'j-title', b.title));
-        b.text.split('\n\n').forEach(function (para) { li.appendChild(el('p', '', para)); });
+        C.fillStory(b.text, state.heroName).split('\n\n').forEach(function (para) { li.appendChild(el('p', '', para)); });      // 이름 자리에 지금의 주인공 이름을 넣는다
       }
       list.appendChild(li);
     });
     setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
     // 상황 화면의 한 줄: 가장 최근 글의 제목과 첫 문단
-    var line = latest ? '〈' + latest.title + '〉 ' + latest.text.split('\n\n')[0] : '아직 적힌 것이 없어요.';
+    var line = latest ? '〈' + latest.title + '〉 ' + C.fillStory(latest.text, state.heroName).split('\n\n')[0] : '아직 적힌 것이 없어요.';
     setText($('story-latest'), line);
     setText($('m-story'), line);
   }

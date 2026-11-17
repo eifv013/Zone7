@@ -684,15 +684,7 @@ body { font-size: 15.5px; line-height: 1.55; }
 .brief, .scene-wrap { overflow: hidden; }
 .trade { background: var(--soft); box-shadow: none; }
 .panel { position: relative; }
-/* 덩굴: 면의 오른쪽 위 모서리와 도트 화면 틀 */
-/* 글자를 가리지 않게 작고 옅게, 테두리 위로 조금 걸쳐서 둔다 */
-.panel::before { content: ''; position: absolute; top: -5px; right: 6px; width: 48px; height: 24px; background: var(--art-vine) no-repeat right top / contain; image-rendering: pixelated; pointer-events: none; opacity: .5; }
-.panel > * { position: relative; }
-/* 패널마다 덩굴이 다르다: 오른쪽 위의 넝쿨 / 왼쪽 위에서 길게 늘어진 가닥 / 오른쪽 위의 작은 잎 뭉치 / 없음. 도트 화면에는 달지 않는다 */
-.panel:nth-of-type(4n+2)::before { right: auto; left: 10px; top: -3px; width: 42px; height: 36px; background-image: var(--art-vine2); background-position: left top; opacity: .55; }
-.panel:nth-of-type(4n+3)::before { right: 14px; top: -3px; width: 33px; height: 18px; background-image: var(--art-vine3); opacity: .6; }
-.panel:nth-of-type(4n)::before { content: none; }
-.foot .panel:nth-of-type(odd)::before { transform: scaleX(-1); right: auto; left: 8px; }
+/* 덩굴은 뺐다(0.8.7): 자리가 어색하고 글자와 겹쳤다 */
 /* 마스코트: 머리띠의 우비 소년, 오늘 밤 패널의 담 너머 좀비, 시작 화면 */
 .mast h1::before { content: ''; display: inline-block; width: .62em; height: .71em; margin-right: .18em; background: var(--art-boy) no-repeat center / contain; image-rendering: pixelated; vertical-align: -.06em; }
 #night .panel-head h2::after { content: ''; display: inline-block; width: 28px; height: 18px; margin-left: 8px; background: var(--art-zombie) no-repeat center bottom / contain; image-rendering: pixelated; vertical-align: -3px; }
@@ -738,12 +730,19 @@ body { font-size: 15.5px; line-height: 1.55; }
 /* 구역 지도: 길로 이어진 일곱 구역 */
 .zmap-map { border-radius: 10px; overflow: hidden; border: 1px solid #4a4b40; }
 .zmap-svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; }
-.zm-land { fill: #2c3324; }
-.zm-river { fill: none; stroke: #2f5a78; stroke-width: 26; stroke-linejoin: round; }
-.zm-river-glint { fill: none; stroke: #4f86a8; stroke-width: 2; stroke-dasharray: 6 14; transform: translateY(-5px); }
-.zm-road { stroke: #6d6a5c; stroke-width: 5; stroke-dasharray: 3 6; stroke-linecap: square; }
-.zm-road-open { stroke: #d9c9a0; stroke-dasharray: none; }
-.zm-tree { fill: #4f6b33; } .zm-trunk { fill: #4a3a2a; } .zm-ruin { fill: #55574a; }
+.zm-land { fill: #39432c; }
+.zm-grass { fill: #465233; } .zm-dirt { fill: #4a4630; }
+.zm-bank { fill: none; stroke: #2a2f20; stroke-width: 32; stroke-linejoin: round; }
+.zm-river { fill: none; stroke: #2f5a78; stroke-width: 24; stroke-linejoin: round; }
+.zm-river-glint { fill: none; stroke: #5b93b3; stroke-width: 2; stroke-dasharray: 5 13; transform: translateY(-5px); animation: zm-flow 2.4s linear infinite; }
+.zm-glint2 { stroke: #24485f; stroke-dasharray: 8 17; transform: translateY(5px); animation-duration: 3.4s; }
+@keyframes zm-flow { to { stroke-dashoffset: -36; } }
+.zm-road { stroke: #5d5a48; stroke-width: 6; stroke-dasharray: 2 5; stroke-linecap: butt; }
+.zm-road-open { stroke: #cbb98a; stroke-dasharray: none; stroke-linecap: round; }
+.zm-plank { fill: #8a6a44; } .zm-plank2 { fill: #6b4f30; }
+.zm-tree { fill: #3f6a36; } .zm-tree2 { fill: #2f5330; } .zm-leaf { fill: #7da35a; } .zm-trunk { fill: #4a3a2a; }
+.zm-ruin { fill: #6a6b5e; } .zm-win { fill: #1e1f18; } .zm-car { fill: #7a4a3a; }
+.zm-ink { fill: #cfcebf; } .zm-here-c { fill: #f0b400; } .zm-compass { font: 700 7px/1 var(--font-mono); fill: #cfcebf; }
 .zm-node { cursor: pointer; outline: none; }
 .zm-hit { fill: transparent; }
 .zm-plot { fill: rgba(0, 0, 0, .35); }
@@ -764,7 +763,7 @@ body { font-size: 15.5px; line-height: 1.55; }
 .zmap-info .label { color: #a09f8e; }
 .story-card .zmap-info button { align-self: stretch; padding: 10px; background: #f0b400; color: #17180f; border: 0; font-weight: 700; }
 .story-card .zmap-info button:disabled { background: #33342a; color: #a09f8e; }
-@media (prefers-reduced-motion: reduce) { .zm-here { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .zm-here, .zm-river-glint { animation: none; } }
 /* 시작 화면: 로딩 바 위를 우비 소년이 달리고 좀비 셋이 쫓아간다(바의 왼쪽 끝에서 오른쪽 끝으로, 되풀이) */
 #boot .boot-run { position: relative; width: min(280px, 72vw); height: 36px; overflow: hidden; }
 #boot .boot-run i { position: absolute; bottom: 0; left: -12%; width: 24px; height: 33px; background: var(--art-zrun) no-repeat center bottom / contain; image-rendering: pixelated; animation: boot-run 3.4s linear infinite, boot-hop .26s steps(2, start) infinite; }
@@ -796,14 +795,40 @@ body { font-size: 15.5px; line-height: 1.55; }
 #back .boot-track { width: min(280px, 72vw); height: 18px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
 #back #back-bar { height: 100%; width: 0; background: repeating-linear-gradient(-45deg, #f0b400 0 8px, #17180f 8px 16px); }
 #back #back-text { margin: 12px 0 0; font: 600 13px/1.5 var(--font-mono); }
-/* 도트 화면의 이름표: 주인공 머리 위와 동물 친구 발밑. 작고 반투명해서 그림을 가리지 않는다 */
+/* 도트 화면의 이름표: 캐릭터를 가리지 않게 발밑(땅 부분)에 한 줄로. '주인공 · 동물 친구' */
 .scene-wrap { position: relative; }
-.tag { position: absolute; transform: translateX(-50%); padding: 0 5px; border-radius: 99px; font: 600 10px/1.5 var(--font-body); white-space: nowrap; pointer-events: none; transition: left .1s linear; }
+/* 바탕 띠 없이 글자에 검은 테두리만 둘러서 도트 그림에 얹힌 글씨처럼 보이게 한다 */
+.tag { position: absolute; top: 81%; transform: translateX(-50%); font: 700 10.5px/1.4 var(--font-body); white-space: nowrap; pointer-events: none; transition: left .1s linear; text-shadow: -1px 0 #17180f, 1px 0 #17180f, 0 -1px #17180f, 0 1px #17180f, -1px -1px #17180f, 1px 1px #17180f, -1px 1px #17180f, 1px -1px #17180f; }
 .tag[hidden] { display: none; }
-/* 캐릭터를 가리지 않게 둘 다 발밑(땅 부분)에 둔다: 주인공 이름이 윗줄, 동물 친구 이름이 아랫줄 */
-.tag { font-size: 9.5px; line-height: 1.35; }
-.tag-hero { top: 81.5%; background: rgba(23, 24, 15, .72); color: #f0b400; }
-.tag-pet { top: 91%; background: rgba(23, 24, 15, .55); color: #e6e5db; font-weight: 500; }
+.tag b { color: #f0b400; font-weight: 600; } .tag i { color: #e6e5db; font-style: normal; font-weight: 500; }
+/* 0.8.7 간격 손질: 붙어 있던 것들을 띄운다 */
+.pet-top { margin-top: 12px; }
+.pet-rename { margin-bottom: 12px; }
+.pet-pick { margin-top: 12px; gap: 10px; }
+.pet-pick button { padding: 12px 12px; }
+.pet-pick button small { margin-top: 2px; }
+.set-rows { gap: 0; }
+.set-row { padding: 10px 0; }
+.save-actions { gap: 10px; margin-top: 8px; }
+.save-actions button { padding: 9px 14px; }
+#save-code { margin-top: 6px; }
+.reset-row { display: grid; justify-items: start; gap: 6px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--rule); }
+.reset-row .danger { padding: 9px 14px; background: transparent; border: 1px solid var(--blood); color: var(--blood); border-radius: var(--r-s); font-weight: 600; cursor: pointer; }
+.reset-row .danger[data-armed] { background: var(--blood); color: #fff; }
+.reset-row p { margin: 0; }
+.ver { margin-top: 14px; }
+.relocate { border-radius: var(--r-s); }
+.row-info:empty { display: none; }
+.stats-h { margin: 22px 0 8px; }
+.panel-head { margin-bottom: 14px; }
+#search-note.flash { color: var(--hazard); font-weight: 600; }
+/* 개조 줄: 구역 화면 안에서는 '이 구역 전용' 딱지가 군더더기라 뺀다 */
+.row-zone .row-name::after { content: none; }
+/* 구역 머리줄: 제목·구역 지도 단추·수량 단추를 가운데 줄에 맞추고 두 단추의 높이를 같게 한다 */
+.panel-head:has(.zmap-open) { align-items: center; flex-wrap: nowrap; }
+.panel-head:has(.zmap-open) h2 { line-height: 1; }
+.zmap-open, .panel-head .qty button { height: 30px; padding: 0 12px; font: 600 13px/28px var(--font-body); }
+.zmap-open { border-radius: 999px; margin-left: 10px; white-space: nowrap; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -819,7 +844,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.6</div>
+  <div class="boot-ver">7구역 알파 0.8.7</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -863,7 +888,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
     </div>
   </section>
-  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="tag tag-hero" id="tag-hero" aria-hidden="true" hidden></span><span class="tag tag-pet" id="tag-pet" aria-hidden="true" hidden></span></div>
+  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="tag" id="tag-hero" aria-hidden="true" hidden><b id="tag-hero-name"></b><i id="tag-pet-name"></i></span></div>
   <div class="col col-main">
     <div class="notice" id="notice" role="status" hidden>
       <p id="notice-text"></p>
@@ -1007,7 +1032,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     </section>
     <section class="panel" aria-labelledby="h-traits">
       <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label" id="trait-points">항체 샘플 0</span></div>
-      <p class="hint">항체 샘플로 찍는 특성이에요. 철수해도 그대로 남고, 언제든 되돌려서 샘플을 전부 돌려받을 수 있어요.</p>
+      <p class="hint">철수해도 남아요. 언제든 되돌려서 샘플을 돌려받을 수 있어요.</p>
       <div class="rows" id="traits"></div>
       <button type="button" class="recall trait-reset" id="trait-reset">특성 되돌리기</button>
     </section>
@@ -1053,7 +1078,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="notes" id="help"></div>
   </section>
   <section class="panel" data-rpane="save" aria-labelledby="h-save">
-    <div class="panel-head"><h2 id="h-save">설정</h2><span class="label" id="cloud-status">10초마다 이 브라우저에 자동 저장</span></div>
+    <div class="panel-head"><h2 id="h-save">설정</h2><span class="label" id="cloud-status">자동으로 저장돼요</span></div>
     <div class="set-rows">
       <div class="set-row"><span class="label">화면 테마</span>
         <div class="qty" role="group" aria-label="화면 테마"><button type="button" data-skin-set="light" aria-pressed="true">라이트</button><button type="button" data-skin-set="dark" aria-pressed="false">다크</button></div></div>
@@ -1080,8 +1105,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
-    <p class="ver">7구역 알파 0.8.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
+    <p class="ver">7구역 알파 0.8.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
