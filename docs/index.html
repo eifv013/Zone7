@@ -915,7 +915,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.5</div>
+  <div class="boot-ver">7구역 알파 0.9.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1327,8 +1327,6 @@ setTimeout(function () {
         <div class="vol"><input type="range" id="volume" min="0" max="100" step="5" value="50"><b class="num" id="volume-num">50</b></div></div>
       <div class="set-row" id="notify-row" hidden><span class="label">앱 알림 · 하루에 많아야 두 번</span>
         <div class="qty" role="group" aria-label="앱 알림"><button type="button" data-notify="on">켬</button><button type="button" data-notify="off">끔</button></div></div>
-      <div class="set-row" id="notify-test-row" hidden><span class="label">알림 시험 · 1분 뒤에 하나</span>
-        <div class="qty"><button type="button" id="notify-test">보내기</button></div></div>
       <div class="set-row"><span class="label">진동</span>
         <div class="qty" role="group" aria-label="진동"><button type="button" data-pref="vibrate" data-value="on">켬</button><button type="button" data-pref="vibrate" data-value="off">끔</button></div></div>
       <div class="set-row"><span class="label">숫자 표기</span>
@@ -1351,7 +1349,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1475,7 +1473,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.6";
 </script>
 <script>
 /*
@@ -1494,6 +1492,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.6', date: '2026-11-17', at: '2026-11-17 23:20:00', title: '설정 정리',
+      items: [
+        '설정의 "알림 시험" 단추를 뺐어요. "앱 알림"은 그대로 있어요.'
+      ] },
     { ver: '알파 0.9.5', date: '2026-11-17', at: '2026-11-17 23:10:00', title: '밤에 보이는 얼굴들',
       items: [
         '도감에만 있던 좀비들이 이제 도트 화면에도 걸어와요. 앞치마, 작업복, 양복, 환자복처럼 구역마다 다른 옷을 입고 있어요.',
@@ -1503,8 +1505,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
     { ver: '알파 0.9.4', date: '2026-11-17', at: '2026-11-17 23:00:00', title: '아이폰 알림',
       items: [
         '아이폰에서도 알림을 받을 수 있어요. 홈 화면에 추가한 7구역을 열고 기록 > 설정에서 "앱 알림"을 켜 주세요. iOS 16.4부터 돼요.',
-        '알림 내용과 시각은 안드로이드 앱과 같아요. 닫고 4시간 뒤 한 번, 24시간 뒤 한 번, 밤에는 아침으로 미뤄져요.',
-        '설정에 "알림 시험" 단추를 잠깐 넣었어요. 누르면 1분 뒤에 알림이 하나 와요. 확인이 끝나면 뺄 거예요.'
+        '알림 내용과 시각은 안드로이드 앱과 같아요. 닫고 4시간 뒤 한 번, 24시간 뒤 한 번, 밤에는 아침으로 미뤄져요.'
       ] },
     { ver: '알파 0.9.3', date: '2026-11-17', at: '2026-11-17 22:50:00', title: '아이폰 알림 준비',
       items: [
@@ -3744,14 +3745,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
       { at: noticeAt(now, NOTICE_BACK_MS, hourOf), text: noticeBackText(state, index), kind: 'back' }
     ];
   }
-  /** 시험 알림 목록(임시): 1분 뒤에 하나. 조용한 시간(밤)을 따지지 않는다 — 누른 사람이 바로 확인하려는 것이라서. */
-  var NOTICE_TEST_MS = 60000, NOTICE_TEST_TEXT = '시험 알림이에요. 잘 도착했어요.';
-  function noticeTestPlan(now) {
-    var t = Number(now);
-    if (!isFinite(t)) t = Date.now();
-    return [{ at: Math.floor(t) + NOTICE_TEST_MS, text: NOTICE_TEST_TEXT, kind: 'test' }];
-  }
-
   /* ---------- 업적 ---------- */
   /*
    * 업적: 구역마다 15개, 공통 30개(모두 105개). 한 번 달성하면 철수해도 남는다.
@@ -4025,7 +4018,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, noticeAt: noticeAt, noticeBackText: noticeBackText, noticePlan: noticePlan, noticeTestPlan: noticeTestPlan, NOTICE_FULL_TEXT: NOTICE_FULL_TEXT, NOTICE_FULL_MS: NOTICE_FULL_MS, NOTICE_BACK_MS: NOTICE_BACK_MS, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, nightSpecials: nightSpecials, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, noticeAt: noticeAt, noticeBackText: noticeBackText, noticePlan: noticePlan, NOTICE_FULL_TEXT: NOTICE_FULL_TEXT, NOTICE_FULL_MS: NOTICE_FULL_MS, NOTICE_BACK_MS: NOTICE_BACK_MS, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, nightSpecials: nightSpecials, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
@@ -5823,7 +5816,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
    */
   var PUSH_SERVER = 'https://zone7-push.eifv013.workers.dev';      // 알림 서버(push/worker.js)를 올린 주소
   var PUSH_KEY = 'zone7-push', PUSH_INDEX = 'zone7-push-index', PUSH_BACK_AT = 'zone7-push-back';
-  var PUSH_TEST_AT = 'zone7-push-test';      // 시험 알림이 올 시각. 그때까지는 평소 예약/취소를 쉬어서 시험을 덮어쓰지 않는다
   var NOTICE_CACHE = 'zone7-notice', NOTICE_PLAN = './notice-plan';      // 서비스 워커(sw.js)와 맞춘 이름
   function webPushReady() {
     try { return !!(PUSH_SERVER && window.ZONE7_PWA && !nativeApp() && navigator.serviceWorker && window.PushManager && window.Notification && window.caches); }
@@ -5858,7 +5850,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
   /** 화면이 가려질 때: 알림을 맡긴다. 다시 보일 때: 취소한다. */
   async function webPushSync(hidden) {
     if (!webPushReady() || recall(PUSH_KEY) !== 'on') return;
-    if (Date.now() < (Number(recall(PUSH_TEST_AT)) || 0) + 15000) return;      // 시험 알림을 기다리는 중: 앱을 닫거나 열어도 시험을 건드리지 않는다
     try {
       var reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
       if (!sub) return;
@@ -5877,21 +5868,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
       await pushPost('/schedule', { endpoint: sub.endpoint, times: plan.map(function (p) { return p.at; }) });
     } catch (e) { /* 알림은 없어도 게임에는 지장이 없다 */ }
   }
-  /**
-   * 시험 알림(임시): 1분 뒤에 알림 하나를 보내 달라고 서버에 맡긴다. 알림이 실제로 오는지 확인하려는 단추다.
-   * 성공하면 true. 구독이 없으면(알림을 켜지 않았으면) false.
-   */
-  async function webPushTest() {
-    var reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
-    if (!sub) return false;
-    var plan = C.noticeTestPlan(Date.now());
-    var box = await caches.open(NOTICE_CACHE);
-    await box.put(NOTICE_PLAN, new Response(JSON.stringify({ items: plan }), { headers: { 'Content-Type': 'application/json' } }));
-    var res = await pushPost('/schedule', { endpoint: sub.endpoint, times: [plan[0].at] });
-    if (!res.ok) throw new Error('server ' + res.status);
-    remember(PUSH_TEST_AT, plan[0].at);
-    return true;
-  }
   function wireNotify() {
     var app = nativeApp(), row = $('notify-row');
     if (!row || (!app && !webPushReady())) return;
@@ -5901,19 +5877,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.5";
     if (app) { try { now = !!app.getNotify(); } catch (e) { now = true; } }
     else now = recall(PUSH_KEY) === 'on' && Notification.permission === 'granted';
     show(now);
-    // 시험 단추(임시): 웹 앱 알림에서만 보인다
-    var testRow = $('notify-test-row'), testBtn = $('notify-test');
-    if (!app && testRow && testBtn) {
-      testRow.hidden = false;
-      testBtn.addEventListener('click', function () {
-        if (recall(PUSH_KEY) !== 'on') { toast('먼저 앱 알림을 켜 주세요'); return; }
-        testBtn.disabled = true;
-        webPushTest().then(function (ok) {
-          testBtn.disabled = false;
-          toast(ok ? '1분 뒤에 알림이 와요. 홈 화면으로 나가서 기다려 보세요.' : '먼저 앱 알림을 켜 주세요');
-        }, function () { testBtn.disabled = false; toast('알림 서버에 닿지 못했어요. 잠시 뒤에 다시 해 주세요.'); });
-      });
-    }
     document.querySelectorAll('[data-notify]').forEach(function (b) {
       b.addEventListener('click', function () {
         var on = b.getAttribute('data-notify') === 'on';
