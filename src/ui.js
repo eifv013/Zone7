@@ -1480,7 +1480,7 @@
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
     setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
-      : sieging ? '농성 중이에요. 보강하면 풀리고, 버틸수록 무리가 줄어요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
+      : sieging ? '농성 중이에요. 보강하면 풀리고, 버틸수록 무리가 줄어요.' : '방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
     setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;

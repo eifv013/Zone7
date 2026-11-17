@@ -6,7 +6,7 @@
 <title>7구역</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>
 try { if (localStorage.getItem('zone7-skin') === 'dark') document.documentElement.setAttribute('data-skin', 'dark'); } catch (e) { /* 저장소를 못 쓰면 기본(라이트) */ }
 </script>
@@ -27,6 +27,8 @@ try { if (localStorage.getItem('zone7-skin') === 'dark') document.documentElemen
   --slab: #17180f;        /* 현재 위치 띠, 구조 신호 버튼의 어두운 바탕: 두 테마에서 같다 */
   --on-slab: #e6e5db;
   --font-display: 'Black Han Sans', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  /* 제목 글꼴: 본문과 같은 글꼴의 굵은 것. 전에는 제목도 Black Han Sans 였는데, 글자 조각이 덜 받아진 기기에서 한 낱말 안에 두 글꼴이 섞여 보였다(생존, 번째 등). 이제 Black Han Sans 는 '7구역' 로고에만 쓴다 */
+  --font-head: var(--font-body);
   --font-body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
@@ -102,7 +104,7 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); ou
 
 .panel { background: var(--paper); border: 2px solid var(--ink); padding: 16px; }
 .panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
-h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
+h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .label { font-size: 12px; letter-spacing: .1em; color: var(--ink-soft); }
 
 /* 알림 */
@@ -118,7 +120,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .scavenge {
   width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px;
   background: var(--hazard); color: var(--on-hazard); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
-  padding: 16px 18px; cursor: pointer; font: 400 26px/1 var(--font-display);
+  padding: 16px 18px; cursor: pointer; font: 700 26px/1 var(--font-head);
   transition: transform .06s, box-shadow .06s; touch-action: manipulation; user-select: none;
 }
 .scavenge:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
@@ -153,7 +155,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .stats dt { font-size: 12px; line-height: 1.35; color: var(--ink-soft); }
 .stats dd { margin: 3px 0 0; font: 600 15px/1.25 var(--font-mono); }
 .stats-hero div { padding: 12px 10px; background: color-mix(in srgb, var(--hazard) 16%, transparent); }
-.stats-hero dd { font: 400 26px/1.1 var(--font-display); }
+.stats-hero dd { font: 700 26px/1.1 var(--font-head); }
 .stats-list li.bar { position: relative; padding: 7px 8px; border-top: 0; margin-top: 4px; border-radius: 6px; background: linear-gradient(to right, color-mix(in srgb, var(--ink) 12%, transparent) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--ink) 4%, transparent) 0); }
 .stats-list li.bar.here { background: linear-gradient(to right, color-mix(in srgb, var(--hazard) 40%, transparent) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--hazard) 10%, transparent) 0); }
 
@@ -192,6 +194,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .row-mile .st.on { opacity: 1; }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
+#search-bar { margin-bottom: 8px; }      /* 자동 수색 막대와 동네 칸 사이 */
 .row-mile[hidden] { display: none; }      /* 2배가 없는 줄(짐꾼, 호객꾼 등)에서는 딱지를 숨긴다. inline-flex 가 hidden 을 덮어써서 빈 테두리가 보였다 */
 /* 누름 표시: 터치에서는 직접 켠 .pressed 만 쓴다(:active 는 들쭉날쭉했다) */
 .row.pressed, .row.pressed .row-desc, .row.pressed .row-cost { background: var(--hazard); color: var(--on-hazard); }
@@ -272,7 +275,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .brief > div { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
 .brief-zone { background: var(--slab); color: var(--on-slab); }
 .brief-zone .label { color: var(--hazard); }
-.brief-zone b { font: 400 26px/1.15 var(--font-display); }
+.brief-zone b { font: 700 26px/1.15 var(--font-head); }
 .brief-zone span { font-size: 13px; opacity: .85; }
 .sector-track { border-color: var(--on-slab); background: transparent; height: 8px; }
 #sector-bar { background: var(--hazard); }
@@ -283,7 +286,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .journal li { padding: 14px 0 6px; border-top: 1px solid var(--rule); }
 .journal li:first-child { border-top: 2px solid var(--ink); }
 .journal .j-no { display: block; font: 600 12px/1.6 var(--font-mono); color: var(--ink-soft); }
-.journal .j-title { display: block; margin: 0 0 8px; font: 400 22px/1.2 var(--font-display); }
+.journal .j-title { display: block; margin: 0 0 8px; font: 700 22px/1.2 var(--font-head); }
 .journal p { margin: 0 0 .9em; font-size: 15.5px; line-height: 1.85; }
 .journal li.locked { color: var(--ink-soft); }
 .journal li.locked .j-title { font: 600 15px/1.5 var(--font-body); margin: 0; }
@@ -342,7 +345,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 /* 2구역 거래 */
 .trade { margin: 4px 0 12px; padding: 10px; border: 2px solid var(--ink); background: var(--paper); }
 .trade-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; margin-bottom: 10px; }
-.trade-price { font: 400 34px/1 var(--font-display); }
+.trade-price { font: 700 34px/1 var(--font-head); }
 /* 2구역 시세판 */
 .board { position: relative; height: 84px; margin-bottom: 8px; border: 2px solid var(--ink); background: var(--concrete); overflow: hidden; }
 .board-bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 3px; padding: 0 4px; }
@@ -382,7 +385,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .line-name { font: 600 12px/1.4 var(--font-body); white-space: nowrap; overflow: hidden; }
 .line-cap { font: 500 13px/1.4 var(--font-mono); }
 .line-stat { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; }   /* 가동률은 한 줄로, 설명은 그 아래에 */
-.line-stat .num { font: 400 22px/1.1 var(--font-display); white-space: nowrap; }
+.line-stat .num { font: 700 22px/1.1 var(--font-head); white-space: nowrap; }
 .line-stat .num.steady { color: var(--safe); }
 #line-mile { margin-bottom: 8px; }
 /* 4구역 노선: 노선마다 한 줄. 왼쪽에 이름과 운행 시간, 오른쪽에 탄 열차 수, 아래에 운행 진행 막대. */
@@ -404,7 +407,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .zmap-open { margin-right: auto; margin-left: 10px; padding: 3px 9px; background: transparent; color: var(--ink); border: 1px solid var(--ink); font: 600 12px/1.5 var(--font-body); cursor: pointer; }
 /* 1구역 수색 지도: 5×4 칸. 안 뒤진 칸은 어두운 건물, 뒤진 칸은 무엇이 나왔는지 보여 준다. */
 .search-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.search-head .num { font: 400 22px/1.1 var(--font-display); white-space: nowrap; }
+.search-head .num { font: 700 22px/1.1 var(--font-head); white-space: nowrap; }
 .search-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin-bottom: 8px; }
 .tile { position: relative; aspect-ratio: 2 / 1; padding: 0; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); cursor: pointer; font: 600 11px/1.2 var(--font-body); overflow: hidden; }
 .tile::before { content: ''; position: absolute; inset: 22% 18% 0; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .22) 0 3px, transparent 3px 7px); }   /* 창문 */
@@ -419,7 +422,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) { .tile.hit, .search.swept .search-grid { animation: none; } }
 /* 자리 비움 보상 창 */
 .away-card { align-items: center; text-align: center; gap: 12px; }
-.away-gain { font: 400 clamp(40px, 13vw, 60px)/1 var(--font-display); color: #f0b400; }
+.away-gain { font: 700 clamp(40px, 13vw, 60px)/1 var(--font-head); color: #f0b400; }
 .story-card .away-card .sync-q, .story-card.away-card .sync-q { font-size: 14px; color: #b9b8ab; }
 .away-list { list-style: none; margin: 0; padding: 0; font: 500 13px/1.7 var(--font-mono); color: #e6e5db; }
 .away-list:empty { display: none; }
@@ -453,12 +456,12 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .zmap-head { display: flex; align-items: center; justify-content: space-between; }
 .story-card .zmap-head button { align-self: auto; padding: 5px 14px; background: transparent; color: #e6e5db; border-color: #e6e5db; }
 .zmap-total { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #6d6d60; font-size: 13px; color: #b9b8ab; }
-.zmap-total b { font: 400 26px/1 var(--font-display); color: #f0b400; }
+.zmap-total b { font: 700 26px/1 var(--font-head); color: #f0b400; }
 .zmap-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .story-card .zmap-zone { align-self: stretch; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; width: 100%; text-align: left; padding: 8px 10px; background: transparent; color: #e6e5db; border: 2px solid #6d6d60; font: inherit; cursor: pointer; }
 .story-card .zmap-zone:disabled { opacity: .45; cursor: default; }
 .story-card .zmap-zone.here { border-color: #f0b400; }
-.zmap-no { grid-row: 1 / span 3; display: grid; place-items: center; width: 34px; height: 34px; background: #f0b400; color: #17180f; font: 400 20px/1 var(--font-display); }
+.zmap-no { grid-row: 1 / span 3; display: grid; place-items: center; width: 34px; height: 34px; background: #f0b400; color: #17180f; font: 700 20px/1 var(--font-head); }
 .zmap-zone:disabled .zmap-no { background: #6d6d60; }
 .zmap-name { font: 600 15px/1.3 var(--font-body); }
 .zmap-rate { font: 500 13px/1.3 var(--font-mono); color: #f0b400; white-space: nowrap; }
@@ -487,7 +490,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .tabbar button[data-locked] { opacity: .5; }
 /* 사건 단추: 구조 신호와 구분되게 어두운 바탕 */
 .event-btn { background: var(--slab); color: var(--on-slab); animation: none; }
-.event-title { margin: 6px 0 8px; font: 400 24px/1.25 var(--font-display); color: #e6e5db; }
+.event-title { margin: 6px 0 8px; font: 700 24px/1.25 var(--font-head); color: #e6e5db; }
 .event-later { margin-top: 12px; padding: 8px 12px; width: 100%; background: transparent; color: #b9b8ae; border: 1px dashed #77786c; font: 500 14px var(--font-body); cursor: pointer; }
 .perk-list .sync-pick[disabled] { opacity: .45; cursor: not-allowed; }
 .perk-list .sync-pick .pick-default { margin-left: 8px; padding: 0 5px; font: 600 11px/1.7 var(--font-body); background: #f0b400; color: #17180f; vertical-align: 2px; }
@@ -573,7 +576,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .notes { display: flex; flex-direction: column; }
 .note { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 20px; padding: 14px 0; border-top: 1px solid var(--rule); }
 .note:first-child { border-top: 2px solid var(--ink); }
-.note-ver { font: 400 22px/1.1 var(--font-display); }
+.note-ver { font: 700 22px/1.1 var(--font-head); }
 .note-date { font: 500 12px/1.6 var(--font-mono); color: var(--ink-soft); }
 .note-title { grid-column: 2; grid-row: 1; margin: 0; font-weight: 600; font-size: 16px; }
 .note ul { grid-column: 2; margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.65; max-width: 70ch; }
@@ -610,7 +613,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 @keyframes veil { from { opacity: 0; } }
 .story-card { width: min(100%, 520px); display: flex; flex-direction: column; gap: 14px; color: #e6e5db; }
 .story-card .label { color: #f0b400; font-size: 13px; }
-.story-title { margin: 0; font: 400 28px/1.15 var(--font-display); color: #f0b400; }
+.story-title { margin: 0; font: 700 28px/1.15 var(--font-head); color: #f0b400; }
 .story-card p { margin: 0; min-height: 6.4em; max-height: 52vh; overflow-y: auto; white-space: pre-line; font-size: 17px; line-height: 1.8; }
 .story-card p::after { content: '▌'; margin-left: 2px; animation: caret 1s steps(2, start) infinite; }
 @keyframes caret { 50% { opacity: 0; } }
@@ -809,7 +812,7 @@ body { font-size: 15.5px; line-height: 1.55; }
 @keyframes zm-bob { 50% { transform: translateY(-3px); } }
 .zmap-info { display: grid; gap: 6px; padding: 12px; border-radius: 10px; background: rgba(255, 255, 255, .06); }
 .zmap-info-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.zmap-info-head b { font: 400 21px/1.2 var(--font-display); } .zmap-info-head .num { color: #f0b400; font-weight: 600; white-space: nowrap; }
+.zmap-info-head b { font: 700 21px/1.2 var(--font-head); } .zmap-info-head .num { color: #f0b400; font-weight: 600; white-space: nowrap; }
 .story-card .zmap-info p { min-height: 0; margin: 0; font-size: 14px; line-height: 1.6; color: #cfcebf; }
 .story-card .zmap-info p::after { content: none; }
 .zmap-info .autobar { background: linear-gradient(#f0b400, #f0b400) no-repeat left center / calc(var(--p, 0) * 100%) 100%, #33342a; }
@@ -904,7 +907,7 @@ body { font-size: 15.5px; line-height: 1.55; }
 .note { display: block; padding: 0; border-top: 1px solid var(--rule); }
 .note:first-child { border-top: 1px solid var(--edge); }
 .note-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; width: 100%; padding: 12px 2px; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
-.note-ver { grid-column: 1; grid-row: 1; font: 400 18px/1.2 var(--font-display); white-space: nowrap; }
+.note-ver { grid-column: 1; grid-row: 1; font: 700 18px/1.2 var(--font-head); white-space: nowrap; }
 .note-date { grid-column: 2; grid-row: 1; font: 500 11px/1.6 var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
 /* 제목(부제)은 버전 아랫줄에 온 너비로 둔다. 옆에 두면 좁은 화면에서 두 줄로 꺾여 보기 나쁘다 */
 .note-title { grid-column: 1 / -1; grid-row: 2; margin: 0; font: 500 14px/1.45 var(--font-body); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -956,7 +959,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.18</div>
+  <div class="boot-ver">7구역 알파 0.9.19</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1265,7 +1268,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.18 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.19 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

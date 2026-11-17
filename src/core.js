@@ -1459,7 +1459,7 @@
    * 방벽을 올릴 물자가 더디게 모이는 때에도 언젠가는 풀리게 해서, 무리 때문에 철수로 내몰리지 않게 한다.
    * 방어에 성공하면 다음 무리는 원래 크기로 돌아온다.
    */
-  var SIEGE_FADE = 0.12, SIEGE_FLOOR = 0.2;
+  var SIEGE_FADE = 0.05, SIEGE_FLOOR = 0.5;      // 천천히, 절반까지만: 철수로 내몰리는 압박은 남기되 끝없이 갇히지는 않게
   function siegeFactor(state) { return Math.max(SIEGE_FLOOR, Math.pow(1 - SIEGE_FADE, state.siegeNights || 0)); }
   function nightStrength(state) { return Math.ceil(strengthAt(state, currentWave(state)) * siegeFactor(state)); }
   function nightReward(state) {
