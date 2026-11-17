@@ -277,9 +277,9 @@ test('거래: 시세는 10초마다 범위 안에서 바뀌고, 강화로 범위
 test('거래: 자동 판매는 거간꾼(개조)이나 자동화 특성이 있어야 한다. 좋은 시세에 팔고, 창고가 차면 그냥 판다', () => {
   const none = inMarket(); none.stalls = 10;
   for (let i = 0; i < 200; i++) assert.ok(!C.tick(none, 1, half).some(e => e.type === 'sold'), '거간꾼이 없으면 알아서 팔지 않는다');
-  const viaTrait = inMarket(); viaTrait.stalls = 10; viaTrait.traits.auto = 1;
+  const viaTrait = inMarket(); viaTrait.stalls = 10; viaTrait.traits.auto = 3;
   let traitSold = 0; for (let i = 0; i < 200; i++) traitSold += C.tick(viaTrait, 1, half).filter(e => e.type === 'sold').length;
-  assert.ok(traitSold >= 1, '자동화 특성이 있으면 개조 없이도 판다');
+  assert.equal(traitSold, 0, '자동화 특성만으로는 팔지 않는다(0.9.0)');
   const s = inMarket(); s.stalls = 10; s.upgrades.broker = 1;
   const sold = [];
   for (let i = 0; i < 200; i++) C.tick(s, 1, half).forEach(e => { if (e.type === 'sold') sold.push(e); });
@@ -842,6 +842,7 @@ test('노선: 열차는 배수가 높은 노선부터 채워 탄다', () => {
 test('노선: 화물은 열차가 돌아왔을 때 한꺼번에 들어온다', () => {
   const s = inStation();
   s.trains = 2; s.routes.loop = 1; s.defenses.rail = 1e9; s.signalIn = 1e9; s.autoSell = false;
+  s.achClock = -1e9;      // 이 시험 도중에 업적이 달성되어 생산 배수가 바뀌지 않게 한다(값을 정확히 비교하므로)
   const loop = C.ROUTES.find(r => r.id === 'loop'), value = C.cargoValue(s);
   let ev = C.tick(s, loop.seconds - 1, half);
   assert.ok(!ev.some(e => e.type === 'train'), '돌아오기 전에는 들어오지 않는다');
@@ -1357,13 +1358,14 @@ test('청신호: 잠긴 구역, 자리 비움, 저장', () => {
 
 /* ================= 자동 보조 ================= */
 
-test('자동화: 특성을 찍으면 전력 투입을 준비되는 대로 알아서 쓴다', () => {
+test('자동: 자동 제어반(개조)을 달면 전력 투입을 준비되는 대로 알아서 쓴다. 특성만으로는 안 된다', () => {
   const off = inFactory(); off.defenses.rail = 1e9; off.signalIn = 1e9;
   off.machines.sorter = 2; off.machines.press = 3; off.machines.assembler = 6;
-  assert.equal(C.assistOn(off), false);
-  assert.ok(!C.tick(off, 5, half).some(e => e.type === 'surge'), '특성이 없으면 알아서 쓰지 않는다');
+  off.traits.auto = 5;
+  assert.equal(C.autoOn(off, 2), false);
+  assert.ok(!C.tick(off, 5, half).some(e => e.type === 'surge'), '개조가 없으면 특성이 있어도 알아서 쓰지 않는다');
   assert.ok(C.surge(off).ok, '직접 누르면 된다');
-  const s = inFactory(); s.traits.auto = 1; s.defenses.rail = 1e9; s.signalIn = 1e9;
+  const s = inFactory(); s.upgrades.autoline = 1; s.defenses.rail = 1e9; s.signalIn = 1e9;
   let ev = C.tick(s, 1, half);
   assert.ok(!ev.some(e => e.type === 'surge'), '라인이 서 있으면 쓰지 않는다');
   s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
@@ -1375,8 +1377,8 @@ test('자동화: 특성을 찍으면 전력 투입을 준비되는 대로 알아
   assert.ok(fired >= 3 && fired <= 4, '90초마다 한 번: ' + fired);
 });
 
-test('자동화: 청신호도 알아서 켜고, 그 덕에 도착한 열차를 알린다', () => {
-  const s = inStation(); s.traits.auto = 1; s.defenses.rail = 1e9; s.signalIn = 1e9;
+test('자동: 자동 신호(개조)를 달면 청신호도 알아서 켜고, 그 덕에 도착한 열차를 알린다', () => {
+  const s = inStation(); s.upgrades.autosig = 1; s.defenses.rail = 1e9; s.signalIn = 1e9;
   let ev = C.tick(s, 1, half);
   assert.ok(!ev.some(e => e.type === 'green'), '달리는 열차가 없으면 켜지 않는다');
   s.trains = 1; s.routes.loop = 1;
@@ -1508,13 +1510,11 @@ test('자동화: 레벨이 오를수록 대기 시간이 줄고, 절반 아래�
   const s = inStation();
   assert.equal(C.assistFactor(s), 1);
   s.traits.auto = 1;
-  assert.equal(C.assistFactor(s), 1, '1레벨은 자동으로 쓰기만 한다');
-  s.traits.auto = 2;
   near(C.assistFactor(s), 1 - C.ASSIST_STEP);
   near(C.surgeCooldown(s), C.SURGE_COOLDOWN * (1 - C.ASSIST_STEP));
   near(C.greenCooldown(s), C.GREEN_COOLDOWN * (1 - C.ASSIST_STEP));
   s.traits.auto = C.ASSIST_MAX;
-  assert.ok(C.assistFactor(s) >= 0.5 && C.assistFactor(s) < 0.6);
+  assert.equal(C.assistFactor(s), 0.5);
   s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6; s.trains = 1; s.routes.loop = 1;
   C.surge(s); C.greenSignal(s);
   near(s.surgeCool, C.surgeCooldown(s)); near(s.greenCool, C.greenCooldown(s));
@@ -1522,9 +1522,10 @@ test('자동화: 레벨이 오를수록 대기 시간이 줄고, 절반 아래�
   assert.equal(t.max, C.ASSIST_MAX);
   const b = fresh(); b.antibodies = 2;
   assert.ok(C.buyTrait(b, 'auto').ok);
-  assert.equal(C.assistOn(b), true);
+  assert.ok(C.assistFactor(b) < 1);
+  assert.equal(C.autoOn(b, 2), false, '특성만으로는 자동이 켜지지 않는다');
   C.resetTraits(b);
-  assert.equal(C.assistOn(b), false, '되돌리면 꺼진다');
+  assert.equal(C.assistFactor(b), 1, '되돌리면 대기 시간도 돌아온다');
 });
 
 /* ---------- 알파 0.8.0: 소설 일지, 지난 구역, 숫자 표기 ---------- */
@@ -1676,4 +1677,41 @@ test('구조 신호의 보상: 물자, 간식, 생산 배수 가운데 하나', 
   assert.deepEqual(kind(0.59), ['treats', C.SIGNAL_TREATS]);
   assert.deepEqual(kind(0.6), ['buff', 0]);
   assert.deepEqual(kind(0.99), ['buff', 0]);
+});
+
+/* ---------- 알파 0.9.0: 업적 ---------- */
+test('업적: 구역마다 15개, 공통 30개. 이름과 조건이 있고 id 가 겹치지 않는다', () => {
+  const by = {};
+  for (const a of C.ACHIEVEMENTS) { by[a.group] = (by[a.group] || 0) + 1; assert.ok(a.name && a.text && a.need > 0 && a.tier >= 1 && a.tier <= 4, a.id); assert.ok(!/undefined|NaN/.test(a.text), a.text); }
+  assert.deepEqual(by, { z1: 15, z2: 15, z3: 15, z4: 15, z5: 15, all: 30 });
+  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.id)).size, 105);
+  assert.equal(new Set(C.ACHIEVEMENTS.map(a => a.name)).size, 105);
+  for (const g of Object.keys(by)) assert.ok(new Set(C.ACHIEVEMENTS.filter(a => a.group === g).map(a => a.tier)).size >= 3, g + ' 에 여러 난이도가 있다');
+});
+
+test('업적: 조건을 채우면 달성되어 알림이 오고, 하나마다 생산이 늘고, 철수해도 저장해도 남는다', () => {
+  const s = C.createState();
+  assert.equal(C.achCount(s), 0); assert.equal(C.achMult(s), 1);
+  s.clicks = 150; s.defenses.rail = 1e6; s.signalIn = 1e9;
+  const ev = [];
+  for (let i = 0; i < 15; i++) C.tick(s, 0.1, () => 0.5).forEach(e => ev.push(e));
+  const got = ev.filter(e => e.type === 'achievement');
+  assert.ok(got.some(e => e.id === 'z1click-1'), '부지런한 손 Ⅰ');
+  assert.equal(got.filter(e => e.id === 'z1click-1').length, 1, '한 번만 알린다');
+  assert.ok(s.ach['z1click-1']); assert.ok(!s.ach['z1click-2']);
+  near(C.achMult(s), 1 + C.ACH_BONUS * C.achCount(s));
+  const a = C.ACHIEVEMENTS.find(x => x.id === 'z1click-2');
+  assert.deepEqual(C.achProgress(s, a), { value: 150, need: 1000, done: false });
+  // 값을 읽다 오류가 나도 0 으로 본다
+  assert.equal(C.achProgress(s, { id: 'x', need: 5, value: () => { throw new Error('x'); } }).value, 0);
+  const n = C.achCount(s);
+  s.runEarned = 1e30; s.stalls = 100;      // 철수하는 순간의 값도 쳐 준다(좌판 100곳)
+  const r = C.retreat(s);
+  assert.equal(r.ok, true);
+  assert.ok(r.state.ach['z1click-1'] && r.state.ach['z2stall-2']);
+  assert.ok(C.achCount(r.state) > n);
+  const raw = JSON.parse(C.serialize(r.state)); raw.ach.fake = true;
+  const back = C.sanitizeState(raw);
+  assert.ok(back.ach['z1click-1']); assert.equal(back.ach.fake, undefined);
+  raw.ach = 'x'; assert.equal(C.achCount(C.sanitizeState(raw)), 0);
 });

@@ -155,9 +155,9 @@
           "기다리는 건 오늘까지만 하기로 했다. 내일부터는 내가 찾으러 나간다. 옆집부터, 한 집씩."] },
         { title: "지붕 위의 7", text: [
           "옆집 지붕에 누가 흰 페인트로 숫자를 써 놓았다. 7, 그리고 화살표. 화살표는 강 쪽을 가리킨다. 다음 집 지붕에도, 그다음 집에도 있다. 누군가 지붕을 타고 가면서 길을 남긴 것이다.",
-          "세 번째 집 다락에서 사람들을 만났다. 정수기 기사였다는 아저씨, 쌍둥이를 데리고 있는 아주머니, 말이 없는 {student}. 다들 같은 방송을 듣고 있었다.",
+          "세 번째 집 다락에서 사람들을 만났다. 정수기 기사였다는 아저씨, 쌍둥이를 데리고 있는 아주머니, 말이 없는 {student}. 다들 같은 방송을 듣고 있었다. 아주머니가 이름을 물어서 {hero}라고 했다. 쌍둥이들이 그 이름을 세 번쯤 따라 불렀다.",
           "아저씨가 물었다. “{hero:야}, 그 상자엔 뭐가 들었냐.” 나는 모른다고 했다. 정말로 모른다. 아저씨는 더 묻지 않고 내 우비의 모자를 씌워 주었다. “비 온다. 노란색이라 멀리서도 보이겠네. 길 잃을 일은 없겠다.”",
-          "밤에 방벽 너머에서 손톱으로 철판을 긁는 소리가 났다. 사람들이 숨을 죽였다. 나는 왼쪽 소매를 꼭 쥐고 있었다. 소매 아래가 가려웠다. 긁지 말라고 엄마가 했다.",
+          "밤에 방벽 너머에서 손톱으로 철판을 긁는 소리가 났다. 사람들이 숨을 죽였다. 나는 왼쪽 소매를 꼭 쥐고 있었다. 소매 아래가 가려웠다. 엄마가 긁지 말라고 했다.",
           "사람들은 내가 추워서 우비를 안 벗는 줄 안다. 그렇게 알게 두기로 했다."] },
         { title: "남겨 두는 것", text: [
           "동네의 통조림이 바닥을 보인다. 찾아볼 집이 이제 없다. 골목 끝에 셔터 내린 시장이 보인다. 다음은 거기다.",
@@ -252,7 +252,7 @@
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
-          "열일곱 명 중에 열여섯이 건넜다. 나는 쪽지 뒷면을 꺼내서, 줄 그은 이름 하나를 뺀 나머지를 소리 내어 읽었다. 열여섯 개. 맞다.",
+          "아이 열여섯. 나는 쪽지 뒷면을 꺼내서, 줄 그은 이름 하나를 뺀 나머지를 소리 내어 읽었다. 열여섯 개. 맞다. 그러면 남는 하나는 아이가 아니다. 아이들과 같이 건넌 어른이 하나 있다.",
           "다리 위에는 버려진 차들이 끝까지 늘어서 있다. 그 사이사이에 놈들이 서 있다. 걷지 않는다. 다리 한가운데부터는 전부 멈춰서 건너편을 보고 있다. 방송이 저기서 나오기 때문이다.",
           "그때 건너편 탐조등이 돌던 것을 멈추고 이쪽으로 내려왔다. 빛이 차들을 훑고, 놈들을 훑고, 차단기 앞의 나한테 와서 섰다. 노란 우비가 대낮처럼 환해졌다.",
           "불빛이 한 번 꺼졌다 켜졌다. 그리고 또 한 번. 누가 저기서 나를 보고 있다. 다리를 건너려면 여기를 먼저 지켜야 한다."] }] },
@@ -373,7 +373,7 @@
     { id: 'scholar', name: '연구자',    desc: '연구 속도 +30%',            key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
-    { id: 'auto',    name: '자동화',    desc: '모든 구역의 자동이 개조 없이 켜진다 · 레벨마다 전력 투입·청신호 대기 시간 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
+    { id: 'auto',    name: '자동화',    desc: '전력 투입·청신호의 대기 시간 -6% (자동은 구역 개조로 켜요)', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
   ];
 
   /*
@@ -451,6 +451,8 @@
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      ach: {},               // 달성한 업적 { id: true }. 철수해도 남는다
+      achClock: 0,           // 업적을 마지막으로 확인한 뒤 흐른 시간(초)
       startedAt: safeNum(now, 0), playSeconds: 0, awaySeconds: 0, runSeconds: 0,
       zoneLog: [],           // 이번 판에 구역을 연 기록 [{ zone 구역 번호(0부터), seconds 판을 시작한 뒤 흐른 시간, day 날짜 }]
       runLog: [],            // 지난 판들 [{ zone, seconds, antibodies }] (최근 10판)
@@ -545,6 +547,8 @@
     GOALS.forEach(function (list) { list.forEach(function (g) { if (gd[g.id]) s.goalsDone[g.id] = true; }); });
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
+    var ra = raw.ach && typeof raw.ach === 'object' ? raw.ach : {};
+    ACHIEVEMENTS.forEach(function (a) { if (ra[a.id]) s.ach[a.id] = true; });
     // 예전에는 '문 앞'까지만 갈 수 있던 구역이 그 뒤 버전에서 열린 경우: 문값은 이미 치렀으므로 들여보낸다.
     if (s.gate && s.zone + 1 < ZONES.length && ZONES[s.zone + 1].kind !== 'soon') {
       s.zone++; s.gate = false; s.bestZone = Math.max(s.bestZone, s.zone);
@@ -601,7 +605,7 @@
   }
   /** 전체 생산 배수: 특성·특전 × 막아낸 밤 보너스 × 지원 효과. */
   function globalMult(state) {
-    return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1);
+    return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state);
   }
 
   /* ---------- 값 계산(공통) ---------- */
@@ -830,21 +834,21 @@
     return bought ? { ok: true, bought: bought, cost: spent } : fail(last);
   }
   /*
-   * 자동화(영구 특성): 1레벨부터 전력 투입과 청신호를 준비되는 대로 알아서 쓴다. 2레벨부터는 레벨마다 대기 시간이 ASSIST_STEP 씩 줄어든다.
-   * 특성이 없으면 단추를 직접 눌러야 한다. 줄어든 대기 시간은 직접 누를 때에도 똑같이 적용된다.
+   * 자동화(영구 특성): 전력 투입과 청신호의 대기 시간을 레벨마다 ASSIST_STEP 씩 줄인다(절반까지).
+   * 0.9.0 부터 이 특성만으로는 자동이 켜지지 않는다. 자동은 구역마다 개조를 사야 켜진다(autoOn). 줄어든 대기 시간은 직접 누를 때에도 적용된다.
    */
   function assistLevel(state) { return Math.min(ASSIST_MAX, Math.max(0, Math.floor(mods(state).assist))); }
   function assistOn(state) { return assistLevel(state) >= 1; }
   /*
-   * 구역의 자동: 그 구역의 개조(AUTO_KEYS)를 샀거나 영구 특성 '자동화'가 있으면 켜진다.
+   * 구역의 자동: 그 구역의 개조(AUTO_KEYS)를 사야 켜진다. 영구 특성 '자동화'는 켜 주지 않고 대기 시간만 줄인다.
    *   0 수색조의 자동 수색, 1 자동 판매, 2 전력 투입, 3 청신호. 그 밖의 구역은 늘 false.
    */
   var AUTO_KEYS = ['patrol', 'broker', 'autoline', 'autosig'];
-  function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && (assistOn(state) || mods(state)[AUTO_KEYS[zone]] > 0); }
+  function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && mods(state)[AUTO_KEYS[zone]] > 0; }
   /** 수색조가 한 칸을 뒤지는 데 걸리는 시간(초). 순찰조 레벨마다 0.4초씩 줄어든다(1.4초까지). */
   function sweepInterval(state) { return Math.max(1.4, SWEEP_AUTO_SECONDS - 0.4 * Math.max(0, mods(state).patrol - 1)); }
   /** 대기 시간에 곱하는 값: 0·1레벨 1, 그 뒤로 레벨마다 ASSIST_STEP 씩 줄고 절반 아래로는 내려가지 않는다. */
-  function assistFactor(state) { return Math.max(0.5, 1 - ASSIST_STEP * Math.max(0, assistLevel(state) - 1)); }
+  function assistFactor(state) { return Math.max(0.5, 1 - ASSIST_STEP * assistLevel(state)); }
   function surgeCooldown(state) { return SURGE_COOLDOWN * assistFactor(state); }
   function greenCooldown(state) { return GREEN_COOLDOWN * assistFactor(state); }
   /**
@@ -1422,6 +1426,8 @@
     next.pet = state.pet; next.kennel = state.kennel; next.treats = state.treats; next.petLv = state.petLv; next.heroName = state.heroName; next.heroGender = state.heroGender;      // 동물 친구와 이름은 함께 간다
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
+    checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
+    next.ach = state.ach;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -1523,8 +1529,8 @@
   BEATS.push({ id: 'retreat-1', zone: 1, zoneName: '주택가', title: "다시, 1구역", part: 4,
     text: [
       "거점을 버렸다. 등 뒤에서 방벽이 무너지는 소리가 났다. 아저씨가 쌍둥이를 하나씩 옆구리에 끼고 뛰었다. 나는 냉장 상자만 안고 뛰었다.",
-      "손에 남은 것은 상자 하나, 그 안의 혈액 샘플뿐이다. 창고도, 좌판도, 기계도 전부 저 뒤에 있다.",
-      "그런데 이상하다. 무섭지가 않다. 어디에 뭐가 있는지 안다. 어느 집 지붕이 튼튼한지, 누가 장부를 쓰는지, 프레스 2번을 어디를 차야 하는지.",
+      "손에 남은 것은 파란 상자 하나뿐이다. 쌓아 둔 것도, 고쳐 놓은 것도 전부 저 뒤에 있다.",
+      "그런데 이상하다. 무섭지가 않다. 어디에 뭐가 있는지 안다. 어느 집 지붕이 튼튼한지, 어느 골목이 막혔는지, 밤이면 어디서부터 소리가 나는지.",
       "아저씨가 숨을 고르며 말했다. “집은 무너져도 짓는 법은 안 무너진다.” 그러고는 분필을 꺼내 첫 번째 문에 썼다. “쓰고 채워 놓을 것.”",
       "다시 1구역이다. 하지만 이번에는 무엇을 먼저 해야 하는지 안다."].join('\n\n'),
     when: function (s) { return s.retreats >= 1; } });
@@ -1536,6 +1542,99 @@
       if (!hit) return;
       state.story[b.id] = true;
       events.push({ type: 'story', id: b.id, zone: b.zone, zoneName: b.zoneName, title: b.title, text: fillStory(b.text, state.heroName, state.heroGender) });
+    });
+  }
+
+  /* ---------- 업적 ---------- */
+  /*
+   * 업적: 구역마다 15개, 공통 30개(모두 105개). 한 번 달성하면 철수해도 남는다.
+   *   묶음(series) 하나가 문턱(needs)마다 업적 하나씩이 된다: '좌판 주인 Ⅰ~Ⅳ' 처럼 쉬운 것부터 아주 어려운 것까지.
+   *   group : 'all'(공통) 또는 'z1'~'z5',  value(state) : 지금의 값,  text(need) : 조건을 적은 글
+   *   tier  : 1 쉬움, 2 되풀이, 3 어려움, 4 아주 어려움 (묶음 안에서의 차례로 정한다. 문턱이 하나뿐인 묶음은 tier 를 따로 적는다)
+   * 달성한 업적 하나마다 전체 생산이 ACH_BONUS(0.5%)씩 늘어난다.
+   */
+  var ACH_BONUS = 0.005;
+  function sumOf(obj) { var n = 0; for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k) && obj[k] > 0) n += obj[k]; return n; }
+  function zoneUpgrades(s, zone) { var n = 0; UPGRADES.forEach(function (u) { if (u.zone === zone) n += s.upgrades[u.id] || 0; }); return n; }
+  function maxOf(obj) { var m = 0; for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k) && obj[k] > m) m = obj[k]; return m; }
+  function minMachine(s) { var m = Infinity; MACHINES.forEach(function (d) { m = Math.min(m, s.machines[d.id] || 0); }); return isFinite(m) ? m : 0; }
+  function storyRead(s) { var n = 0; BEATS.forEach(function (b) { if (s.story[b.id]) n++; }); return n; }
+  function defenseKinds(s) { var n = 0; DEFENSES.forEach(function (d) { if (s.defenses[d.id] > 0) n++; }); return n; }
+  var ACH_SERIES = [
+    // 1구역 주택가
+    { id: 'z1build', group: 'z1', name: '동네 일꾼', needs: [10, 100, 500, 2000], value: function (s) { return totalBuildings(s); }, text: function (n) { return '1구역 시설을 모두 합쳐 ' + n + '곳 짓기'; } },
+    { id: 'z1sweep', group: 'z1', name: '골목 대장', needs: [1, 10, 100, 1000], value: function (s) { return s.sweeps; }, text: function (n) { return '한 판에 동네 ' + n + '곳을 다 수색하기'; } },
+    { id: 'z1click', group: 'z1', name: '부지런한 손', needs: [100, 1000, 10000], value: function (s) { return s.clicks; }, text: function (n) { return '잔해 수색을 ' + n + '번 누르기'; } },
+    { id: 'z1up', group: 'z1', name: '살림꾼', needs: [10, 40], value: function (s) { return zoneUpgrades(s, 0); }, text: function (n) { return '1구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
+    { id: 'z1patrol', group: 'z1', name: '빈틈없는 순찰', tier: 3, needs: [5], value: function (s) { return s.upgrades.patrol; }, text: function () { return '순찰조를 끝까지 올리기'; } },
+    { id: 'z1rumor', group: 'z1', name: '소문난 동네', tier: 3, needs: [8], value: function (s) { return s.upgrades.rumor; }, text: function () { return '소문을 끝까지 올리기'; } },
+    // 2구역 재래시장
+    { id: 'z2stall', group: 'z2', name: '좌판 주인', needs: [10, 100, 300, 500], value: function (s) { return s.stalls; }, text: function (n) { return '좌판 ' + n + '곳 열기'; } },
+    { id: 'z2earn', group: 'z2', name: '큰손', needs: [1e8, 1e11, 1e14], value: function (s) { return s.tradeEarned; }, text: function (n) { return '한 판에 상품을 팔아 물자 ' + formatNumber(n) + ' 벌기'; } },
+    { id: 'z2peak', group: 'z2', name: '고점 사냥꾼', needs: [10, 100, 1000], value: function (s) { return s.peakSales; }, text: function (n) { return '한 판에 고점에서 ' + n + '번 팔기'; } },
+    { id: 'z2streak', group: 'z2', name: '연속 호가', tier: 2, needs: [STREAK_MAX], value: function (s) { return s.streak; }, text: function () { return '연속 호가를 끝까지 쌓기'; } },
+    { id: 'z2hand', group: 'z2', name: '북적이는 시장', needs: [20, 150], value: function (s) { return sumOf(s.hands); }, text: function (n) { return '짐꾼과 호객꾼을 합쳐 ' + n + '명 두기'; } },
+    { id: 'z2broker', group: 'z2', name: '믿음직한 거간꾼', needs: [1, 5], value: function (s) { return s.upgrades.broker; }, text: function (n) { return n === 1 ? '거간꾼 두기' : '거간꾼을 끝까지 올리기'; } },
+    // 3구역 공단
+    { id: 'z3level', group: 'z3', name: '기계공', needs: [10, 50, 150, 300], value: function (s) { return sumOf(s.machines); }, text: function (n) { return '기계 레벨의 합계 ' + n + ' 채우기'; } },
+    { id: 'z3earn', group: 'z3', name: '공장장', needs: [1e13, 1e16, 1e19], value: function (s) { return s.lineEarned; }, text: function (n) { return '한 판에 라인으로 물자 ' + formatNumber(n) + ' 벌기'; } },
+    { id: 'z3steady', group: 'z3', name: '정속 가동', needs: [60, 3600, 36000], value: function (s) { return s.steadySeconds; }, text: function (n) { return '한 판에 정속 가동 ' + formatDuration(n) + ' 채우기'; } },
+    { id: 'z3up', group: 'z3', name: '정비반', needs: [10, 40], value: function (s) { return zoneUpgrades(s, 2); }, text: function (n) { return '3구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
+    { id: 'z3auto', group: 'z3', name: '손을 뗀 공장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autoline; }, text: function () { return '자동 제어반 달기'; } },
+    { id: 'z3even', group: 'z3', name: '세 박자', tier: 3, needs: [50], value: function (s) { return minMachine(s); }, text: function (n) { return '기계 셋을 모두 ' + n + '레벨 이상으로 올리기'; } },
+    { id: 'z3belt', group: 'z3', name: '끊기지 않는 벨트', tier: 4, needs: [10], value: function (s) { return s.upgrades.belt; }, text: function () { return '컨베이어를 끝까지 올리기'; } },
+    // 4구역 환승역
+    { id: 'z4train', group: 'z4', name: '차량 기지장', needs: [5, 20, 50, 100], value: function (s) { return s.trains; }, text: function (n) { return '열차 ' + n + '대 갖추기'; } },
+    { id: 'z4earn', group: 'z4', name: '화물왕', needs: [1e20, 1e23, 1e26], value: function (s) { return s.railEarned; }, text: function (n) { return '한 판에 화물로 물자 ' + formatNumber(n) + ' 벌기'; } },
+    { id: 'z4express', group: 'z4', name: '심야 급행', needs: [1, 20, 200], value: function (s) { return s.expressRuns; }, text: function (n) { return '한 판에 심야 급행을 ' + n + '번 맞이하기'; } },
+    { id: 'z4route', group: 'z4', name: '선로 복구반', needs: [5, 20], value: function (s) { return sumOf(s.routes); }, text: function (n) { return '노선 단계를 모두 합쳐 ' + n + ' 올리기'; } },
+    { id: 'z4up', group: 'z4', name: '역무원', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 3); }, text: function (n) { return '4구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
+    { id: 'z4auto', group: 'z4', name: '알아서 켜지는 신호', tier: 2, needs: [1], value: function (s) { return s.upgrades.autosig; }, text: function () { return '자동 신호 달기'; } },
+    // 5구역 대학 병원
+    { id: 'z5staff', group: 'z5', name: '연구실장', needs: [5, 25, 100, 250], value: function (s) { return s.staff; }, text: function (n) { return '연구원 ' + n + '명 뽑기'; } },
+    { id: 'z5done', group: 'z5', name: '끝낸 과제', needs: [1, 10, 30, 60], value: function (s) { return s.projectsDone; }, text: function (n) { return '한 판에 과제 ' + n + '개 끝내기'; } },
+    { id: 'z5points', group: 'z5', name: '쌓인 연구', needs: [1000, 1000000], value: function (s) { return s.points; }, text: function (n) { return '연구 점수 ' + formatNumber(n) + ' 모아 두기'; } },
+    { id: 'z5up', group: 'z5', name: '실험 도구', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 4); }, text: function (n) { return '5구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
+    { id: 'z5deep', group: 'z5', name: '한 우물', needs: [5, 10], value: function (s) { return maxOf(s.research); }, text: function (n) { return '같은 과제를 ' + n + '번 끝내기'; } },
+    { id: 'z5gate', group: 'z5', name: '다리 앞에서', tier: 4, needs: [1], value: function (s) { return s.gate && s.zone >= 4 ? 1 : 0; }, text: function () { return '6구역의 문 앞에 닿기'; } },
+    // 공통
+    { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 판에 밤 ' + n + '번 막기'; } },
+    { id: 'retreat', group: 'all', name: '다시, 1구역', needs: [1, 5, 20, 50], value: function (s) { return s.retreats; }, text: function (n) { return '철수 ' + n + '번 하기'; } },
+    { id: 'antibody', group: 'all', name: '항체 수집가', needs: [10, 100, 10000, 1000000], value: function (s) { return s.antibodyTotal; }, text: function (n) { return '항체 샘플을 모두 합쳐 ' + formatNumber(n) + '개 얻기'; } },
+    { id: 'kennel', group: 'all', name: '동물 친구들', needs: [1, 4, 8, 12], value: function (s) { return kennelCount(s); }, text: function (n) { return '동물 친구 ' + n + '마리 만나기'; } },
+    { id: 'petlv', group: 'all', name: '잘 먹고 잘 크는', needs: [5, 10], value: function (s) { return maxOf(s.petLv); }, text: function (n) { return '친구 하나를 ' + n + '레벨까지 키우기'; } },
+    { id: 'story', group: 'all', name: '일지를 쓰는 아이', needs: [5, 10, 17], value: function (s) { return storyRead(s); }, text: function (n) { return '생존 일지 ' + n + '편 적기'; } },
+    { id: 'reach', group: 'all', name: '더 멀리', needs: [1, 2, 3, 4], value: function (s) { return s.bestZone; }, text: function (n) { return (n + 1) + '구역 열기'; } },
+    { id: 'time', group: 'all', name: '오래 버틴 거점', needs: [3600, 36000, 360000], value: function (s) { return s.playSeconds + s.awaySeconds; }, text: function (n) { return '진행 시간 ' + formatDuration(n) + ' 채우기'; } },
+    { id: 'signal', group: 'all', name: '무전병', tier: 2, needs: [10], value: function (s) { return s.signalsAnswered; }, text: function (n) { return '한 판에 구조 신호 ' + n + '번 응답하기'; } },
+    { id: 'arsenal', group: 'all', name: '빈틈없는 방벽', tier: 3, needs: [DEFENSES.length], value: function (s) { return defenseKinds(s); }, text: function () { return '방어 수단 여섯 가지를 모두 갖추기'; } }
+  ];
+  var ROMAN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
+  var ACHIEVEMENTS = [];
+  ACH_SERIES.forEach(function (sr) {
+    sr.needs.forEach(function (need, k) {
+      var a = { id: sr.id + '-' + (k + 1), group: sr.group, tier: sr.tier || Math.min(4, k + 1 + (sr.needs.length === 2 ? 1 : 0)),
+        name: sr.name + (sr.needs.length > 1 ? ' ' + ROMAN[k] : ''), need: need, value: sr.value };
+      // 조건 글은 읽을 때 만든다: 숫자 표기(만·억 / 지수) 설정을 따라가야 하고, 이 자리에서는 아직 숫자 단위 표가 준비되지 않았다
+      Object.defineProperty(a, 'text', { enumerable: true, get: function () { return sr.text(need); } });
+      ACHIEVEMENTS.push(a);
+    });
+  });
+  function achCount(state) { var n = 0; ACHIEVEMENTS.forEach(function (a) { if (state.ach[a.id]) n++; }); return n; }
+  function achMult(state) { return 1 + ACH_BONUS * achCount(state); }
+  /** 업적 하나의 진행 { value, need, done }. 값을 읽다 오류가 나면 0 으로 본다. */
+  function achProgress(state, a) {
+    var v = 0;
+    try { v = a.value(state); } catch (e) { v = 0; }
+    v = typeof v === 'number' && isFinite(v) && v > 0 ? v : 0;
+    return { value: Math.min(v, a.need), need: a.need, done: !!state.ach[a.id] };
+  }
+  /** 조건을 채운 업적을 달성으로 바꾸고 'achievement' 사건을 남긴다. */
+  function checkAchievements(state, events) {
+    ACHIEVEMENTS.forEach(function (a) {
+      if (state.ach[a.id]) return;
+      var p = achProgress(state, a);
+      if (p.value >= a.need) { state.ach[a.id] = true; if (events) events.push({ type: 'achievement', id: a.id, name: a.name, text: a.text, group: a.group, tier: a.tier }); }
     });
   }
 
@@ -1591,6 +1690,8 @@
 
     checkGoals(state, rng, events);
     checkStory(state, events);
+    state.achClock += dt;
+    if (state.achClock >= 1) { state.achClock = 0; checkAchievements(state, events); }      // 업적은 1초에 한 번만 확인한다
     return events;
   }
 
@@ -1717,7 +1818,7 @@
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

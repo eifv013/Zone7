@@ -980,6 +980,47 @@
     setText($('notes-current'), PATCH_NOTES.length ? '현재 ' + PATCH_NOTES[0].ver : '');
   }
 
+  /* ---------- 업적 ---------- */
+  /*
+   * 업적 화면: 공통과 구역마다 탭이 있고, 고른 묶음의 업적을 쉬운 것부터 보여 준다.
+   *   달성한 것은 노란 표시, 아직인 것은 진행 막대와 '지금 / 목표'. 머리줄에는 달성 수와 지금의 생산 보너스.
+   */
+  var achTab = 'all', achShown = '';
+  var ACH_GROUPS = [['all', '공통'], ['z1', '1구역'], ['z2', '2구역'], ['z3', '3구역'], ['z4', '4구역'], ['z5', '5구역']];
+  var TIER_NAMES = ['', '쉬움', '되풀이', '어려움', '아주 어려움'];
+  function renderAch() {
+    var list = C.ACHIEVEMENTS.filter(function (a) { return a.group === achTab; });
+    var prog = list.map(function (a) { return C.achProgress(state, a); });
+    var key = achTab + '|' + prog.map(function (p) { return (p.done ? 'd' : '') + Math.floor(p.value / p.need * 50); }).join(',');
+    if (key === achShown) return;
+    achShown = key;
+    var total = C.achCount(state);
+    setText($('ach-count'), total + ' / ' + C.ACHIEVEMENTS.length + ' · 생산 +' + (total * C.ACH_BONUS * 100).toFixed(1).replace('.0', '') + '%');
+    var tabs = $('ach-tabs'), box = $('ach');
+    tabs.textContent = ''; box.textContent = '';
+    ACH_GROUPS.forEach(function (g) {
+      var all = C.ACHIEVEMENTS.filter(function (a) { return a.group === g[0]; }), got = all.filter(function (a) { return state.ach[a.id]; }).length;
+      var b = el('button', '', g[1] + ' ' + got + '/' + all.length);
+      b.type = 'button'; b.setAttribute('aria-pressed', g[0] === achTab ? 'true' : 'false');
+      b.addEventListener('click', function () { achTab = g[0]; renderAch(); });
+      tabs.appendChild(b);
+    });
+    // 아직인 것을 위로, 그 안에서는 쉬운 것부터. 달성한 것은 아래에 모은다
+    var order = list.map(function (a, i) { return i; }).sort(function (x, y) { return (prog[x].done - prog[y].done) || (list[x].tier - list[y].tier) || (x - y); });
+    order.forEach(function (i) {
+      var a = list[i], p = prog[i], card = el('div', 'ach-card tier' + a.tier + (p.done ? ' done' : '')), head = el('div', 'ach-head');
+      head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' : TIER_NAMES[a.tier]));
+      card.appendChild(head); card.appendChild(el('p', '', a.text));
+      if (!p.done) {
+        var bar = el('div', 'autobar');
+        fill(bar, p.value / p.need);
+        card.appendChild(bar);
+        card.appendChild(el('span', 'label num', (a.need >= 1e4 ? fmt(p.value) + ' / ' + fmt(p.need) : Math.floor(p.value) + ' / ' + a.need)));
+      }
+      box.appendChild(card);
+    });
+  }
+
   /* ---------- 도감 ---------- */
   /*
    * 도감: 동물 친구(만난 아이만 모습이 보인다), 좀비, 방어 수단. 기록 화면의 '도감' 탭에서 본다.
@@ -1232,6 +1273,7 @@
     renderPerkChoice();
     if ($('record').getAttribute('data-rtab') === 'stats') renderStats();
     if ($('record').getAttribute('data-rtab') === 'dex') renderDex();
+    if ($('record').getAttribute('data-rtab') === 'ach') renderAch();
   }
 
   /** 구역 화면: 고른 탭에 따라 목표, 거래 칸, 목록을 바꿔 보여 준다. */
@@ -1555,8 +1597,7 @@
       if (t.id === 'auto') {
         var lvNow = state.traits.auto || 0, tp = Object.create(state); tp.traits = Object.create(state.traits); tp.traits.auto = lvNow + 1;
         var cNow = secs(C.surgeCooldown(state)), cNext = secs(C.surgeCooldown(tp)), gNow = secs(C.greenCooldown(state)), gNext = secs(C.greenCooldown(tp));
-        tInfo = lvNow >= t.max ? '전력 투입 ' + cNow + ' · 청신호 ' + gNow : !lvNow ? '찍으면 자동 켜짐 · 전력 투입 ' + cNow + ' · 청신호 ' + gNow
-          : '전력 투입 ' + cNow + ' → ' + cNext + ' · 청신호 ' + gNow + ' → ' + gNext;
+        tInfo = lvNow >= t.max ? '전력 투입 ' + cNow + ' · 청신호 ' + gNow : '전력 투입 ' + cNow + ' → ' + cNext + ' · 청신호 ' + gNow + ' → ' + gNext;
       }
       setText(r.info, tInfo);
       setText(r.cost, isFinite(cost) ? '샘플 ' + fmt(cost) : '최대');
@@ -1667,6 +1708,9 @@
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
+          break;
+        case 'achievement':
+          toast('업적 달성 · ' + ev.name); log('업적을 달성했다. 〈' + ev.name + '〉 ' + ev.text + '.', 'good'); sfx('goal'); buzz(25);
           break;
         case 'story':
           log('일지에 새 글을 적었다. 〈' + ev.title + '〉', 'story');
@@ -1956,6 +2000,7 @@
         $('record').setAttribute('data-rtab', b.dataset.rtabSet);
         if (b.dataset.rtabSet === 'stats') renderStats(); // 다음 갱신을 기다리지 않고 바로 채운다
         if (b.dataset.rtabSet === 'dex') renderDex();
+        if (b.dataset.rtabSet === 'ach') { achShown = ''; renderAch(); }
         document.querySelectorAll('[data-rtab-set]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
         sfx('tab');
       });
@@ -1989,6 +2034,12 @@
     });
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
+    // 업데이트 알림 띠의 두 단추. 알파 0.6 에서 화면을 새로 짜면서 이 연결이 빠져 있었다(눌러도 반응이 없던 원인, 0.9.0 에서 고침).
+    $('update-now').addEventListener('click', function () { Update.apply(); });
+    $('update-later').addEventListener('click', function () {
+      Update.offered = $('update-bar').dataset.version || '';      // 이 버전은 다시 묻지 않는다(앱을 다시 열면 또 묻는다)
+      $('update-bar').hidden = true;
+    });
     wirePrefs();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {

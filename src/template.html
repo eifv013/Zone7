@@ -865,6 +865,21 @@ body { font-size: 15.5px; line-height: 1.55; }
 .vol { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; max-width: 210px; }
 .vol input { flex: 1 1 auto; min-width: 0; accent-color: var(--hazard); }
 .vol b { width: 28px; text-align: right; font-size: 13px; }
+/* 업적 */
+.foot[data-rtab="ach"] [data-rpane="ach"] { display: block; }
+.ach-card { padding: 10px 12px; border-radius: 10px; background: var(--soft); border-left: 4px solid color-mix(in srgb, var(--ink) 25%, transparent); }
+.ach-card.tier3 { border-left-color: #c9a04a; } .ach-card.tier4 { border-left-color: var(--blood); }
+.ach-card.done { border-left-color: var(--hazard); background: color-mix(in srgb, var(--hazard) 14%, transparent); }
+.ach-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.ach-head b { font: 600 15px/1.4 var(--font-body); }
+.ach-tier { font: 600 11px/1.6 var(--font-body); color: var(--ink-soft); white-space: nowrap; }
+.ach-card.done .ach-tier { color: var(--on-hazard); background: var(--hazard); padding: 0 6px; border-radius: 4px; }
+.ach-card p { margin: 2px 0 6px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+.ach-card .label { display: block; margin-top: 3px; text-align: right; }
+/* 도움말: 제목과 윗줄 사이를 띄운다 */
+#help .note { padding: 14px 0 4px; border-top: 0; }
+#help .help-title { margin-bottom: 10px; }
+.subtabs + .notes, .subtabs + .dex, .subtabs + .journal { margin-top: 4px; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -880,7 +895,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.17</div>
+  <div class="boot-ver">7구역 알파 0.9.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1104,6 +1119,7 @@ setTimeout(function () {
 <footer class="foot" id="record" data-view="record" data-rtab="journal">
   <div class="tabbar record-tabs" role="group" aria-label="기록 항목">
     <button type="button" data-rtab-set="journal" aria-pressed="true">일지</button>
+    <button type="button" data-rtab-set="ach" aria-pressed="false">업적</button>
     <button type="button" data-rtab-set="dex" aria-pressed="false">도감</button>
     <button type="button" data-rtab-set="radio" aria-pressed="false">무전</button>
     <button type="button" data-rtab-set="stats" aria-pressed="false">통계</button>
@@ -1115,6 +1131,11 @@ setTimeout(function () {
     <div class="panel-head"><h2 id="h-journal">생존 일지</h2><span class="label" id="journal-count">0 / 0</span></div>
     <div class="subtabs" id="journal-tabs" role="group" aria-label="장 고르기"></div>
     <ol class="journal" id="journal"></ol>
+  </section>
+  <section class="panel" data-rpane="ach" aria-labelledby="h-ach">
+    <div class="panel-head"><h2 id="h-ach">업적</h2><span class="label" id="ach-count"></span></div>
+    <div class="subtabs" id="ach-tabs" role="group" aria-label="업적 묶음"></div>
+    <div class="dex" id="ach"></div>
   </section>
   <section class="panel" data-rpane="dex" aria-labelledby="h-dex">
     <div class="panel-head"><h2 id="h-dex">도감</h2></div>
@@ -1171,7 +1192,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.17 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

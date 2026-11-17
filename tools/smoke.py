@@ -144,6 +144,17 @@ def run_case(browser, name, size, state, mode):
         if not fits(): problems.append('한 화면에 들어오지 않는다(특성)')
         tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'journal', 'save']: tap('[data-rtab-set=%s]' % t)
+        # 0.9.0 업적: 탭 여섯, 고른 묶음의 업적 카드, 머리줄의 달성 수
+        tap('[data-mview-set=record]'); tap('[data-rtab-set=ach]')
+        if page.locator('#ach-tabs button').count() != 6: problems.append('업적 탭이 여섯이 아니다')
+        if page.locator('#ach .ach-card').count() != 30: problems.append('공통 업적 30개가 보이지 않는다: %d' % page.locator('#ach .ach-card').count())
+        page.locator('#ach-tabs button').nth(2).click(); page.wait_for_timeout(100)
+        if page.locator('#ach .ach-card').count() != 15: problems.append('구역 업적 15개가 보이지 않는다')
+        if '/ 105' not in text('ach-count'): problems.append('업적 달성 수가 없다: ' + text('ach-count'))
+        # 0.9.0 업데이트 알림 띠: '나중에'를 누르면 사라진다(단추가 연결돼 있는지 본다)
+        page.evaluate("document.getElementById('update-bar').hidden = false")
+        page.click('#update-later'); page.wait_for_timeout(100)
+        if page.evaluate("!document.getElementById('update-bar').hidden"): problems.append("업데이트 알림의 '나중에'가 듣지 않는다")
         # 0.8.10 저장 코드: 한글 이름이 있어도 코드가 만들어지고, 그 코드를 다시 불러올 수 있다
         tap('[data-mview-set=record]'); tap('[data-rtab-set=save]')
         tap('#export'); page.wait_for_timeout(200)
