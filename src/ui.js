@@ -1310,16 +1310,17 @@
    * 도감 화면: 강아지 / 고양이 / 좀비 / 방어 수단 네 탭. 카드의 글은 한 줄에 들어가게 짧게 쓴다.
    *   아직 만나지 못한 것은 회색 그림자와 '???' 로 보이고, 어디서 만날 수 있는지만 알려 준다.
    */
+  var CAR_PIX = ['..........', '.cccccccc.', '.cwccccwc.', '.cccccccc.', '.cccccccc.', 'dddddddddd', '.kk....kk.', '.kk....kk.'];      // 화물칸의 모습(몸통 c, 창 w, 받침 d, 바퀴 k)
   var REG_PIX = ['..hhh...', '.hhhhh..', '.hsssh..', '..sss...', '.ccccc..', 'scccccs.', '.ccccc..', '.ccccc..', '.dd.dd..', '.dd.dd..'];      // 단골의 모습(머리 h, 살 s, 옷 c, 바지 d)
   function renderDex() {
     if (dexTab === 'pet') dexTab = 'dog';
-    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
     function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
-    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['wall', '방어 수단']].forEach(function (t) {
+    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['cargo', '화물 ' + C.cargoCount(state) + '/' + C.CARGOS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
@@ -1352,6 +1353,14 @@
         var rname = C.ZOMBIE_RARITIES[z.rarity];
         if (!n) { card(pixSvg(rows, pal, z.big ? 'big' : ''), '???', rname, z.zone > state.zone ? (z.zone + 1) + '구역을 열면 나와요.' : z.boss ? '변이체가 오는 밤에 나와요.' : '밤을 넘기다 보면 만나요.', true, 'z-' + z.rarity); return; }
         card(pixSvg(rows, pal, z.big ? 'big' : ''), z.name, rname + ' · 만난 밤 ' + fmt(n), z.text, false, 'z-' + z.rarity);
+      });
+    } else if (dexTab === 'cargo') {
+      // 화물: 4구역에서 끌어온 표류 화물칸들
+      C.CARGOS.forEach(function (r) {
+        var n = state.cargos[r.id] || 0;
+        var pal = n ? { c: r.color, w: '#e6e5db', d: '#3a3f4a', k: '#17180f' } : { c: '#4a4b40', w: '#4a4b40', d: '#4a4b40', k: '#4a4b40' };
+        if (!n) { card(pixSvg(CAR_PIX, pal), '???', '아직 못 찾았어요', '4구역에서 표류 화물을 끌어오면 적혀요.', true); return; }
+        card(pixSvg(CAR_PIX, pal), r.name, '끌어온 수 ' + fmt(n) + '번', r.text, false);
       });
     } else if (dexTab === 'client') {
       // 거래처: 3구역에서 납품 의뢰를 채워 준 곳들
@@ -1464,6 +1473,15 @@
       buzz(20); Store.save(); render();
     });
   }
+  function wireSalvage() {
+    $('salvage-fill').addEventListener('click', function () {
+      var r = C.fillSalvage(state);
+      if (!r.ok) return;
+      if (r.first) { toast('새 화물 · ' + r.name); log(r.name + (C.hasBatchim(r.name) ? '을' : '를') + ' 끌어왔다. 도감에 적었다.', 'good'); sfx('goal'); }
+      else { log(r.name + (C.hasBatchim(r.name) ? '을' : '를') + ' 끌어왔다. 물자 ' + fmt(r.gain) + ' 확보.', 'good'); sfx('train'); }
+      buzz(20); Store.save(); render();
+    });
+  }
   function wireContract() {
     $('contract-fill').addEventListener('click', function () {
       var r = C.fillContract(state);
@@ -1545,7 +1563,7 @@
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
     var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.cost <= state.supplies && !(nz.soon && state.gate);
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
-    var canFill = (!!state.order && state.goods >= state.order.need) || (!!state.contract && state.contract.have >= state.contract.need);
+    var canFill = (!!state.order && state.goods >= state.order.need) || (!!state.contract && state.contract.have >= state.contract.need) || (!!state.salvage && state.salvage.have >= state.salvage.need);
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
     $('pet-feed').classList.toggle('ready', canFeed);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
@@ -1823,6 +1841,19 @@
       setText(tb, isFinite(tc) ? '병목 올리기 · ' + names[line.bottleneck] + ' · 물자 ' + fmt(tc) + (qtyMode === 1 ? '' : qtyMode === 'max' ? ' · 되는 만큼' : ' · ' + qtyMode + '번') : '기계가 모두 최대다');
     }
     if (tab === 'z3' && open) {
+      // 표류 화물: 발견됐을 때만 칸이 보인다. 발견된 뒤로 열차가 싣고 온 화물 값이 차고, 다 차면 끌어올 수 있다
+      var sv = state.salvage, sb2 = $('salvage');
+      sb2.hidden = !sv;
+      if (sv) {
+        var cg = null; C.CARGOS.forEach(function (r) { if (r.id === sv.who) cg = r; });
+        setText($('salvage-left'), clock(sv.left));
+        setText($('salvage-text'), '선로에 멈춰 선 ' + (cg ? cg.name + (C.hasBatchim(cg.name) ? '을' : '를') : '화물칸을') + ' 찾았어요.\n끌어오면 물자 +' + fmt(C.salvageReward(state)) + ' · 간식 +' + C.SALVAGE_TREATS);
+        fill($('salvage-bar'), sv.need > 0 ? sv.have / sv.need : 0);
+        var sdone = sv.have >= sv.need;
+        $('salvage-fill').disabled = !sdone;
+        setText($('salvage-fill'), sdone ? '끌어온다' : '열차를 기다리는 중 · ' + Math.floor(sv.need > 0 ? sv.have / sv.need * 100 : 0) + '%');
+      }
+      setText($('salvage-note'), '화물 ' + C.cargoCount(state) + ' / ' + C.CARGOS.length + ' · 이번 회차 ' + state.salvagesRun + '번 · 화물 값 +' + Math.round((C.salvageMult(state) - 1) * 100) + '%');
       var plan = C.railPlan(state), cargo = C.cargoValue(state);
       C.ROUTES.forEach(function (d) {
         var v = rows.railRows[d.id], r = rows.routes[d.id], lv = state.routes[d.id], trip = C.tripSeconds(state, d.id), on = plan.riders[d.id];
@@ -2099,6 +2130,12 @@
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
+          break;
+        case 'salvage':
+          toast('표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); sfx('signal');
+          break;
+        case 'salvage-gone':
+          log('표류 화물을 놓쳤다.', '');
           break;
         case 'contract':
           toast('납품 의뢰 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 완제품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
@@ -2451,6 +2488,7 @@
     wirePerkReroll();
     wireOrder();
     wireContract();
+    wireSalvage();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');

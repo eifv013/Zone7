@@ -541,6 +541,7 @@
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      cargos: {}, salvage: null, salvageIn: 150, salvagesRun: 0,      // 4구역 표류 화물: 종류마다 끌어온 수(철수해도 남는다), 지금 발견된 화물, 다음 발견까지(초), 이번 회차에 끌어온 수
       clients: {}, contract: null, contractIn: 120, contractsRun: 0,      // 3구역 거래처: 종류마다 채운 의뢰 수(철수해도 남는다), 지금 온 의뢰, 다음 의뢰까지(초), 이번 회차에 채운 수
       regulars: {}, order: null, orderIn: 120, ordersRun: 0,      // 단골: 종류마다 채운 주문 수(철수해도 남는다), 지금 온 주문, 다음 주문까지(초), 이번 회차에 채운 수
       zdex: {},              // 좀비 도감: 종류마다 만난 횟수. 철수해도 남는다
@@ -648,6 +649,13 @@
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
     ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
+    var rg = raw.cargos && typeof raw.cargos === 'object' ? raw.cargos : {};
+    CARGOS.forEach(function (c) { var n = clamp(safeCount(rg[c.id]), 0, 1e9); if (n > 0) s.cargos[c.id] = n; });
+    s.salvagesRun = clamp(safeCount(raw.salvagesRun), 0, 1e6);
+    s.salvageIn = clamp(safeNum(raw.salvageIn, 150), 0, SALVAGE_GAP_MAX);
+    var rs = raw.salvage;
+    s.salvage = rs && typeof rs === 'object' && findById(CARGOS, rs.who) && safeNum(rs.need, 0) > 0 && safeNum(rs.left, 0) > 0
+      ? { who: rs.who, need: safeNum(rs.need, 0), have: clamp(safeNum(rs.have, 0), 0, safeNum(rs.need, 0)), left: clamp(safeNum(rs.left, 0), 0, SALVAGE_SECONDS) } : null;
     var rc = raw.clients && typeof raw.clients === 'object' ? raw.clients : {};
     CLIENTS.forEach(function (c) { var n = clamp(safeCount(rc[c.id]), 0, 1e9); if (n > 0) s.clients[c.id] = n; });
     s.contractsRun = clamp(safeCount(raw.contractsRun), 0, 1e6);
@@ -1183,7 +1191,59 @@
     return { riders: riders, slots: slots, idle: left };
   }
   /** 열차 한 대가 운행 1초마다 싣는 화물의 값(노선 배수를 곱하기 전). */
-  function cargoValue(state) { return zoneOpen(state, 3) ? TRAIN_VALUE * fleetMilestone(state.trains) * mods(state).z4 * globalMult(state) : 0; }
+  /*
+   * 표류 화물(1.1.2, 4구역): 단골 주문·납품 의뢰와 같은 틀이다.
+   *   몇 분마다 선로 어딘가에 멈춰 선 화물칸이 발견된다. 발견된 뒤로 열차가 싣고 돌아온 화물의 값이 차곡차곡 쌓이고(평소 수입은 그대로),
+   *   다 차면 "끌어온다"를 눌러 물자(SALVAGE_PAY 배)와 간식을 받는다. 그 화물칸은 도감에 적힌다(철수해도 남는다).
+   *   이번 회차에 끌어온 화물 하나마다 화물 값이 SALVAGE_BONUS 씩 오른다(SALVAGE_BONUS_MAX 까지). 놓쳐도 잃는 것은 없다.
+   */
+  var CARGOS = [
+    { id: 'ration',  name: '비상식량 칸',   color: '#b8402e', text: '상자마다 날짜가 적혀 있어요.' },
+    { id: 'medic',   name: '의약품 칸',     color: '#e6e5db', text: '붉은 십자가 반쯤 벗겨졌어요.' },
+    { id: 'fuel',    name: '연료 탱크차',   color: '#5a5f6a', text: '절반쯤 남아 있었어요.' },
+    { id: 'tool',    name: '공구 칸',       color: '#c9a04a', text: '자물쇠가 세 개나 달려 있었어요.' },
+    { id: 'seed',    name: '종자 칸',       color: '#5a7a3a', text: '봉투에 손글씨가 있어요.' },
+    { id: 'blanket', name: '담요 칸',       color: '#8a5a44', text: '겨울 전에 찾아서 다행이에요.' },
+    { id: 'cell',    name: '건전지 칸',     color: '#3f6f8f', text: '무전기가 며칠은 더 버텨요.' },
+    { id: 'filter',  name: '정수 필터 칸',  color: '#4f9bd8', text: '정수기 담당이 제일 반겼어요.' },
+    { id: 'parts',   name: '무전 부품 칸',  color: '#6a4a8a', text: '안테나가 통째로 들어 있었어요.' },
+    { id: 'book',    name: '책 칸',         color: '#6b4a3a', text: '아이들이 먼저 올라갔어요.' },
+    { id: 'cycle',   name: '자전거 칸',     color: '#d08a3c', text: '바람만 넣으면 탈 수 있어요.' },
+    { id: 'mail',    name: '우편 칸',       color: '#f0b400', text: '부치지 못한 편지가 가득해요.' }
+  ];
+  var SALVAGE_SECONDS = 150, SALVAGE_NEED_SECONDS = 50, SALVAGE_GAP_MIN = 180, SALVAGE_GAP_MAX = 300, SALVAGE_PAY = 2, SALVAGE_BONUS = 0.01, SALVAGE_BONUS_MAX = 0.5, SALVAGE_TREATS = 2;
+  function salvageMult(state) { return 1 + Math.min(SALVAGE_BONUS_MAX, (state.salvagesRun || 0) * SALVAGE_BONUS); }
+  function cargoCount(state) { var n = 0; CARGOS.forEach(function (c) { if (state.cargos[c.id] > 0) n++; }); return n; }
+  function salvageReward(state) { return state.salvage ? state.salvage.need * SALVAGE_PAY : 0; }
+  function stepSalvage(state, dt, rng, events) {
+    if (!zoneOpen(state, 3) || !(railRate(state) > 0)) return;
+    if (state.salvage) {
+      state.salvage.left -= dt;
+      if (state.salvage.left <= 0) { events.push({ type: 'salvage-gone', who: state.salvage.who }); state.salvage = null; }
+      return;
+    }
+    state.salvageIn -= dt;
+    if (state.salvageIn > 0) return;
+    rng = typeof rng === 'function' ? rng : Math.random;
+    var who = CARGOS[Math.floor(rng() * CARGOS.length) % CARGOS.length];
+    state.salvage = { who: who.id, need: railRate(state) * SALVAGE_NEED_SECONDS, have: 0, left: SALVAGE_SECONDS };
+    state.salvageIn = SALVAGE_GAP_MIN + rng() * (SALVAGE_GAP_MAX - SALVAGE_GAP_MIN);
+    events.push({ type: 'salvage', who: who.id, name: who.name });
+  }
+  /** 다 찬 표류 화물을 끌어온다. 덜 찼으면 실패(화물은 남는다). */
+  function fillSalvage(state) {
+    if (!state.salvage) return fail('none');
+    if (!(state.salvage.have >= state.salvage.need)) return fail('short');
+    var who = findById(CARGOS, state.salvage.who), gain = salvageReward(state), first = !(state.cargos[state.salvage.who] > 0);
+    earn(state, gain);
+    state.railEarned += gain;
+    state.treats = Math.min(1e9, state.treats + SALVAGE_TREATS);
+    state.cargos[state.salvage.who] = Math.min(1e9, (state.cargos[state.salvage.who] || 0) + 1);
+    state.salvagesRun = (state.salvagesRun || 0) + 1;
+    state.salvage = null;
+    return { ok: true, gain: gain, treats: SALVAGE_TREATS, first: first, who: who ? who.id : '', name: who ? who.name : '' };
+  }
+  function cargoValue(state) { return zoneOpen(state, 3) ? TRAIN_VALUE * fleetMilestone(state.trains) * mods(state).z4 * globalMult(state) * salvageMult(state) : 0; }
   /** 4구역이 평균적으로 초당 버는 물자(운행 중인 열차 기준). 실제로는 열차가 돌아올 때 한꺼번에 들어온다. */
   function railRate(state) {
     if (!zoneOpen(state, 3)) return 0;
@@ -1212,6 +1272,7 @@
       state.routeClock[d.id] -= trips * trip;
       earn(state, gain);
       state.railEarned += gain;
+      if (state.salvage) state.salvage.have = Math.min(state.salvage.need, state.salvage.have + gain);      // 표류 화물: 돌아온 열차의 화물 값이 쌓인다
       if (d.id === 'express') state.expressRuns += trips;
       events.push({ type: 'train', route: d.id, name: d.name, gain: gain, trips: trips, long: d.seconds >= 900 });
     });
@@ -1803,7 +1864,7 @@
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients;
+    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -2095,6 +2156,7 @@
     stepRepair(state, dt);
     stepTrade(state, dt, rng, events);
     stepOrders(state, dt, rng, events);
+    stepSalvage(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
     if (autoOn(state, 3) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
@@ -2277,7 +2339,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

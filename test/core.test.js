@@ -2083,3 +2083,32 @@ test('납품 의뢰: 3구역에서만 오고, 만든 완제품이 차면 납품�
   const bad = C.sanitizeState({ version: 2, contract: { who: '없는곳', need: 5, left: 5 }, clients: { forge: -2, 가짜: 3 }, contractsRun: 'x' }, 0);
   assert.equal(bad.contract, null); assert.equal(bad.clients.forge, undefined); assert.equal(bad.contractsRun, 0);
 });
+
+test('표류 화물: 4구역에서만 발견되고, 열차가 싣고 온 값이 차면 끌어와서 물자·간식·도감·화물 값을 얻는다', () => {
+  const f = inFactory(); f.salvageIn = 0.5;
+  for (let i = 0; i < 30; i++) C.tick(f, 1, () => 0.3);
+  assert.equal(f.salvage, null, '4구역을 열기 전에는 없다');
+  const s = inStation(); s.supplies = 1e40;
+  assert.ok(C.buyTrain(s, 8).ok); assert.ok(C.buyRoute(s, 'loop').ok);
+  assert.ok(C.railRate(s) > 0);
+  s.salvageIn = 0.5;
+  let got = null;
+  for (let i = 0; i < 5 && !got; i++) got = C.tick(s, 1, () => 0.3).find((e) => e.type === 'salvage') || null;
+  assert.ok(got && s.salvage, '화물이 발견된다');
+  assert.equal(C.fillSalvage(s).reason, 'short');
+  const who = s.salvage.who;
+  for (let i = 0; i < 149 && s.salvage && s.salvage.have < s.salvage.need; i++) C.tick(s, 1, () => 0.3);
+  assert.ok(s.salvage && s.salvage.have >= s.salvage.need, '시간 안에 찬다');
+  s.supplies = 0;
+  const treats = s.treats, value = C.cargoValue(s), r = C.fillSalvage(s);
+  assert.ok(r.ok && r.first && r.gain > 0 && s.supplies > 0);
+  assert.equal(s.treats, treats + C.SALVAGE_TREATS); assert.equal(s.cargos[who], 1); assert.equal(C.cargoCount(s), 1); assert.equal(s.salvage, null);
+  near(C.cargoValue(s), value * (1 + C.SALVAGE_BONUS));
+  s.salvagesRun = 1000; near(C.salvageMult(s), 1 + C.SALVAGE_BONUS_MAX);
+  s.salvage = { who: 'fuel', need: 1e60, have: 0, left: 1 };
+  assert.ok(C.tick(s, 2, Math.random).some((e) => e.type === 'salvage-gone')); assert.equal(s.salvage, null);
+  s.runEarned = 1e9; const back = C.retreat(s, 1).state;
+  assert.equal(back.cargos[who], 1); assert.equal(back.salvagesRun, 0); assert.equal(back.salvage, null);
+  const bad = C.sanitizeState({ version: 2, salvage: { who: '없는칸', need: 5, left: 5 }, cargos: { fuel: -2, 가짜: 3 }, salvagesRun: 'x' }, 0);
+  assert.equal(bad.salvage, null); assert.equal(bad.cargos.fuel, undefined); assert.equal(bad.salvagesRun, 0);
+});
