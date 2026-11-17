@@ -525,6 +525,7 @@
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      regulars: {}, order: null, orderIn: 120, ordersRun: 0,      // 단골: 종류마다 채운 주문 수(철수해도 남는다), 지금 온 주문, 다음 주문까지(초), 이번 회차에 채운 수
       zdex: {},              // 좀비 도감: 종류마다 만난 횟수. 철수해도 남는다
       ach: {},               // 달성한 업적 { id: true }. 철수해도 남는다
       achClock: 0,           // 업적을 마지막으로 확인한 뒤 흐른 시간(초)
@@ -628,6 +629,13 @@
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
     ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
+    var rr = raw.regulars && typeof raw.regulars === 'object' ? raw.regulars : {};
+    REGULARS.forEach(function (r) { var n = clamp(safeCount(rr[r.id]), 0, 1e9); if (n > 0) s.regulars[r.id] = n; });
+    s.ordersRun = clamp(safeCount(raw.ordersRun), 0, 1e6);
+    s.orderIn = clamp(safeNum(raw.orderIn, 120), 0, ORDER_GAP_MAX);
+    var ro = raw.order;
+    s.order = ro && typeof ro === 'object' && findById(REGULARS, ro.who) && safeNum(ro.need, 0) > 0 && safeNum(ro.left, 0) > 0
+      ? { who: ro.who, need: Math.floor(safeNum(ro.need, 0)), left: clamp(safeNum(ro.left, 0), 0, ORDER_SECONDS) } : null;
     var ra = raw.ach && typeof raw.ach === 'object' ? raw.ach : {};
     // 값은 달성한 시각(ms). 날짜를 적기 전의 저장(true)은 버린다: 조건을 아직 채우고 있으면 곧바로 오늘 날짜로 다시 달성된다(0.9.10 에서 한 번 초기화)
     ACHIEVEMENTS.forEach(function (a) { var v = ra[a.id]; if (typeof v === 'number' && isFinite(v) && v > 0) s.ach[a.id] = Math.floor(v); });
@@ -826,7 +834,7 @@
   function goodsRate(state) { return zoneOpen(state, 1) ? state.stalls * milestoneMult(state.stalls) : 0; }
   function goodsCap(state) { return goodsRate(state) * GOODS_CAP_SECONDS * mods(state).cap * handBonus(state, 'porter'); }
   /** 상품 하나를 시세 1 에 팔았을 때의 물자. */
-  function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state) * handBonus(state, 'crier'); }
+  function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state) * handBonus(state, 'crier') * orderMult(state); }
   /** 연속 호가로 직접 판매에 붙는 배수(1 ~ 1.5). */
   function streakMult(state) { return 1 + Math.min(STREAK_MAX, state.streak || 0) * STREAK_BONUS; }
   /**
@@ -855,6 +863,63 @@
   var SELL_AUTO_SECONDS = 10;   // 흥정꾼 1레벨이 한 번 파는 간격(초)
   /** 흥정꾼이 한 번 파는 간격(초). 레벨마다 2초씩 줄어든다(2초까지). 자동화 특성만 있으면 10초. */
   function sellInterval(state) { return Math.max(2, SELL_AUTO_SECONDS - 2 * Math.max(0, mods(state).broker - 1)); }
+  /*
+   * 단골 주문(1.0.3): 2구역에 머무는 긴 시간 동안 할 거리와 모을 거리를 준다.
+   *   몇 분마다 단골 하나가 "상품 N개를 M초 안에" 달라고 온다. 쌓인 상품으로 넘기면 물자(평균 시세의 ORDER_PAY 배)와 간식을 받고,
+   *   그 단골이 도감에 적힌다(철수해도 남는다). 이번 회차에 채운 주문 하나마다 상품 값이 ORDER_BONUS 씩 오른다(ORDER_BONUS_MAX 까지).
+   *   놓쳐도 잃는 것은 없다(방치해도 손해가 없게). 자리를 비운 동안에는 오지 않는다.
+   */
+  var REGULARS = [
+    { id: 'dried',   name: '건어물 할머니',   color: '#8a5a44', hair: '#d8d8d0', text: '저울 눈금을 절대 속이지 않아요.' },
+    { id: 'fish',    name: '생선 장수',       color: '#3f6f8f', hair: '#2a2a2a', text: '얼음 대신 강물로 식혀 와요.' },
+    { id: 'mill',    name: '방앗간 아저씨',   color: '#c9a04a', hair: '#4a3628', text: '고춧가루 냄새가 먼저 와요.' },
+    { id: 'fruit',   name: '과일 트럭',       color: '#b8402e', hair: '#17180f', text: '확성기가 아직 돼요.' },
+    { id: 'tools',   name: '철물점 주인',     color: '#5a5f6a', hair: '#8a8a82', text: '못 하나도 세어서 줘요.' },
+    { id: 'herbs',   name: '약초꾼',          color: '#5a7a3a', hair: '#3a2a22', text: '산에서 내려올 때마다 들러요.' },
+    { id: 'rice',    name: '떡집 자매',       color: '#e6d8c0', hair: '#2a2a2a', text: '둘이 번갈아 와요.' },
+    { id: 'taffy',   name: '엿장수',          color: '#d08a3c', hair: '#6a4a3a', text: '가위 소리로 온 줄 알아요.' },
+    { id: 'tailor',  name: '수선집 할아버지', color: '#4f5d73', hair: '#e6e5db', text: '우비 솔기를 봐 줬어요.' },
+    { id: 'soup',    name: '국밥집 이모',     color: '#a8483a', hair: '#3a2a22', text: '오면 꼭 한 그릇 놓고 가요.' },
+    { id: 'flower',  name: '꽃집 청년',       color: '#7a9a6a', hair: '#4a3628', text: '씨앗만 받아 가요.' },
+    { id: 'busker',  name: '야시장 악사',     color: '#6a4a8a', hair: '#17180f', text: '값은 노래로도 받아 달래요.' }
+  ];
+  var ORDER_SECONDS = 90, ORDER_GAP_MIN = 150, ORDER_GAP_MAX = 270, ORDER_PAY = 2, ORDER_BONUS = 0.01, ORDER_BONUS_MAX = 0.5, ORDER_TREATS = 2;
+  /** 이번 회차에 채운 주문으로 오른 상품 값 배수(1 ~ 1.5). */
+  function orderMult(state) { return 1 + Math.min(ORDER_BONUS_MAX, (state.ordersRun || 0) * ORDER_BONUS); }
+  function regularCount(state) { var n = 0; REGULARS.forEach(function (r) { if (state.regulars[r.id] > 0) n++; }); return n; }
+  /** 주문을 넘겼을 때 받는 물자. */
+  function orderReward(state) { return state.order ? state.order.need * goodsValue(state) * priceRange(state).mean * ORDER_PAY : 0; }
+  function stepOrders(state, dt, rng, events) {
+    if (!zoneOpen(state, 1) || !(goodsRate(state) > 0)) return;
+    if (state.order) {
+      state.order.left -= dt;
+      if (state.order.left <= 0) { events.push({ type: 'order-gone', who: state.order.who }); state.order = null; }
+      return;
+    }
+    state.orderIn -= dt;
+    if (state.orderIn > 0) return;
+    rng = typeof rng === 'function' ? rng : Math.random;
+    var who = REGULARS[Math.floor(rng() * REGULARS.length) % REGULARS.length];
+    // 주문량: 좌판이 45초쯤 만드는 양. 창고에 다 들어가지 않으면 창고의 8할로 줄인다
+    var need = Math.max(10, Math.floor(Math.min(goodsCap(state) * 0.8, goodsRate(state) * 45)));
+    state.order = { who: who.id, need: need, left: ORDER_SECONDS };
+    state.orderIn = ORDER_GAP_MIN + rng() * (ORDER_GAP_MAX - ORDER_GAP_MIN);
+    events.push({ type: 'order', who: who.id, name: who.name, need: need });
+  }
+  /** 쌓인 상품으로 주문을 넘긴다. 상품이 모자라면 실패(주문은 남는다). */
+  function fillOrder(state) {
+    if (!state.order) return fail('none');
+    if (!(state.goods >= state.order.need)) return fail('short');
+    var who = findById(REGULARS, state.order.who), gain = orderReward(state), first = !(state.regulars[state.order.who] > 0);
+    state.goods -= state.order.need;
+    earn(state, gain);
+    state.tradeEarned += gain;
+    state.treats = Math.min(1e9, state.treats + ORDER_TREATS);
+    state.regulars[state.order.who] = Math.min(1e9, (state.regulars[state.order.who] || 0) + 1);
+    state.ordersRun = (state.ordersRun || 0) + 1;
+    state.order = null;
+    return { ok: true, gain: gain, treats: ORDER_TREATS, first: first, who: who ? who.id : '', name: who ? who.name : '' };
+  }
   function stepTrade(state, dt, rng, events) {
     if (!zoneOpen(state, 1)) return;
     state.priceClock += dt;
@@ -875,6 +940,8 @@
     state.sellClock = Math.min(every, state.sellClock + dt);
     if (!(state.goods > 0)) return;
     var full = state.goods >= cap, good = state.price >= priceRange(state).mean && state.sellClock >= every;
+    // 단골 주문이 와 있으면 흥정꾼은 팔지 않고 상품을 모아 둔다(창고가 차면 판다). 그러지 않으면 자동 판매를 켠 사람은 주문을 채울 상품이 쌓이지 않는다
+    if (state.order && !full) return;
     if (full || good) state.sellClock = 0;
     if (full || good) { var sold = sellGoods(state, true); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
@@ -1626,7 +1693,7 @@
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach; next.zdex = state.zdex;
+    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -1902,6 +1969,7 @@
     stepSweep(state, dt, events);
     stepRepair(state, dt);
     stepTrade(state, dt, rng, events);
+    stepOrders(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
     if (autoOn(state, 3) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
@@ -2081,7 +2149,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

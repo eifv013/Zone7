@@ -1281,15 +1281,16 @@
    * 도감 화면: 강아지 / 고양이 / 좀비 / 방어 수단 네 탭. 카드의 글은 한 줄에 들어가게 짧게 쓴다.
    *   아직 만나지 못한 것은 회색 그림자와 '???' 로 보이고, 어디서 만날 수 있는지만 알려 준다.
    */
+  var REG_PIX = ['..hhh...', '.hhhhh..', '.hsssh..', '..sss...', '.ccccc..', 'scccccs.', '.ccccc..', '.ccccc..', '.dd.dd..', '.dd.dd..'];      // 단골의 모습(머리 h, 살 s, 옷 c, 바지 d)
   function renderDex() {
     if (dexTab === 'pet') dexTab = 'dog';
-    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
     function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
-    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['wall', '방어 수단']].forEach(function (t) {
+    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
@@ -1322,6 +1323,14 @@
         var rname = C.ZOMBIE_RARITIES[z.rarity];
         if (!n) { card(pixSvg(rows, pal, z.big ? 'big' : ''), '???', rname, z.zone > state.zone ? (z.zone + 1) + '구역을 열면 나와요.' : z.boss ? '변이체가 오는 밤에 나와요.' : '밤을 넘기다 보면 만나요.', true, 'z-' + z.rarity); return; }
         card(pixSvg(rows, pal, z.big ? 'big' : ''), z.name, rname + ' · 만난 밤 ' + fmt(n), z.text, false, 'z-' + z.rarity);
+      });
+    } else if (dexTab === 'regular') {
+      // 단골: 2구역에서 주문을 채워 준 사람들. 아직 못 만난 사람은 그림자로 보인다
+      C.REGULARS.forEach(function (r) {
+        var n = state.regulars[r.id] || 0;
+        var pal = n ? { h: r.hair, s: '#e8c39e', c: r.color, d: '#3a3f4a' } : { h: '#4a4b40', s: '#4a4b40', c: '#4a4b40', d: '#4a4b40' };
+        if (!n) { card(pixSvg(REG_PIX, pal), '???', '아직 못 만났어요', '2구역에서 주문을 채워 주면 만나요.', true); return; }
+        card(pixSvg(REG_PIX, pal), r.name, '채운 주문 ' + fmt(n) + '번', r.text, false);
       });
     } else {
       C.DEFENSES.forEach(function (d) {
@@ -1409,6 +1418,15 @@
     }
   }
 
+  function wireOrder() {
+    $('order-fill').addEventListener('click', function () {
+      var r = C.fillOrder(state);
+      if (!r.ok) return;
+      if (r.first) { toast('새 단골 · ' + r.name); log('새 단골이 생겼다. ' + r.name + '. 도감에 적었다.', 'good'); sfx('goal'); }
+      else { log(r.name + '의 주문을 넘겼다. 물자 ' + fmt(r.gain) + ' 확보.', 'good'); sfx('sell'); }
+      buzz(20); Store.save(); render();
+    });
+  }
   function wirePerkReroll() {
     $('perk-reroll').addEventListener('click', function () {
       var r = C.rerollPerks(state, Math.random);
@@ -1682,7 +1700,20 @@
       fill($('sell-bar'), !selling ? 0 : goodPrice ? state.sellClock / sellEvery : (cap > 0 ? state.goods / cap : 0));
       $('sell-bar').classList.toggle('wait', !goodPrice);
       setText($('sell-auto'), !broker ? '개조에서 흥정꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
-        : goodPrice ? '시세가 좋아요 · 흥정꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
+        : state.order ? '단골 주문에 넘길 상품을 모으는 중이에요' : goodPrice ? '시세가 좋아요 · 흥정꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
+      // 단골 주문: 왔을 때만 칸이 보인다. 상품이 모자라면 단추가 꺼지고 얼마나 모자란지 알려 준다
+      var od = state.order, ob2 = $('order');
+      ob2.hidden = !od;
+      if (od) {
+        var reg = null; C.REGULARS.forEach(function (r) { if (r.id === od.who) reg = r; });
+        setText($('order-left'), clock(od.left));
+        setText($('order-text'), (reg ? reg.name + (C.hasBatchim(reg.name) ? '이' : '가') : '단골이') + ' 상품 ' + fmt(od.need) + '개를 찾아요.\n넘기면 물자 +' + fmt(C.orderReward(state)) + ' · 간식 +' + C.ORDER_TREATS);
+        fill($('order-bar'), od.left / C.ORDER_SECONDS);
+        var enough = state.goods >= od.need;
+        $('order-fill').disabled = !enough;
+        setText($('order-fill'), enough ? '주문을 넘긴다' : '상품이 ' + fmt(od.need - state.goods) + '개 모자라요');
+      }
+      setText($('order-note'), '단골 ' + C.regularCount(state) + ' / ' + C.REGULARS.length + ' · 이번 회차 주문 ' + state.ordersRun + '번 · 상품 값 +' + Math.round((C.orderMult(state) - 1) * 100) + '%');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setMile(rows.stall, state.stalls, q2, sc <= state.supplies);
@@ -1992,6 +2023,12 @@
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
+          break;
+        case 'order':
+          toast('단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          break;
+        case 'order-gone':
+          log('단골이 기다리다 돌아갔다.', '');
           break;
         case 'achievement':
           if (achMany) break;
@@ -2330,6 +2367,7 @@
     wireNotify();
     wireMultiTouch();
     wirePerkReroll();
+    wireOrder();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');

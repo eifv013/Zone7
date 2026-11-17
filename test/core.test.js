@@ -1959,3 +1959,45 @@ test('농성: 못 막은 밤마다 무리가 흩어지고, 바닥이 있으며, 
   assert.equal(s.siegeNights, 0);
   assert.equal(C.sanitizeState({ version: 2, siegeNights: 'x' }, 0).siegeNights, 0);
 });
+
+test('단골 주문: 2구역에서만 오고, 상품으로 넘기면 물자·간식·도감·상품 값을 얻는다', () => {
+  const s = fresh();
+  const ev0 = []; for (let i = 0; i < 600; i++) C.tick(s, 1, Math.random).forEach((e) => ev0.push(e));
+  assert.equal(s.order, null, '2구역을 열기 전에는 오지 않는다');
+  const m = inMarket(); m.stalls = 20; m.supplies = 0; m.goods = 0; m.orderIn = 1;
+  let got = null;
+  for (let i = 0; i < 5 && !got; i++) got = C.tick(m, 1, () => 0.3).find((e) => e.type === 'order') || null;
+  assert.ok(got && m.order, '주문이 온다');
+  assert.ok(m.order.need >= 10);
+  assert.equal(C.fillOrder(m).reason, 'short', '상품이 모자라면 못 넘긴다');
+  assert.ok(m.order, '모자라도 주문은 남는다');
+  m.goods = m.order.need + 5;
+  const before = m.supplies, treats = m.treats, value = C.goodsValue(m), who = m.order.who;
+  const r = C.fillOrder(m);
+  assert.ok(r.ok && r.first && r.gain > 0);
+  assert.ok(m.supplies > before); assert.equal(m.treats, treats + C.ORDER_TREATS);
+  assert.equal(m.goods, 5); assert.equal(m.regulars[who], 1); assert.equal(C.regularCount(m), 1);
+  near(C.goodsValue(m), value * (1 + C.ORDER_BONUS));
+  assert.equal(m.order, null);
+  assert.equal(C.fillOrder(m).reason, 'none');
+  m.ordersRun = 1000; near(C.orderMult(m), 1 + C.ORDER_BONUS_MAX);
+  // 기다리다 돌아가도 잃는 것은 없다
+  m.order = { who: 'fish', need: 50, left: 1 }; const sup = m.supplies, gone = C.tick(m, 2, Math.random);
+  assert.ok(gone.some((e) => e.type === 'order-gone')); assert.equal(m.order, null); assert.ok(m.supplies >= sup);
+  // 철수하면 도감은 남고 이번 회차의 보너스는 사라진다
+  m.runEarned = 1e9; const back = C.retreat(m, 1).state;
+  assert.equal(back.regulars[who], 1); assert.equal(back.ordersRun, 0); assert.equal(back.order, null);
+  // 깨진 저장
+  const bad = C.sanitizeState({ version: 2, order: { who: '없는사람', need: 5, left: 5 }, regulars: { fish: -2, 가짜: 3 }, ordersRun: 'x' }, 0);
+  assert.equal(bad.order, null); assert.equal(bad.regulars.fish, undefined); assert.equal(bad.regulars['가짜'], undefined); assert.equal(bad.ordersRun, 0);
+});
+
+test('단골 주문이 와 있으면 흥정꾼은 상품을 팔지 않고 모아 둔다(창고가 차면 판다)', () => {
+  const m = inMarket(); m.stalls = 20; m.upgrades.broker = 5; m.autoSell = true; m.price = C.priceRange(m).ceil; m.goods = 0;
+  m.order = { who: 'fish', need: 1e9, left: 80 }; m.orderIn = 999;
+  for (let i = 0; i < 20; i++) C.tick(m, 1, () => 0.5);
+  assert.ok(m.goods > 0, '주문이 있는 동안에는 쌓인다');
+  const cap = C.goodsCap(m); m.goods = cap;
+  const ev = C.tick(m, 1, () => 0.5);
+  assert.ok(ev.some((e) => e.type === 'sold'), '창고가 차면 판다');
+});

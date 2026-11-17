@@ -206,6 +206,14 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .row-mile .st.on { opacity: 1; }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
+/* 단골 주문 칸(2구역) */
+.order { margin: 10px 0; padding: 10px 12px; border: 2px solid var(--hazard); border-radius: 10px; }
+.order[hidden] { display: none; }
+.order-head { display: flex; justify-content: space-between; align-items: baseline; }
+.order p { margin: 4px 0 6px; font-size: 14px; line-height: 1.5; white-space: pre-line; }
+.order-fill { width: 100%; margin-top: 8px; padding: 10px; border: 0; border-radius: 8px; background: var(--hazard); color: var(--on-hazard); font: 700 14px/1.3 var(--font-body); cursor: pointer; }
+.order-fill:disabled { background: transparent; color: var(--ink-soft); border: 1px dashed var(--ink-soft); cursor: default; }
+#order-note { margin: 8px 0; }
 /* 살 것이 있는 탭의 붉은 점 */
 .mnav button.dot::after { content: ''; position: absolute; top: 6px; left: calc(50% + 12px); width: 9px; height: 9px; border-radius: 50%; background: var(--blood); box-shadow: 0 0 0 2px var(--paper); }
 #pet-feed.ready { box-shadow: 0 0 0 2px var(--hazard); }
@@ -977,7 +985,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.0.2</div>
+  <div class="boot-ver">7구역 알파 1.0.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1261,6 +1269,13 @@ setTimeout(function () {
         <!-- 시세판: 지난 시세가 막대로 흘러가고 맨 오른쪽이 지금 시세다. 가로줄은 평균(점선)과 고점(실선). -->
         <div class="board" id="board" aria-hidden="true"><div class="board-bars" id="board-bars"></div><i class="board-line mean" id="board-mean"></i><i class="board-line peak" id="board-peak"></i></div>
         <div class="streak" id="streak"><span class="streak-pips" id="streak-pips"></span><span class="label" id="streak-note"></span></div>
+        <div class="order" id="order" hidden>
+          <div class="order-head"><span class="label">단골 주문</span><span class="num" id="order-left"></span></div>
+          <p id="order-text"></p>
+          <div class="autobar" id="order-bar" aria-hidden="true"></div>
+          <button type="button" class="order-fill" id="order-fill"></button>
+        </div>
+        <div class="label" id="order-note"></div>
         <button type="button" class="fortify sell" id="sell">상품이 없다</button>
         <div class="autobar" id="sell-bar" aria-hidden="true"></div>
         <div class="label" id="sell-auto"></div>
@@ -1421,7 +1436,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.0.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.0.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1546,7 +1561,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.3";
 </script>
 <script>
 /*
@@ -1565,6 +1580,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.0.3', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '단골',
+      items: [
+        '2구역에 단골 주문이 생겼어요. 몇 분마다 단골 하나가 상품을 찾으러 와요. 쌓인 상품으로 주문을 넘기면 물자와 간식을 받아요.',
+        '주문을 채울 때마다 이번 회차의 상품 값이 1%씩 올라요(50%까지). 놓쳐도 잃는 것은 없어요.',
+        '주문이 와 있는 동안에는 흥정꾼이 상품을 팔지 않고 모아 둬요. 창고가 차면 팔아요.',
+        '단골은 모두 12명이에요. 처음 주문을 채워 준 단골은 도감의 "단골" 탭에 적히고, 철수해도 남아요.'
+      ] },
     { ver: '알파 1.0.2', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '검수',
       items: [
         '목표를 채웠을 때 일지 창과 특전 창이 겹쳐 뜨던 것을 고쳤어요. 일지를 닫으면 특전 창이 이어서 떠요.',
@@ -2820,6 +2842,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      regulars: {}, order: null, orderIn: 120, ordersRun: 0,      // 단골: 종류마다 채운 주문 수(철수해도 남는다), 지금 온 주문, 다음 주문까지(초), 이번 회차에 채운 수
       zdex: {},              // 좀비 도감: 종류마다 만난 횟수. 철수해도 남는다
       ach: {},               // 달성한 업적 { id: true }. 철수해도 남는다
       achClock: 0,           // 업적을 마지막으로 확인한 뒤 흐른 시간(초)
@@ -2923,6 +2946,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
     ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
+    var rr = raw.regulars && typeof raw.regulars === 'object' ? raw.regulars : {};
+    REGULARS.forEach(function (r) { var n = clamp(safeCount(rr[r.id]), 0, 1e9); if (n > 0) s.regulars[r.id] = n; });
+    s.ordersRun = clamp(safeCount(raw.ordersRun), 0, 1e6);
+    s.orderIn = clamp(safeNum(raw.orderIn, 120), 0, ORDER_GAP_MAX);
+    var ro = raw.order;
+    s.order = ro && typeof ro === 'object' && findById(REGULARS, ro.who) && safeNum(ro.need, 0) > 0 && safeNum(ro.left, 0) > 0
+      ? { who: ro.who, need: Math.floor(safeNum(ro.need, 0)), left: clamp(safeNum(ro.left, 0), 0, ORDER_SECONDS) } : null;
     var ra = raw.ach && typeof raw.ach === 'object' ? raw.ach : {};
     // 값은 달성한 시각(ms). 날짜를 적기 전의 저장(true)은 버린다: 조건을 아직 채우고 있으면 곧바로 오늘 날짜로 다시 달성된다(0.9.10 에서 한 번 초기화)
     ACHIEVEMENTS.forEach(function (a) { var v = ra[a.id]; if (typeof v === 'number' && isFinite(v) && v > 0) s.ach[a.id] = Math.floor(v); });
@@ -3121,7 +3151,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
   function goodsRate(state) { return zoneOpen(state, 1) ? state.stalls * milestoneMult(state.stalls) : 0; }
   function goodsCap(state) { return goodsRate(state) * GOODS_CAP_SECONDS * mods(state).cap * handBonus(state, 'porter'); }
   /** 상품 하나를 시세 1 에 팔았을 때의 물자. */
-  function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state) * handBonus(state, 'crier'); }
+  function goodsValue(state) { return GOODS_VALUE * mods(state).z2 * globalMult(state) * handBonus(state, 'crier') * orderMult(state); }
   /** 연속 호가로 직접 판매에 붙는 배수(1 ~ 1.5). */
   function streakMult(state) { return 1 + Math.min(STREAK_MAX, state.streak || 0) * STREAK_BONUS; }
   /**
@@ -3150,6 +3180,63 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
   var SELL_AUTO_SECONDS = 10;   // 흥정꾼 1레벨이 한 번 파는 간격(초)
   /** 흥정꾼이 한 번 파는 간격(초). 레벨마다 2초씩 줄어든다(2초까지). 자동화 특성만 있으면 10초. */
   function sellInterval(state) { return Math.max(2, SELL_AUTO_SECONDS - 2 * Math.max(0, mods(state).broker - 1)); }
+  /*
+   * 단골 주문(1.0.3): 2구역에 머무는 긴 시간 동안 할 거리와 모을 거리를 준다.
+   *   몇 분마다 단골 하나가 "상품 N개를 M초 안에" 달라고 온다. 쌓인 상품으로 넘기면 물자(평균 시세의 ORDER_PAY 배)와 간식을 받고,
+   *   그 단골이 도감에 적힌다(철수해도 남는다). 이번 회차에 채운 주문 하나마다 상품 값이 ORDER_BONUS 씩 오른다(ORDER_BONUS_MAX 까지).
+   *   놓쳐도 잃는 것은 없다(방치해도 손해가 없게). 자리를 비운 동안에는 오지 않는다.
+   */
+  var REGULARS = [
+    { id: 'dried',   name: '건어물 할머니',   color: '#8a5a44', hair: '#d8d8d0', text: '저울 눈금을 절대 속이지 않아요.' },
+    { id: 'fish',    name: '생선 장수',       color: '#3f6f8f', hair: '#2a2a2a', text: '얼음 대신 강물로 식혀 와요.' },
+    { id: 'mill',    name: '방앗간 아저씨',   color: '#c9a04a', hair: '#4a3628', text: '고춧가루 냄새가 먼저 와요.' },
+    { id: 'fruit',   name: '과일 트럭',       color: '#b8402e', hair: '#17180f', text: '확성기가 아직 돼요.' },
+    { id: 'tools',   name: '철물점 주인',     color: '#5a5f6a', hair: '#8a8a82', text: '못 하나도 세어서 줘요.' },
+    { id: 'herbs',   name: '약초꾼',          color: '#5a7a3a', hair: '#3a2a22', text: '산에서 내려올 때마다 들러요.' },
+    { id: 'rice',    name: '떡집 자매',       color: '#e6d8c0', hair: '#2a2a2a', text: '둘이 번갈아 와요.' },
+    { id: 'taffy',   name: '엿장수',          color: '#d08a3c', hair: '#6a4a3a', text: '가위 소리로 온 줄 알아요.' },
+    { id: 'tailor',  name: '수선집 할아버지', color: '#4f5d73', hair: '#e6e5db', text: '우비 솔기를 봐 줬어요.' },
+    { id: 'soup',    name: '국밥집 이모',     color: '#a8483a', hair: '#3a2a22', text: '오면 꼭 한 그릇 놓고 가요.' },
+    { id: 'flower',  name: '꽃집 청년',       color: '#7a9a6a', hair: '#4a3628', text: '씨앗만 받아 가요.' },
+    { id: 'busker',  name: '야시장 악사',     color: '#6a4a8a', hair: '#17180f', text: '값은 노래로도 받아 달래요.' }
+  ];
+  var ORDER_SECONDS = 90, ORDER_GAP_MIN = 150, ORDER_GAP_MAX = 270, ORDER_PAY = 2, ORDER_BONUS = 0.01, ORDER_BONUS_MAX = 0.5, ORDER_TREATS = 2;
+  /** 이번 회차에 채운 주문으로 오른 상품 값 배수(1 ~ 1.5). */
+  function orderMult(state) { return 1 + Math.min(ORDER_BONUS_MAX, (state.ordersRun || 0) * ORDER_BONUS); }
+  function regularCount(state) { var n = 0; REGULARS.forEach(function (r) { if (state.regulars[r.id] > 0) n++; }); return n; }
+  /** 주문을 넘겼을 때 받는 물자. */
+  function orderReward(state) { return state.order ? state.order.need * goodsValue(state) * priceRange(state).mean * ORDER_PAY : 0; }
+  function stepOrders(state, dt, rng, events) {
+    if (!zoneOpen(state, 1) || !(goodsRate(state) > 0)) return;
+    if (state.order) {
+      state.order.left -= dt;
+      if (state.order.left <= 0) { events.push({ type: 'order-gone', who: state.order.who }); state.order = null; }
+      return;
+    }
+    state.orderIn -= dt;
+    if (state.orderIn > 0) return;
+    rng = typeof rng === 'function' ? rng : Math.random;
+    var who = REGULARS[Math.floor(rng() * REGULARS.length) % REGULARS.length];
+    // 주문량: 좌판이 45초쯤 만드는 양. 창고에 다 들어가지 않으면 창고의 8할로 줄인다
+    var need = Math.max(10, Math.floor(Math.min(goodsCap(state) * 0.8, goodsRate(state) * 45)));
+    state.order = { who: who.id, need: need, left: ORDER_SECONDS };
+    state.orderIn = ORDER_GAP_MIN + rng() * (ORDER_GAP_MAX - ORDER_GAP_MIN);
+    events.push({ type: 'order', who: who.id, name: who.name, need: need });
+  }
+  /** 쌓인 상품으로 주문을 넘긴다. 상품이 모자라면 실패(주문은 남는다). */
+  function fillOrder(state) {
+    if (!state.order) return fail('none');
+    if (!(state.goods >= state.order.need)) return fail('short');
+    var who = findById(REGULARS, state.order.who), gain = orderReward(state), first = !(state.regulars[state.order.who] > 0);
+    state.goods -= state.order.need;
+    earn(state, gain);
+    state.tradeEarned += gain;
+    state.treats = Math.min(1e9, state.treats + ORDER_TREATS);
+    state.regulars[state.order.who] = Math.min(1e9, (state.regulars[state.order.who] || 0) + 1);
+    state.ordersRun = (state.ordersRun || 0) + 1;
+    state.order = null;
+    return { ok: true, gain: gain, treats: ORDER_TREATS, first: first, who: who ? who.id : '', name: who ? who.name : '' };
+  }
   function stepTrade(state, dt, rng, events) {
     if (!zoneOpen(state, 1)) return;
     state.priceClock += dt;
@@ -3170,6 +3257,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
     state.sellClock = Math.min(every, state.sellClock + dt);
     if (!(state.goods > 0)) return;
     var full = state.goods >= cap, good = state.price >= priceRange(state).mean && state.sellClock >= every;
+    // 단골 주문이 와 있으면 흥정꾼은 팔지 않고 상품을 모아 둔다(창고가 차면 판다). 그러지 않으면 자동 판매를 켠 사람은 주문을 채울 상품이 쌓이지 않는다
+    if (state.order && !full) return;
     if (full || good) state.sellClock = 0;
     if (full || good) { var sold = sellGoods(state, true); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
@@ -3921,7 +4010,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach; next.zdex = state.zdex;
+    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -4197,6 +4286,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
     stepSweep(state, dt, events);
     stepRepair(state, dt);
     stepTrade(state, dt, rng, events);
+    stepOrders(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
     if (autoOn(state, 3) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
@@ -4376,7 +4466,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
@@ -7238,15 +7328,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
    * 도감 화면: 강아지 / 고양이 / 좀비 / 방어 수단 네 탭. 카드의 글은 한 줄에 들어가게 짧게 쓴다.
    *   아직 만나지 못한 것은 회색 그림자와 '???' 로 보이고, 어디서 만날 수 있는지만 알려 준다.
    */
+  var REG_PIX = ['..hhh...', '.hhhhh..', '.hsssh..', '..sss...', '.ccccc..', 'scccccs.', '.ccccc..', '.ccccc..', '.dd.dd..', '.dd.dd..'];      // 단골의 모습(머리 h, 살 s, 옷 c, 바지 d)
   function renderDex() {
     if (dexTab === 'pet') dexTab = 'dog';
-    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
     function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
-    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['wall', '방어 수단']].forEach(function (t) {
+    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
@@ -7279,6 +7370,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
         var rname = C.ZOMBIE_RARITIES[z.rarity];
         if (!n) { card(pixSvg(rows, pal, z.big ? 'big' : ''), '???', rname, z.zone > state.zone ? (z.zone + 1) + '구역을 열면 나와요.' : z.boss ? '변이체가 오는 밤에 나와요.' : '밤을 넘기다 보면 만나요.', true, 'z-' + z.rarity); return; }
         card(pixSvg(rows, pal, z.big ? 'big' : ''), z.name, rname + ' · 만난 밤 ' + fmt(n), z.text, false, 'z-' + z.rarity);
+      });
+    } else if (dexTab === 'regular') {
+      // 단골: 2구역에서 주문을 채워 준 사람들. 아직 못 만난 사람은 그림자로 보인다
+      C.REGULARS.forEach(function (r) {
+        var n = state.regulars[r.id] || 0;
+        var pal = n ? { h: r.hair, s: '#e8c39e', c: r.color, d: '#3a3f4a' } : { h: '#4a4b40', s: '#4a4b40', c: '#4a4b40', d: '#4a4b40' };
+        if (!n) { card(pixSvg(REG_PIX, pal), '???', '아직 못 만났어요', '2구역에서 주문을 채워 주면 만나요.', true); return; }
+        card(pixSvg(REG_PIX, pal), r.name, '채운 주문 ' + fmt(n) + '번', r.text, false);
       });
     } else {
       C.DEFENSES.forEach(function (d) {
@@ -7366,6 +7465,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
     }
   }
 
+  function wireOrder() {
+    $('order-fill').addEventListener('click', function () {
+      var r = C.fillOrder(state);
+      if (!r.ok) return;
+      if (r.first) { toast('새 단골 · ' + r.name); log('새 단골이 생겼다. ' + r.name + '. 도감에 적었다.', 'good'); sfx('goal'); }
+      else { log(r.name + '의 주문을 넘겼다. 물자 ' + fmt(r.gain) + ' 확보.', 'good'); sfx('sell'); }
+      buzz(20); Store.save(); render();
+    });
+  }
   function wirePerkReroll() {
     $('perk-reroll').addEventListener('click', function () {
       var r = C.rerollPerks(state, Math.random);
@@ -7639,7 +7747,20 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
       fill($('sell-bar'), !selling ? 0 : goodPrice ? state.sellClock / sellEvery : (cap > 0 ? state.goods / cap : 0));
       $('sell-bar').classList.toggle('wait', !goodPrice);
       setText($('sell-auto'), !broker ? '개조에서 흥정꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
-        : goodPrice ? '시세가 좋아요 · 흥정꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
+        : state.order ? '단골 주문에 넘길 상품을 모으는 중이에요' : goodPrice ? '시세가 좋아요 · 흥정꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
+      // 단골 주문: 왔을 때만 칸이 보인다. 상품이 모자라면 단추가 꺼지고 얼마나 모자란지 알려 준다
+      var od = state.order, ob2 = $('order');
+      ob2.hidden = !od;
+      if (od) {
+        var reg = null; C.REGULARS.forEach(function (r) { if (r.id === od.who) reg = r; });
+        setText($('order-left'), clock(od.left));
+        setText($('order-text'), (reg ? reg.name + (C.hasBatchim(reg.name) ? '이' : '가') : '단골이') + ' 상품 ' + fmt(od.need) + '개를 찾아요.\n넘기면 물자 +' + fmt(C.orderReward(state)) + ' · 간식 +' + C.ORDER_TREATS);
+        fill($('order-bar'), od.left / C.ORDER_SECONDS);
+        var enough = state.goods >= od.need;
+        $('order-fill').disabled = !enough;
+        setText($('order-fill'), enough ? '주문을 넘긴다' : '상품이 ' + fmt(od.need - state.goods) + '개 모자라요');
+      }
+      setText($('order-note'), '단골 ' + C.regularCount(state) + ' / ' + C.REGULARS.length + ' · 이번 회차 주문 ' + state.ordersRun + '번 · 상품 값 +' + Math.round((C.orderMult(state) - 1) * 100) + '%');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setMile(rows.stall, state.stalls, q2, sc <= state.supplies);
@@ -7949,6 +8070,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
+          break;
+        case 'order':
+          toast('단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          break;
+        case 'order-gone':
+          log('단골이 기다리다 돌아갔다.', '');
           break;
         case 'achievement':
           if (achMany) break;
@@ -8287,6 +8414,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.2";
     wireNotify();
     wireMultiTouch();
     wirePerkReroll();
+    wireOrder();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');
