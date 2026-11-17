@@ -299,7 +299,7 @@ test('사격: 변이체는 여러 발을 맞아야 쓰러지고, 철갑 무리�
     if (boss && !after) { shotsAtBoss++; fell = true; }
   }
   assert.equal(fell, true);
-  assert.equal(shotsAtBoss, S.BOSS_HP);
+  assert.equal(shotsAtBoss, S.BOSS_HP / 2);   // 무기가 감시탑 하나뿐이면 늘 주 무기다: 저격 한 발이 두 발 몫을 한다(0.8.0)
   const plated = S.create(256);
   S.step(plated, { ...dusk, horde: 'plated' }, 0.1, rng);
   assert.equal(plated.zombies[0].hp, 2);
@@ -580,21 +580,40 @@ test('거점 건물: 벽돌 단계부터는 외벽을 그리고, 3구역을 열�
   assert.doesNotThrow(() => count({ ...day, buildings: { scouts: 1 } }));   // 야영지 단계: 외벽 없음
 });
 
-test('밤마다 주 무기가 바뀐다: 그날의 주 무기가 가장 많이 쏘고, 다른 무기도 가끔 쏜다', () => {
-  const armed = S.WEAPONS.slice(0, 3);
-  assert.deepEqual([0, 1, 2, 3, 4].map(d => S.leadWeapon(armed, d).id), ['tower', 'turret', 'flame', 'tower', 'turret']);
+test('밤마다 주 무기가 바뀐다: 같은 날은 같은 무기, 이틀 연속 같은 무기는 없고, 많이 산 무기가 더 자주 나온다', () => {
+  const armed = S.WEAPONS.slice(0, 3), ids = [];
+  for (let d = 0; d < 300; d++) ids.push(S.leadWeapon(armed, d).id);
+  for (let d = 1; d < 300; d++) assert.notEqual(ids[d], ids[d - 1], d + '일째');
+  assert.deepEqual([...new Set(ids)].sort(), ['flame', 'tower', 'turret']);
+  assert.equal(S.leadWeapon(armed, 42).id, S.leadWeapon(armed, 42).id);
   assert.equal(S.leadWeapon([], 3), null);
   assert.equal(S.leadWeapon(null, 3), null);
-  for (const bad of [NaN, undefined, -2, 'x', Infinity]) assert.equal(S.leadWeapon(armed, bad).id, 'tower');
-  // 실제 싸움: 날짜가 다르면 가장 많이 나온 탄의 종류가 달라진다
-  const kinds = (dayNo) => {
-    const m = S.create(256), seen = {}, view = { ...dusk, t: 0.9, battle: true, day: dayNo, def: { turret: 1, flame: 1, emp: 1 } };
-    let last = null;
-    for (let i = 0; i < 1200; i++) { S.step(m, view, 0.1, rng); const sh = m.shots[m.shots.length - 1]; if (sh && sh !== last) { last = sh; seen[sh.kind] = (seen[sh.kind] || 0) + 1; } }
-    return seen;
+  for (const bad of [NaN, undefined, -2, 'x', Infinity]) assert.equal(S.leadWeapon(armed, bad).id, S.leadWeapon(armed, 0).id);
+  assert.equal(S.leadWeapon(armed.slice(0, 1), 9).id, 'tower');
+  assert.deepEqual([0, -1, NaN, 1, 9, 10, 100, 1e9].map(S.leadWeight), [1, 1, 1, 1, 1, 2, 3, 4]);
+  const share = (def) => { let n = 0; for (let d = 0; d < 400; d++) if (S.leadWeapon(armed, d, def).id === 'flame') n++; return n; };
+  assert.ok(share({ tower: 1, turret: 1, flame: 5000 }) > share({ tower: 1, turret: 1, flame: 1 }));
+});
+
+test('주 무기는 저마다 다르게 쏜다: 화염과 레일건은 여럿을 한꺼번에, 포탑은 세 줄기, 탄 줄기 수에는 상한이 있다', () => {
+  const dayOf = (id, def) => { const armed = S.WEAPONS.filter(w => def[w.id] > 0); for (let d = 0; d < 50; d++) if (S.leadWeapon(armed, d, def).id === id) return d; assert.fail(id); };
+  const fight = (id, def) => {
+    const m = S.create(256), view = { ...dusk, t: 0.9, battle: true, safe: true, day: dayOf(id, def), def };
+    let most = 0, kinds = {};
+    for (let i = 0; i < 1500; i++) { S.step(m, view, 0.1, rng); most = Math.max(most, m.shots.length); m.shots.forEach(sh => { kinds[sh.kind] = 1; }); assert.ok(m.shots.length <= S.SHOT_MAX); }
+    return { most, kinds: Object.keys(kinds) };
   };
-  const top = (o) => Object.keys(o).sort((a, b) => o[b] - o[a])[0];
-  const a = kinds(0), b = kinds(1);
-  assert.notEqual(top(a), top(b));
-  assert.ok(Object.keys(b).length >= 2, '주 무기만 쏘지는 않는다: ' + JSON.stringify(b));
+  assert.ok(fight('turret', { turret: 5 }).most >= 3);
+  assert.deepEqual(fight('rail', { rail: 2 }).kinds, ['beam']);
+  assert.deepEqual(fight('flame', { flame: 2 }).kinds, ['flame']);
+  assert.deepEqual(fight('emp', { emp: 2 }).kinds, ['arc']);
+  assert.deepEqual(fight('tower', { tower: 2 }).kinds, ['bullet']);
+});
+
+test('주 무기를 그릴 때 오류가 없다: 무기마다, 낮과 싸움 중, 방어 수단이 없을 때', () => {
+  for (const id of ['tower', 'turret', 'flame', 'emp', 'rail']) for (const battle of [false, true]) {
+    const ctx = recorder(), m = S.create(195);
+    assert.doesNotThrow(() => S.draw(ctx, m, { ...full, t: battle ? 0.9 : 0.3, battle, def: { [id]: 3 } }), id);
+  }
+  assert.doesNotThrow(() => S.draw(recorder(), S.create(195), { ...full, def: null }));
 });
