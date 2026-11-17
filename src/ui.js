@@ -1138,6 +1138,11 @@
         var r = C.runProject(state, state.offers[slot]);
         if (!r.ok) return;
         if (r.gain) popNumber('+' + fmt(r.gain));
+        if (r.record) {      // 병원 서류를 찾았다
+          toast((r.record.first ? '새 서류 · ' : '서류 · ') + r.record.name);
+          log('과제를 끝내다 ' + r.record.name + (C.hasBatchim(r.record.name) ? '을' : '를') + ' 찾았다.' + (r.record.first ? ' 도감에 적었다.' : ''), 'good');
+          sfx(r.record.first ? 'goal' : 'staff');
+        }
         sfx('buy'); Store.save(); render();
       });
       rows.offers.push({ btn: b, name: name, desc: desc, cost: cost }); $('lab-offers').appendChild(b);
@@ -1310,17 +1315,18 @@
    * 도감 화면: 강아지 / 고양이 / 좀비 / 방어 수단 네 탭. 카드의 글은 한 줄에 들어가게 짧게 쓴다.
    *   아직 만나지 못한 것은 회색 그림자와 '???' 로 보이고, 어디서 만날 수 있는지만 알려 준다.
    */
+  var DOC_PIX = ['.pppppp..', '.ppppppp.', '.pllllpp.', '.ppppppp.', '.plllllp.', '.ppppppp.', '.pllllpp.', '.ppppppp.', '.ppppkkp.', '.ppppppp.'];      // 서류의 모습(종이 p, 글줄 l, 도장 k)
   var CAR_PIX = ['..........', '.cccccccc.', '.cwccccwc.', '.cccccccc.', '.cccccccc.', 'dddddddddd', '.kk....kk.', '.kk....kk.'];      // 화물칸의 모습(몸통 c, 창 w, 받침 d, 바퀴 k)
   var REG_PIX = ['..hhh...', '.hhhhh..', '.hsssh..', '..sss...', '.ccccc..', 'scccccs.', '.ccccc..', '.ccccc..', '.dd.dd..', '.dd.dd..'];      // 단골의 모습(머리 h, 살 s, 옷 c, 바지 d)
   function renderDex() {
     if (dexTab === 'pet') dexTab = 'dog';
-    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + JSON.stringify(state.records) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
     function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
-    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['cargo', '화물 ' + C.cargoCount(state) + '/' + C.CARGOS.length], ['wall', '방어 수단']].forEach(function (t) {
+    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['cargo', '화물 ' + C.cargoCount(state) + '/' + C.CARGOS.length], ['record', '서류 ' + C.recordCount(state) + '/' + C.RECORDS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
@@ -1353,6 +1359,14 @@
         var rname = C.ZOMBIE_RARITIES[z.rarity];
         if (!n) { card(pixSvg(rows, pal, z.big ? 'big' : ''), '???', rname, z.zone > state.zone ? (z.zone + 1) + '구역을 열면 나와요.' : z.boss ? '변이체가 오는 밤에 나와요.' : '밤을 넘기다 보면 만나요.', true, 'z-' + z.rarity); return; }
         card(pixSvg(rows, pal, z.big ? 'big' : ''), z.name, rname + ' · 만난 밤 ' + fmt(n), z.text, false, 'z-' + z.rarity);
+      });
+    } else if (dexTab === 'record') {
+      // 서류: 5구역에서 과제를 끝내다 찾은 병원 서류들
+      C.RECORDS.forEach(function (r) {
+        var n = state.records[r.id] || 0;
+        var pal = n ? { p: r.color, l: '#8a8a82', k: '#17180f' } : { p: '#4a4b40', l: '#4a4b40', k: '#4a4b40' };
+        if (!n) { card(pixSvg(DOC_PIX, pal), '???', '아직 못 찾았어요', '5구역에서 과제를 끝내다 보면 나와요.', true); return; }
+        card(pixSvg(DOC_PIX, pal), r.name, '찾은 수 ' + fmt(n) + '장', r.text, false);
       });
     } else if (dexTab === 'cargo') {
       // 화물: 4구역에서 끌어온 표류 화물칸들
@@ -1915,6 +1929,7 @@
       rr.disabled = !(rc <= state.points) || !state.offers.length;
       setText(rr, '다른 과제 보기 · 점수 ' + fmt(rc));
       var doneList = C.PROJECTS.filter(function (p) { return state.research[p.id] > 0 && p.key !== 'drop'; }).map(function (p) { return p.name + ' ' + state.research[p.id]; });
+      setText($('lab-record'), '서류 ' + C.recordCount(state) + ' / ' + C.RECORDS.length + ' · 이번 회차 ' + state.recordsRun + '장 · 연구 속도 +' + Math.round((C.recordMult(state) - 1) * 100) + '%');
       setText($('lab-done'), '끝낸 과제 ' + state.projectsDone + '개' + (doneList.length ? ' · ' + doneList.join(', ') : '') + ' · 과제를 끝낼수록 다음 과제가 비싸져요');
       var sq = qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff), scost = C.staffCost(state, sq);
       setText(rows.staff.count, state.staff + ' / ' + C.COUNT_MAX);

@@ -2112,3 +2112,23 @@ test('표류 화물: 4구역에서만 발견되고, 열차가 싣고 온 값이 
   const bad = C.sanitizeState({ version: 2, salvage: { who: '없는칸', need: 5, left: 5 }, cargos: { fuel: -2, 가짜: 3 }, salvagesRun: 'x' }, 0);
   assert.equal(bad.salvage, null); assert.equal(bad.cargos.fuel, undefined); assert.equal(bad.salvagesRun, 0);
 });
+
+test('병원 서류: 과제를 끝낼 때 가끔 한 장을 찾고, 간식·도감·연구 속도를 얻는다', () => {
+  const s = inLab(); s.staff = 10; s.points = 1e12; s.offers = ['soil', 'serum', 'drop'];
+  const rate = C.researchRate(s), treats = s.treats;
+  // 주사위가 낮으면(0.1 < 0.35) 찾는다
+  const r = C.runProject(s, 'soil', () => 0.1);
+  assert.ok(r.ok && r.record && r.record.first);
+  assert.equal(s.records[r.record.id], 1); assert.equal(C.recordCount(s), 1); assert.equal(s.recordsRun, 1);
+  assert.equal(s.treats, treats + C.RECORD_TREATS);
+  near(C.researchRate(s), rate * (1 + C.RECORD_BONUS));
+  // 주사위가 높으면 못 찾는다
+  s.offers = ['soil', 'serum', 'drop'];
+  const r2 = C.runProject(s, 'soil', () => 0.9);
+  assert.ok(r2.ok); assert.equal(r2.record, null); assert.equal(s.recordsRun, 1);
+  s.recordsRun = 1000; near(C.recordMult(s), 1 + C.RECORD_BONUS_MAX);
+  s.runEarned = 1e9; const back = C.retreat(s, 1).state;
+  assert.equal(back.records[r.record.id], 1); assert.equal(back.recordsRun, 0);
+  const bad = C.sanitizeState({ version: 2, records: { desk: -1, 가짜: 2 }, recordsRun: 'x' }, 0);
+  assert.equal(bad.records.desk, undefined); assert.equal(bad.records['가짜'], undefined); assert.equal(bad.recordsRun, 0);
+});

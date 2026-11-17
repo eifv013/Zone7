@@ -541,6 +541,7 @@
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      records: {}, recordsRun: 0,      // 5구역 병원 서류: 종류마다 찾은 수(철수해도 남는다), 이번 회차에 찾은 수
       cargos: {}, salvage: null, salvageIn: 150, salvagesRun: 0,      // 4구역 표류 화물: 종류마다 끌어온 수(철수해도 남는다), 지금 발견된 화물, 다음 발견까지(초), 이번 회차에 끌어온 수
       clients: {}, contract: null, contractIn: 120, contractsRun: 0,      // 3구역 거래처: 종류마다 채운 의뢰 수(철수해도 남는다), 지금 온 의뢰, 다음 의뢰까지(초), 이번 회차에 채운 수
       regulars: {}, order: null, orderIn: 120, ordersRun: 0,      // 단골: 종류마다 채운 주문 수(철수해도 남는다), 지금 온 주문, 다음 주문까지(초), 이번 회차에 채운 수
@@ -649,6 +650,9 @@
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
     ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
+    var rd = raw.records && typeof raw.records === 'object' ? raw.records : {};
+    RECORDS.forEach(function (r) { var n = clamp(safeCount(rd[r.id]), 0, 1e9); if (n > 0) s.records[r.id] = n; });
+    s.recordsRun = clamp(safeCount(raw.recordsRun), 0, 1e6);
     var rg = raw.cargos && typeof raw.cargos === 'object' ? raw.cargos : {};
     CARGOS.forEach(function (c) { var n = clamp(safeCount(rg[c.id]), 0, 1e9); if (n > 0) s.cargos[c.id] = n; });
     s.salvagesRun = clamp(safeCount(raw.salvagesRun), 0, 1e6);
@@ -1302,7 +1306,39 @@
     return pay(state, staffCost(state, qty), function () { state.staff += qty; });
   }
   /** 초당 모이는 연구 점수. 연구원 수가 10·25·50…명에 닿을 때마다 2배(시설과 같다). */
-  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab : 0; }
+  /*
+   * 병원 서류(1.1.3, 5구역): 과제를 끝낼 때 RECORD_CHANCE 의 확률로 병원에 남아 있던 서류 한 장을 찾는다.
+   *   찾으면 간식을 받고, 그 서류가 도감에 적힌다(철수해도 남는다). 이번 회차에 찾은 한 장마다 연구 속도가 RECORD_BONUS 씩 오른다(RECORD_BONUS_MAX 까지).
+   *   다른 구역의 주문·의뢰·화물과 달리 시간 제한이 없다: 이 구역의 할 일은 과제를 고르는 것이고, 서류는 그 덤이다.
+   */
+  var RECORDS = [
+    { id: 'desk',    name: '접수 대장',     color: '#e6d8c0', text: '마지막 줄은 이름 없이 시각만 있어요.' },
+    { id: 'temp',    name: '체온 기록지',   color: '#cfe0ea', text: '두 시간마다 빠짐없이 적혀 있어요.' },
+    { id: 'duty',    name: '야간 당직표',   color: '#c9a04a', text: '같은 이름이 나흘 연속 적혀 있어요.' },
+    { id: 'stock',   name: '약품 수불부',   color: '#e6e5db', text: '나간 것만 있고 들어온 것은 없어요.' },
+    { id: 'visit',   name: '면회 명부',     color: '#d8c8a8', text: '어느 날부터 줄이 그어져 있어요.' },
+    { id: 'label',   name: '검체 라벨',     color: '#f0b400', text: '번호만 있고 이름이 없어요.' },
+    { id: 'menu',    name: '식단표',        color: '#a8c89a', text: '금요일 칸에 동그라미가 쳐져 있어요.' },
+    { id: 'beds',    name: '병상 배치도',   color: '#b8c8d8', text: '한 층이 통째로 빗금이에요.' },
+    { id: 'handoff', name: '인계장',        color: '#d8d8d0', text: '"다음 근무자에게"로 시작해요.' },
+    { id: 'clean',   name: '소독 일지',     color: '#c8d8c8', text: '끝까지 서명이 있어요.' },
+    { id: 'call',    name: '호출 기록',     color: '#e0b8a8', text: '같은 호실이 밤새 눌렸어요.' },
+    { id: 'leave',   name: '퇴원 서류',     color: '#e8e0c8', text: '도장만 찍히고 비어 있어요.' }
+  ];
+  var RECORD_CHANCE = 0.35, RECORD_BONUS = 0.01, RECORD_BONUS_MAX = 0.5, RECORD_TREATS = 2;
+  function recordMult(state) { return 1 + Math.min(RECORD_BONUS_MAX, (state.recordsRun || 0) * RECORD_BONUS); }
+  function recordCount(state) { var n = 0; RECORDS.forEach(function (r) { if (state.records[r.id] > 0) n++; }); return n; }
+  /** 과제를 끝낸 뒤 부른다. 서류를 찾았으면 { id, name, first } 를, 못 찾았으면 null 을 돌려준다. */
+  function findRecord(state, rng) {
+    rng = typeof rng === 'function' ? rng : Math.random;
+    if (!(rng() < RECORD_CHANCE)) return null;
+    var who = RECORDS[Math.floor(rng() * RECORDS.length) % RECORDS.length], first = !(state.records[who.id] > 0);
+    state.records[who.id] = Math.min(1e9, (state.records[who.id] || 0) + 1);
+    state.recordsRun = (state.recordsRun || 0) + 1;
+    state.treats = Math.min(1e9, state.treats + RECORD_TREATS);
+    return { id: who.id, name: who.name, first: first };
+  }
+  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab * recordMult(state) : 0; }
   /** 지금 과제 하나를 끝내는 데 드는 점수. 어느 과제를 고르든 같다. */
   function projectCost(state) { return Math.ceil(PROJECT_BASE * Math.pow(PROJECT_GROWTH, state.projectsDone) * mods(state).labcost); }
   function rerollCost(state) { return Math.ceil(projectCost(state) * REROLL_SHARE); }
@@ -1330,7 +1366,8 @@
     state.research[id]++;
     state.projectsDone++;
     state.offers = drawOffers(rng);
-    return { ok: true, id: id, name: def.name, level: state.research[id], cost: cost, gain: gain };
+    var record = findRecord(state, rng);      // 병원 서류: 과제를 끝낼 때 가끔 한 장을 찾는다
+    return { ok: true, id: id, name: def.name, level: state.research[id], cost: cost, gain: gain, record: record };
   }
   /** 점수를 조금 내고 과제 셋을 다시 뽑는다. */
   function rerollOffers(state, rng) {
@@ -1864,7 +1901,7 @@
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos;
+    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos; next.records = state.records;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -2339,7 +2376,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
