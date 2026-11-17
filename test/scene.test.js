@@ -534,3 +534,67 @@ test('사격은 무리가 도착한 뒤에만 한다: 해 질 녘에는 다가�
   for (let i = 0; i < 100; i++) { S.step(before, { ...armed, battle: true }, 0.1, rng); n = tally(before); } // 방어 10초
   assert.ok(n >= 3, '방어 구간에는 쓰러진다: ' + n);
 });
+
+/* ---------- 알파 0.7.9: 좀비의 종류, 외벽이 있는 건물 ---------- */
+test('좀비 종류: 비율의 합은 100, 주사위 값에 따라 네 종류가 나오고 잘못된 값은 평범한 것', () => {
+  const ids = Object.keys(S.ZOMBIE_TYPES);
+  assert.deepEqual(ids.sort(), ['brute', 'hair', 'runner', 'walker']);
+  assert.equal(ids.reduce((a, id) => a + S.ZOMBIE_TYPES[id].weight, 0), 100);
+  assert.equal(S.zombieType(0), 'walker');
+  assert.equal(S.zombieType(0.5), 'hair');
+  assert.equal(S.zombieType(0.7), 'runner');
+  assert.equal(S.zombieType(0.99), 'brute');
+  for (const bad of [-1, 1, 7, NaN, undefined, null, 'x']) assert.equal(S.zombieType(bad), 'walker');
+});
+
+test('좀비 그림: 종류마다 두 장씩 있고 줄 길이가 고르다, 모르는 종류는 평범한 그림', () => {
+  for (const id of Object.keys(S.ZOMBIE_TYPES)) {
+    const frames = S.zombieFrames(id);
+    assert.equal(frames.length, 2, id);
+    for (const f of frames) { assert.equal(f.length, frames[0].length, id); for (const row of f) assert.equal(row.length, f[0].length, id + ': ' + row); }
+  }
+  assert.equal(S.zombieFrames('nothing'), S.zombieFrames('walker'));
+  assert.equal(S.zombieFrames('constructor'), S.zombieFrames('walker'));
+  assert.ok(S.zombieFrames('brute')[0].length > S.zombieFrames('walker')[0].length, '덩치는 키가 더 크다');
+});
+
+test('무리에 여러 종류가 섞여 오고, 뛰는 것은 빠르고 덩치는 한 발을 더 버틴다. 기어 오는 것은 없다', () => {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const m = S.create(256), seen = {};
+  for (let i = 0; i < 1500; i++) { S.step(m, dusk, 0.1, rnd); m.zombies.forEach(z => { seen[z.type] = z; assert.equal(z.crawl, undefined); }); if (i % 100 === 99) m.zombies.length = 0; }
+  assert.deepEqual(Object.keys(seen).sort(), ['brute', 'hair', 'runner', 'walker']);
+  assert.ok(seen.brute.hp > seen.walker.hp);
+});
+
+test('거점 건물: 벽돌 단계부터는 외벽을 그리고, 3구역을 열면 한 층이 더 올라간다(그릴 때 오류가 없다)', () => {
+  // 올린 층의 벽은 방 위쪽 끝(roomSlot 의 y)에서 4칸 위에, 건물 폭 + 3칸으로 그려진다
+  const count = (view) => {
+    const ctx = recorder(), m = S.create(195), slot = S.roomSlot(m, 'radio'); S.draw(ctx, m, view);
+    return ctx.calls.filter(c => c.y === slot.y - 4 && c.h === 4 && c.w === slot.w * 5 + 3).length;
+  };
+  const base = { ...day, buildings: { scouts: 60, garden: 40 } };
+  assert.equal(count({ ...base, zone: 0 }), 0);
+  assert.equal(count({ ...base, zone: 2 }), 1);
+  assert.equal(count({ ...day, buildings: { scouts: 12 }, zone: 2 }), 0, '판잣집 단계에서는 올리지 않는다');
+  for (const zone of [undefined, NaN, -1, 99]) assert.doesNotThrow(() => count({ ...base, zone }));
+  assert.doesNotThrow(() => count({ ...day, buildings: { scouts: 1 } }));   // 야영지 단계: 외벽 없음
+});
+
+test('밤마다 주 무기가 바뀐다: 그날의 주 무기가 가장 많이 쏘고, 다른 무기도 가끔 쏜다', () => {
+  const armed = S.WEAPONS.slice(0, 3);
+  assert.deepEqual([0, 1, 2, 3, 4].map(d => S.leadWeapon(armed, d).id), ['tower', 'turret', 'flame', 'tower', 'turret']);
+  assert.equal(S.leadWeapon([], 3), null);
+  assert.equal(S.leadWeapon(null, 3), null);
+  for (const bad of [NaN, undefined, -2, 'x', Infinity]) assert.equal(S.leadWeapon(armed, bad).id, 'tower');
+  // 실제 싸움: 날짜가 다르면 가장 많이 나온 탄의 종류가 달라진다
+  const kinds = (dayNo) => {
+    const m = S.create(256), seen = {}, view = { ...dusk, t: 0.9, battle: true, day: dayNo, def: { turret: 1, flame: 1, emp: 1 } };
+    let last = null;
+    for (let i = 0; i < 1200; i++) { S.step(m, view, 0.1, rng); const sh = m.shots[m.shots.length - 1]; if (sh && sh !== last) { last = sh; seen[sh.kind] = (seen[sh.kind] || 0) + 1; } }
+    return seen;
+  };
+  const top = (o) => Object.keys(o).sort((a, b) => o[b] - o[a])[0];
+  const a = kinds(0), b = kinds(1);
+  assert.notEqual(top(a), top(b));
+  assert.ok(Object.keys(b).length >= 2, '주 무기만 쏘지는 않는다: ' + JSON.stringify(b));
+});

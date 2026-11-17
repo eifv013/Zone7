@@ -385,6 +385,12 @@
 
   /* ---------- 작은 DOM 도우미 ---------- */
   /** 값이 바뀐 경우에만 DOM 을 건드려 0.1초 주기 갱신 비용을 줄인다. */
+  /** 진행 바 채우기: el 의 --p 를 0~1 로 둔다. 잘못된 값(NaN, 범위 밖)은 0~1 로 맞춘다. 값이 같으면 건드리지 않는다. */
+  function fill(el, ratio) {
+    if (!el) return;
+    var p = typeof ratio === 'number' && ratio > 0 ? Math.min(1, ratio) : 0, v = p.toFixed(3);
+    if (el._p !== v) { el._p = v; el.style.setProperty('--p', v); }
+  }
   function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -918,7 +924,7 @@
     setText($('retreat-count'), state.retreats ? state.retreats + '번 철수함' : '');
     if (!rb.dataset.armed) setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
     setText($('retreat-hint'), can
-      ? '거점을 전부 버리고 1구역에서 다시 시작해요. 물자·시설·방벽·강화·특전은 사라지고, 항체 샘플과 영구 특성은 남아요. 더 모을수록 샘플도 많아져요.'
+      ? '거점을 전부 버리고 1구역에서 다시 시작해요. 물자·시설·방벽·개조·특전은 사라지고, 항체 샘플과 영구 특성은 남아요. 더 모을수록 샘플도 많아져요.'
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에서 물자 ' + fmt(C.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요(지금 ' + fmt(state.runEarned) + '). 철수하면 항체 샘플을 얻고, 그걸로 영구 특성을 찍어요.');
 
     renderZone(m);
@@ -1004,6 +1010,7 @@
       });
       setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
       setText($('search-note'), (state.sweeps + 1) + '번째 동네' + (C.totalBuildings(state) ? ' · 수색조가 ' + C.SWEEP_AUTO_SECONDS + '초마다 한 칸' : ' · 칸을 눌러 뒤져요'));
+      fill($('search-bar'), C.totalBuildings(state) ? state.sweepClock / C.SWEEP_AUTO_SECONDS : 0);            // 수색조가 다음 칸을 뒤질 때까지
       setText($('search-bonus'), '다 뒤지면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
     }
     if (tab === 'z0' && play) {
@@ -1079,6 +1086,8 @@
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
       sg.className = 'surge' + (sOn ? ' on' : '');
       setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) + (C.assistOn(state) ? ' · 자동' : '') : '전력 투입 ×' + C.SURGE_MULT);
+      // 진행 바: 투입 중에는 남은 시간이 줄어들고, 기다리는 동안은 다음 투입까지 차오른다(단추 바탕을 채운다)
+      fill(sg, sOn ? state.surgeLeft / C.SURGE_SECONDS : state.surgeCool > 0 ? 1 - state.surgeCool / C.surgeCooldown(state) : 0);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies);
@@ -1103,6 +1112,7 @@
       C.ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
       gb.disabled = state.greenCool > 0 || !running;
       setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + (C.assistOn(state) ? ' · 알아서 켜져요' : '') : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
+      fill(gb, state.greenCool > 0 ? 1 - state.greenCool / C.greenCooldown(state) : 0);
       setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
         : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
@@ -1150,7 +1160,7 @@
       if ('z' + u.zone !== tab) return;
       var r = rows.upgrades[u.id], lv = state.upgrades[u.id], cost = C.upgradeCost(state, u.id);
       setText(r.count, 'Lv ' + lv + ' / ' + u.max);
-      setText(r.info, '강화');
+      setText(r.info, '개조');
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');
       r.btn.disabled = !(cost <= state.supplies);
       r.btn.classList.toggle('row-owned', lv >= u.max);

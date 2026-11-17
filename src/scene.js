@@ -160,6 +160,23 @@
   }
 
   /** 해 질 녘에 좀비를 화면 오른쪽에서 하나씩 들여보내 방벽 앞까지 걷게 한다. */
+  /*
+   * 좀비의 종류(그림 전용). 한 무리 안에 섞여 나와서 같은 그림이 줄지어 오는 것처럼 보이지 않게 한다.
+   *   speed : 걷는 속도 배수,  hp : 더 버티는 발 수,  weight : 100 가운데 나오는 비율
+   *   walker 평범한 것, hair 머리가 긴 것, runner 몸을 숙이고 뛰는 것, brute 덩치 큰 것
+   */
+  var ZOMBIE_TYPES = {
+    walker: { speed: 1,   hp: 0, weight: 46 },
+    hair:   { speed: 0.9, hp: 0, weight: 22 },
+    runner: { speed: 1.7, hp: 0, weight: 18 },
+    brute:  { speed: 0.7, hp: 1, weight: 14 }
+  };
+  /** 0 이상 1 미만의 수로 종류를 고른다. 잘못된 값이면 평범한 것. */
+  function zombieType(r) {
+    var roll = (typeof r === 'number' && r >= 0 && r < 1 ? r : 0) * 100, acc = 0;
+    for (var id in ZOMBIE_TYPES) if (Object.prototype.hasOwnProperty.call(ZOMBIE_TYPES, id)) { acc += ZOMBIE_TYPES[id].weight; if (roll < acc) return id; }
+    return 'walker';
+  }
   function stepZombies(model, view, dt, rng) {
     var dusk = view.t >= DUSK;
     if (!dusk) { if (view.t < 0.1) model.zombies.length = 0; return; }
@@ -171,15 +188,19 @@
     if (model.zombies.length < want && model.spawn <= 0) {
       var big = !!view.boss && !model.zombies.some(function (z) { return z.big; });
       model.zombies.push({ x: model.W + 4 + rng() * 12, speed: (9 + rng() * 6) * kind.speed, big: big, look: Math.floor(rng() * 3) % 3,
-        // 다섯에 하나는 기어서 온다. 변이체는 여러 발을 맞아야 쓰러진다
-        crawl: !big && rng() < 0.2, hp: big ? BOSS_HP : (kind.hp || 1), stop: 0, phase: rng() * 6 });
+        // 생김새와 걸음이 다른 네 종류가 섞여 온다(zombieType). 덩치는 한 발을 더 버틴다. 변이체는 여러 발을 맞아야 쓰러진다
+        type: 'walker', hp: big ? BOSS_HP : (kind.hp || 1), stop: 0, phase: 0 });
+      var nz = model.zombies[model.zombies.length - 1];
+      nz.type = big ? 'walker' : zombieType(rng());
+      nz.speed *= ZOMBIE_TYPES[nz.type].speed; if (!big) nz.hp += ZOMBIE_TYPES[nz.type].hp;
+      nz.phase = rng() * 6;
       model.spawn = (0.5 + rng() * 0.9) / (view.surge ? 2.5 : 1) / kind.speed;
     }
     // 쓰러진 자리는 뒤에서 채운다: 방벽에 가까운 순서대로 멈출 자리를 다시 매긴다
     model.zombies.sort(function (a, b) { return a.x - b.x; });
     model.zombies.forEach(function (z, i) {
       z.stop = model.wall + 6 + i * gap;
-      if (z.x > z.stop) z.x = Math.max(z.stop, z.x - z.speed * (z.crawl ? 0.6 : 1) * dt);
+      if (z.x > z.stop) z.x = Math.max(z.stop, z.x - z.speed * dt);
     });
   }
 
@@ -202,9 +223,15 @@
   var CORPSE_MAX = 24;      // 화면에 남기는 시체 수의 상한
   /** 쓰러진 좀비를 시체 목록으로 옮긴다(상한을 넘으면 가장 오래된 것부터 지운다). */
   function fell(model, z, death, rng) {
-    model.corpses.push({ x: z.x, big: !!z.big, look: z.look || 0, crawl: !!z.crawl, death: death, life: CORPSE_TIME, total: CORPSE_TIME });
+    model.corpses.push({ x: z.x, big: !!z.big, look: z.look || 0, type: z.type || 'walker', death: death, life: CORPSE_TIME, total: CORPSE_TIME });
     if (model.corpses.length > CORPSE_MAX) model.corpses.shift();
     burst(model, z.x + 3, GROUND - 7, death === 'burn' ? '#e0602b' : death === 'zap' ? '#7fe0f0' : '#7da35a', death === 'blast' ? 14 : z.big ? 12 : 5, rng);
+  }
+  /** 그날 밤의 주 무기: 가진 무기 가운데 날짜에 따라 하나씩 돌아가며 고른다. 무기가 없으면 null, 날짜가 잘못되면 첫 무기. */
+  function leadWeapon(armed, day) {
+    if (!armed || !armed.length) return null;
+    var d = typeof day === 'number' && isFinite(day) && day > 0 ? Math.floor(day) : 0;
+    return armed[d % armed.length];
   }
   function stepCombat(model, view, dt, rng) {
     var i;
@@ -226,15 +253,18 @@
     if (model.fire > 0) return;
     // 무기 종류가 많을수록 자주 쏜다. 못 막는 밤에는 쓰러뜨리는 속도가 무리를 따라가지 못한다
     model.fire = Math.max(0.3, 1.5 / armed.length) * (view.safe ? 1 : 2.6);
-    var w = armed[model.turn++ % armed.length];
-    var target = null;
-    for (i = 0; i < model.zombies.length && !target; i++) {
-      var z = model.zombies[i];
-      if (z.x < model.W - 6 && (!w.reach || z.x <= model.wall + w.reach)) target = z;
+    // 밤마다 주역이 바뀐다: 그날의 주 무기가 네 발 가운데 세 발을 쏘고, 나머지 한 발은 다른 무기들이 돌아가며 쏜다
+    var turn = model.turn++, lead = leadWeapon(armed, view.day);
+    var w = turn % 4 === 3 ? armed[Math.floor(turn / 4) % armed.length] : lead;
+    function aim(wp) {      // 그 무기의 사거리 안에 든 맨 앞의 좀비
+      for (var k = 0; k < model.zombies.length; k++) { var z = model.zombies[k]; if (z.x < model.W - 6 && (!wp.reach || z.x <= model.wall + wp.reach)) return z; }
+      return null;
     }
+    var target = aim(w);
+    if (!target && w !== lead) { w = lead; target = aim(w); }      // 거들 무기의 사거리 밖이면 주 무기가 대신 쏜다
     if (!target) return;
     var from = w.from(model);
-    model.shots.push({ kind: w.shot, x0: from[0], y0: from[1], x1: target.x + 3, y1: GROUND - (target.crawl ? 3 : 7), life: w.shot === 'beam' ? 0.22 : 0.12 });
+    model.shots.push({ kind: w.shot, x0: from[0], y0: from[1], x1: target.x + 3, y1: GROUND - 7, life: w.shot === 'beam' ? 0.22 : 0.12 });
     target.hp -= w.id === 'rail' ? 4 : 1;
     if (target.hp <= 0) {
       model.zombies.splice(model.zombies.indexOf(target), 1);
@@ -332,6 +362,23 @@
     ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.ccccgg.', '.cccc...', '.cccc...', '.cccc...', '.dd.dd..', '.dd.dd..', '.dd.dd..'],
     ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.cccc...', '.ccccgg.', '.cccc...', '.cccc...', '..ddd...', '.dd.dd..', 'dd...dd.']
   ];
+  // 머리가 긴 것: 머리카락(h)이 얼굴 옆으로 내려온다
+  var ZOMBIE_HAIR = ZOMBIE.map(function (f) { return ['..hhh...', '.hhhhh..', '.hxgxh..', '.hggg...'].concat(f.slice(4)); });
+  // 뛰는 것: 몸을 앞으로 숙이고 팔을 뒤로 뻗는다. 보폭이 크다
+  var ZOMBIE_RUN = [
+    ['...ggg..', '..ggggg.', '..gxgxg.', '...ggg..', '.gcccc..', '..cccc..', '..ccc...', '..ccc...', '.dd.dd..', 'dd...d..', 'd....dd.'],
+    ['...ggg..', '..ggggg.', '..gxgxg.', '...ggg..', '..ccccg.', '..cccc..', '..ccc...', '..ccc...', '..ddd...', '..dd....', '..d.d...']
+  ];
+  // 덩치: 어깨가 넓고 키가 두 칸 크다(10×13)
+  var ZOMBIE_BRUTE = [
+    ['...gggg...', '..gggggg..', '..gxggxg..', '..gggggg..', '.cccccccc.', 'gccccccccg', 'gccccccccg', 'g.cccccc.g', '..cccccc..', '..cccccc..', '..ddd.ddd.', '..dd...dd.', '.ddd...ddd'],
+    ['...gggg...', '..gggggg..', '..gxggxg..', '..gggggg..', '.cccccccc.', 'gccccccccg', 'gccccccccg', '.gcccccc.g', '..cccccc..', '..cccccc..', '..ddd.ddd.', '...dd.dd..', '..ddd.ddd.']
+  ];
+  var ZOMBIE_FRAMES = { walker: ZOMBIE, hair: ZOMBIE_HAIR, runner: ZOMBIE_RUN, brute: ZOMBIE_BRUTE };
+  /** 종류의 그림 두 장. 모르는 종류면 평범한 것. */
+  function zombieFrames(type) { return Object.prototype.hasOwnProperty.call(ZOMBIE_FRAMES, type) ? ZOMBIE_FRAMES[type] : ZOMBIE; }
+  // 쓰러진 것: 서 있는 그림을 눕혀 쓰지 않고, 바닥에 무너진 더미를 따로 그린다(머리가 방벽 반대쪽)
+  var ZOMBIE_DOWN = ['...cc.gg', '.ddcccgg', 'dddccccg'];
   // 원정대원: 주인공과 같은 몸에 회색 옷(주인공의 노란 우비와 구별된다)
   var SQUAD_TOP = HERO_TOP.map(function (row) { return row.replace(/j/g, 'c').replace(/k/g, 'd'); });
   // 좀비 옷 색 세 가지(같은 무리가 복제된 것처럼 보이지 않게). 각 항목은 PAL 의 일부만 바꾼다.
@@ -682,25 +729,59 @@
       px(c('#57554d', '#17160f'), BASE_X - 2, GROUND - 1, W5 + 5, 1);                                              // 기초
     } else { px(frame, BASE_X, top, 1, GROUND - top); px(frame, right, top, 1, GROUND - top); }                    // 야영지: 기둥뿐
 
+    /* --- 외벽: 방을 통째로 드러내지 않고, 벽에 난 창으로 안이 들여다보이게 한다 --- */
+    if (wallCol) {
+      var trim = c('#4a4034', '#14110d'), board = c('#6b4a2b', '#1f160e'), shade = lerpColor(wallCol, '#17180f', 0.18);
+      ROOMS.forEach(function (row, ri) {
+        row.forEach(function (id, ci) {
+          var x = BASE_X + ci * rw, y = top + ri * ROOM_H, own = b[id] > 0;
+          px(wallCol, x, y, rw + 1, 2); px(wallCol, x, y + ROOM_H - 2, rw + 1, 2);              // 창 위아래의 벽
+          px(wallCol, x, y, 2, ROOM_H); px(wallCol, x + rw - 1, y, 2, ROOM_H);                  // 창 양옆의 벽
+          px(trim, x + 2, y + ROOM_H - 3, rw - 3, 1);                                           // 창턱
+          px(shade, x + 1, y + ROOM_H - 1, rw - 1, 1);                                          // 층 사이의 그늘진 줄
+          if (!own) { px(board, x + 2, y + 3, rw - 3, 1); px(board, x + 3, y + 5, rw - 4, 1); } // 빈 방: 판자로 막은 창
+        });
+      });
+      // 1층: 창고 셔터(반쯤 올린 것), 공용실의 큰 창, 현관
+      px(wallCol, BASE_X, floor, W5 + 1, 2);
+      px(wallCol, BASE_X, floor, 2, PILOTI); px(wallCol, BASE_X + rw * 2 - 1, floor, 2, PILOTI); px(wallCol, BASE_X + rw * 4 - 1, floor, 2, PILOTI);
+      for (k = 0; k < 2; k++) px(trim, BASE_X + 2, floor + 2 + k, rw * 2 - 3, 1);              // 말아 올린 셔터
+      px(trim, BASE_X + rw * 2 + 1, GROUND - 3, rw * 2 - 2, 1);                                 // 공용실 창턱
+      px(wallCol, BASE_X + rw * 2 + 1, GROUND - 2, rw * 2 - 2, 2);                              // 창 아래의 벽
+    }
+
+    /* --- 위로 올린 층: 3구역을 열면 창만 있는 층이 하나 더 올라간다.
+     *     폰에서는 화면 위쪽 22칸을 날짜 줄이 가리므로 한 층(4칸)까지만 올린다. 옥상의 탑과 깃발도 그 안에 들어오게 낮게 그린다. --- */
+    var extra = stage >= 3 && view.zone >= 2 ? 1 : 0, FLOOR_H = 4, rt = top - extra * FLOOR_H;
+    for (i = 0; i < extra; i++) {
+      var fy = top - (i + 1) * FLOOR_H;
+      px(wallCol, BASE_X - 1, fy, W5 + 3, FLOOR_H);
+      px(lerpColor(wallCol, '#17180f', 0.18), BASE_X - 1, fy + FLOOR_H - 1, W5 + 3, 1);
+      for (k = 3; k < W5 - 2; k += 6) {
+        var on = night && (k + i * 3) % 4 !== 0;                                                // 밤에는 창 넷에 셋쯤 불이 켜진다
+        px(on ? ['#ffe9a0', '#f3c66a', '#cfe0ea'][(k + i) % 3] : c('#9fb4c4', '#1a2230'), BASE_X + k, fy + 1, 3, 2);
+      }
+    }
+
     /* --- 지붕: 단계마다 모양이 다르다 --- */
-    if (stage === 1) { for (i = 0; i < W5 + 2; i++) px(roof, BASE_X - 1 + i, top - 2 + (Math.floor(i / 4) % 2), 1, 2); }                              // 처진 천막
+    if (stage === 1) { for (i = 0; i < W5 + 2; i++) px(roof, BASE_X - 1 + i, rt - 2 + (Math.floor(i / 4) % 2), 1, 2); }                              // 처진 천막
     if (stage === 2) {                                                                                                                              // 박공 양철 지붕과 굴뚝
-      for (k = 0; k < 4; k++) px(roof, BASE_X - 2 + k * Math.ceil(W5 / 12), top - 1 - k, W5 + 5 - k * 2 * Math.ceil(W5 / 12), 1);
-      for (i = 3; i < W5; i += 5) px(c('#6d7479', '#22262b'), BASE_X + i, top - 1, 1, 1);
-      px(c('#6d2a20', '#22100c'), right - 8, top - 8, 3, 6); if (Math.floor(t * 2) % 2) px(c('#b9b6ac', '#3a3c44'), right - 8 + Math.floor(t) % 2, top - 10, 2, 1);
+      for (k = 0; k < 4; k++) px(roof, BASE_X - 2 + k * Math.ceil(W5 / 12), rt - 1 - k, W5 + 5 - k * 2 * Math.ceil(W5 / 12), 1);
+      for (i = 3; i < W5; i += 5) px(c('#6d7479', '#22262b'), BASE_X + i, rt - 1, 1, 1);
+      px(c('#6d2a20', '#22100c'), right - 8, rt - 8, 3, 6); if (Math.floor(t * 2) % 2) px(c('#b9b6ac', '#3a3c44'), right - 8 + Math.floor(t) % 2, rt - 10, 2, 1);
     }
     if (stage >= 3) {
-      px(roof, BASE_X - 2, top - 2, W5 + 5, 2);                                                                                                     // 평지붕
-      for (i = 0; i <= W5; i += stage >= 4 ? 3 : 4) px(frame, BASE_X + i, top - (stage >= 4 ? 5 : 4), stage >= 4 ? 2 : 1, stage >= 4 ? 3 : 2);      // 난간 / 총안
-      if (stage === 3) px(frame, BASE_X, top - 4, W5 + 1, 1);
-      px('#17180f', BASE_X + 2, top - 11, 1, 9); px(c('#f0b400', '#8a6a08'), BASE_X + 3, top - 11, 4, 3);                                           // 깃발
-      px(c('#3f6f8f', '#162836'), BASE_X + rw * 3 + 2, top - 7, 6, 5); px('#17180f', BASE_X + rw * 3 + 3, top - 2, 1, 1); px('#17180f', BASE_X + rw * 3 + 6, top - 2, 1, 1); // 옥상 물탱크
+      px(roof, BASE_X - 2, rt - 2, W5 + 5, 2);                                                                                                     // 평지붕
+      for (i = 0; i <= W5; i += stage >= 4 ? 3 : 4) px(frame, BASE_X + i, rt - (stage >= 4 ? 5 : 4), stage >= 4 ? 2 : 1, stage >= 4 ? 3 : 2);      // 난간 / 총안
+      if (stage === 3) px(frame, BASE_X, rt - 4, W5 + 1, 1);
+      px('#17180f', BASE_X + 2, rt - 9, 1, 7); px(c('#f0b400', '#8a6a08'), BASE_X + 3, rt - 9, 4, 3);                                           // 깃발
+      px(c('#3f6f8f', '#162836'), BASE_X + rw * 3 + 2, rt - 7, 6, 5); px('#17180f', BASE_X + rw * 3 + 3, rt - 2, 1, 1); px('#17180f', BASE_X + rw * 3 + 6, rt - 2, 1, 1); // 옥상 물탱크
     }
-    if (stage >= 4) { px('#30343c', right - 5, top - 8, 4, 3); if (night) for (i = 0; i < 9; i++) { px('rgba(240,220,150,' + (0.10 - i * 0.01).toFixed(2) + ')', right - 1 + i * 2, top - 8 + i, 2, 3 + Math.floor(i / 2)); } } // 탐조등
+    if (stage >= 4) { px('#30343c', right - 5, rt - 8, 4, 3); if (night) for (i = 0; i < 9; i++) { px('rgba(240,220,150,' + (0.10 - i * 0.01).toFixed(2) + ')', right - 1 + i * 2, rt - 8 + i, 2, 3 + Math.floor(i / 2)); } } // 탐조등
     if (stage >= 5) {
       var mx = BASE_X + Math.floor(W5 / 2);
-      px('#17180f', mx, top - 15, 1, 13); px('#17180f', mx - 1, top - 11, 3, 1); if (Math.floor(t * 2) % 2) px('#e0392b', mx, top - 16, 1, 1);     // 송신탑
-      px(c('#a8261b', '#7a2018'), BASE_X + rw + 1, top - 8, rw + 2, 5); px(night ? '#ffe9a0' : c('#e6e5db', '#8a887c'), BASE_X + rw + 3, top - 6, rw - 2, 1); // 옥상 간판
+      px('#17180f', mx, rt - 7, 1, 5); px('#17180f', mx - 1, rt - 5, 3, 1); if (Math.floor(t * 2) % 2) px('#e0392b', mx, rt - 8, 1, 1);     // 송신탑
+      px(c('#a8261b', '#7a2018'), BASE_X + rw + 1, rt - 8, rw + 2, 5); px(night ? '#ffe9a0' : c('#e6e5db', '#8a887c'), BASE_X + rw + 3, rt - 6, rw - 2, 1); // 옥상 간판
       for (i = 4; i < W5 - 2; i += 5) px(night ? ['#ffe9a0', '#ffb39a', '#9ad0ff'][Math.floor(i / 5) % 3] : c('#c9c2a3', '#4a4738'), BASE_X + i, floor + 1 + (Math.floor(i / 5) % 2), 1, 1); // 줄전등
     }
   }
@@ -721,16 +802,6 @@
   }
 
   // 누운 좀비: 선 그림을 옆으로 눕힌 것(쓰러진 뒤와 기어 오는 좀비에 쓴다)
-  var ZOMBIE_LYING = (function () {
-    var src = ZOMBIE[0], out = [];
-    for (var c = 0; c < src[0].length; c++) {
-      var row = '';
-      for (var r = 0; r < src.length; r++) row += src[r][c];
-      out.push(row);
-    }
-    return out.slice(1, 7); // 빈 가장자리를 잘라 낸 6줄
-  })();
-
   /** 쓰러진 좀비: 죽는 방식에 따라 넘어지거나, 불타거나, 감전되거나, 흔적만 남는다. 끝에는 흐려지며 사라진다. */
   function drawCorpses(ctx, model, view) {
     var t = model.time;
@@ -747,10 +818,15 @@
         } else { ctx.fillStyle = '#2b241c'; ctx.fillRect(x, GROUND - 2, 7 * sc, 2); ctx.fillStyle = '#57554d'; ctx.fillRect(x + 2, GROUND - 3, 3 * sc, 1); }
       } else if (cp.death === 'zap' && k < 0.2) { // 감전: 잠깐 하얗게 굳는다
         sprite(ctx, ZOMBIE[0], x, GROUND - 11 * sc, true, sc, Math.floor(t * 20) % 2 ? { g: '#ffffff', c: '#7fe0f0', d: '#7fe0f0', x: '#17180f' } : look);
-      } else if (!cp.crawl && k < 0.12) {    // 맞은 순간: 뒤로 젖혀진다
-        sprite(ctx, ZOMBIE[1], x + 2, GROUND - 10 * sc, true, sc, look);
-      } else {                               // 바닥에 쓰러져 있다
-        sprite(ctx, ZOMBIE_LYING, x - 1, GROUND - 6 * sc, false, sc, look);
+      } else if (k < 0.1) {                  // 맞은 순간: 뒤로 젖혀진다
+        var fr = zombieFrames(cp.type)[1];
+        sprite(ctx, fr, x + 2, GROUND - (fr.length - 1) * sc, true, sc, look);
+      } else if (k < 0.2) {                  // 무릎이 꺾인다: 같은 그림의 위쪽 절반만 낮게
+        var half = zombieFrames(cp.type)[0].slice(0, 7);
+        sprite(ctx, half, x + 3, GROUND - 7 * sc, true, sc, look);
+      } else {                               // 바닥에 무너져 있다
+        sprite(ctx, ZOMBIE_DOWN, x + 1, GROUND - 3 * sc, false, sc, look);
+        if (cp.type === 'brute') sprite(ctx, ZOMBIE_DOWN, x + 3, GROUND - 4 * sc, false, sc, look);       // 덩치는 더미도 크다
       }
       ctx.globalAlpha = 1;
     });
@@ -965,16 +1041,15 @@
       var moving = z.x > z.stop, sc = z.big ? kind.bossScale : 1;
       // 무리 성격의 색이 먼저, 그 위에 개체마다 다른 옷 색(성격이 옷 색을 정하지 않을 때만)
       var look = kind.look ? Object.assign({}, ZOMBIE_LOOKS[z.look || 0], kind.look) : ZOMBIE_LOOKS[z.look || 0];
-      if (z.crawl) { // 기어 오는 좀비: 누운 그림을 끌면서 온다
-        sprite(ctx, ZOMBIE_LYING, z.x - 2 + (moving && Math.floor(t * 4 + z.phase) % 2 ? 1 : 0), GROUND - 5, false, 1, look);
-        return;
-      }
-      // 빠른 무리는 다리도 빨리 움직인다
-      var frame = ZOMBIE[Math.floor(t * 3 * kind.speed + z.phase) % 2];
+      // 종류마다 그림이 다르다. 빠른 것은 다리도 빨리 움직인다
+      var frames = zombieFrames(z.big ? 'walker' : z.type), pace = z.type === 'runner' ? 7 : z.type === 'brute' ? 2 : 3;
+      var frame = frames[Math.floor(t * pace * kind.speed + z.phase) % 2], tall = frame.length;
       // 방벽 앞에 선 맨 앞줄은, 못 막는 밤이면 방벽을 두드린다(앞뒤로 흔들린다)
       var pound = !moving && !view.safe && zi < 2 && Math.floor(t * 6 + z.phase) % 2 ? -1 : 0;
-      var top = GROUND - 11 * sc - (!moving && Math.floor(t * 5 + z.phase) % 2 ? 1 : 0);
-      sprite(ctx, frame, z.x + pound, top, true, sc, look);
+      // 걷는 동안 한 칸씩 휘청이고(뛰는 것은 빼고), 방벽 앞에 서면 제자리에서 들썩인다
+      var sway = moving && z.type !== 'runner' && Math.floor(t * 1.5 + z.phase) % 3 === 0 ? 1 : 0;
+      var top = GROUND - tall * sc - (!moving && Math.floor(t * 5 + z.phase) % 2 ? 1 : 0);
+      sprite(ctx, frame, z.x + pound + sway, top, true, sc, look);
       if (kind.hat) { ctx.fillStyle = kind.hat; ctx.fillRect(Math.round(z.x) + 1 * sc, top - sc, 5 * sc, sc); }           // 안전모
       if (z.big) { ctx.fillStyle = PAL.e; ctx.fillRect(Math.round(z.x) + 3 * sc, top + 2 * sc, sc, sc); ctx.fillRect(Math.round(z.x) + 5 * sc, top + 2 * sc, sc, sc); } // 변이체의 붉은 눈(그림을 뒤집어 그리므로 3·5번째 칸)
     });
@@ -1041,7 +1116,7 @@
     };
   }
 
-  return { fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
+  return { leadWeapon: leadWeapon, ZOMBIE_TYPES: ZOMBIE_TYPES, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });
