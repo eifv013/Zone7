@@ -1475,7 +1475,7 @@
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
     setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
-      : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요. 버틸수록 무리가 조금씩 흩어져요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
+      : sieging ? '농성 중이에요. 보강하면 풀리고, 버틸수록 무리가 줄어요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
     setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;
@@ -1488,10 +1488,10 @@
     setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
     // 철수의 기준은 "이번 회차에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
     setText($('retreat-hint'), can
-      ? '이번 회차에 번 물자 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
-      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차에 번 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
-    setText($('retreat-sub'), can ? '가진 물자가 아니라 이번 회차에 번 물자를 모두 더한 값이에요. 더 벌고 철수하면 샘플이 늘어요.'
-      : state.pendingPerks.length ? '' : '가진 물자가 아니라 이번 회차에 번 물자를 모두 더한 값이에요. 다 채우면 철수할 수 있어요.');
+      ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
+      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차 누적 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
+    setText($('retreat-sub'), can ? '더 벌고 철수하면 샘플이 늘어요.'
+      : state.pendingPerks.length ? '' : '다 채우면 철수할 수 있어요.');
     // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
     $('retreat-bar').hidden = !!state.pendingPerks.length && !can;
     $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / (can ? C.nextAntibodyAt(state) : C.RETREAT_MIN) * 100).toFixed(1) + '%';
