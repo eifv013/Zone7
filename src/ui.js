@@ -1858,15 +1858,16 @@
       setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.peakPrice(state) ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
       // 자동 판매: 흥정꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
-      var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= C.priceRange(state).mean;
+      var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= (state.sellPeak ? C.peakPrice(state) : C.priceRange(state).mean);
       var sellEvery = C.sellInterval(state);
       $('auto-sell-row').hidden = !broker;
+      $('sell-peak-row').hidden = !selling; $('sell-peak').checked = !!state.sellPeak;
       $('sell-bar').hidden = !selling;
       // 시세가 좋을 때는 다음 판매까지의 시간, 낮을 때는 창고가 찰 때까지(회색)
       fill($('sell-bar'), !selling ? 0 : goodPrice ? state.sellClock / sellEvery : (cap > 0 ? state.goods / cap : 0));
       $('sell-bar').classList.toggle('wait', !goodPrice);
       setText($('sell-auto'), !broker ? '개조에서 흥정꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
-        : state.order ? '단골 주문에 넘길 상품을 모으는 중이에요' : goodPrice ? '시세가 좋아요 · 흥정꾼이 ' + secs(sellEvery) + '마다 팔아요' : '시세가 낮아 기다려요 · 창고가 차면 팔아요');
+        : state.order ? '단골 주문에 넘길 상품을 모으는 중이에요' : goodPrice ? (state.sellPeak ? '고점이에요' : '시세가 좋아요') + ' · 흥정꾼이 ' + secs(sellEvery) + '마다 팔아요' : (state.sellPeak ? '고점을 기다려요' : '시세가 낮아 기다려요') + ' · 창고가 차면 팔아요');
       // 단골 주문: 왔을 때만 칸이 보인다. 상품이 모자라면 단추가 꺼지고 얼마나 모자란지 알려 준다
       var od = state.order, ob2 = $('order');
       ob2.hidden = !od;
@@ -2518,6 +2519,7 @@
       sfx(r.peak ? 'peak' : 'sell'); render();
     });
     $('auto-sell').addEventListener('change', function () { C.setAutoSell(state, $('auto-sell').checked); Store.save(); render(); });
+    $('sell-peak').addEventListener('change', function () { C.setSellPeak(state, $('sell-peak').checked); Store.save(); render(); });
     // 철수는 되돌릴 수 없으니 확인 창을 한 번 거친다(안전한 쪽 단추에 초점이 간다)
     $('retreat').addEventListener('click', function () {
       if (!C.canRetreat(state)) return;

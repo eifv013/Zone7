@@ -2297,3 +2297,14 @@ test('시세: 평균 아래가 세 번 이어지면 다음은 평균 위다. 그
   assert.ok(above / n > 0.5, '평균 위 비율 ' + (above / n).toFixed(2));
   assert.equal(C.sanitizeState({ version: 2, lowRun: 99 }, 0).lowRun, C.LOW_RUN_MAX);
 });
+
+test('흥정꾼의 고점 판매: 켜면 고점 아래에서는 팔지 않고 모으다가, 고점이거나 창고가 차면 판다', () => {
+  const mk = () => { const s = inLab(); s.zone = 1; s.stalls = 5; s.upgrades.broker = 1; s.autoSell = true; s.goods = 100; s.sellClock = 999; s.priceClock = 0; return s; };
+  const r = C.priceRange(mk()), peak = C.peakPrice(mk());
+  const a = mk(); a.price = r.mean + 0.01; C.setSellPeak(a, true); let ev = []; C.stepOrders && 0; ev = C.tick(a, 0.1, () => 0.5);
+  assert.ok(!ev.some((e) => e.type === 'sold'), '평균은 넘었지만 고점이 아니면 기다린다'); assert.ok(a.goods >= 100);
+  const b = mk(); b.price = r.mean + 0.01; assert.ok(C.tick(b, 0.1, () => 0.5).some((e) => e.type === 'sold'), '꺼 두면 평균 이상에서 판다');
+  const c = mk(); c.price = peak; C.setSellPeak(c, true); assert.ok(C.tick(c, 0.1, () => 0.5).some((e) => e.type === 'sold'), '고점이면 판다');
+  const d = mk(); d.price = r.floor; C.setSellPeak(d, true); d.goods = C.goodsCap(d); assert.ok(C.tick(d, 0.1, () => 0.5).some((e) => e.type === 'sold'), '창고가 차면 판다');
+  assert.equal(C.sanitizeState({ version: 2, sellPeak: 'yes' }, 0).sellPeak, false); assert.equal(C.createState(0).sellPeak, false);
+});
