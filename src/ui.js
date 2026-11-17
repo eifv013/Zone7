@@ -1313,13 +1313,13 @@
   var REG_PIX = ['..hhh...', '.hhhhh..', '.hsssh..', '..sss...', '.ccccc..', 'scccccs.', '.ccccc..', '.ccccc..', '.dd.dd..', '.dd.dd..'];      // 단골의 모습(머리 h, 살 s, 옷 c, 바지 d)
   function renderDex() {
     if (dexTab === 'pet') dexTab = 'dog';
-    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
     function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
-    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['wall', '방어 수단']].forEach(function (t) {
+    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
@@ -1352,6 +1352,14 @@
         var rname = C.ZOMBIE_RARITIES[z.rarity];
         if (!n) { card(pixSvg(rows, pal, z.big ? 'big' : ''), '???', rname, z.zone > state.zone ? (z.zone + 1) + '구역을 열면 나와요.' : z.boss ? '변이체가 오는 밤에 나와요.' : '밤을 넘기다 보면 만나요.', true, 'z-' + z.rarity); return; }
         card(pixSvg(rows, pal, z.big ? 'big' : ''), z.name, rname + ' · 만난 밤 ' + fmt(n), z.text, false, 'z-' + z.rarity);
+      });
+    } else if (dexTab === 'client') {
+      // 거래처: 3구역에서 납품 의뢰를 채워 준 곳들
+      C.CLIENTS.forEach(function (r) {
+        var n = state.clients[r.id] || 0;
+        var pal = n ? { h: r.hair, s: '#e8c39e', c: r.color, d: '#3a3f4a' } : { h: '#4a4b40', s: '#4a4b40', c: '#4a4b40', d: '#4a4b40' };
+        if (!n) { card(pixSvg(REG_PIX, pal), '???', '아직 거래가 없어요', '3구역에서 납품 의뢰를 채우면 만나요.', true); return; }
+        card(pixSvg(REG_PIX, pal), r.name, '채운 의뢰 ' + fmt(n) + '번', r.text, false);
       });
     } else if (dexTab === 'regular') {
       // 단골: 2구역에서 주문을 채워 준 사람들. 아직 못 만난 사람은 그림자로 보인다
@@ -1456,6 +1464,15 @@
       buzz(20); Store.save(); render();
     });
   }
+  function wireContract() {
+    $('contract-fill').addEventListener('click', function () {
+      var r = C.fillContract(state);
+      if (!r.ok) return;
+      if (r.first) { toast('새 거래처 · ' + r.name); log('새 거래처가 생겼다. ' + r.name + '. 도감에 적었다.', 'good'); sfx('goal'); }
+      else { log(r.name + '에 납품했다. 물자 ' + fmt(r.gain) + ' 확보.', 'good'); sfx('machine'); }
+      buzz(20); Store.save(); render();
+    });
+  }
   function wirePerkReroll() {
     $('perk-reroll').addEventListener('click', function () {
       var r = C.rerollPerks(state, Math.random);
@@ -1528,7 +1545,8 @@
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
     var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.cost <= state.supplies && !(nz.soon && state.gate);
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
-    $('mnav-manage').classList.toggle('dot', canOpen);
+    var canFill = (!!state.order && state.goods >= state.order.need) || (!!state.contract && state.contract.have >= state.contract.need);
+    $('mnav-manage').classList.toggle('dot', canOpen || canFill);
     $('pet-feed').classList.toggle('ready', canFeed);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
     var guideText = goalLines(guideNow.text);
@@ -1760,6 +1778,19 @@
       });
     }
     if (tab === 'z2' && open) {
+      // 납품 의뢰: 왔을 때만 칸이 보인다. 의뢰가 온 뒤로 만든 완제품이 차고, 다 차면 납품할 수 있다
+      var ct = state.contract, cb = $('contract');
+      cb.hidden = !ct;
+      if (ct) {
+        var cl = null; C.CLIENTS.forEach(function (r) { if (r.id === ct.who) cl = r; });
+        setText($('contract-left'), clock(ct.left));
+        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' 완제품 ' + fmt(ct.need) + '개를 찾아요.\n납품하면 물자 +' + fmt(C.contractReward(state)) + ' · 간식 +' + C.CONTRACT_TREATS);
+        fill($('contract-bar'), ct.have / ct.need);
+        var cdone = ct.have >= ct.need;
+        $('contract-fill').disabled = !cdone;
+        setText($('contract-fill'), cdone ? '납품한다' : '만드는 중 · ' + fmt(Math.floor(ct.have)) + ' / ' + fmt(ct.need));
+      }
+      setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 이번 회차 의뢰 ' + state.contractsRun + '번 · 완제품 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '%');
       var line = C.lineInfo(state), top = 0, names = {};
       C.MACHINES.forEach(function (d) { top = Math.max(top, line.caps[d.id]); names[d.id] = d.name; });
       C.MACHINES.forEach(function (d) {
@@ -2068,6 +2099,12 @@
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
+          break;
+        case 'contract':
+          toast('납품 의뢰 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 완제품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          break;
+        case 'contract-gone':
+          log('거래처가 기다리다 돌아갔다.', '');
           break;
         case 'order':
           toast('단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
@@ -2413,6 +2450,7 @@
     wireMultiTouch();
     wirePerkReroll();
     wireOrder();
+    wireContract();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');

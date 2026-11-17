@@ -541,6 +541,7 @@
       retreats: 0,           // 철수한 횟수
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
+      clients: {}, contract: null, contractIn: 120, contractsRun: 0,      // 3구역 거래처: 종류마다 채운 의뢰 수(철수해도 남는다), 지금 온 의뢰, 다음 의뢰까지(초), 이번 회차에 채운 수
       regulars: {}, order: null, orderIn: 120, ordersRun: 0,      // 단골: 종류마다 채운 주문 수(철수해도 남는다), 지금 온 주문, 다음 주문까지(초), 이번 회차에 채운 수
       zdex: {},              // 좀비 도감: 종류마다 만난 횟수. 철수해도 남는다
       ach: {},               // 달성한 업적 { id: true }. 철수해도 남는다
@@ -647,6 +648,13 @@
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
     ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
+    var rc = raw.clients && typeof raw.clients === 'object' ? raw.clients : {};
+    CLIENTS.forEach(function (c) { var n = clamp(safeCount(rc[c.id]), 0, 1e9); if (n > 0) s.clients[c.id] = n; });
+    s.contractsRun = clamp(safeCount(raw.contractsRun), 0, 1e6);
+    s.contractIn = clamp(safeNum(raw.contractIn, 120), 0, CONTRACT_GAP_MAX);
+    var rk = raw.contract;
+    s.contract = rk && typeof rk === 'object' && findById(CLIENTS, rk.who) && safeNum(rk.need, 0) > 0 && safeNum(rk.left, 0) > 0
+      ? { who: rk.who, need: Math.floor(safeNum(rk.need, 0)), have: clamp(safeNum(rk.have, 0), 0, Math.floor(safeNum(rk.need, 0))), left: clamp(safeNum(rk.left, 0), 0, CONTRACT_SECONDS) } : null;
     var rr = raw.regulars && typeof raw.regulars === 'object' ? raw.regulars : {};
     REGULARS.forEach(function (r) { var n = clamp(safeCount(rr[r.id]), 0, 1e9); if (n > 0) s.regulars[r.id] = n; });
     s.ordersRun = clamp(safeCount(raw.ordersRun), 0, 1e6);
@@ -1010,7 +1018,64 @@
       bonus: steady ? 1 + STEADY_BONUS + m.steady : 1, levels: levels, milestone: lineMilestone(levels), nextMilestone: next };
   }
   /** 완제품 하나의 값(물자). */
-  function productValue(state) { return PRODUCT_VALUE * mods(state).z3 * globalMult(state); }
+  /*
+   * 납품 의뢰(1.0.8, 3구역): 2구역의 단골 주문과 같은 틀이다.
+   *   몇 분마다 거래처 하나가 "완제품 N개를 M초 안에" 달라고 온다. 의뢰가 온 뒤로 라인이 만든 완제품이 차곡차곡 쌓이고(평소 수입은 그대로),
+   *   다 차면 "납품한다"를 눌러 물자(완제품 값의 CONTRACT_PAY 배)와 간식을 받는다. 그 거래처는 도감에 적힌다(철수해도 남는다).
+   *   이번 회차에 채운 의뢰 하나마다 완제품 값이 CONTRACT_BONUS 씩 오른다(CONTRACT_BONUS_MAX 까지). 전력 투입을 쓰면 더 빨리 찬다.
+   *   놓쳐도 잃는 것은 없고, 자리를 비운 동안에는 오지 않는다.
+   */
+  var CLIENTS = [
+    { id: 'bike',    name: '자전거포',         color: '#3f6f8f', hair: '#2a2a2a', text: '체인이 없어서 못 고친대요.' },
+    { id: 'garage',  name: '정비소',           color: '#5a5f6a', hair: '#17180f', text: '기름 묻은 장부를 들고 와요.' },
+    { id: 'forge',   name: '철공소',           color: '#8a5a44', hair: '#6a4a3a', text: '망치 소리가 다시 나요.' },
+    { id: 'sign',    name: '간판집',           color: '#b8402e', hair: '#3a2a22', text: '구역 표지판을 새로 달아요.' },
+    { id: 'boiler',  name: '보일러 기사',      color: '#d08a3c', hair: '#8a8a82', text: '겨울 전에 다 돌려야 한대요.' },
+    { id: 'farm',    name: '농기구상',         color: '#5a7a3a', hair: '#4a3628', text: '옥상 텃밭에서 소문을 들었대요.' },
+    { id: 'welder',  name: '용접공',           color: '#30343c', hair: '#17180f', text: '불꽃을 보면 멀리서도 알아요.' },
+    { id: 'junk',    name: '고물상',           color: '#6b4a3a', hair: '#d8d8d0', text: '주는 것보다 가져가는 게 많아요.' },
+    { id: 'print',   name: '인쇄소',           color: '#e6d8c0', hair: '#2a2a2a', text: '전단지를 찍어 붙이고 다녀요.' },
+    { id: 'wood',    name: '목공소',           color: '#c9a04a', hair: '#6a4a3a', text: '문짝을 맞춰 달아 줘요.' },
+    { id: 'battery', name: '배터리 가게',      color: '#7a9a6a', hair: '#3a2a22', text: '충전은 해 줄 테니 부품을 달래요.' },
+    { id: 'radio',   name: '무전기 수리점',    color: '#6a4a8a', hair: '#4a3628', text: '잡음을 줄일 수 있대요.' }
+  ];
+  var CONTRACT_SECONDS = 90, CONTRACT_NEED_SECONDS = 50, CONTRACT_GAP_MIN = 150, CONTRACT_GAP_MAX = 270, CONTRACT_PAY = 2, CONTRACT_BONUS = 0.01, CONTRACT_BONUS_MAX = 0.5, CONTRACT_TREATS = 2;
+  function contractMult(state) { return 1 + Math.min(CONTRACT_BONUS_MAX, (state.contractsRun || 0) * CONTRACT_BONUS); }
+  function clientCount(state) { var n = 0; CLIENTS.forEach(function (c) { if (state.clients[c.id] > 0) n++; }); return n; }
+  function contractReward(state) { return state.contract ? state.contract.need * productValue(state) * CONTRACT_PAY : 0; }
+  /** 라인이 지금 초당 내는 완제품 수(전력 투입은 빼고). */
+  function productFlow(state) { var pv = productValue(state); return pv > 0 ? lineRate(state) / pv : 0; }
+  function stepContracts(state, dt, made, rng, events) {
+    if (!zoneOpen(state, 2) || !(productFlow(state) > 0)) return;
+    if (state.contract) {
+      state.contract.have = Math.min(state.contract.need, state.contract.have + made);
+      state.contract.left -= dt;
+      if (state.contract.left <= 0) { events.push({ type: 'contract-gone', who: state.contract.who }); state.contract = null; }
+      return;
+    }
+    state.contractIn -= dt;
+    if (state.contractIn > 0) return;
+    rng = typeof rng === 'function' ? rng : Math.random;
+    var who = CLIENTS[Math.floor(rng() * CLIENTS.length) % CLIENTS.length];
+    var need = Math.max(5, Math.ceil(productFlow(state) * CONTRACT_NEED_SECONDS));
+    state.contract = { who: who.id, need: need, have: 0, left: CONTRACT_SECONDS };
+    state.contractIn = CONTRACT_GAP_MIN + rng() * (CONTRACT_GAP_MAX - CONTRACT_GAP_MIN);
+    events.push({ type: 'contract', who: who.id, name: who.name, need: need });
+  }
+  /** 다 찬 의뢰를 납품한다. 아직 덜 찼으면 실패(의뢰는 남는다). */
+  function fillContract(state) {
+    if (!state.contract) return fail('none');
+    if (!(state.contract.have >= state.contract.need)) return fail('short');
+    var who = findById(CLIENTS, state.contract.who), gain = contractReward(state), first = !(state.clients[state.contract.who] > 0);
+    earn(state, gain);
+    state.lineEarned += gain;
+    state.treats = Math.min(1e9, state.treats + CONTRACT_TREATS);
+    state.clients[state.contract.who] = Math.min(1e9, (state.clients[state.contract.who] || 0) + 1);
+    state.contractsRun = (state.contractsRun || 0) + 1;
+    state.contract = null;
+    return { ok: true, gain: gain, treats: CONTRACT_TREATS, first: first, who: who ? who.id : '', name: who ? who.name : '' };
+  }
+  function productValue(state) { return PRODUCT_VALUE * mods(state).z3 * globalMult(state) * contractMult(state); }
   /** 3구역이 초당 버는 물자. */
   function lineRate(state) {
     if (!zoneOpen(state, 2)) return 0;
@@ -1738,7 +1803,7 @@
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars;
+    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
     next.signalsAnswered = state.signalsAnswered;
@@ -2015,6 +2080,7 @@
     // 전력 투입 중인 시간만큼은 라인이 SURGE_MULT 배로 돈다(dt 가 길어도 남은 투입 시간까지만 친다)
     if (line > 0 && state.surgeLeft > 0) line *= 1 + (SURGE_MULT - 1) * Math.min(dt, state.surgeLeft) / dt;
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
+    stepContracts(state, dt, line > 0 ? line / productValue(state) : 0, rng, events);      // 3구역 납품 의뢰: 이번 틱에 만든 완제품 수를 넘긴다
     var guard = guardRate(state) * dt;      // 6구역 통행 물자
     if (guard > 0) { earn(state, guard); state.guardEarned += guard; }
     if (state.surgeLeft > 0 || state.surgeCool > 0) {
@@ -2211,7 +2277,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

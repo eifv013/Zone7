@@ -2052,3 +2052,34 @@ test('업적은 철수의 도움 없이는 다 깰 수 없다: 어려움은 철�
   s.retreats = 3; C.checkAchievements(s, [], 7);
   clickAch.forEach((a) => assert.ok(s.ach[a.id], a.id));
 });
+
+test('납품 의뢰: 3구역에서만 오고, 만든 완제품이 차면 납품해서 물자·간식·도감·완제품 값을 얻는다', () => {
+  const m = inMarket(); m.contractIn = 0.5;
+  for (let i = 0; i < 30; i++) C.tick(m, 1, () => 0.3);
+  assert.equal(m.contract, null, '3구역을 열기 전에는 오지 않는다');
+  const s = inFactory(); s.supplies = 1e30;
+  ['sorter', 'press', 'assembler'].forEach((id) => assert.ok(C.buyMachine(s, id, 5).ok));
+  assert.ok(C.productFlow(s) > 0);
+  s.contractIn = 0.5;
+  let got = null;
+  for (let i = 0; i < 5 && !got; i++) got = C.tick(s, 1, () => 0.3).find((e) => e.type === 'contract') || null;
+  assert.ok(got && s.contract, '의뢰가 온다');
+  assert.equal(C.fillContract(s).reason, 'short', '덜 찼으면 납품할 수 없다');
+  const need = s.contract.need, who = s.contract.who;
+  for (let i = 0; i < 80 && s.contract && s.contract.have < need; i++) C.tick(s, 1, () => 0.3);
+  assert.ok(s.contract && s.contract.have >= need, '시간 안에 찬다(의뢰량은 50초 치, 시간은 90초)');
+  s.supplies = 0;                                             // 큰 수에 묻혀 늘어난 것이 안 보이지 않게
+  const before = s.supplies, treats = s.treats, value = C.productValue(s);
+  const r = C.fillContract(s);
+  assert.ok(r.ok && r.first && r.gain > 0);
+  assert.ok(s.supplies > before); assert.equal(s.treats, treats + C.CONTRACT_TREATS);
+  assert.equal(s.clients[who], 1); assert.equal(C.clientCount(s), 1); assert.equal(s.contract, null);
+  near(C.productValue(s), value * (1 + C.CONTRACT_BONUS));
+  s.contractsRun = 1000; near(C.contractMult(s), 1 + C.CONTRACT_BONUS_MAX);
+  s.contract = { who: 'forge', need: 1e12, have: 0, left: 1 };
+  assert.ok(C.tick(s, 2, Math.random).some((e) => e.type === 'contract-gone')); assert.equal(s.contract, null);
+  s.runEarned = 1e9; const back = C.retreat(s, 1).state;
+  assert.equal(back.clients[who], 1); assert.equal(back.contractsRun, 0); assert.equal(back.contract, null);
+  const bad = C.sanitizeState({ version: 2, contract: { who: '없는곳', need: 5, left: 5 }, clients: { forge: -2, 가짜: 3 }, contractsRun: 'x' }, 0);
+  assert.equal(bad.contract, null); assert.equal(bad.clients.forge, undefined); assert.equal(bad.contractsRun, 0);
+});

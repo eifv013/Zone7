@@ -51,12 +51,13 @@ try {
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="7구역">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 /* 전체 화면 앱에서는 노치와 홈 표시줄에 가려지지 않게 안쪽 여백을 둔다 */
-body { padding-top: env(safe-area-inset-top); }
+/* 1.0.8: 화면을 상태 표시줄 밑으로 펼치지 않으므로 위쪽 여백은 필요 없다. 아래쪽은 기기가 값을 주면 그대로 쓴다 */
 .mnav { padding-bottom: env(safe-area-inset-bottom); }
 </style>`;
   const swRegister = `
@@ -69,8 +70,8 @@ if ('serviceWorker' in navigator) {
 }
 </script>`;
   let pwaHtml = html.replace('<meta name="viewport" content="width=device-width, initial-scale=1">',
-    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
-  if (pwaHtml === html) throw new Error('viewport 메타 태그를 찾지 못했습니다(PWA 빌드).');
+    '<meta name="viewport" content="width=device-width, initial-scale=1">');      // 1.0.8: viewport-fit=cover 를 뺐다. 화면을 상태 표시줄 밑까지 펼치면 새 iOS 가 그 아래 내용을 흐리게 덮는다(맨 위 머리띠가 뿌옇게 보였다)
+  if (pwaHtml.indexOf('<meta name="viewport"') < 0) throw new Error('viewport 메타 태그를 찾지 못했습니다(PWA 빌드).');
   pwaHtml = pwaHtml.replace('</title>', '</title>' + headExtra).replace('</body>', swRegister + '\n</body>')
     .replace('window.ZONE7_VERSION = ', 'window.ZONE7_PWA = true; window.ZONE7_VERSION = '); // 설치형에서만 새 버전을 확인한다
   fs.mkdirSync(pwaOut, { recursive: true });
