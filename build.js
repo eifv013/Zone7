@@ -57,8 +57,18 @@ try {
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 /* 전체 화면 앱에서는 노치와 홈 표시줄에 가려지지 않게 안쪽 여백을 둔다 */
-/* 1.0.8: 화면을 상태 표시줄 밑으로 펼치지 않으므로 위쪽 여백은 필요 없다. 아래쪽은 기기가 값을 주면 그대로 쓴다 */
+body { padding-top: env(safe-area-inset-top); }
 .mnav { padding-bottom: env(safe-area-inset-bottom); }
+/*
+ * 1.0.9: iOS 26 부터 홈 화면 앱의 맨 위에는 기기가 직접 그리는 흐림(상태 표시줄 아래로 40pt 쯤)이 덮인다.
+ * 웹 쪽에서 끌 방법이 없어서(메타 태그나 CSS 로는 안 된다), 그 띠만큼 화면을 아래로 내려 내용이 흐림에 걸리지 않게 한다.
+ * 아이폰·아이패드의 홈 화면 앱에서만 적용된다(다른 기기와 브라우저 탭에서는 그대로).
+ */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    body { padding-top: calc(env(safe-area-inset-top) + 40px); }
+  }
+}
 </style>`;
   const swRegister = `
 <script>
@@ -70,7 +80,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>`;
   let pwaHtml = html.replace('<meta name="viewport" content="width=device-width, initial-scale=1">',
-    '<meta name="viewport" content="width=device-width, initial-scale=1">');      // 1.0.8: viewport-fit=cover 를 뺐다. 화면을 상태 표시줄 밑까지 펼치면 새 iOS 가 그 아래 내용을 흐리게 덮는다(맨 위 머리띠가 뿌옇게 보였다)
+    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
   if (pwaHtml.indexOf('<meta name="viewport"') < 0) throw new Error('viewport 메타 태그를 찾지 못했습니다(PWA 빌드).');
   pwaHtml = pwaHtml.replace('</title>', '</title>' + headExtra).replace('</body>', swRegister + '\n</body>')
     .replace('window.ZONE7_VERSION = ', 'window.ZONE7_PWA = true; window.ZONE7_VERSION = '); // 설치형에서만 새 버전을 확인한다

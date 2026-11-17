@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>7구역</title>
 <meta name="theme-color" content="#17180f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,8 +14,18 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 /* 전체 화면 앱에서는 노치와 홈 표시줄에 가려지지 않게 안쪽 여백을 둔다 */
-/* 1.0.8: 화면을 상태 표시줄 밑으로 펼치지 않으므로 위쪽 여백은 필요 없다. 아래쪽은 기기가 값을 주면 그대로 쓴다 */
+body { padding-top: env(safe-area-inset-top); }
 .mnav { padding-bottom: env(safe-area-inset-bottom); }
+/*
+ * 1.0.9: iOS 26 부터 홈 화면 앱의 맨 위에는 기기가 직접 그리는 흐림(상태 표시줄 아래로 40pt 쯤)이 덮인다.
+ * 웹 쪽에서 끌 방법이 없어서(메타 태그나 CSS 로는 안 된다), 그 띠만큼 화면을 아래로 내려 내용이 흐림에 걸리지 않게 한다.
+ * 아이폰·아이패드의 홈 화면 앱에서만 적용된다(다른 기기와 브라우저 탭에서는 그대로).
+ */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    body { padding-top: calc(env(safe-area-inset-top) + 40px); }
+  }
+}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -994,7 +1004,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.0.8</div>
+  <div class="boot-ver">7구역 알파 1.0.9</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1459,7 +1469,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.0.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.0.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1584,7 +1594,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.8";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.9";
 </script>
 <script>
 /*
@@ -1603,6 +1613,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.8";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.0.9', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '아이폰 화면 위쪽',
+      items: [
+        '아이폰 홈 화면 앱에서 맨 위가 뿌옇게 보이던 것을 고쳤어요. 새 iOS가 화면 맨 위에 직접 흐림을 덮는데 끌 방법이 없어서, 그 띠만큼 화면을 아래로 내렸어요. 맨 위에 빈 띠가 조금 생겨요.'
+      ] },
     { ver: '알파 1.0.8', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '납품 의뢰',
       items: [
         '3구역에 납품 의뢰가 생겼어요. 몇 분마다 거래처 하나가 완제품을 찾으러 와요. 의뢰가 온 뒤로 만든 완제품이 차고, 다 차면 "납품한다"를 눌러 물자와 간식을 받아요.',
