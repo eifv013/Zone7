@@ -252,7 +252,7 @@
           "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
           "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
           "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
-    { no: 3, name: '공단', kind: 'line', cost: 1e12, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
+    { no: 3, name: '공단', kind: 'line', cost: 3e11, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
       story: [
         { title: "멈춘 자리", text: [
           "3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 밖에서 잠근 게 아니다. 안에 있던 사람들이 잠그고, 다른 길로 나간 것이다.",
@@ -444,7 +444,7 @@
     { id: 'scholar', name: '연구자',    desc: '연구 속도 +30%',            key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
-    { id: 'reroll',  name: '다시 뽑기', desc: '특전 후보를 한 판에 1번 더 다시 뽑을 수 있다', key: 'reroll', per: 1, baseCost: 3, growth: 1.8, max: 5 },
+    { id: 'reroll',  name: '다시 뽑기', desc: '특전 후보를 한 회차에 1번 더 다시 뽑을 수 있다', key: 'reroll', per: 1, baseCost: 3, growth: 1.8, max: 5 },
     { id: 'auto',    name: '자동화',    desc: '전력 투입·청신호의 대기 시간 -6% (자동은 구역 개조로 켜요)', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
   ];
 
@@ -456,7 +456,7 @@
     [ { id: 'z1a', text: '잔해 수색조 50곳', need: 50, value: function (s) { return s.buildings.scouts; } },
       { id: 'z1b', text: '1구역 시설 합계 200곳', need: 200, value: function (s) { return totalBuildings(s); } },
       // 기다리기만 하면 되는 목표(밤 30번)는 뺐다: 손을 움직이는 만큼 빨리 끝나는 것으로 바꿨다
-      { id: 'z1c', text: '동네 5곳 다 수색하기', need: 5, value: function (s) { return s.sweeps; } } ],
+      { id: 'z1c', text: '동네 12곳 다 수색하기', need: 12, value: function (s) { return s.sweeps; } } ],
     [ { id: 'z2a', text: '좌판 50곳', need: 50, value: function (s) { return s.stalls; } },
       { id: 'z2b', text: '시세 ' + PEAK_PRICE + ' 이상에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
       { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
@@ -507,7 +507,7 @@
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
       // 밤
-      day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false,
+      day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false, siegeNights: 0,
       // 구조 신호
       signalIn: SIGNAL_FIRST, signalLeft: 0, signalsAnswered: 0, buff: null,
       // 특전(이번 판)
@@ -619,6 +619,7 @@
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
     s.perks = counts(PERKS, raw.perks, 999);
     s.traits = counts(TRAITS, raw.traits, function (t) { return t.max; });
+    s.siegeNights = clamp(safeCount(raw.siegeNights), 0, 99);
     s.rerollsUsed = clamp(safeCount(raw.rerollsUsed), 0, 99);
     s.pendingPerks = (Array.isArray(raw.pendingPerks) ? raw.pendingPerks : []).filter(function (id) { return !!findById(PERKS, id); }).slice(0, PERK_CHOICES);
     var gd = raw.goalsDone && typeof raw.goalsDone === 'object' ? raw.goalsDone : {};
@@ -1447,7 +1448,14 @@
   function strengthAt(state, w) {
     return Math.round(HORDE_BASE * Math.pow(HORDE_GROWTH, w - 1) * (isBossWave(w) ? BOSS_STRENGTH : 1) * Math.pow(3, state.zone));
   }
-  function nightStrength(state) { return strengthAt(state, currentWave(state)); }
+  /*
+   * 농성이 길어지면 무리가 흩어진다: 못 막은 밤 하루마다 무리가 SIEGE_FADE 만큼 줄어든다(SIEGE_FLOOR 까지).
+   * 방벽을 올릴 물자가 더디게 모이는 때에도 언젠가는 풀리게 해서, 무리 때문에 철수로 내몰리지 않게 한다.
+   * 방어에 성공하면 다음 무리는 원래 크기로 돌아온다.
+   */
+  var SIEGE_FADE = 0.12, SIEGE_FLOOR = 0.2;
+  function siegeFactor(state) { return Math.max(SIEGE_FLOOR, Math.pow(1 - SIEGE_FADE, state.siegeNights || 0)); }
+  function nightStrength(state) { return Math.ceil(strengthAt(state, currentWave(state)) * siegeFactor(state)); }
   function nightReward(state) {
     var w = currentWave(state);
     return Math.max(25 * w, productionPerSec(state) * NIGHT_REWARD_SECONDS) * mods(state).loot * (isBossWave(w) ? BOSS_REWARD : 1);
@@ -1502,12 +1510,12 @@
       var reward = nightReward(state);
       earn(state, reward);
       state.wavesCleared++;
-      state.siege = false;
+      state.siege = false; state.siegeNights = 0;
       var treat = boss ? TREAT_BOSS : TREAT_NIGHT;
       state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
       return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat };
     }
-    if (state.siege) return { type: 'held', wave: w, strength: strength, defense: defense, boss: boss };
+    if (state.siege) { state.siegeNights = Math.min(99, (state.siegeNights || 0) + 1); return      /* 버틴 밤을 센다: 다음 밤의 무리가 그만큼 흩어진다 */ { type: 'held', wave: w, strength: strength, defense: defense, boss: boss }; }
     var lost = state.supplies * BREACH_LOSS;
     state.supplies -= lost;
     state.breaches++;
@@ -1768,42 +1776,42 @@
   var ACH_SERIES = [
     // 1구역 주택가
     { id: 'z1build', group: 'z1', name: '동네 일꾼', needs: [10, 100, 500, 2000], value: function (s) { return totalBuildings(s); }, text: function (n) { return '1구역 시설을 모두 합쳐 ' + n + '곳 짓기'; } },
-    { id: 'z1sweep', group: 'z1', name: '골목 대장', needs: [1, 10, 100, 1000], value: function (s) { return s.sweeps; }, text: function (n) { return '한 판에 동네 ' + n + '곳을 다 수색하기'; } },
+    { id: 'z1sweep', group: 'z1', name: '골목 대장', needs: [1, 10, 100, 1000], value: function (s) { return s.sweeps; }, text: function (n) { return '한 회차에 동네 ' + n + '곳을 다 수색하기'; } },
     { id: 'z1click', group: 'z1', name: '부지런한 손', needs: [100, 1000, 10000], value: function (s) { return s.clicks; }, text: function (n) { return '잔해 수색을 ' + n + '번 누르기'; } },
     { id: 'z1up', group: 'z1', name: '살림꾼', needs: [10, 40], value: function (s) { return zoneUpgrades(s, 0); }, text: function (n) { return '1구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z1patrol', group: 'z1', name: '빈틈없는 순찰', tier: 3, needs: [5], value: function (s) { return s.upgrades.patrol; }, text: function () { return '순찰조를 끝까지 올리기'; } },
     { id: 'z1rumor', group: 'z1', name: '소문난 동네', tier: 3, needs: [8], value: function (s) { return s.upgrades.rumor; }, text: function () { return '소문을 끝까지 올리기'; } },
     // 2구역 재래시장
     { id: 'z2stall', group: 'z2', name: '좌판 주인', needs: [10, 100, 300, 500], value: function (s) { return s.stalls; }, text: function (n) { return '좌판 ' + n + '곳 열기'; } },
-    { id: 'z2earn', group: 'z2', name: '큰손', needs: [1e8, 1e11, 1e14], value: function (s) { return s.tradeEarned; }, text: function (n) { return '한 판에 상품을 팔아 물자 ' + formatNumber(n) + ' 벌기'; } },
-    { id: 'z2peak', group: 'z2', name: '고점 사냥꾼', needs: [10, 100, 1000], value: function (s) { return s.peakSales; }, text: function (n) { return '한 판에 고점에서 ' + n + '번 팔기'; } },
+    { id: 'z2earn', group: 'z2', name: '큰손', needs: [1e8, 1e11, 1e14], value: function (s) { return s.tradeEarned; }, text: function (n) { return '한 회차에 상품을 팔아 물자 ' + formatNumber(n) + ' 벌기'; } },
+    { id: 'z2peak', group: 'z2', name: '고점 사냥꾼', needs: [10, 100, 1000], value: function (s) { return s.peakSales; }, text: function (n) { return '한 회차에 고점에서 ' + n + '번 팔기'; } },
     { id: 'z2streak', group: 'z2', name: '연속 호가', tier: 2, needs: [STREAK_MAX], value: function (s) { return s.streak; }, text: function () { return '연속 호가를 끝까지 쌓기'; } },
     { id: 'z2hand', group: 'z2', name: '북적이는 시장', needs: [20, 150], value: function (s) { return sumOf(s.hands); }, text: function (n) { return '짐꾼과 호객꾼을 합쳐 ' + n + '명 두기'; } },
     { id: 'z2broker', group: 'z2', name: '믿음직한 흥정꾼', needs: [1, 5], value: function (s) { return s.upgrades.broker; }, text: function (n) { return n === 1 ? '흥정꾼 두기' : '흥정꾼을 끝까지 올리기'; } },
     // 3구역 공단
     { id: 'z3level', group: 'z3', name: '기계공', needs: [10, 50, 150, 300], value: function (s) { return sumOf(s.machines); }, text: function (n) { return '기계 레벨의 합계 ' + n + ' 채우기'; } },
-    { id: 'z3earn', group: 'z3', name: '공장장', needs: [1e13, 1e16, 1e19], value: function (s) { return s.lineEarned; }, text: function (n) { return '한 판에 라인으로 물자 ' + formatNumber(n) + ' 벌기'; } },
-    { id: 'z3steady', group: 'z3', name: '정속 가동', needs: [60, 3600, 36000], value: function (s) { return s.steadySeconds; }, text: function (n) { return '한 판에 정속 가동 ' + formatDuration(n) + ' 채우기'; } },
+    { id: 'z3earn', group: 'z3', name: '공장장', needs: [1e13, 1e16, 1e19], value: function (s) { return s.lineEarned; }, text: function (n) { return '한 회차에 라인으로 물자 ' + formatNumber(n) + ' 벌기'; } },
+    { id: 'z3steady', group: 'z3', name: '정속 가동', needs: [60, 3600, 36000], value: function (s) { return s.steadySeconds; }, text: function (n) { return '한 회차에 정속 가동 ' + formatDuration(n) + ' 채우기'; } },
     { id: 'z3up', group: 'z3', name: '정비반', needs: [10, 40], value: function (s) { return zoneUpgrades(s, 2); }, text: function (n) { return '3구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z3auto', group: 'z3', name: '손을 뗀 공장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autoline; }, text: function () { return '자동 제어반 달기'; } },
     { id: 'z3even', group: 'z3', name: '세 박자', tier: 3, needs: [50], value: function (s) { return minMachine(s); }, text: function (n) { return '기계 셋을 모두 ' + n + '레벨 이상으로 올리기'; } },
     { id: 'z3belt', group: 'z3', name: '끊기지 않는 벨트', tier: 4, needs: [10], value: function (s) { return s.upgrades.belt; }, text: function () { return '컨베이어를 끝까지 올리기'; } },
     // 4구역 환승역
     { id: 'z4train', group: 'z4', name: '차량 기지장', needs: [5, 20, 50, 100], value: function (s) { return s.trains; }, text: function (n) { return '열차 ' + n + '대 갖추기'; } },
-    { id: 'z4earn', group: 'z4', name: '화물왕', needs: [1e20, 1e23, 1e26], value: function (s) { return s.railEarned; }, text: function (n) { return '한 판에 화물로 물자 ' + formatNumber(n) + ' 벌기'; } },
-    { id: 'z4express', group: 'z4', name: '심야 급행', needs: [1, 20, 200], value: function (s) { return s.expressRuns; }, text: function (n) { return '한 판에 심야 급행을 ' + n + '번 맞이하기'; } },
+    { id: 'z4earn', group: 'z4', name: '화물왕', needs: [1e20, 1e23, 1e26], value: function (s) { return s.railEarned; }, text: function (n) { return '한 회차에 화물로 물자 ' + formatNumber(n) + ' 벌기'; } },
+    { id: 'z4express', group: 'z4', name: '심야 급행', needs: [1, 20, 200], value: function (s) { return s.expressRuns; }, text: function (n) { return '한 회차에 심야 급행을 ' + n + '번 맞이하기'; } },
     { id: 'z4route', group: 'z4', name: '선로 복구반', needs: [5, 20], value: function (s) { return sumOf(s.routes); }, text: function (n) { return '노선 단계를 모두 합쳐 ' + n + ' 올리기'; } },
     { id: 'z4up', group: 'z4', name: '역무원', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 3); }, text: function (n) { return '4구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z4auto', group: 'z4', name: '알아서 켜지는 신호', tier: 2, needs: [1], value: function (s) { return s.upgrades.autosig; }, text: function () { return '자동 신호 달기'; } },
     // 5구역 대학 병원
     { id: 'z5staff', group: 'z5', name: '연구실장', needs: [5, 25, 100, 250], value: function (s) { return s.staff; }, text: function (n) { return '연구원 ' + n + '명 뽑기'; } },
-    { id: 'z5done', group: 'z5', name: '끝낸 과제', needs: [1, 10, 30, 60], value: function (s) { return s.projectsDone; }, text: function (n) { return '한 판에 과제 ' + n + '개 끝내기'; } },
+    { id: 'z5done', group: 'z5', name: '끝낸 과제', needs: [1, 10, 30, 60], value: function (s) { return s.projectsDone; }, text: function (n) { return '한 회차에 과제 ' + n + '개 끝내기'; } },
     { id: 'z5points', group: 'z5', name: '쌓인 연구', needs: [1000, 1000000], value: function (s) { return s.points; }, text: function (n) { return '연구 점수 ' + formatNumber(n) + ' 모아 두기'; } },
     { id: 'z5up', group: 'z5', name: '실험 도구', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 4); }, text: function (n) { return '5구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z5deep', group: 'z5', name: '한 우물', needs: [5, 10], value: function (s) { return maxOf(s.research); }, text: function (n) { return '같은 과제를 ' + n + '번 끝내기'; } },
     { id: 'z5gate', group: 'z5', name: '다리 앞에서', tier: 4, needs: [1], value: function (s) { return s.gate && s.zone >= 4 ? 1 : 0; }, text: function () { return '6구역의 문 앞에 닿기'; } },
     // 공통
-    { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 판에 방어 성공 ' + n + '번'; } },
+    { id: 'night', group: 'all', name: '밤을 넘긴 사람', needs: [10, 50, 100, 300], value: function (s) { return s.wavesCleared; }, text: function (n) { return '한 회차에 방어 성공 ' + n + '번'; } },
     { id: 'retreat', group: 'all', name: '다시, 1구역', needs: [1, 5, 20, 50], value: function (s) { return s.retreats; }, text: function (n) { return '철수 ' + n + '번 하기'; } },
     { id: 'antibody', group: 'all', name: '항체 수집가', needs: [10, 100, 10000, 1000000], value: function (s) { return s.antibodyTotal; }, text: function (n) { return '항체 샘플을 모두 합쳐 ' + formatNumber(n) + '개 얻기'; } },
     { id: 'kennel', group: 'all', name: '동물 친구들', needs: [1, 6, 12, 24], value: function (s) { return kennelCount(s); }, text: function (n) { return '동물 친구 ' + n + '마리 만나기'; } },
@@ -2054,7 +2062,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

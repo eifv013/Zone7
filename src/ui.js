@@ -1333,12 +1333,12 @@
     show(0);
   }
   /*
-   * 통계: 맨 위에 큰 숫자 셋(어디까지 갔나, 항체, 진행 시간), 그 아래 '이번 판'과 '전체'를 나눠 보여 준다.
+   * 통계: 맨 위에 큰 숫자 셋(어디까지 갔나, 항체, 진행 시간), 그 아래 '이번 회차'과 '전체'를 나눠 보여 준다.
    *   [id, 이름] 의 id 는 renderStats 가 값을 채우는 자리(rows.stats)다.
    */
   var STAT_HERO = [['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['total', '진행 시간']];
   var STAT_GROUPS = [
-    ['이번 판', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '방어 성공한 밤']]],
+    ['이번 회차', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '방어 성공한 밤']]],
     ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비운 시간'], ['days', '시작한 지']]]
   ];
   function buildStats() {
@@ -1365,7 +1365,7 @@
     setText(c.best, (st.bestZone + 1) + '구역');
     setText(c.antibody, fmt(st.antibodyTotal) + '개'); setText(c.runEarned, fmt(st.runEarned)); setText(c.lifetime, fmt(st.lifetimeEarned));
     setText(c.waves, st.wavesCleared + '밤'); setText(c.clicks, fmt(st.clicks) + '번');
-    // 지난 구역: 이번 판에 지나온 구역마다 머문 시간(지금 있는 구역은 계속 늘어난다)
+    // 지난 구역: 이번 회차에 지나온 구역마다 머문 시간(지금 있는 구역은 계속 늘어난다)
     var key = st.zones.map(function (r) { return r.zone + ':' + (r.seconds === null ? '-' : Math.floor(r.seconds)); }).join('|');
     if (key === statsShown) return;
     statsShown = key;
@@ -1402,7 +1402,7 @@
     var box = $('perk-list');
     box.textContent = '';
     if (!state.pendingPerks.length) { $('perk').hidden = true; return; }
-    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 판이 끝날 때까지 남아요.');
+    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 회차이 끝날 때까지 남아요.');
     state.pendingPerks.forEach(function (id) {
       var def = null;
       C.PERKS.forEach(function (k) { if (k.id === id) def = k; });
@@ -1423,7 +1423,7 @@
     // 다시 뽑기(영구 특성): 남은 횟수가 있을 때만 단추가 보인다
     var left = C.rerollsLeft(state), rr = $('perk-reroll');
     rr.hidden = left < 1;
-    setText(rr, '다시 뽑기 · 이번 판에 ' + left + '번 남음');
+    setText(rr, '다시 뽑기 · 이번 회차에 ' + left + '번 남음');
     $('perk').hidden = false;
   }
 
@@ -1475,7 +1475,7 @@
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
     setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
-      : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
+      : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요. 버틸수록 무리가 조금씩 흩어져요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
     setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;
@@ -1486,12 +1486,12 @@
     rb.disabled = !can;
     setText($('retreat-count'), state.retreats ? state.retreats + '번 철수함' : '');
     setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
-    // 철수의 기준은 "이번 판에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
+    // 철수의 기준은 "이번 회차에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
     setText($('retreat-hint'), can
-      ? '이번 판에 번 물자 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
-      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에 번 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
-    setText($('retreat-sub'), can ? '가진 물자가 아니라 이번 판에 번 물자를 모두 더한 값이에요. 더 벌고 철수하면 샘플이 늘어요.'
-      : state.pendingPerks.length ? '' : '가진 물자가 아니라 이번 판에 번 물자를 모두 더한 값이에요. 다 채우면 철수할 수 있어요.');
+      ? '이번 회차에 번 물자 ' + fmt(state.runEarned) + ' · ' + fmt(C.nextAntibodyAt(state)) + '을 넘기면 샘플 +' + fmt(gain + 1)
+      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차에 번 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
+    setText($('retreat-sub'), can ? '가진 물자가 아니라 이번 회차에 번 물자를 모두 더한 값이에요. 더 벌고 철수하면 샘플이 늘어요.'
+      : state.pendingPerks.length ? '' : '가진 물자가 아니라 이번 회차에 번 물자를 모두 더한 값이에요. 다 채우면 철수할 수 있어요.');
     // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
     $('retreat-bar').hidden = !!state.pendingPerks.length && !can;
     $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / (can ? C.nextAntibodyAt(state) : C.RETREAT_MIN) * 100).toFixed(1) + '%';

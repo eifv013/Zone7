@@ -1820,7 +1820,7 @@ test('1구역 셋째 목표는 수색으로 채운다(기다리기만 하는 목
   const s = fresh(), g = C.GOALS[0][2];
   assert.equal(g.id, 'z1c');
   s.wavesCleared = 100; assert.equal(g.value(s), 0);
-  s.sweeps = 5; assert.ok(g.value(s) >= g.need);
+  s.sweeps = g.need; assert.ok(g.value(s) >= g.need);
 });
 
 test('순찰조의 초당 물자: 없으면 0, 사면 생기고, 빨라질수록 커진다', () => {
@@ -1931,4 +1931,20 @@ test('특전 다시 뽑기: 특성 레벨만큼만 쓸 수 있고, 철수하면 
   const back = C.retreat(s, 1);
   assert.ok(back.ok); assert.equal(C.rerollsLeft(back.state), 2);
   assert.equal(C.sanitizeState({ version: 2, rerollsUsed: -4 }, 0).rerollsUsed, 0);
+});
+
+test('농성: 못 막은 밤마다 무리가 흩어지고, 바닥이 있으며, 방어에 성공하면 원래대로 돌아온다', () => {
+  const s = fresh(); s.wavesCleared = 40; s.supplies = 1000;
+  const full = C.nightStrength(s);
+  assert.equal(C.resolveNight(s).type, 'breached');
+  assert.equal(C.nightStrength(s), full, '뚫린 첫 밤에는 아직 그대로');
+  assert.equal(C.resolveNight(s).type, 'held');
+  assert.ok(C.nightStrength(s) < full, '버틴 밤마다 줄어든다');
+  for (let i = 0; i < 60; i++) C.resolveNight(s);
+  assert.ok(C.nightStrength(s) >= Math.floor(full * C.SIEGE_FLOOR), '바닥 아래로는 줄지 않는다');
+  assert.ok(C.nightStrength(s) <= Math.ceil(full * C.SIEGE_FLOOR) + 1);
+  s.defenses.rail = 100000;
+  assert.equal(C.resolveNight(s).type, 'defended');
+  assert.equal(s.siegeNights, 0);
+  assert.equal(C.sanitizeState({ version: 2, siegeNights: 'x' }, 0).siegeNights, 0);
 });
