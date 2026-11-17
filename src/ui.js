@@ -209,8 +209,9 @@
    * 서버에는 글이 가지 않는다(시각과 알림 주소뿐). 무슨 글을 띄울지는 서비스 워커가 적어 둔 목록에서 고른다.
    * PUSH_SERVER 가 비어 있거나 기기가 지원하지 않으면 이 기능은 없는 것처럼 동작한다.
    */
-  var PUSH_SERVER = '';      // 알림 서버의 주소(예: https://zone7-push.계정.workers.dev). 서버를 올린 뒤에 채운다
+  var PUSH_SERVER = 'https://zone7-push.eifv013.workers.dev';      // 알림 서버(push/worker.js)를 올린 주소
   var PUSH_KEY = 'zone7-push', PUSH_INDEX = 'zone7-push-index', PUSH_BACK_AT = 'zone7-push-back';
+  var PUSH_TEST_AT = 'zone7-push-test';      // 시험 알림이 올 시각. 그때까지는 평소 예약/취소를 쉬어서 시험을 덮어쓰지 않는다
   var NOTICE_CACHE = 'zone7-notice', NOTICE_PLAN = './notice-plan';      // 서비스 워커(sw.js)와 맞춘 이름
   function webPushReady() {
     try { return !!(PUSH_SERVER && window.ZONE7_PWA && !nativeApp() && navigator.serviceWorker && window.PushManager && window.Notification && window.caches); }
@@ -245,6 +246,7 @@
   /** 화면이 가려질 때: 알림을 맡긴다. 다시 보일 때: 취소한다. */
   async function webPushSync(hidden) {
     if (!webPushReady() || recall(PUSH_KEY) !== 'on') return;
+    if (Date.now() < (Number(recall(PUSH_TEST_AT)) || 0) + 15000) return;      // 시험 알림을 기다리는 중: 앱을 닫거나 열어도 시험을 건드리지 않는다
     try {
       var reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
       if (!sub) return;
@@ -263,6 +265,21 @@
       await pushPost('/schedule', { endpoint: sub.endpoint, times: plan.map(function (p) { return p.at; }) });
     } catch (e) { /* 알림은 없어도 게임에는 지장이 없다 */ }
   }
+  /**
+   * 시험 알림(임시): 1분 뒤에 알림 하나를 보내 달라고 서버에 맡긴다. 알림이 실제로 오는지 확인하려는 단추다.
+   * 성공하면 true. 구독이 없으면(알림을 켜지 않았으면) false.
+   */
+  async function webPushTest() {
+    var reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+    if (!sub) return false;
+    var plan = C.noticeTestPlan(Date.now());
+    var box = await caches.open(NOTICE_CACHE);
+    await box.put(NOTICE_PLAN, new Response(JSON.stringify({ items: plan }), { headers: { 'Content-Type': 'application/json' } }));
+    var res = await pushPost('/schedule', { endpoint: sub.endpoint, times: [plan[0].at] });
+    if (!res.ok) throw new Error('server ' + res.status);
+    remember(PUSH_TEST_AT, plan[0].at);
+    return true;
+  }
   function wireNotify() {
     var app = nativeApp(), row = $('notify-row');
     if (!row || (!app && !webPushReady())) return;
@@ -272,6 +289,19 @@
     if (app) { try { now = !!app.getNotify(); } catch (e) { now = true; } }
     else now = recall(PUSH_KEY) === 'on' && Notification.permission === 'granted';
     show(now);
+    // 시험 단추(임시): 웹 앱 알림에서만 보인다
+    var testRow = $('notify-test-row'), testBtn = $('notify-test');
+    if (!app && testRow && testBtn) {
+      testRow.hidden = false;
+      testBtn.addEventListener('click', function () {
+        if (recall(PUSH_KEY) !== 'on') { toast('먼저 앱 알림을 켜 주세요'); return; }
+        testBtn.disabled = true;
+        webPushTest().then(function (ok) {
+          testBtn.disabled = false;
+          toast(ok ? '1분 뒤에 알림이 와요. 홈 화면으로 나가서 기다려 보세요.' : '먼저 앱 알림을 켜 주세요');
+        }, function () { testBtn.disabled = false; toast('알림 서버에 닿지 못했어요. 잠시 뒤에 다시 해 주세요.'); });
+      });
+    }
     document.querySelectorAll('[data-notify]').forEach(function (b) {
       b.addEventListener('click', function () {
         var on = b.getAttribute('data-notify') === 'on';

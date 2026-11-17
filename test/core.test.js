@@ -1783,3 +1783,13 @@ test('알림 문구: 네 가지가 차례로 돌고, 이름과 조사가 맞고,
   assert.equal(plan[0].text, C.NOTICE_FULL_TEXT);
   assert.ok(plan[0].at < plan[1].at);
 });
+
+test('시험 알림 목록: 1분 뒤에 하나, 잘못된 시각이 와도 깨지지 않는다', () => {
+  const plan = C.noticeTestPlan(1000000);
+  assert.equal(plan.length, 1);
+  assert.equal(plan[0].at, 1000000 + 60000);
+  assert.equal(plan[0].kind, 'test');
+  assert.ok(plan[0].text.length > 0);
+  const bad = C.noticeTestPlan('엉뚱한 값');
+  assert.ok(isFinite(bad[0].at) && bad[0].at > Date.now());
+});
