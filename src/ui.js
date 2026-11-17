@@ -1406,6 +1406,7 @@
     var p = C.petInfo(state), cost = C.petPullCost(state), have = C.kennelCount(state);
     $('pet-empty').hidden = !!p; $('pet-card').hidden = !p;
     $('hero-input').placeholder = state.heroName;
+    document.querySelectorAll('[data-gender]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-gender') === state.heroGender ? 'true' : 'false'); });
     setText($('pet-kind'), p ? '친구 ' + have + ' / ' + C.PET_BREEDS.length : '아직 친구가 없어요');
     ['dog', 'cat'].forEach(function (kind) {
       var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
@@ -1488,7 +1489,7 @@
     C.BEATS.forEach(function (b) { if (!byZone[b.zone]) { byZone[b.zone] = []; chapters.push(b.zone); } byZone[b.zone].push(b); });
     // 처음에는 글이 적힌 장 가운데 가장 뒤의 장을 연다(철수 글은 1장에 있으므로 '마지막에 적힌 글'로 고르면 1장이 열린다)
     if (!journalTab || !byZone[journalTab]) { journalTab = chapters[0]; read.forEach(function (b) { if (b.zone > journalTab) journalTab = b.zone; }); }
-    var key = read.map(function (b) { return b.id; }).join(',') + '|' + journalTab + '|' + state.heroName;
+    var key = read.map(function (b) { return b.id; }).join(',') + '|' + journalTab + '|' + state.heroName + '|' + state.heroGender;
     if (key === journalShown) return;
     journalShown = key;
     var tabs = $('journal-tabs'), list = $('journal'), latest = read.length ? read[read.length - 1] : null;
@@ -1509,13 +1510,13 @@
       } else {
         li.appendChild(el('span', 'j-no', b.zone + '장 ' + (k + 1) + '편'));
         li.appendChild(el('span', 'j-title', b.title));
-        C.fillStory(b.text, state.heroName).split('\n\n').forEach(function (para) { li.appendChild(el('p', '', para)); });      // 이름 자리에 지금의 주인공 이름을 넣는다
+        C.fillStory(b.text, state.heroName, state.heroGender).split('\n\n').forEach(function (para) { li.appendChild(el('p', '', para)); });      // 이름 자리에 지금의 주인공 이름을 넣는다
       }
       list.appendChild(li);
     });
     setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
     // 상황 화면의 한 줄: 가장 최근 글의 제목과 첫 문단
-    var line = latest ? '〈' + latest.title + '〉 ' + C.fillStory(latest.text, state.heroName).split('\n\n')[0] : '아직 적힌 것이 없어요.';
+    var line = latest ? '〈' + latest.title + '〉 ' + C.fillStory(latest.text, state.heroName, state.heroGender).split('\n\n')[0] : '아직 적힌 것이 없어요.';
     setText($('story-latest'), line);
     setText($('m-story'), line);
   }
@@ -1873,6 +1874,10 @@
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
     wirePrefs();
+    // 주인공의 성별: 고르면 일지의 호칭이 바뀐다(설정 안 함이면 중립)
+    document.querySelectorAll('[data-gender]').forEach(function (b) {
+      b.addEventListener('click', function () { if (C.setHeroGender(state, b.getAttribute('data-gender')).ok) { Store.save(); render(); renderJournal(); } });
+    });
     wireFeedback();
     $('export').addEventListener('click', function () {
       var code;

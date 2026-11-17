@@ -829,6 +829,7 @@ body { font-size: 15.5px; line-height: 1.55; }
 .panel-head:has(.zmap-open) h2 { line-height: 1; }
 .zmap-open, .panel-head .qty button { height: 30px; padding: 0 12px; font: 600 13px/28px var(--font-body); }
 .zmap-open { border-radius: 999px; margin-left: 10px; white-space: nowrap; }
+.gender-row { border-top: 0; padding: 0 0 6px; }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -844,7 +845,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.7</div>
+  <div class="boot-ver">7구역 알파 0.8.8</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1021,7 +1022,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <section class="panel" aria-labelledby="h-pet">
       <div class="panel-head"><h2 id="h-pet">일행</h2><span class="label" id="pet-kind"></span></div>
       <div class="pet-rename hero-row"><input type="text" id="hero-input" maxlength="8" autocomplete="off" spellcheck="false" aria-label="주인공의 새 이름"><button type="button" id="hero-rename">주인공 이름 바꾸기</button></div>
-      <p class="hint" id="pet-empty">거점 주변을 떠돌던 동물이 따라와요. 강아지나 고양이를 골라 데려와 보세요. 어떤 아이가 올지는 만나 봐야 알아요.</p>
+      <div class="set-row gender-row"><span class="label">성별 · 일지의 호칭이 바뀌어요</span>
+        <div class="qty" role="group" aria-label="주인공의 성별"><button type="button" data-gender="none">설정 안 함</button><button type="button" data-gender="m">남</button><button type="button" data-gender="f">여</button></div></div>
+      <p class="hint" id="pet-empty">강아지나 고양이를 데려와 보세요. 누가 올지는 만나 봐야 알아요.</p>
       <div id="pet-card" hidden>
         <div class="pet-top"><i class="pet-face" id="pet-face"></i><div><div class="pet-name num" id="pet-name"></div><div class="label" id="pet-desc"></div></div></div>
         <div class="pet-rename"><input type="text" id="pet-input" maxlength="8" autocomplete="off" spellcheck="false" aria-label="친구의 새 이름"><button type="button" id="pet-rename">이름 바꾸기</button></div>
@@ -1106,7 +1109,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

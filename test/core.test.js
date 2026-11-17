@@ -1604,3 +1604,21 @@ test('일지의 이름 자리: 주인공 이름과 받침에 맞는 조사가 �
   const raw = JSON.parse(C.serialize(C.createState())); raw.heroName = '생존자';
   assert.equal(C.sanitizeState(raw).heroName, '라라');
 });
+
+test('성별: 설정 안 함이면 중립 호칭, 고르면 형·오빠, 누나·언니, 아들·딸로 바뀌고 조사도 맞는다', () => {
+  const t = '{student:이} {driver:은} {driver}의 {child:을} {sib:은}';
+  assert.equal(C.fillStory(t, '라라', 'none'), '고등학생이 기관사는 기관사의 내 아이를 라라는');
+  assert.equal(C.fillStory(t, '라라', 'm'), '고등학생 형이 기관사 누나는 기관사 누나의 내 아들을 오빠는');
+  assert.equal(C.fillStory(t, '라라', 'f'), '고등학생 오빠가 기관사 언니는 기관사 언니의 내 딸을 언니는');
+  for (const bad of [undefined, null, 'x', 3]) assert.equal(C.fillStory('{driver}', '라라', bad), '기관사');
+  assert.equal(C.fillStory('{nothing:이}', '민준', 'm'), '민준이');
+  for (const g of C.GENDERS) for (const b of C.BEATS) assert.ok(!/[{}]/.test(C.fillStory(b.text, '라라', g)), b.id + ' ' + g);
+  const s = C.createState();
+  assert.equal(s.heroGender, 'none');
+  assert.equal(C.setHeroGender(s, 'f').ok, true);
+  assert.equal(C.setHeroGender(s, 'robot').ok, false);
+  assert.equal(s.heroGender, 'f');
+  assert.equal(C.deserialize(C.serialize(s), 0).heroGender, 'f');
+  const raw = JSON.parse(C.serialize(s)); raw.heroGender = 'zzz';
+  assert.equal(C.sanitizeState(raw).heroGender, 'none');
+});

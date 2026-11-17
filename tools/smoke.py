@@ -144,6 +144,11 @@ def run_case(browser, name, size, state, mode):
         if not fits(): problems.append('한 화면에 들어오지 않는다(특성)')
         tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'journal', 'save']: tap('[data-rtab-set=%s]' % t)
+        # 0.8.8 성별: 일행 칸에서 '여'를 고르면 일지의 호칭이 바뀐다(기관사 → 기관사 언니는 4구역 일지라 여기서는 단추만 본다)
+        tap('[data-mview-set=exped]')
+        tap('[data-gender=f]')
+        if page.get_attribute('[data-gender=f]', 'aria-pressed') != 'true': problems.append('성별 단추가 눌린 표시가 안 된다')
+        tap('[data-gender=none]')
         # 0.8.3 자동화 설명: 영구 특성 '자동화' 줄에 전력 투입 대기 시간(초)이 나온다
         tap('[data-mview-set=exped]')
         if '전력 투입' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))

@@ -155,14 +155,14 @@
           "기다리는 건 오늘까지만 하기로 했다. 내일부터는 내가 찾으러 나간다. 옆집부터, 한 집씩."] },
         { title: "지붕 위의 7", text: [
           "옆집 지붕에 누가 흰 페인트로 숫자를 써 놓았다. 7, 그리고 화살표. 화살표는 강 쪽을 가리킨다. 다음 집 지붕에도, 그다음 집에도 있다. 누군가 지붕을 타고 가면서 길을 남긴 것이다.",
-          "세 번째 집 다락에서 사람들을 만났다. 정수기 기사였다는 아저씨, 쌍둥이를 데리고 있는 아주머니, 말이 없는 고등학생. 다들 같은 방송을 듣고 있었다.",
+          "세 번째 집 다락에서 사람들을 만났다. 정수기 기사였다는 아저씨, 쌍둥이를 데리고 있는 아주머니, 말이 없는 {student}. 다들 같은 방송을 듣고 있었다.",
           "아저씨가 물었다. “{hero:야}, 그 상자엔 뭐가 들었냐.” 나는 모른다고 했다. 정말로 모른다. 아저씨는 더 묻지 않고 내 우비의 모자를 씌워 주었다. “비 온다. 노란색이라 멀리서도 보이겠네. 길 잃을 일은 없겠다.”",
           "밤에 방벽 너머에서 손톱으로 철판을 긁는 소리가 났다. 사람들이 숨을 죽였다. 나는 왼쪽 소매를 꼭 쥐고 있었다. 아홉 번째 날에 물린 자리가 가려웠다.",
           "물리면 반나절이라고들 한다. 나는 사흘째 멀쩡하다."] },
         { title: "남겨 두는 것", text: [
           "동네의 통조림이 바닥을 보인다. 찾아볼 집이 이제 없다. 골목 끝에 셔터 내린 시장이 보인다. 다음은 거기다.",
           "떠나기 전에 아저씨가 이상한 일을 시켰다. 창고의 절반을 그대로 두고 가자는 것이다. 물, 통조림, 건전지. 문에는 분필로 썼다. “쓰고 채워 놓을 것.”",
-          "고등학생이 화를 냈다. 우리도 모자란데 누굴 주느냐고. 아저씨는 지붕을 가리켰다. “저 숫자 써 놓은 사람도 모자랐을 거다. 그래도 썼잖냐.”",
+          "{student:이} 화를 냈다. 우리도 모자란데 누굴 주느냐고. 아저씨는 지붕을 가리켰다. “저 숫자 써 놓은 사람도 모자랐을 거다. 그래도 썼잖냐.”",
           "나는 우리 집 현관에 쪽지를 붙였다. “엄마, 나 7구역으로 가. 상자는 잘 들고 있어. — {hero}” 붙이고 나서 한참 서 있었다. 엄마가 이걸 읽을 일이 있을까.",
           "돌아보지 않으려고 했는데 한 번 돌아봤다. 지붕 위의 7이 비에 젖어 번들거렸다."] }] },
     { no: 2, name: '재래시장', kind: 'trade', cost: 5e7, lead: '좌판을 열고 시세를 봐 가며 판다',
@@ -181,7 +181,7 @@
           "열일곱 명이 이 길을 먼저 지나갔다. 그러니까 이 길은 갈 수 있는 길이다. 나는 쪽지를 접어서 냉장 상자 손잡이에 묶었다."] },
         { title: "같은 방향", text: [
           "시장이 다시 시끄럽다. 좌판이 스무 개를 넘었다. 할머니는 목이 쉬었다.",
-          "그런데 밤마다 무리가 불어난다. 망을 보던 고등학생이 이상한 걸 알아챘다. 놈들은 우리를 보고 오는 게 아니다. 시장 앞을 그냥 지나간다. 우리가 소리를 내면 그때 고개를 돌린다.",
+          "그런데 밤마다 무리가 불어난다. 망을 보던 {student:이} 이상한 걸 알아챘다. 놈들은 우리를 보고 오는 게 아니다. 시장 앞을 그냥 지나간다. 우리가 소리를 내면 그때 고개를 돌린다.",
           "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
           "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
           "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
@@ -211,19 +211,19 @@
           "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
           "승강장에 열차 한 대가 문을 연 채 서 있다. 좌석마다 가방이 놓여 있다. 사람은 없다. 가방들만 줄 맞춰 앉아서 출발을 기다리고 있다.",
           "맨 앞 칸에서 기관사를 찾았다. 살아 있었다. 운전석에 앉아서 컵라면을 먹고 있었다. “손님이네. 표는 없어도 돼. 이름이 뭐야?” {hero}라고 했더니 승무 일지에 그대로 받아 적었다.",
-          "기관사는 열이틀째 여기 있었다고 했다. 전기가 나갔는데 왜 안 떠났느냐고 물으니 전광판을 가리켰다. “저게 안 꺼지잖아. 저게 켜져 있는 동안은 운행 중인 거야. 내가 정한 건 아니고.”",
-          "아저씨가 변전실을 보러 갔다. 나는 기관사 옆에 앉아서 전광판을 봤다. --분. 숫자가 들어갈 자리가 비어 있다."] },
+          "{driver:은} 열이틀째 여기 있었다고 했다. 전기가 나갔는데 왜 안 떠났느냐고 물으니 전광판을 가리켰다. “저게 안 꺼지잖아. 저게 켜져 있는 동안은 운행 중인 거야. 내가 정한 건 아니고.”",
+          "아저씨가 변전실을 보러 갔다. 나는 {driver} 옆에 앉아서 전광판을 봤다. --분. 숫자가 들어갈 자리가 비어 있다."] },
         { title: "막차", text: [
           "역무실 칠판에 분필 글씨가 남아 있다. “막차는 7구역행. 못 탄 사람은 선로를 따라 걸을 것. 터널 안에서는 소리 내지 말 것.” 마지막 줄에는 밑줄이 세 번 그어져 있다.",
-          "끊긴 선로를 보러 터널에 들어갔다. 기관사가 앞장서고 내가 손전등을 들었다. 터널 벽에 손자국이 있다. 어른 것, 그리고 그 아래 내 손만 한 것들. 열 몇 개. 벽을 짚으며 걸어간 자국이다.",
-          "한가운데쯤 왔을 때 가방 속 무전기가 저절로 켜졌다. “여기는 7구역. 생존자는—” 기관사가 내 입을 막았다. 입을 막을 건 내가 아닌데. 나는 가방을 끌어안고 스위치를 더듬었다.",
+          "끊긴 선로를 보러 터널에 들어갔다. {driver:이} 앞장서고 내가 손전등을 들었다. 터널 벽에 손자국이 있다. 어른 것, 그리고 그 아래 내 손만 한 것들. 열 몇 개. 벽을 짚으며 걸어간 자국이다.",
+          "한가운데쯤 왔을 때 가방 속 무전기가 저절로 켜졌다. “여기는 7구역. 생존자는—” {driver:이} 내 입을 막았다. 입을 막을 건 내가 아닌데. 나는 가방을 끌어안고 스위치를 더듬었다.",
           "끄기 직전에 들었다. 문장과 문장 사이에 아주 작은 소리가 있다. 딸깍. 테이프가 처음으로 돌아가는 소리다. 방송은 누가 말하고 있는 게 아니다. 녹음이다.",
-          "터널 저쪽 어둠에서 수십 개의 발이 한꺼번에 멈췄다가, 한참 뒤에 다시 걷기 시작했다. 우리는 그 자리에서 삼십 분을 서 있었다. 기관사의 손이 내 입 위에서 계속 떨렸다."] },
+          "터널 저쪽 어둠에서 수십 개의 발이 한꺼번에 멈췄다가, 한참 뒤에 다시 걷기 시작했다. 우리는 그 자리에서 삼십 분을 서 있었다. {driver}의 손이 내 입 위에서 계속 떨렸다."] },
         { title: "옥상의 불", text: [
-          "열차가 다시 다닌다. 멀리 간 열차일수록 많이 싣고 돌아온다. 전광판의 --분 자리에 처음으로 숫자가 들어갔다. 기관사가 그걸 보고 울었다. 컵라면을 먹으면서.",
-          "심야 급행에서 돌아온 기관사가 말했다. 강 건너 병원 옥상에 불이 켜져 있다고. 깜박이는 불이라고. 길게, 짧게, 길게.",
+          "열차가 다시 다닌다. 멀리 간 열차일수록 많이 싣고 돌아온다. 전광판의 --분 자리에 처음으로 숫자가 들어갔다. {driver:이} 그걸 보고 울었다. 컵라면을 먹으면서.",
+          "심야 급행에서 돌아온 {driver:이} 말했다. 강 건너 병원 옥상에 불이 켜져 있다고. 깜박이는 불이라고. 길게, 짧게, 길게.",
           "아저씨가 그건 신호라고 했다. 누가 거기서 손으로 켰다 껐다 하는 거라고. 녹음이 아니라 사람이라고.",
-          "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. 고등학생이 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
+          "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. {student:이} 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
           "아무도 대답하지 못했다. 나는 방송의 목소리를 한 번 더 떠올렸다. 숨 쉴 틈 없이 말하는 여자. 엄마는 급할 때 그렇게 말한다. 그 생각은 입 밖에 내지 않았다. 다음 급행은 병원 앞까지 간다."] }] },
     { no: 5, name: '대학 병원', kind: 'lab', cost: 1e24, lead: '남은 연구를 이어 가며 과제를 고른다',
       story: [
@@ -236,9 +236,9 @@
         { title: "114번", text: [
           "수첩은 실험 노트였다. 엄마 글씨다. 마지막 쪽. “샘플 114번에서 반응. 양이 모자란다. 사람이 더 필요하다. 살아서 여기까지 온 사람들의 피가.” 날짜는 사태 9일째.",
           "9일째는 내가 물린 날이다.",
-          "앞쪽을 넘겨 봤다. 1번부터 113번까지는 전부 한 줄씩이고, 끝에 같은 말이 적혀 있다. 반응 없음. 114번만 세 쪽이다. “물린 지 6시간, 열 39도. 12시간, 열 내림. 24시간, 밥을 달라고 함.” 그리고 줄을 벅벅 그어 지운 한 줄. 불빛에 비춰 보니 읽을 수 있었다. “{hero:을} 숫자로 적고 있다. 내 아이를.”",
+          "앞쪽을 넘겨 봤다. 1번부터 113번까지는 전부 한 줄씩이고, 끝에 같은 말이 적혀 있다. 반응 없음. 114번만 세 쪽이다. “물린 지 6시간, 열 39도. 12시간, 열 내림. 24시간, 밥을 달라고 함.” 그리고 줄을 벅벅 그어 지운 한 줄. 불빛에 비춰 보니 읽을 수 있었다. “{hero:을} 숫자로 적고 있다. {child:을}.”",
           "나는 왼쪽 소매를 걷었다. 처음으로 사람들 앞에서. 이빨 자국은 하얗게 아물어 있다. 아저씨는 한참 보다가 소매를 도로 내려 주었다. “그래서 비도 안 오는데 맨날 우비를 입고 있었구나.”",
-          "쌍둥이 중 하나가 물었다. “그럼 {hero:은} 안 변해?” 나는 모른다고 했다. 엄마도 몰랐을 것이다. 그래서 병원에 온 것이다."] },
+          "쌍둥이 중 하나가 물었다. “그럼 {sib:은} 안 변해?” 나는 모른다고 했다. 엄마도 몰랐을 것이다. 그래서 병원에 온 것이다."] },
         { title: "냉장 상자", text: [
           "연구가 다시 굴러간다. 아주머니는 알고 보니 임상병리사였다. 열이틀 동안 아무도 묻지 않아서 말하지 않았다고 했다.",
           "냉장 상자를 열었다. 엄마가 열지 말라고 했지만, 엄마의 노트가 열라고 하고 있었다. 안에는 피가 든 관이 여섯 개. 라벨은 114-2부터 114-7. 첫 번째 관은 엄마가 들고 간 것이다.",
@@ -437,7 +437,8 @@
       // 영구
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
       kennel: {},            // 함께 있는 친구들 { 품종: 이름 }. 한 번 데려온 아이는 계속 남고, 누구를 데리고 다닐지 고른다
-      heroName: HERO_DEFAULT,    // 주인공의 이름
+      heroName: HERO_DEFAULT,
+      heroGender: 'none',    // 주인공의 성별: 'none'(설정 안 함) | 'm' | 'f'. 일지의 호칭이 달라진다    // 주인공의 이름
       antibodies: 0,         // 쓰지 않은 항체 샘플
       antibodyTotal: 0,      // 지금까지 얻은 항체 샘플
       traits: {},
@@ -496,7 +497,8 @@
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
     s.heroName = cleanName(raw.heroName, HERO_DEFAULT);
-    if (s.heroName === '생존자') s.heroName = HERO_DEFAULT;      // 예전 기본 이름은 새 기본 이름으로 옮긴다
+    if (s.heroName === '생존자') s.heroName = HERO_DEFAULT;
+    s.heroGender = GENDERS.indexOf(raw.heroGender) >= 0 ? raw.heroGender : 'none';      // 예전 기본 이름은 새 기본 이름으로 옮긴다
     s.kennel = {};
     var rk = raw.kennel && typeof raw.kennel === 'object' && !Array.isArray(raw.kennel) ? raw.kennel : {};
     PET_BREEDS.forEach(function (b) { if (Object.prototype.hasOwnProperty.call(rk, b.id)) s.kennel[b.id] = cleanName(rk[b.id], b.name); });
@@ -1362,7 +1364,7 @@
     next.antibodyTotal = state.antibodyTotal + gained;
     TRAITS.forEach(function (t) { next.traits[t.id] = state.traits[t.id]; });
     next.retreats = state.retreats + 1;
-    next.pet = state.pet; next.kennel = state.kennel; next.heroName = state.heroName;      // 동물 친구와 이름은 함께 간다
+    next.pet = state.pet; next.kennel = state.kennel; next.heroName = state.heroName; next.heroGender = state.heroGender;      // 동물 친구와 이름은 함께 간다
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     next.lifetimeEarned = state.lifetimeEarned;
@@ -1420,13 +1422,35 @@
    *   라라 → 라라야, 라라는, 라라를, 라라가 / 민준 → 민준아, 민준은, 민준을, 민준이.  이름이 비면 기본 이름을 쓴다.
    */
   var JOSA = { '야': ['아', '야'], '은': ['은', '는'], '을': ['을', '를'], '이': ['이', '가'] };
-  function fillStory(text, name) {
+  /*
+   * 주인공의 성별에 따라 달라지는 호칭. 'none'(설정 안 함)이면 어느 쪽으로 읽어도 되는 말을 쓴다.
+   *   student 고등학생(남자), driver 기관사(여자), child 엄마가 주인공을 가리키는 말, sib 쌍둥이가 주인공을 부르는 말(none 이면 이름)
+   */
+  var GENDERS = ['none', 'm', 'f'];
+  var CALLS = {
+    student: { none: '고등학생', m: '고등학생 형', f: '고등학생 오빠' },
+    driver:  { none: '기관사',   m: '기관사 누나', f: '기관사 언니' },
+    child:   { none: '내 아이',  m: '내 아들',     f: '내 딸' },
+    sib:     { none: null,       m: '오빠',        f: '언니' }
+  };
+  /**
+   * 일지 글의 자리를 채운다. {hero} 는 주인공 이름, {student}·{driver}·{child}·{sib} 는 성별에 맞는 호칭(CALLS).
+   *   자리 뒤에 :야 :은 :을 :이 를 붙이면 받침에 맞는 조사가 따라온다(라라야 / 민준아, 형이 / 오빠가).
+   *   이름이 비면 기본 이름, 모르는 성별이면 '설정 안 함', 모르는 자리는 주인공 이름으로 채운다.
+   */
+  function fillStory(text, name, gender) {
     var hero = typeof name === 'string' && name.trim() ? name.trim() : HERO_DEFAULT;
-    return String(text == null ? '' : text).replace(/\{hero(?::(.))?\}/g, function (all, josa) {
-      if (!josa) return hero;
-      var pair = JOSA[josa];
-      return pair ? hero + (hasBatchim(hero) ? pair[0] : pair[1]) : hero;
+    var g = GENDERS.indexOf(gender) >= 0 ? gender : 'none';
+    return String(text == null ? '' : text).replace(/\{([a-z]+)(?::(.))?\}/g, function (all, key, josa) {
+      var word = Object.prototype.hasOwnProperty.call(CALLS, key) ? (CALLS[key][g] || hero) : hero;
+      var pair = josa ? JOSA[josa] : null;
+      return pair ? word + (hasBatchim(word) ? pair[0] : pair[1]) : word;
     });
+  }
+  function setHeroGender(state, gender) {
+    if (GENDERS.indexOf(gender) < 0) return fail('unknown');
+    state.heroGender = gender;
+    return { ok: true, gender: gender };
   }
   var BEATS = [];
   ZONES.forEach(function (z, zi) {
@@ -1456,7 +1480,7 @@
       try { hit = !!b.when(state); } catch (e) { hit = false; }
       if (!hit) return;
       state.story[b.id] = true;
-      events.push({ type: 'story', id: b.id, zone: b.zone, zoneName: b.zoneName, title: b.title, text: fillStory(b.text, state.heroName) });
+      events.push({ type: 'story', id: b.id, zone: b.zone, zoneName: b.zoneName, title: b.title, text: fillStory(b.text, state.heroName, state.heroGender) });
     });
   }
 
@@ -1638,7 +1662,7 @@
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
