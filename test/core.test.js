@@ -1667,3 +1667,13 @@ test('소문(1구역 개조): 은닉처가 나올 확률이 오른다. 올리지
   s.upgrades.rumor = 8;
   assert.equal(C.cacheExtra(s), 24);
 });
+
+test('구조 신호의 보상: 물자, 간식, 생산 배수 가운데 하나', () => {
+  const kind = (r) => { const s = C.createState(); s.signalLeft = 5; const before = s.treats; const out = C.answerSignal(s, () => r); return [out.kind, s.treats - before]; };
+  assert.deepEqual(kind(0.1), ['supplies', 0]);
+  assert.deepEqual(kind(0.44), ['supplies', 0]);
+  assert.deepEqual(kind(0.45), ['treats', C.SIGNAL_TREATS]);
+  assert.deepEqual(kind(0.59), ['treats', C.SIGNAL_TREATS]);
+  assert.deepEqual(kind(0.6), ['buff', 0]);
+  assert.deepEqual(kind(0.99), ['buff', 0]);
+});

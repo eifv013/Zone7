@@ -16,6 +16,11 @@ REPO="${1:-$SRC/../zone7}"
 cd "$SRC"
 npm test >/dev/null || { echo "테스트 실패. 올리지 않는다." >&2; exit 1; }
 node build.js >/dev/null
+# 화면 연기 테스트를 통과해야만 올린다. 0.8.13 에서 문법 오류가 든 빌드가 그대로 올라가 화면이 멈춘 일이 있었다.
+# (단위 테스트는 화면 코드를 실행하지 않으므로 이런 오류를 못 잡는다.) SKIP_SMOKE=1 이면 건너뛴다: 방금 직접 돌려 통과한 경우에만 쓴다.
+if [ "${SKIP_SMOKE:-0}" != "1" ]; then
+  python3 tools/smoke.py >/tmp/zone7-smoke.log 2>&1 || { echo "화면 테스트 실패. 올리지 않는다. (/tmp/zone7-smoke.log)" >&2; grep -v '^통과' /tmp/zone7-smoke.log | head -8 >&2; exit 1; }
+fi
 VERSION="$(node -p "require('./package.json').version")"
 [ "$(node -p "require('./dist/pwa/version.json').version")" = "$VERSION" ] || { echo "빌드 버전이 맞지 않는다." >&2; exit 1; }
 

@@ -1092,7 +1092,7 @@
   }
   /*
    * 친구 키우기: 간식을 주면 그 친구의 레벨이 오르고 효과가 커진다.
-   *   간식은 물자·항체와 다른 재화다. 밤을 막을 때마다 TREAT_NIGHT 개(변이체는 TREAT_BOSS 개), 구조 신호에 응답하면 1개를 얻는다.
+   *   간식은 물자·항체와 다른 재화다. 밤을 막을 때마다 TREAT_NIGHT 개(변이체는 TREAT_BOSS 개)를 얻고, 구조 신호의 보상으로도 가끔 나온다.
    *   레벨마다 효과가 PET_LEVEL_STEP(20%)씩 커진다(기본 효과에 곱한다). 값은 PET_FEED_BASE 에서 시작해 레벨마다 PET_FEED_GROWTH 배.
    *   레벨은 친구마다 따로이고, 간식과 레벨은 철수해도 남는다.
    */
@@ -1360,13 +1360,19 @@
   }
 
   /* ---------- 구조 신호 ---------- */
+  var SIGNAL_TREATS = 3;      // 구조 신호의 보상으로 간식이 나왔을 때의 개수
   function answerSignal(state, rng) {
     if (!(state.signalLeft > 0)) return fail('none');
     rng = typeof rng === 'function' ? rng : Math.random;
     state.signalLeft = 0;
     state.signalsAnswered++;
-    state.treats = Math.min(1e9, state.treats + 1);      // 신호에 응답하면 간식 하나
-    if (rng() < 0.5) {
+    // 보상은 셋 가운데 하나: 물자(45%), 간식(15%), 생산 배수(40%)
+    var roll = rng();
+    if (roll >= 0.45 && roll < 0.6) {
+      state.treats = Math.min(1e9, state.treats + SIGNAL_TREATS);
+      return { ok: true, kind: 'treats', treats: SIGNAL_TREATS };
+    }
+    if (roll < 0.45) {
       var gain = Math.max(SIGNAL_SUPPLY_MIN, productionPerSec(state) * SIGNAL_SUPPLY_SECONDS);
       earn(state, gain);
       return { ok: true, kind: 'supplies', gain: gain };
@@ -1708,7 +1714,7 @@
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

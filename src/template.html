@@ -880,13 +880,31 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.14</div>
+  <div class="boot-ver">7구역 알파 0.8.15</div>
   <div class="boot-tape"></div>
 </div>
 <script>
 /*__BOOT__*/
 // 시작 화면이 실패해도 게임은 열려야 하므로 통째로 감싼다.
 try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BOOT = null; var b = document.getElementById('boot'); if (b) b.remove(); }
+</script>
+<script>
+/*
+ * 안전장치(0.8.15): 게임 스크립트가 통째로 죽어서(문법 오류 등) 12초 안에 시작하지 못하면
+ * "다시 불러오기" 단추만 있는 안내를 띄운다. 이 조각은 다른 스크립트와 따로 돌기 때문에 그쪽이 죽어도 살아 있다.
+ * 단추는 주소 뒤에 시각을 붙여 기기에 저장된 화면을 건너뛰고 새로 받는다. 진행 저장은 건드리지 않는다.
+ */
+setTimeout(function () {
+  if (window.ZONE7_STARTED) return;
+  var box = document.createElement('div');
+  box.setAttribute('role', 'alert');
+  box.style.cssText = 'position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#17180f;color:#e6e5db;text-align:center;font:16px/1.6 sans-serif';
+  var p = document.createElement('p'); p.textContent = '게임을 불러오지 못했어요. 진행은 저장돼 있어요.';
+  var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '다시 불러오기';
+  btn.style.cssText = 'padding:12px 22px;border:0;border-radius:8px;background:#f0b400;color:#17180f;font:700 16px/1.4 sans-serif';
+  btn.onclick = function () { try { location.replace(location.origin + location.pathname + '?r=' + Date.now()); } catch (e) { location.reload(); } };
+  box.appendChild(p); box.appendChild(btn); document.body.appendChild(box);
+}, 12000);
 </script>
 <div class="update-bar" id="update-bar" role="status" hidden>
   <p id="update-text"></p>
@@ -1153,7 +1171,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.8.14 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.15 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

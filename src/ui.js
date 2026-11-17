@@ -936,7 +936,7 @@
       $('goals').appendChild(li);
     }
     C.ZONES.forEach(function (z) { var li = el('li', '', String(z.no)); li.title = z.no + '구역 ' + z.name; $('route').appendChild(li); });
-    setText($('signal-gain'), '물자 ' + C.SIGNAL_SUPPLY_SECONDS + '초치 또는 ' + C.BUFF_SECONDS + '초간 생산 ' + C.BUFF_MULT + '배');
+    setText($('signal-gain'), '물자, 간식, 생산 ' + C.BUFF_MULT + '배 가운데 하나');
     buildNotes(); buildHelp(); buildStats();
   }
   function addTab(id, label) {
@@ -1823,7 +1823,8 @@
     $('signal').addEventListener('click', function () {
       var r = C.answerSignal(state);
       if (!r.ok) return; // 누르는 순간 신호가 끊긴 경우
-      sfx('answer'); render();
+      toast(r.kind === 'supplies' ? '보급품 · 물자 +' + fmt(r.gain) : r.kind === 'treats' ? '간식 +' + r.treats : '지원 · ' + r.seconds + '초 동안 생산 ' + r.mult + '배');
+      sfx(r.kind === 'treats' ? 'feed' : 'answer'); render();
     });
     $('fortify').addEventListener('click', function () {
       var r = C.fortify(state);
@@ -2094,6 +2095,7 @@
     Cloud.init();
     Update.afterUpdate();
     Update.check();
+    window.ZONE7_STARTED = true;      // 안전장치(template.html)에게 무사히 시작했다고 알린다
   }
 
   // 뷰어가 페이지를 교체할 때 진행 상황을 넘겨받을 수 있도록 현재 상태를 제공한다.
