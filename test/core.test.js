@@ -274,8 +274,13 @@ test('거래: 시세는 10초마다 범위 안에서 바뀌고, 강화로 범위
   for (const roll of [0, 0.3, 0.7, 0.999]) { C.tick(s, C.PRICE_STEP, () => roll); assert.ok(s.price >= r.floor - 1e-9 && s.price <= r.ceil + 1e-9); }
 });
 
-test('거래: 자동 판매는 창고가 차면 판다. 거간꾼이 있으면 좋은 시세에 미리 판다', () => {
-  const s = inMarket(); s.stalls = 10;
+test('거래: 자동 판매는 거간꾼(개조)이나 자동화 특성이 있어야 한다. 좋은 시세에 팔고, 창고가 차면 그냥 판다', () => {
+  const none = inMarket(); none.stalls = 10;
+  for (let i = 0; i < 200; i++) assert.ok(!C.tick(none, 1, half).some(e => e.type === 'sold'), '거간꾼이 없으면 알아서 팔지 않는다');
+  const viaTrait = inMarket(); viaTrait.stalls = 10; viaTrait.traits.auto = 1;
+  let traitSold = 0; for (let i = 0; i < 200; i++) traitSold += C.tick(viaTrait, 1, half).filter(e => e.type === 'sold').length;
+  assert.ok(traitSold >= 1, '자동화 특성이 있으면 개조 없이도 판다');
+  const s = inMarket(); s.stalls = 10; s.upgrades.broker = 1;
   const sold = [];
   for (let i = 0; i < 200; i++) C.tick(s, 1, half).forEach(e => { if (e.type === 'sold') sold.push(e); });
   assert.ok(sold.length >= 2, '가만히 둬도 팔린다');
@@ -286,7 +291,7 @@ test('거래: 자동 판매는 창고가 차면 판다. 거간꾼이 있으면 �
   assert.ok(C.tick(b, 0.1, half).some(e => e.type === 'sold'));
   const low = inMarket(); low.stalls = 10; low.upgrades.broker = 1; low.price = 0.6; low.goods = C.goodsCap(low) * 0.3;
   assert.ok(!C.tick(low, 0.1, half).some(e => e.type === 'sold'), '낮은 시세에서는 기다린다');
-  const off = inMarket(); off.stalls = 10; C.setAutoSell(off, false);
+  const off = inMarket(); off.stalls = 10; off.upgrades.broker = 1; C.setAutoSell(off, false);
   for (let i = 0; i < 200; i++) assert.ok(!C.tick(off, 1, half).some(e => e.type === 'sold'));
 });
 
@@ -1165,11 +1170,14 @@ test('수색 지도: 누르기가 방치를 압도하지 않는다', () => {
   assert.ok(perTap * 5 < per * 0.75, `한 번에 생산의 ${(perTap / per * 100).toFixed(1)}%`);
 });
 
-test('수색 지도: 시설이 있으면 알아서 뒤진다(칸 수익은 없고 동네 보너스만)', () => {
+test('수색 지도: 순찰조(개조)가 있으면 알아서 뒤진다(칸 수익은 없고 동네 보너스만). 올릴수록 빨라진다', () => {
   const s = fresh(); s.defenses.rail = 1e5; s.signalIn = 1e9;
   C.tick(s, 30, half);
-  assert.equal(C.sweepCount(s), 0, '시설이 없으면 그대로다');
-  s.buildings.scouts = 1;
+  s.buildings.scouts = 5; C.tick(s, 30, half);
+  assert.equal(C.sweepCount(s), 0, '순찰조가 없으면 시설이 있어도 그대로다');
+  s.upgrades.patrol = 1;
+  assert.equal(C.autoOn(s, 0), true); assert.equal(C.autoOn(s, 1), false); assert.equal(C.autoOn(s, 9), false);
+  assert.deepEqual([1, 2, 5].map(lv => { const t = fresh(); t.upgrades.patrol = lv; return C.sweepInterval(t); }), [3, 2.6, 1.4]);
   C.tick(s, C.SWEEP_AUTO_SECONDS * 4 + 0.1, half);
   assert.equal(C.sweepCount(s), 4);
   assert.equal(s.clicks, 0);
@@ -1248,7 +1256,7 @@ test('연속 호가: 자동 판매도 단계를 올리고 보너스를 받지만
   r = C.sellGoods(s, true);
   assert.equal(s.streak, 4, '평균 이상의 자동 판매는 올린다');
   // tick 의 자동 판매도 마찬가지다
-  s.defenses.rail = 1e5; s.signalIn = 1e9; s.autoSell = true; s.goods = C.goodsCap(s);
+  s.defenses.rail = 1e5; s.signalIn = 1e9; s.autoSell = true; s.upgrades.broker = 1; s.goods = C.goodsCap(s);
   const ev = C.tick(s, 0.1, half).find(e => e.type === 'sold');
   assert.ok(ev && ev.auto); near(ev.bonus, 1.4);
 });

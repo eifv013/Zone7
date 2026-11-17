@@ -571,18 +571,95 @@
     render();
   }
   /** 구역 지도를 채운다: 구역마다 이름, 하는 일, 지금 버는 양(전체에서 차지하는 몫을 막대로). */
+  /*
+   * 구역 지도: 1구역(왼쪽 아래)에서 7구역(오른쪽 위)까지 길이 이어진 지도. 강을 건너야 6·7구역이다.
+   *   구역 표지를 누르면 아래 카드에 그 구역의 설명과 버는 양이 나오고, '이 구역 보기'로 그 구역 화면에 간다.
+   *   그림은 SVG 도형으로 그린다(좌표는 320×330 도트 기준). ZMAP_AT 이 구역마다의 자리다.
+   */
+  var ZMAP_AT = [[56, 292], [176, 268], [258, 206], [150, 170], [62, 122], [182, 66], [270, 30]];
+  var zmapPick = 0;
+  function svgEl(name, attrs, text) {
+    var n = document.createElementNS('http://www.w3.org/2000/svg', name);
+    for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  /** 구역 표지 위의 작은 건물 그림(도트). kind 는 구역 번호(0~6). */
+  function zmapIcon(g, zi, x, y) {
+    function r(dx, dy, w, h, c) { g.appendChild(svgEl('rect', { x: x + dx, y: y + dy, width: w, height: h, fill: c, 'class': 'zm-art' })); }
+    if (zi === 0) { r(-9, -12, 18, 12, '#8a6a4a'); r(-11, -16, 22, 4, '#a8402e'); r(-3, -7, 5, 7, '#17180f'); r(4, -9, 3, 3, '#ffe9a0'); }                                   // 주택가: 집
+    if (zi === 1) { r(-12, -8, 24, 8, '#8a5a34'); for (var i = 0; i < 4; i++) r(-12 + i * 6, -14, 6, 6, i % 2 ? '#e6e5db' : '#b8402e'); r(-11, -15, 1, 15, '#17180f'); r(10, -15, 1, 15, '#17180f'); } // 시장: 천막 좌판
+    if (zi === 2) { r(-12, -10, 24, 10, '#6d7479'); r(-10, -20, 4, 10, '#4a4f55'); r(-3, -16, 4, 6, '#4a4f55'); r(4, -6, 5, 6, '#f0b400'); r(-10, -24, 5, 3, '#9a9a94'); }       // 공단: 굴뚝 공장
+    if (zi === 3) { r(-14, -4, 28, 2, '#17180f'); r(-11, -14, 22, 9, '#3f6f8f'); r(-9, -12, 5, 4, '#cfe0ea'); r(-2, -12, 5, 4, '#cfe0ea'); r(5, -12, 4, 4, '#cfe0ea'); r(-9, -5, 4, 3, '#17180f'); r(5, -5, 4, 3, '#17180f'); } // 환승역: 열차
+    if (zi === 4) { r(-10, -18, 20, 18, '#d9d8cf'); r(-2, -15, 4, 10, '#a8261b'); r(-5, -12, 10, 4, '#a8261b'); r(-3, -4, 6, 4, '#17180f'); }                                 // 병원: 붉은 십자
+    if (zi === 5) { r(-13, -6, 26, 6, '#8d8a80'); r(-13, -9, 26, 2, '#a8261b'); r(-13, -11, 26, 2, '#e6e5db'); r(8, -20, 3, 9, '#30343c'); r(5, -22, 9, 3, '#30343c'); }      // 검문소: 차단벽과 초소
+    if (zi === 6) { r(-1, -26, 2, 26, '#17180f'); r(-6, -8, 12, 1, '#17180f'); r(-4, -16, 8, 1, '#17180f'); r(-7, -1, 14, 1, '#17180f'); r(-1, -29, 2, 3, '#e0392b'); }       // 송신탑
+  }
+  function buildZoneMap() {
+    var svg = svgEl('svg', { viewBox: '0 0 320 330', 'class': 'zmap-svg', role: 'group', 'aria-label': '구역 지도' });
+    // 땅, 강(오른쪽 위에서 왼쪽 가운데로 흐른다), 다리
+    svg.appendChild(svgEl('rect', { x: 0, y: 0, width: 320, height: 330, 'class': 'zm-land' }));
+    svg.appendChild(svgEl('path', { d: 'M-10 78 L120 96 L210 84 L330 104', 'class': 'zm-river' }));
+    svg.appendChild(svgEl('path', { d: 'M-10 78 L120 96 L210 84 L330 104', 'class': 'zm-river-glint' }));
+    // 길: 구역을 차례로 잇는다. 연 구역까지는 실선(zm-road-open), 그 뒤는 점선
+    rows.zmapRoad = []; rows.zmap = [];
+    for (var k = 0; k < ZMAP_AT.length - 1; k++) {
+      var seg = svgEl('line', { x1: ZMAP_AT[k][0], y1: ZMAP_AT[k][1], x2: ZMAP_AT[k + 1][0], y2: ZMAP_AT[k + 1][1], 'class': 'zm-road' });
+      rows.zmapRoad.push(seg); svg.appendChild(seg);
+    }
+    // 꾸밈: 나무와 폐허 몇 점(누를 수 없다)
+    [[20, 230], [110, 232], [292, 276], [226, 150], [22, 176], [298, 150], [104, 44], [36, 30]].forEach(function (p, n) {
+      svg.appendChild(svgEl('rect', { x: p[0], y: p[1], width: 6, height: 6, 'class': n % 3 ? 'zm-tree' : 'zm-ruin' }));
+      if (n % 3) svg.appendChild(svgEl('rect', { x: p[0] + 2, y: p[1] + 6, width: 2, height: 3, 'class': 'zm-trunk' }));
+    });
+    C.ZONES.forEach(function (z, zi) {
+      var at = ZMAP_AT[zi], g = svgEl('g', { id: 'zmap-z' + zi, 'class': 'zm-node', tabindex: '0', role: 'button' });
+      g.appendChild(svgEl('circle', { cx: at[0], cy: at[1], r: 22, 'class': 'zm-hit' }));           // 누르는 넓은 자리
+      g.appendChild(svgEl('ellipse', { cx: at[0], cy: at[1] + 1, rx: 17, ry: 5, 'class': 'zm-plot' }));
+      zmapIcon(g, zi, at[0], at[1]);
+      g.appendChild(svgEl('rect', { x: at[0] - 21, y: at[1] - 30, width: 12, height: 12, 'class': 'zm-badge' }));
+      g.appendChild(svgEl('text', { x: at[0] - 15, y: at[1] - 20.5, 'class': 'zm-no', 'text-anchor': 'middle' }, String(z.no)));
+      var name = svgEl('text', { x: at[0], y: at[1] + 16, 'class': 'zm-name', 'text-anchor': 'middle' }, z.no + '구역 ' + z.name);
+      var rate = svgEl('text', { x: at[0], y: at[1] + 28, 'class': 'zm-rate', 'text-anchor': 'middle' }, '');
+      g.appendChild(name); g.appendChild(rate);
+      var pick = function () { zmapPick = zi; renderZoneMap(); };
+      g.addEventListener('click', pick);
+      g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      rows.zmap.push({ g: g, rate: rate });
+      svg.appendChild(g);
+    });
+    // 지금 있는 곳: 우비 소년의 노란 표시
+    rows.zmapHere = svgEl('rect', { width: 8, height: 8, 'class': 'zm-here' });
+    svg.appendChild(rows.zmapHere);
+    $('zmap-map').appendChild(svg);
+    $('zmap-go').addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zmapPick; pane = 'play'; goTo('tab'); });
+  }
+  /** 구역 zi 가 버는 양을 글로. 5구역은 물자가 아니라 연구 점수다. 잠긴 구역은 '잠김'. */
+  function zmapRate(zi, rates) {
+    if (zi > state.zone) return '잠김';
+    if (zi === 4) return '점수 +' + fmt(C.researchRate(state)) + '/초';
+    return zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '';
+  }
   function renderZoneMap() {
     var rates = [C.searchRate(state), C.tradeRate(state), C.lineRate(state), C.railRate(state)], total = C.productionPerSec(state);
+    if (zmapPick > C.ZONES.length - 1 || zmapPick < 0) zmapPick = state.zone;
     setText($('zmap-total'), '+' + fmt(total));
     rows.zmap.forEach(function (r, zi) {
-      var z = C.ZONES[zi], open = zi <= state.zone, soon = z.kind === 'soon';
-      r.btn.disabled = !open;
-      r.btn.classList.toggle('here', zi === state.zone);
-      setText(r.name, z.no + '구역 ' + z.name);
-      setText(r.lead, soon ? '다음 버전에서 열려요' : open ? z.lead : '아직 열지 않았어요 · ' + z.lead);
-      setText(r.rate, !open ? '잠김' : zi === 4 ? '점수 +' + fmt(C.researchRate(state)) + '/초' : zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '');
-      r.fill.style.width = (open && zi < rates.length && total > 0 ? Math.min(100, rates[zi] / total * 100) : 0).toFixed(1) + '%';
+      r.g.setAttribute('class', 'zm-node' + (zi <= state.zone ? ' open' : ' locked') + (zi === state.zone ? ' here' : '') + (zi === zmapPick ? ' pick' : ''));
+      setText(r.rate, zmapRate(zi, rates));
     });
+    rows.zmapRoad.forEach(function (seg, k) { seg.setAttribute('class', 'zm-road' + (k < state.zone ? ' zm-road-open' : '')); });
+    var here = ZMAP_AT[Math.min(state.zone, ZMAP_AT.length - 1)];
+    rows.zmapHere.setAttribute('x', here[0] + 12); rows.zmapHere.setAttribute('y', here[1] - 9);
+    // 아래 카드: 고른 구역의 설명
+    var z = C.ZONES[zmapPick], open = zmapPick <= state.zone, soon = z.kind === 'soon';
+    setText($('zmap-name'), z.no + '구역 ' + z.name + (zmapPick === state.zone ? ' · 지금 여기' : ''));
+    setText($('zmap-lead'), soon ? '다음 버전에서 열려요.' : open ? z.lead + '.' : '아직 열지 않았어요. ' + z.lead + '.');
+    setText($('zmap-rate'), zmapRate(zmapPick, rates));
+    fill($('zmap-share'), open && zmapPick < rates.length && total > 0 ? rates[zmapPick] / total : 0);
+    setText($('zmap-share-note'), open && zmapPick < rates.length && total > 0 ? '전체 생산의 ' + Math.round(rates[zmapPick] / total * 100) + '%' : open && zmapPick === 4 ? '물자 대신 연구 점수를 모아요' : '');
+    $('zmap-go').disabled = !open || soon;
+    setText($('zmap-go'), open && !soon ? '이 구역 보기' : '아직 갈 수 없어요');
   }
 
   /**
@@ -723,14 +800,7 @@
       b.addEventListener('click', function () { search(index); });
       rows.tiles.push(b); $('search-grid').appendChild(b);
     })(ti);
-    // 구역 지도의 구역 줄
-    C.ZONES.forEach(function (z, zi) {
-      var li = el('li'), b = el('button', 'zmap-zone'), no = el('span', 'zmap-no', String(z.no)), name = el('span', 'zmap-name'), rate = el('span', 'zmap-rate'), lead = el('span', 'zmap-lead'), bar = el('span', 'zmap-bar'), fill = el('i');
-      b.type = 'button'; b.id = 'zmap-z' + zi;
-      bar.appendChild(fill); b.appendChild(no); b.appendChild(name); b.appendChild(rate); b.appendChild(lead); b.appendChild(bar); li.appendChild(b);
-      b.addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zi; pane = 'play'; goTo('tab'); });
-      rows.zmap.push({ btn: b, name: name, rate: rate, lead: lead, fill: fill }); $('zmap-list').appendChild(li);
-    });
+    buildZoneMap();
     // 2구역 시세판: 지난 시세 막대들 + 지금 시세 막대 하나, 그리고 연속 호가 칸
     for (var bi = 0; bi <= C.PRICE_HISTORY; bi++) { var bar = el('i'); rows.bars.push(bar); $('board-bars').appendChild(bar); }
     for (var pi = 0; pi < C.STREAK_MAX; pi++) { var pip = el('i'); rows.pips.push(pip); $('streak-pips').appendChild(pip); }
@@ -1065,8 +1135,10 @@
         b.setAttribute('aria-label', searched ? kind.name + ' · 뒤진 칸' : '아직 뒤지지 않은 칸');
       });
       setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
-      setText($('search-note'), (state.sweeps + 1) + '번째 동네' + (C.totalBuildings(state) ? ' · 수색조가 ' + C.SWEEP_AUTO_SECONDS + '초마다 한 칸' : ' · 칸을 눌러 뒤져요'));
-      fill($('search-bar'), C.totalBuildings(state) ? state.sweepClock / C.SWEEP_AUTO_SECONDS : 0);            // 수색조가 다음 칸을 뒤질 때까지
+      var patrol = C.autoOn(state, 0), every = C.sweepInterval(state);
+      setText($('search-note'), (state.sweeps + 1) + '번째 동네 · ' + (patrol ? '수색조가 ' + every.toFixed(1).replace('.0', '') + '초마다 한 칸' : '개조에서 순찰조를 사면 알아서 뒤져요'));
+      fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
+      $('search-bar').hidden = !patrol;
       setText($('search-bonus'), '다 뒤지면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
     }
     if (tab === 'z0' && play) {
@@ -1111,6 +1183,15 @@
       sb.disabled = !(state.goods > 0);
       setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
+      // 자동 판매: 거간꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
+      var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= C.priceRange(state).mean;
+      var need = cap * (goodPrice ? C.AUTO_SELL_AT : 1);
+      $('auto-sell-row').hidden = !broker;
+      $('sell-bar').hidden = !selling;
+      fill($('sell-bar'), selling && need > 0 ? state.goods / need : 0);
+      $('sell-bar').classList.toggle('wait', !goodPrice);
+      setText($('sell-auto'), !broker ? '개조에서 거간꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
+        : goodPrice ? '시세가 평균 이상이에요. 조금만 쌓이면 바로 팔아요.' : '시세가 낮아서 기다려요. 창고가 차면 그냥 팔아요.');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
@@ -1141,7 +1222,7 @@
       var sg = $('surge'), sOn = state.surgeLeft > 0;
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
       sg.className = 'surge' + (sOn ? ' on' : '');
-      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) + (C.assistOn(state) ? ' · 자동' : '') : '전력 투입 ×' + C.SURGE_MULT);
+      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) + (C.autoOn(state, 2) ? ' · 자동' : '') : '전력 투입 ×' + C.SURGE_MULT);
       // 진행 바: 투입 중에는 남은 시간이 줄어들고, 기다리는 동안은 다음 투입까지 차오른다(단추 바탕을 채운다)
       fill(sg, sOn ? state.surgeLeft / C.SURGE_SECONDS : state.surgeCool > 0 ? 1 - state.surgeCool / C.surgeCooldown(state) : 0);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
@@ -1167,7 +1248,7 @@
       var gb = $('green'), running = 0;
       C.ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
       gb.disabled = state.greenCool > 0 || !running;
-      setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + (C.assistOn(state) ? ' · 알아서 켜져요' : '') : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
+      setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + (C.autoOn(state, 3) ? ' · 자동' : '') : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
       fill(gb, state.greenCool > 0 ? 1 - state.greenCool / C.greenCooldown(state) : 0);
       setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
         : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
@@ -1494,7 +1575,7 @@
       b.addEventListener('click', function () { pane = b.dataset.pane; render(); });
     });
     // 구역 지도: 구역 화면의 단추나 머리띠의 구역 번호를 누르면 열린다
-    var openMap = function () { renderZoneMap(); $('zmap').hidden = false; };
+    var openMap = function () { zmapPick = state.zone; renderZoneMap(); $('zmap').hidden = false; };
     $('zmap-open').addEventListener('click', openMap);
     $('route').addEventListener('click', openMap);
     $('zmap-close').addEventListener('click', function () { $('zmap').hidden = true; });

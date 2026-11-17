@@ -331,7 +331,11 @@
     { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e24, growth: 2.4, max: 40 },
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
-    { id: 'broker',  zone: 1, name: '거간꾼',    desc: '자동 판매가 평균 시세 이상일 때만 판다(창고가 차면 그냥 판다)', key: 'broker', per: 1, baseCost: 5e6, growth: 1, max: 1 }
+    // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
+    { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 뒤진다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 60, growth: 6, max: 5 },
+    { id: 'broker',  zone: 1, name: '거간꾼',    desc: '알아서 판다 · 시세가 평균 이상이거나 창고가 찼을 때', key: 'broker', per: 1, baseCost: 2e5, growth: 1, max: 1 },
+    { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 3e12, growth: 1, max: 1 },
+    { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 2e19, growth: 1, max: 1 }
   ];
   /*
    * 특전: 구역의 목표를 달성할 때마다 셋 중 하나를 고른다. 이번 판에만 유효하고 철수하면 사라진다.
@@ -364,7 +368,7 @@
     { id: 'scholar', name: '연구자',    desc: '연구 속도 +30%',            key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
-    { id: 'auto',    name: '자동화',    desc: '전력 투입과 청신호를 알아서 쓴다 · 레벨마다 대기 시간 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
+    { id: 'auto',    name: '자동화',    desc: '모든 구역의 자동이 개조 없이 켜진다 · 레벨마다 전력 투입·청신호 대기 시간 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
   ];
 
   /*
@@ -552,8 +556,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -687,6 +691,7 @@
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
   /** 2구역이 가만히 둘 때 초당 버는 물자(평균 시세 기준). 화면의 '초당' 표시와 자리 비움 계산에 쓴다. */
   function tradeRate(state) { return goodsRate(state) * goodsValue(state) * priceRange(state).mean; }
+  var AUTO_SELL_AT = 0.25;      // 자동 판매는 창고가 이만큼 찼을 때부터 판다(너무 잘게 팔지 않게)
   function stepTrade(state, dt, rng, events) {
     if (!zoneOpen(state, 1)) return;
     state.priceClock += dt;
@@ -700,9 +705,9 @@
     }
     var cap = goodsCap(state);
     state.goods = Math.min(cap, state.goods + goodsRate(state) * dt);
-    if (!state.autoSell || !(state.goods > 0)) return;
-    // 자동 판매: 창고가 차면 판다. 거간꾼이 있으면 평균 시세 이상일 때 미리 팔고, 차기 전의 낮은 시세는 기다린다.
-    var full = state.goods >= cap, good = mods(state).broker > 0 && state.price >= priceRange(state).mean && state.goods >= cap * 0.25;
+    if (!state.autoSell || !autoOn(state, 1) || !(state.goods > 0)) return;
+    // 자동 판매(거간꾼): 시세가 평균 이상이면 팔고, 낮은 시세는 기다린다. 창고가 차면 시세와 상관없이 판다(버려지지 않게).
+    var full = state.goods >= cap, good = state.price >= priceRange(state).mean && state.goods >= cap * AUTO_SELL_AT;
     if (full || good) { var sold = sellGoods(state, true); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
 
@@ -780,6 +785,14 @@
    */
   function assistLevel(state) { return Math.min(ASSIST_MAX, Math.max(0, Math.floor(mods(state).assist))); }
   function assistOn(state) { return assistLevel(state) >= 1; }
+  /*
+   * 구역의 자동: 그 구역의 개조(AUTO_KEYS)를 샀거나 영구 특성 '자동화'가 있으면 켜진다.
+   *   0 수색조의 자동 수색, 1 자동 판매, 2 전력 투입, 3 청신호. 그 밖의 구역은 늘 false.
+   */
+  var AUTO_KEYS = ['patrol', 'broker', 'autoline', 'autosig'];
+  function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && (assistOn(state) || mods(state)[AUTO_KEYS[zone]] > 0); }
+  /** 수색조가 한 칸을 뒤지는 데 걸리는 시간(초). 순찰조 레벨마다 0.4초씩 줄어든다(1.4초까지). */
+  function sweepInterval(state) { return Math.max(1.4, SWEEP_AUTO_SECONDS - 0.4 * Math.max(0, mods(state).patrol - 1)); }
   /** 대기 시간에 곱하는 값: 0·1레벨 1, 그 뒤로 레벨마다 ASSIST_STEP 씩 줄고 절반 아래로는 내려가지 않는다. */
   function assistFactor(state) { return Math.max(0.5, 1 - ASSIST_STEP * Math.max(0, assistLevel(state) - 1)); }
   function surgeCooldown(state) { return SURGE_COOLDOWN * assistFactor(state); }
@@ -1114,13 +1127,13 @@
     var bonus = markTile(state, i);
     return { ok: true, gain: g, tile: i, kind: kind.id, swept: bonus > 0, bonus: bonus };
   }
-  /** 시설이 dt 초 동안 알아서 뒤진다. 동네를 다 뒤질 때마다 'sweep' 사건을 남긴다. */
+  /** 수색조가 dt 초 동안 알아서 뒤진다. 동네를 다 뒤질 때마다 'sweep' 사건을 남긴다. */
   function stepSweep(state, dt, events) {
-    if (!totalBuildings(state)) return;
+    if (!autoOn(state, 0)) return;                 // 순찰조(1구역 개조)나 자동화 특성이 있어야 알아서 뒤진다
     state.sweepClock += dt;
-    var guard = 0;
-    while (state.sweepClock >= SWEEP_AUTO_SECONDS && guard++ < SWEEP_TILES * 3) {
-      state.sweepClock -= SWEEP_AUTO_SECONDS;
+    var guard = 0, every = sweepInterval(state);
+    while (state.sweepClock >= every && guard++ < SWEEP_TILES * 3) {
+      state.sweepClock -= every;
       var bonus = markTile(state, nextTile(state));
       if (bonus > 0) events.push({ type: 'sweep', bonus: bonus, auto: true });
     }
@@ -1417,13 +1430,13 @@
       if (wasOn && !(state.surgeLeft > 0)) events.push({ type: 'surge-end' });
     }
     // 영구 특성 '자동화'가 있으면 준비되는 대로 알아서 투입한다
-    if (assistOn(state) && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
+    if (autoOn(state, 2) && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
 
     stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
-    if (assistOn(state) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
+    if (autoOn(state, 3) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
     stepLab(state, dt, rng);
 
     if (state.signalLeft > 0) {
@@ -1569,7 +1582,7 @@
   }
 
   return {
-    setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, AUTO_SELL_AT: AUTO_SELL_AT, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

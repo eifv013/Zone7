@@ -80,7 +80,7 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); ou
 #boot .boot-tape { flex: none; height: 22px; background: repeating-linear-gradient(-45deg, #f0b400 0 18px, #17180f 18px 36px); }
 #boot .boot-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
 #boot .boot-title { margin: 0; font: 400 clamp(64px, 22vw, 120px)/1 var(--font-display); letter-spacing: -.01em; }
-#boot .boot-sub { margin: 10px 0 44px; font: 400 14px/1.5 var(--font-body); letter-spacing: .12em; color: #cfcfc4; }
+#boot .boot-sub { margin: 10px 0 20px; font: 400 14px/1.5 var(--font-body); letter-spacing: .12em; color: #cfcfc4; }
 #boot .boot-track { width: min(280px, 72vw); height: 18px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
 /* 진행 막대는 경고 줄무늬다. 줄무늬 크기가 막대 길이와 상관없이 같도록 고정 크기로 깔고, 천천히 흐르게 한다. */
 #boot #boot-bar { height: 100%; width: 0; background: repeating-linear-gradient(-45deg, #f0b400 0 8px, #17180f 8px 16px); background-size: 22.63px 100%; animation: boot-stripe .8s linear infinite; transition: width .12s linear; }
@@ -686,7 +686,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
   --edge: color-mix(in srgb, var(--ink) 22%, transparent);
   --soft: color-mix(in srgb, var(--ink) 6%, transparent);
   --ink-soft: #484a3e;
-  --art-boy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='1' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='2' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='5' y='2' width='4' height='1' fill='%23f1c9a0'/%3E%3Crect x='9' y='2' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='3' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='5' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='6' y='3' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='8' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='9' y='3' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='4' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='4' width='6' height='1' fill='%23f1c9a0'/%3E%3Crect x='10' y='4' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='5' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='5' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='6' y='5' width='2' height='1' fill='%23b8402e'/%3E%3Crect x='8' y='5' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='10' y='5' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='6' width='10' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='7' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='7' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='7' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='8' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='8' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='8' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='9' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='9' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='3' y='9' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='9' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='9' width='4' height='1' fill='%23f0b400'/%3E%3Crect x='11' y='9' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%233f6f8f'/%3E%3Crect x='1' y='10' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='10' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='10' width='4' height='1' fill='%233f6f8f'/%3E%3Crect x='2' y='11' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='11' width='1' height='1' fill='%233f6f8f'/%3E%3Crect x='11' y='11' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='12' y='11' width='2' height='1' fill='%233f6f8f'/%3E%3Crect x='2' y='12' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='12' width='4' height='1' fill='%233f6f8f'/%3E%3Crect x='3' y='13' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='7' y='13' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='3' y='14' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='7' y='14' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='2' y='15' width='3' height='1' fill='%23b8402e'/%3E%3Crect x='7' y='15' width='3' height='1' fill='%23b8402e'/%3E%3C/svg%3E"); --art-zombie: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 9' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='6' height='1' fill='%237da35a'/%3E%3Crect x='3' y='1' width='8' height='1' fill='%237da35a'/%3E%3Crect x='2' y='2' width='10' height='1' fill='%237da35a'/%3E%3Crect x='2' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='5' y='3' width='4' height='1' fill='%237da35a'/%3E%3Crect x='9' y='3' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='10' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='11' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='2' y='4' width='10' height='1' fill='%237da35a'/%3E%3Crect x='2' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='5' width='6' height='1' fill='%2317180f'/%3E%3Crect x='10' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='0' y='6' width='1' height='1' fill='%237da35a'/%3E%3Crect x='3' y='6' width='8' height='1' fill='%237da35a'/%3E%3Crect x='13' y='6' width='1' height='1' fill='%237da35a'/%3E%3Crect x='0' y='7' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='7' width='6' height='1' fill='%237da35a'/%3E%3Crect x='12' y='7' width='2' height='1' fill='%237da35a'/%3E%3Crect x='0' y='8' width='2' height='1' fill='%237da35a'/%3E%3Crect x='3' y='8' width='8' height='1' fill='%235a5f6a'/%3E%3Crect x='12' y='8' width='2' height='1' fill='%237da35a'/%3E%3C/svg%3E"); --art-vine: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 13' shape-rendering='crispEdges'%3E%3Crect x='10' y='0' width='1' height='1' fill='%237da35a'/%3E%3Crect x='14' y='0' width='12' height='1' fill='%234f6b33'/%3E%3Crect x='9' y='1' width='2' height='1' fill='%237da35a'/%3E%3Crect x='13' y='1' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='18' y='1' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='1' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='25' y='1' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%237da35a'/%3E%3Crect x='12' y='2' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='17' y='2' width='2' height='1' fill='%237da35a'/%3E%3Crect x='23' y='2' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='3' y='3' width='2' height='1' fill='%237da35a'/%3E%3Crect x='7' y='3' width='6' height='1' fill='%234f6b33'/%3E%3Crect x='23' y='3' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='24' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='6' y='4' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='4' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='4' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='4' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='5' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='5' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='13' y='5' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='5' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='23' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='24' y='6' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='7' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='7' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='11' y='7' width='1' height='1' fill='%237da35a'/%3E%3Crect x='12' y='7' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='7' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='3' y='8' width='2' height='1' fill='%237da35a'/%3E%3Crect x='5' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='13' y='9' width='1' height='1' fill='%237da35a'/%3E%3Crect x='21' y='9' width='1' height='1' fill='%237da35a'/%3E%3Crect x='22' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='10' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='11' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='4' y='12' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='12' width='1' height='1' fill='%234f6b33'/%3E%3C/svg%3E");
+  --art-boy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='1' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='2' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='5' y='2' width='4' height='1' fill='%23f1c9a0'/%3E%3Crect x='9' y='2' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='3' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='5' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='6' y='3' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='8' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='9' y='3' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='4' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='4' width='6' height='1' fill='%23f1c9a0'/%3E%3Crect x='10' y='4' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='5' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='4' y='5' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='6' y='5' width='2' height='1' fill='%23b8402e'/%3E%3Crect x='8' y='5' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='10' y='5' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='6' width='10' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='7' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='7' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='7' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='8' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='8' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='8' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='9' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='9' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='3' y='9' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='9' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='9' width='4' height='1' fill='%23f0b400'/%3E%3Crect x='11' y='9' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%233f6f8f'/%3E%3Crect x='1' y='10' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='7' y='10' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='10' width='4' height='1' fill='%233f6f8f'/%3E%3Crect x='2' y='11' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='11' width='1' height='1' fill='%233f6f8f'/%3E%3Crect x='11' y='11' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='12' y='11' width='2' height='1' fill='%233f6f8f'/%3E%3Crect x='2' y='12' width='8' height='1' fill='%23f0b400'/%3E%3Crect x='10' y='12' width='4' height='1' fill='%233f6f8f'/%3E%3Crect x='3' y='13' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='7' y='13' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='3' y='14' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='7' y='14' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='2' y='15' width='3' height='1' fill='%23b8402e'/%3E%3Crect x='7' y='15' width='3' height='1' fill='%23b8402e'/%3E%3C/svg%3E"); --art-zombie: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 9' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='6' height='1' fill='%237da35a'/%3E%3Crect x='3' y='1' width='8' height='1' fill='%237da35a'/%3E%3Crect x='2' y='2' width='10' height='1' fill='%237da35a'/%3E%3Crect x='2' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='4' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='5' y='3' width='4' height='1' fill='%237da35a'/%3E%3Crect x='9' y='3' width='1' height='1' fill='%23e6e5db'/%3E%3Crect x='10' y='3' width='1' height='1' fill='%2317180f'/%3E%3Crect x='11' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='2' y='4' width='10' height='1' fill='%237da35a'/%3E%3Crect x='2' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='5' width='6' height='1' fill='%2317180f'/%3E%3Crect x='10' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='0' y='6' width='1' height='1' fill='%237da35a'/%3E%3Crect x='3' y='6' width='8' height='1' fill='%237da35a'/%3E%3Crect x='13' y='6' width='1' height='1' fill='%237da35a'/%3E%3Crect x='0' y='7' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='7' width='6' height='1' fill='%237da35a'/%3E%3Crect x='12' y='7' width='2' height='1' fill='%237da35a'/%3E%3Crect x='0' y='8' width='2' height='1' fill='%237da35a'/%3E%3Crect x='3' y='8' width='8' height='1' fill='%235a5f6a'/%3E%3Crect x='12' y='8' width='2' height='1' fill='%237da35a'/%3E%3C/svg%3E"); --art-vine: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 13' shape-rendering='crispEdges'%3E%3Crect x='10' y='0' width='1' height='1' fill='%237da35a'/%3E%3Crect x='14' y='0' width='12' height='1' fill='%234f6b33'/%3E%3Crect x='9' y='1' width='2' height='1' fill='%237da35a'/%3E%3Crect x='13' y='1' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='18' y='1' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='1' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='25' y='1' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%237da35a'/%3E%3Crect x='12' y='2' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='17' y='2' width='2' height='1' fill='%237da35a'/%3E%3Crect x='23' y='2' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='3' y='3' width='2' height='1' fill='%237da35a'/%3E%3Crect x='7' y='3' width='6' height='1' fill='%234f6b33'/%3E%3Crect x='23' y='3' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='24' y='3' width='1' height='1' fill='%237da35a'/%3E%3Crect x='6' y='4' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='4' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='4' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='4' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='5' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='5' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='13' y='5' width='1' height='1' fill='%237da35a'/%3E%3Crect x='23' y='5' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='23' y='6' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='24' y='6' width='2' height='1' fill='%237da35a'/%3E%3Crect x='4' y='7' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='7' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='11' y='7' width='1' height='1' fill='%237da35a'/%3E%3Crect x='12' y='7' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='7' width='2' height='1' fill='%234f6b33'/%3E%3Crect x='3' y='8' width='2' height='1' fill='%237da35a'/%3E%3Crect x='5' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='22' y='8' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='13' y='9' width='1' height='1' fill='%237da35a'/%3E%3Crect x='21' y='9' width='1' height='1' fill='%237da35a'/%3E%3Crect x='22' y='9' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='5' y='10' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='11' width='1' height='1' fill='%234f6b33'/%3E%3Crect x='4' y='12' width='1' height='1' fill='%237da35a'/%3E%3Crect x='5' y='12' width='1' height='1' fill='%234f6b33'/%3E%3C/svg%3E"); --art-zrun: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 11' shape-rendering='crispEdges'%3E%3Crect x='2' y='0' width='3' height='1' fill='%237da35a'/%3E%3Crect x='1' y='1' width='5' height='1' fill='%237da35a'/%3E%3Crect x='1' y='2' width='1' height='1' fill='%237da35a'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%2317180f'/%3E%3Crect x='3' y='2' width='1' height='1' fill='%237da35a'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%2317180f'/%3E%3Crect x='5' y='2' width='1' height='1' fill='%237da35a'/%3E%3Crect x='2' y='3' width='3' height='1' fill='%237da35a'/%3E%3Crect x='0' y='4' width='1' height='1' fill='%237da35a'/%3E%3Crect x='1' y='4' width='5' height='1' fill='%235a5f6a'/%3E%3Crect x='1' y='5' width='4' height='1' fill='%235a5f6a'/%3E%3Crect x='5' y='5' width='2' height='1' fill='%237da35a'/%3E%3Crect x='1' y='6' width='4' height='1' fill='%235a5f6a'/%3E%3Crect x='1' y='7' width='4' height='1' fill='%235a5f6a'/%3E%3Crect x='1' y='8' width='2' height='1' fill='%233a3f4a'/%3E%3Crect x='4' y='8' width='2' height='1' fill='%233a3f4a'/%3E%3Crect x='1' y='9' width='2' height='1' fill='%233a3f4a'/%3E%3Crect x='5' y='9' width='1' height='1' fill='%233a3f4a'/%3E%3Crect x='0' y='10' width='2' height='1' fill='%233a3f4a'/%3E%3Crect x='5' y='10' width='2' height='1' fill='%233a3f4a'/%3E%3C/svg%3E"); --art-brun: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 11' shape-rendering='crispEdges'%3E%3Crect x='2' y='0' width='4' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='1' width='6' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='2' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='2' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%2317180f'/%3E%3Crect x='5' y='2' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='6' y='2' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='3' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='3' width='2' height='1' fill='%23f1c9a0'/%3E%3Crect x='5' y='3' width='1' height='1' fill='%23b8402e'/%3E%3Crect x='6' y='3' width='1' height='1' fill='%23f0b400'/%3E%3Crect x='2' y='4' width='4' height='1' fill='%23f0b400'/%3E%3Crect x='1' y='5' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='5' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='4' y='5' width='3' height='1' fill='%23f0b400'/%3E%3Crect x='0' y='6' width='1' height='1' fill='%23f1c9a0'/%3E%3Crect x='1' y='6' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='3' y='6' width='1' height='1' fill='%23c98f00'/%3E%3Crect x='4' y='6' width='2' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='6' width='2' height='1' fill='%233f6f8f'/%3E%3Crect x='1' y='7' width='5' height='1' fill='%23f0b400'/%3E%3Crect x='6' y='7' width='2' height='1' fill='%233f6f8f'/%3E%3Crect x='1' y='8' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='4' y='8' width='2' height='1' fill='%233c4a5a'/%3E%3Crect x='1' y='9' width='1' height='1' fill='%233c4a5a'/%3E%3Crect x='5' y='9' width='1' height='1' fill='%233c4a5a'/%3E%3Crect x='0' y='10' width='2' height='1' fill='%23b8402e'/%3E%3Crect x='5' y='10' width='2' height='1' fill='%23b8402e'/%3E%3C/svg%3E");
 }
 :root[data-skin="dark"] { --ink-soft: #b9b8a6; --paper: #20211a; --edge: color-mix(in srgb, var(--ink) 18%, transparent); }
 body { font-size: 15.5px; line-height: 1.55; }
@@ -731,6 +731,53 @@ body { font-size: 15.5px; line-height: 1.55; }
   .mnav button + button { border-left: 0; }
   .mnav button[aria-pressed="true"] { background: var(--soft); }
 }
+/* 설명 글: 줄을 고르게 나누던 것(balance)을 끄고 칸 너비를 다 쓴다. 낱말 단위 줄바꿈은 그대로다 */
+.hint, .label { text-wrap: wrap; }
+.hint { font-size: 13.5px; line-height: 1.65; }
+[hidden].autobar, .check[hidden] { display: none; }
+.autobar.wait { background: linear-gradient(to right, var(--ink-soft) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--ink) 14%, transparent) 0); }
+#sell-bar { margin-top: 8px; }
+#sell-auto { margin: 4px 0 2px; }
+/* 구역 지도: 길로 이어진 일곱 구역 */
+.zmap-map { border-radius: 10px; overflow: hidden; border: 1px solid #4a4b40; }
+.zmap-svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; }
+.zm-land { fill: #2c3324; }
+.zm-river { fill: none; stroke: #2f5a78; stroke-width: 26; stroke-linejoin: round; }
+.zm-river-glint { fill: none; stroke: #4f86a8; stroke-width: 2; stroke-dasharray: 6 14; transform: translateY(-5px); }
+.zm-road { stroke: #6d6a5c; stroke-width: 5; stroke-dasharray: 3 6; stroke-linecap: square; }
+.zm-road-open { stroke: #d9c9a0; stroke-dasharray: none; }
+.zm-tree { fill: #4f6b33; } .zm-trunk { fill: #4a3a2a; } .zm-ruin { fill: #55574a; }
+.zm-node { cursor: pointer; outline: none; }
+.zm-hit { fill: transparent; }
+.zm-plot { fill: rgba(0, 0, 0, .35); }
+.zm-badge { fill: #f0b400; } .zm-no { font: 700 9px/1 var(--font-mono); fill: #17180f; }
+.zm-name { font: 600 9.5px/1 var(--font-body); fill: #f1f0e6; paint-order: stroke; stroke: #1b1c14; stroke-width: 3px; stroke-linejoin: round; }
+.zm-rate { font: 600 9px/1 var(--font-mono); fill: #f0b400; paint-order: stroke; stroke: #1b1c14; stroke-width: 3px; stroke-linejoin: round; }
+.zm-node.locked .zm-art { opacity: .35; } .zm-node.locked .zm-badge { fill: #6d6d60; } .zm-node.locked .zm-name { fill: #a09f8e; } .zm-node.locked .zm-rate { fill: #a09f8e; }
+.zm-node.pick .zm-hit { fill: rgba(240, 180, 0, .16); stroke: #f0b400; stroke-width: 1.5; stroke-dasharray: 3 3; }
+.zm-node:focus-visible .zm-hit { stroke: #fff; stroke-width: 1.5; }
+.zm-here { fill: #f0b400; stroke: #17180f; stroke-width: 1.5; animation: zm-bob 1s steps(2, start) infinite; }
+@keyframes zm-bob { 50% { transform: translateY(-3px); } }
+.zmap-info { display: grid; gap: 6px; padding: 12px; border-radius: 10px; background: rgba(255, 255, 255, .06); }
+.zmap-info-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.zmap-info-head b { font: 400 21px/1.2 var(--font-display); } .zmap-info-head .num { color: #f0b400; font-weight: 600; white-space: nowrap; }
+.story-card .zmap-info p { min-height: 0; margin: 0; font-size: 14px; line-height: 1.6; color: #cfcebf; }
+.story-card .zmap-info p::after { content: none; }
+.zmap-info .autobar { background: linear-gradient(to right, #f0b400 calc(var(--p, 0) * 100%), #33342a 0); }
+.zmap-info .label { color: #a09f8e; }
+.story-card .zmap-info button { align-self: stretch; padding: 10px; background: #f0b400; color: #17180f; border: 0; font-weight: 700; }
+.story-card .zmap-info button:disabled { background: #33342a; color: #a09f8e; }
+@media (prefers-reduced-motion: reduce) { .zm-here { animation: none; } }
+/* 시작 화면: 로딩 바 위를 우비 소년이 달리고 좀비 셋이 쫓아간다(바의 왼쪽 끝에서 오른쪽 끝으로, 되풀이) */
+#boot .boot-run { position: relative; width: min(280px, 72vw); height: 36px; overflow: hidden; }
+#boot .boot-run i { position: absolute; bottom: 0; left: -12%; width: 24px; height: 33px; background: var(--art-zrun) no-repeat center bottom / contain; image-rendering: pixelated; animation: boot-run 3.4s linear infinite, boot-hop .26s steps(2, start) infinite; }
+#boot .boot-run .run-boy { background-image: var(--art-brun); animation-delay: -.9s, 0s; }
+#boot .boot-run i:nth-child(2) { animation-delay: -.35s, -.1s; }
+#boot .boot-run i:nth-child(3) { animation-delay: -.12s, -.05s; animation-duration: 3.4s, .34s; }
+#boot .boot-run i:nth-child(4) { animation-delay: .12s, -.15s; height: 38px; width: 28px; animation-duration: 3.4s, .4s; }
+@keyframes boot-run { from { left: -12%; } to { left: 104%; } }
+@keyframes boot-hop { 50% { transform: translateY(-3px) rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { #boot .boot-run i { animation: none; left: 40%; } #boot .boot-run i:nth-child(2) { left: 22%; } #boot .boot-run i:nth-child(3) { left: 10%; } #boot .boot-run i:nth-child(4) { left: -2%; } }
 /* ====== 새 얼굴 끝 ====== */
 </style>
 </head>
@@ -741,11 +788,12 @@ body { font-size: 15.5px; line-height: 1.55; }
   <div class="boot-mid">
     <h1 class="boot-title">7구역</h1>
     <p class="boot-sub">“생존자는 7구역으로 오라”</p>
+    <div class="boot-run" aria-hidden="true"><i class="run-boy"></i><i></i><i></i><i></i></div>
     <div class="boot-track"><div id="boot-bar"></div></div>
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.8.1</div>
+  <div class="boot-ver">7구역 알파 0.8.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1009,7 +1057,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="board" id="board" aria-hidden="true"><div class="board-bars" id="board-bars"></div><i class="board-line mean" id="board-mean"></i><i class="board-line peak" id="board-peak"></i></div>
         <div class="streak" id="streak"><span class="streak-pips" id="streak-pips"></span><span class="label" id="streak-note"></span></div>
         <button type="button" class="fortify sell" id="sell">상품이 없다</button>
-        <label class="check" for="auto-sell"><input type="checkbox" id="auto-sell"> 창고가 차면 알아서 판다</label>
+        <div class="autobar" id="sell-bar" aria-hidden="true"></div>
+        <div class="label" id="sell-auto"></div>
+        <label class="check" for="auto-sell" id="auto-sell-row"><input type="checkbox" id="auto-sell"> 거간꾼이 알아서 판다</label>
       </div>
       <div class="trade line" id="line" hidden>
         <!-- 컨베이어: 물건이 왼쪽에서 오른쪽으로 흐른다. 병목인 기계 앞에는 물건이 쌓인다. 그림은 ui.js 의 drawBelt 가 그린다. -->
@@ -1138,7 +1188,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
-    <p class="ver">7구역 알파 0.8.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.8.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1185,7 +1235,14 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <div class="story-card feedback-card zmap-card">
     <div class="zmap-head"><div class="label" id="zmap-title">구역 지도</div><button type="button" class="feedback-close" id="zmap-close">닫기</button></div>
     <div class="zmap-total"><span>초당 물자</span><b class="num" id="zmap-total">0</b></div>
-    <ol class="zmap-list" id="zmap-list"></ol>
+    <div class="zmap-map" id="zmap-map"></div>
+    <div class="zmap-info">
+      <div class="zmap-info-head"><b id="zmap-name"></b><span class="num" id="zmap-rate"></span></div>
+      <p id="zmap-lead"></p>
+      <div class="autobar" id="zmap-share" aria-hidden="true"></div>
+      <div class="label" id="zmap-share-note"></div>
+      <button type="button" id="zmap-go">이 구역 보기</button>
+    </div>
   </div>
 </div>
 
@@ -1246,7 +1303,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.2";
 </script>
 <script>
 /*
@@ -1265,6 +1322,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.2', date: '2026-11-17', at: '2026-11-17 13:00:00', title: '진짜 지도와 구역마다의 자동',
+      items: [
+        '구역 지도가 진짜 지도가 됐어요. 일곱 구역이 길로 이어져 있고 강 건너에 6·7구역이 있어요. 구역을 누르면 설명과 버는 양이 나오고, 그 구역으로 바로 갈 수 있어요.',
+        '자동은 이제 구역마다 개조로 사요. 1구역 "순찰조"(올릴수록 빨라져요), 2구역 "거간꾼", 3구역 "자동 제어반", 4구역 "자동 신호"예요. 영구 특성 "자동화"가 있으면 개조 없이도 전부 켜져요.',
+        '이미 하던 판은 순찰조와 거간꾼을 한 번 사야 전처럼 알아서 돌아가요. 값은 싸요.',
+        '거간꾼은 시세가 평균 이상일 때 알아서 팔고, 낮을 때는 기다렸다가 창고가 차면 팔아요. 다음 자동 판매까지 진행 바가 보여요.',
+        '설명 글의 줄바꿈을 고쳤어요. 줄 중간에서 일찍 꺾이지 않고 칸 너비를 다 써요.',
+        '시작 화면의 로딩 바 위로 우비 소년이 달리고 좀비들이 쫓아가요.'
+      ] },
     { ver: '알파 0.8.1', date: '2026-11-17', at: '2026-11-17 12:20:00', title: '화면을 새로 단장했어요',
       items: [
         '각진 검은 테두리를 걷어 냈어요. 모서리를 굴리고, 테두리를 얇게 하고, 흐린 글자를 더 진하게 했어요.',
@@ -2044,7 +2110,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
     { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e24, growth: 2.4, max: 40 },
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
-    { id: 'broker',  zone: 1, name: '거간꾼',    desc: '자동 판매가 평균 시세 이상일 때만 판다(창고가 차면 그냥 판다)', key: 'broker', per: 1, baseCost: 5e6, growth: 1, max: 1 }
+    // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
+    { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 뒤진다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 60, growth: 6, max: 5 },
+    { id: 'broker',  zone: 1, name: '거간꾼',    desc: '알아서 판다 · 시세가 평균 이상이거나 창고가 찼을 때', key: 'broker', per: 1, baseCost: 2e5, growth: 1, max: 1 },
+    { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 3e12, growth: 1, max: 1 },
+    { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 2e19, growth: 1, max: 1 }
   ];
   /*
    * 특전: 구역의 목표를 달성할 때마다 셋 중 하나를 고른다. 이번 판에만 유효하고 철수하면 사라진다.
@@ -2077,7 +2147,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
     { id: 'scholar', name: '연구자',    desc: '연구 속도 +30%',            key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
-    { id: 'auto',    name: '자동화',    desc: '전력 투입과 청신호를 알아서 쓴다 · 레벨마다 대기 시간 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
+    { id: 'auto',    name: '자동화',    desc: '모든 구역의 자동이 개조 없이 켜진다 · 레벨마다 전력 투입·청신호 대기 시간 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
   ];
 
   /*
@@ -2265,8 +2335,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -2400,6 +2470,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
   function setAutoSell(state, on) { state.autoSell = !!on; return { ok: true, on: state.autoSell }; }
   /** 2구역이 가만히 둘 때 초당 버는 물자(평균 시세 기준). 화면의 '초당' 표시와 자리 비움 계산에 쓴다. */
   function tradeRate(state) { return goodsRate(state) * goodsValue(state) * priceRange(state).mean; }
+  var AUTO_SELL_AT = 0.25;      // 자동 판매는 창고가 이만큼 찼을 때부터 판다(너무 잘게 팔지 않게)
   function stepTrade(state, dt, rng, events) {
     if (!zoneOpen(state, 1)) return;
     state.priceClock += dt;
@@ -2413,9 +2484,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
     }
     var cap = goodsCap(state);
     state.goods = Math.min(cap, state.goods + goodsRate(state) * dt);
-    if (!state.autoSell || !(state.goods > 0)) return;
-    // 자동 판매: 창고가 차면 판다. 거간꾼이 있으면 평균 시세 이상일 때 미리 팔고, 차기 전의 낮은 시세는 기다린다.
-    var full = state.goods >= cap, good = mods(state).broker > 0 && state.price >= priceRange(state).mean && state.goods >= cap * 0.25;
+    if (!state.autoSell || !autoOn(state, 1) || !(state.goods > 0)) return;
+    // 자동 판매(거간꾼): 시세가 평균 이상이면 팔고, 낮은 시세는 기다린다. 창고가 차면 시세와 상관없이 판다(버려지지 않게).
+    var full = state.goods >= cap, good = state.price >= priceRange(state).mean && state.goods >= cap * AUTO_SELL_AT;
     if (full || good) { var sold = sellGoods(state, true); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
 
@@ -2493,6 +2564,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
    */
   function assistLevel(state) { return Math.min(ASSIST_MAX, Math.max(0, Math.floor(mods(state).assist))); }
   function assistOn(state) { return assistLevel(state) >= 1; }
+  /*
+   * 구역의 자동: 그 구역의 개조(AUTO_KEYS)를 샀거나 영구 특성 '자동화'가 있으면 켜진다.
+   *   0 수색조의 자동 수색, 1 자동 판매, 2 전력 투입, 3 청신호. 그 밖의 구역은 늘 false.
+   */
+  var AUTO_KEYS = ['patrol', 'broker', 'autoline', 'autosig'];
+  function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && (assistOn(state) || mods(state)[AUTO_KEYS[zone]] > 0); }
+  /** 수색조가 한 칸을 뒤지는 데 걸리는 시간(초). 순찰조 레벨마다 0.4초씩 줄어든다(1.4초까지). */
+  function sweepInterval(state) { return Math.max(1.4, SWEEP_AUTO_SECONDS - 0.4 * Math.max(0, mods(state).patrol - 1)); }
   /** 대기 시간에 곱하는 값: 0·1레벨 1, 그 뒤로 레벨마다 ASSIST_STEP 씩 줄고 절반 아래로는 내려가지 않는다. */
   function assistFactor(state) { return Math.max(0.5, 1 - ASSIST_STEP * Math.max(0, assistLevel(state) - 1)); }
   function surgeCooldown(state) { return SURGE_COOLDOWN * assistFactor(state); }
@@ -2827,13 +2906,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
     var bonus = markTile(state, i);
     return { ok: true, gain: g, tile: i, kind: kind.id, swept: bonus > 0, bonus: bonus };
   }
-  /** 시설이 dt 초 동안 알아서 뒤진다. 동네를 다 뒤질 때마다 'sweep' 사건을 남긴다. */
+  /** 수색조가 dt 초 동안 알아서 뒤진다. 동네를 다 뒤질 때마다 'sweep' 사건을 남긴다. */
   function stepSweep(state, dt, events) {
-    if (!totalBuildings(state)) return;
+    if (!autoOn(state, 0)) return;                 // 순찰조(1구역 개조)나 자동화 특성이 있어야 알아서 뒤진다
     state.sweepClock += dt;
-    var guard = 0;
-    while (state.sweepClock >= SWEEP_AUTO_SECONDS && guard++ < SWEEP_TILES * 3) {
-      state.sweepClock -= SWEEP_AUTO_SECONDS;
+    var guard = 0, every = sweepInterval(state);
+    while (state.sweepClock >= every && guard++ < SWEEP_TILES * 3) {
+      state.sweepClock -= every;
       var bonus = markTile(state, nextTile(state));
       if (bonus > 0) events.push({ type: 'sweep', bonus: bonus, auto: true });
     }
@@ -3130,13 +3209,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
       if (wasOn && !(state.surgeLeft > 0)) events.push({ type: 'surge-end' });
     }
     // 영구 특성 '자동화'가 있으면 준비되는 대로 알아서 투입한다
-    if (assistOn(state) && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
+    if (autoOn(state, 2) && zoneOpen(state, 2) && !(state.surgeCool > 0) && surge(state).ok) events.push({ type: 'surge' });
 
     stepSweep(state, dt, events);
     stepTrade(state, dt, rng, events);
     stepRail(state, dt, events);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
-    if (assistOn(state) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
+    if (autoOn(state, 3) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
     stepLab(state, dt, rng);
 
     if (state.signalLeft > 0) {
@@ -3282,7 +3361,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
   }
 
   return {
-    setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, AUTO_SELL_AT: AUTO_SELL_AT, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
@@ -3380,7 +3459,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
         '지금은 ' + ready.length + '구역까지 만들어져 있어요.' + (next ? ' ' + next.no + '구역 ' + topic(next.name) + ' 문 앞까지만 갈 수 있고, 다음 버전에서 열려요.' : '') ] },
 
       { id: 'zone', tab: '구역', title: '구역과 목표', items: [
-        '구역 화면의 번호 탭에서 구역을 골라요. 구역마다 운영, 개조, 목표 세 화면이 있어요.',
+        '구역 화면의 번호 탭에서 구역을 골라요. 구역마다 운영, 개조, 목표 세 화면이 있어요. "구역 지도"를 열면 일곱 구역이 길로 이어진 지도가 나오고, 구역을 누르면 버는 양을 볼 수 있어요.',
         '구역마다 목표가 셋 있어요. 하나를 채울 때마다 특전을 하나 골라요.',
         '목표를 모두 채우고 물자를 치르면 다음 구역의 문이 열려요. 뒤 구역을 열수록 밤에 오는 무리도 커져요.' ] },
 
@@ -3391,11 +3470,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
       { id: 'map', tab: '1구역', title: '1구역: 수색 지도', items: [
         '동네 하나는 ' + core.SWEEP_TILES + '칸이에요. 칸을 누르면 그 칸을 뒤져요. 빈집, 가게, 은닉처 가운데 무엇이 나올지는 뒤져 봐야 알아요.',
         '다 뒤지면 보너스를 받고 다음 동네로 넘어가요.',
-        '시설이 하나라도 있으면 수색조가 알아서 한 칸씩 뒤져요.' ] },
+        '개조에서 "순찰조"를 사면 수색조가 알아서 한 칸씩 뒤져요. 올릴수록 빨라져요.' ] },
 
       { id: 'trade', tab: '2구역', title: '2구역: 거래', items: [
         '좌판이 상품을 만들고, 상품은 그때의 시세로 팔려요. 시세는 계속 오르내려요.',
-        '자동 판매가 켜져 있으면 가만히 둬도 평균만큼은 벌어요. 시세가 높을 때 직접 팔면 더 벌어요.',
+        '개조에서 "거간꾼"을 사면 알아서 팔아요. 시세가 평균 이상일 때 팔고, 낮을 때는 기다렸다가 창고가 차면 팔아요.',
         '평균보다 높은 시세에서 팔리면 "연속 호가"가 쌓여서 판매 값이 올라요. 평균 아래에서 직접 팔면 끊겨요.',
         '시세판의 점선이 평균, 굵은 선이 고점이에요.' ] },
 
@@ -3403,13 +3482,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
         '기계 셋(' + core.MACHINES.map(function (m) { return m.name; }).join(' → ') + ')이 차례로 맞물려 돌아요.',
         '라인은 가장 느린 기계의 속도로만 나와요. "병목 올리기"를 누르면 그때 가장 느린 기계가 올라요.',
         '세 기계의 속도가 비슷해지면 "정속 가동"이 되어 더 많이 나와요.',
-        '"전력 투입"을 누르면 잠깐 동안 라인이 빨라져요.' ] },
+        '"전력 투입"을 누르면 잠깐 동안 라인이 빨라져요. 개조에서 "자동 제어반"을 사면 알아서 들어가요.' ] },
 
       { id: 'rail', tab: '4구역', title: '4구역: 노선', items: [
         '노선을 복구하고 열차를 사면 운행이 시작돼요. 열차가 돌아올 때 화물이 물자로 바뀌어요.',
         '노선은 ' + names(core.ROUTES) + ' 넷이에요. 멀리 가는 노선일수록 오래 걸리지만 더 많이 실어 와요.',
         '열차는 좋은 노선부터 알아서 타요. 고를 것은 열차를 살지, 어느 노선을 늘릴지예요.',
-        '"청신호"를 누르면 달리는 열차들이 앞당겨 도착해요.' ] },
+        '"청신호"를 누르면 달리는 열차들이 앞당겨 도착해요. 개조에서 "자동 신호"를 사면 알아서 켜져요.' ] },
 
       { id: 'lab', tab: '5구역', title: '5구역: 연구', items: [
         '연구원을 뽑으면 연구 점수가 모여요. 이 구역은 물자를 만들지 않고, 다른 구역들을 강하게 만들어요.',
@@ -3430,7 +3509,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
 
       { id: 'trait', tab: '특성', title: '특성과 특전', items: [
         '영구 특성은 항체 샘플로 찍고, 철수해도 남아요. ' + names(core.TRAITS) + '이 있어요.',
-        '"자동화"는 전력 투입과 청신호를 알아서 써 줘요. 올릴수록 더 자주 써요.',
+        '구역의 자동(순찰조, 거간꾼, 자동 제어반, 자동 신호)은 판마다 개조로 다시 사야 해요. 영구 특성 "자동화"를 찍으면 개조 없이도 처음부터 전부 알아서 돌아가요.',
         '"특성 되돌리기"를 누르면 쓴 샘플을 모두 돌려받아요. 값이 들지 않으니 판마다 다르게 찍어 봐도 좋아요.',
         '특전은 목표를 채울 때 고르고, 이번 판에만 쓰여요. 같은 것을 또 고르면 레벨이 올라요.' ] },
 
@@ -5383,18 +5462,95 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
     render();
   }
   /** 구역 지도를 채운다: 구역마다 이름, 하는 일, 지금 버는 양(전체에서 차지하는 몫을 막대로). */
+  /*
+   * 구역 지도: 1구역(왼쪽 아래)에서 7구역(오른쪽 위)까지 길이 이어진 지도. 강을 건너야 6·7구역이다.
+   *   구역 표지를 누르면 아래 카드에 그 구역의 설명과 버는 양이 나오고, '이 구역 보기'로 그 구역 화면에 간다.
+   *   그림은 SVG 도형으로 그린다(좌표는 320×330 도트 기준). ZMAP_AT 이 구역마다의 자리다.
+   */
+  var ZMAP_AT = [[56, 292], [176, 268], [258, 206], [150, 170], [62, 122], [182, 66], [270, 30]];
+  var zmapPick = 0;
+  function svgEl(name, attrs, text) {
+    var n = document.createElementNS('http://www.w3.org/2000/svg', name);
+    for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  /** 구역 표지 위의 작은 건물 그림(도트). kind 는 구역 번호(0~6). */
+  function zmapIcon(g, zi, x, y) {
+    function r(dx, dy, w, h, c) { g.appendChild(svgEl('rect', { x: x + dx, y: y + dy, width: w, height: h, fill: c, 'class': 'zm-art' })); }
+    if (zi === 0) { r(-9, -12, 18, 12, '#8a6a4a'); r(-11, -16, 22, 4, '#a8402e'); r(-3, -7, 5, 7, '#17180f'); r(4, -9, 3, 3, '#ffe9a0'); }                                   // 주택가: 집
+    if (zi === 1) { r(-12, -8, 24, 8, '#8a5a34'); for (var i = 0; i < 4; i++) r(-12 + i * 6, -14, 6, 6, i % 2 ? '#e6e5db' : '#b8402e'); r(-11, -15, 1, 15, '#17180f'); r(10, -15, 1, 15, '#17180f'); } // 시장: 천막 좌판
+    if (zi === 2) { r(-12, -10, 24, 10, '#6d7479'); r(-10, -20, 4, 10, '#4a4f55'); r(-3, -16, 4, 6, '#4a4f55'); r(4, -6, 5, 6, '#f0b400'); r(-10, -24, 5, 3, '#9a9a94'); }       // 공단: 굴뚝 공장
+    if (zi === 3) { r(-14, -4, 28, 2, '#17180f'); r(-11, -14, 22, 9, '#3f6f8f'); r(-9, -12, 5, 4, '#cfe0ea'); r(-2, -12, 5, 4, '#cfe0ea'); r(5, -12, 4, 4, '#cfe0ea'); r(-9, -5, 4, 3, '#17180f'); r(5, -5, 4, 3, '#17180f'); } // 환승역: 열차
+    if (zi === 4) { r(-10, -18, 20, 18, '#d9d8cf'); r(-2, -15, 4, 10, '#a8261b'); r(-5, -12, 10, 4, '#a8261b'); r(-3, -4, 6, 4, '#17180f'); }                                 // 병원: 붉은 십자
+    if (zi === 5) { r(-13, -6, 26, 6, '#8d8a80'); r(-13, -9, 26, 2, '#a8261b'); r(-13, -11, 26, 2, '#e6e5db'); r(8, -20, 3, 9, '#30343c'); r(5, -22, 9, 3, '#30343c'); }      // 검문소: 차단벽과 초소
+    if (zi === 6) { r(-1, -26, 2, 26, '#17180f'); r(-6, -8, 12, 1, '#17180f'); r(-4, -16, 8, 1, '#17180f'); r(-7, -1, 14, 1, '#17180f'); r(-1, -29, 2, 3, '#e0392b'); }       // 송신탑
+  }
+  function buildZoneMap() {
+    var svg = svgEl('svg', { viewBox: '0 0 320 330', 'class': 'zmap-svg', role: 'group', 'aria-label': '구역 지도' });
+    // 땅, 강(오른쪽 위에서 왼쪽 가운데로 흐른다), 다리
+    svg.appendChild(svgEl('rect', { x: 0, y: 0, width: 320, height: 330, 'class': 'zm-land' }));
+    svg.appendChild(svgEl('path', { d: 'M-10 78 L120 96 L210 84 L330 104', 'class': 'zm-river' }));
+    svg.appendChild(svgEl('path', { d: 'M-10 78 L120 96 L210 84 L330 104', 'class': 'zm-river-glint' }));
+    // 길: 구역을 차례로 잇는다. 연 구역까지는 실선(zm-road-open), 그 뒤는 점선
+    rows.zmapRoad = []; rows.zmap = [];
+    for (var k = 0; k < ZMAP_AT.length - 1; k++) {
+      var seg = svgEl('line', { x1: ZMAP_AT[k][0], y1: ZMAP_AT[k][1], x2: ZMAP_AT[k + 1][0], y2: ZMAP_AT[k + 1][1], 'class': 'zm-road' });
+      rows.zmapRoad.push(seg); svg.appendChild(seg);
+    }
+    // 꾸밈: 나무와 폐허 몇 점(누를 수 없다)
+    [[20, 230], [110, 232], [292, 276], [226, 150], [22, 176], [298, 150], [104, 44], [36, 30]].forEach(function (p, n) {
+      svg.appendChild(svgEl('rect', { x: p[0], y: p[1], width: 6, height: 6, 'class': n % 3 ? 'zm-tree' : 'zm-ruin' }));
+      if (n % 3) svg.appendChild(svgEl('rect', { x: p[0] + 2, y: p[1] + 6, width: 2, height: 3, 'class': 'zm-trunk' }));
+    });
+    C.ZONES.forEach(function (z, zi) {
+      var at = ZMAP_AT[zi], g = svgEl('g', { id: 'zmap-z' + zi, 'class': 'zm-node', tabindex: '0', role: 'button' });
+      g.appendChild(svgEl('circle', { cx: at[0], cy: at[1], r: 22, 'class': 'zm-hit' }));           // 누르는 넓은 자리
+      g.appendChild(svgEl('ellipse', { cx: at[0], cy: at[1] + 1, rx: 17, ry: 5, 'class': 'zm-plot' }));
+      zmapIcon(g, zi, at[0], at[1]);
+      g.appendChild(svgEl('rect', { x: at[0] - 21, y: at[1] - 30, width: 12, height: 12, 'class': 'zm-badge' }));
+      g.appendChild(svgEl('text', { x: at[0] - 15, y: at[1] - 20.5, 'class': 'zm-no', 'text-anchor': 'middle' }, String(z.no)));
+      var name = svgEl('text', { x: at[0], y: at[1] + 16, 'class': 'zm-name', 'text-anchor': 'middle' }, z.no + '구역 ' + z.name);
+      var rate = svgEl('text', { x: at[0], y: at[1] + 28, 'class': 'zm-rate', 'text-anchor': 'middle' }, '');
+      g.appendChild(name); g.appendChild(rate);
+      var pick = function () { zmapPick = zi; renderZoneMap(); };
+      g.addEventListener('click', pick);
+      g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      rows.zmap.push({ g: g, rate: rate });
+      svg.appendChild(g);
+    });
+    // 지금 있는 곳: 우비 소년의 노란 표시
+    rows.zmapHere = svgEl('rect', { width: 8, height: 8, 'class': 'zm-here' });
+    svg.appendChild(rows.zmapHere);
+    $('zmap-map').appendChild(svg);
+    $('zmap-go').addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zmapPick; pane = 'play'; goTo('tab'); });
+  }
+  /** 구역 zi 가 버는 양을 글로. 5구역은 물자가 아니라 연구 점수다. 잠긴 구역은 '잠김'. */
+  function zmapRate(zi, rates) {
+    if (zi > state.zone) return '잠김';
+    if (zi === 4) return '점수 +' + fmt(C.researchRate(state)) + '/초';
+    return zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '';
+  }
   function renderZoneMap() {
     var rates = [C.searchRate(state), C.tradeRate(state), C.lineRate(state), C.railRate(state)], total = C.productionPerSec(state);
+    if (zmapPick > C.ZONES.length - 1 || zmapPick < 0) zmapPick = state.zone;
     setText($('zmap-total'), '+' + fmt(total));
     rows.zmap.forEach(function (r, zi) {
-      var z = C.ZONES[zi], open = zi <= state.zone, soon = z.kind === 'soon';
-      r.btn.disabled = !open;
-      r.btn.classList.toggle('here', zi === state.zone);
-      setText(r.name, z.no + '구역 ' + z.name);
-      setText(r.lead, soon ? '다음 버전에서 열려요' : open ? z.lead : '아직 열지 않았어요 · ' + z.lead);
-      setText(r.rate, !open ? '잠김' : zi === 4 ? '점수 +' + fmt(C.researchRate(state)) + '/초' : zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '');
-      r.fill.style.width = (open && zi < rates.length && total > 0 ? Math.min(100, rates[zi] / total * 100) : 0).toFixed(1) + '%';
+      r.g.setAttribute('class', 'zm-node' + (zi <= state.zone ? ' open' : ' locked') + (zi === state.zone ? ' here' : '') + (zi === zmapPick ? ' pick' : ''));
+      setText(r.rate, zmapRate(zi, rates));
     });
+    rows.zmapRoad.forEach(function (seg, k) { seg.setAttribute('class', 'zm-road' + (k < state.zone ? ' zm-road-open' : '')); });
+    var here = ZMAP_AT[Math.min(state.zone, ZMAP_AT.length - 1)];
+    rows.zmapHere.setAttribute('x', here[0] + 12); rows.zmapHere.setAttribute('y', here[1] - 9);
+    // 아래 카드: 고른 구역의 설명
+    var z = C.ZONES[zmapPick], open = zmapPick <= state.zone, soon = z.kind === 'soon';
+    setText($('zmap-name'), z.no + '구역 ' + z.name + (zmapPick === state.zone ? ' · 지금 여기' : ''));
+    setText($('zmap-lead'), soon ? '다음 버전에서 열려요.' : open ? z.lead + '.' : '아직 열지 않았어요. ' + z.lead + '.');
+    setText($('zmap-rate'), zmapRate(zmapPick, rates));
+    fill($('zmap-share'), open && zmapPick < rates.length && total > 0 ? rates[zmapPick] / total : 0);
+    setText($('zmap-share-note'), open && zmapPick < rates.length && total > 0 ? '전체 생산의 ' + Math.round(rates[zmapPick] / total * 100) + '%' : open && zmapPick === 4 ? '물자 대신 연구 점수를 모아요' : '');
+    $('zmap-go').disabled = !open || soon;
+    setText($('zmap-go'), open && !soon ? '이 구역 보기' : '아직 갈 수 없어요');
   }
 
   /**
@@ -5535,14 +5691,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
       b.addEventListener('click', function () { search(index); });
       rows.tiles.push(b); $('search-grid').appendChild(b);
     })(ti);
-    // 구역 지도의 구역 줄
-    C.ZONES.forEach(function (z, zi) {
-      var li = el('li'), b = el('button', 'zmap-zone'), no = el('span', 'zmap-no', String(z.no)), name = el('span', 'zmap-name'), rate = el('span', 'zmap-rate'), lead = el('span', 'zmap-lead'), bar = el('span', 'zmap-bar'), fill = el('i');
-      b.type = 'button'; b.id = 'zmap-z' + zi;
-      bar.appendChild(fill); b.appendChild(no); b.appendChild(name); b.appendChild(rate); b.appendChild(lead); b.appendChild(bar); li.appendChild(b);
-      b.addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zi; pane = 'play'; goTo('tab'); });
-      rows.zmap.push({ btn: b, name: name, rate: rate, lead: lead, fill: fill }); $('zmap-list').appendChild(li);
-    });
+    buildZoneMap();
     // 2구역 시세판: 지난 시세 막대들 + 지금 시세 막대 하나, 그리고 연속 호가 칸
     for (var bi = 0; bi <= C.PRICE_HISTORY; bi++) { var bar = el('i'); rows.bars.push(bar); $('board-bars').appendChild(bar); }
     for (var pi = 0; pi < C.STREAK_MAX; pi++) { var pip = el('i'); rows.pips.push(pip); $('streak-pips').appendChild(pip); }
@@ -5877,8 +6026,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
         b.setAttribute('aria-label', searched ? kind.name + ' · 뒤진 칸' : '아직 뒤지지 않은 칸');
       });
       setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
-      setText($('search-note'), (state.sweeps + 1) + '번째 동네' + (C.totalBuildings(state) ? ' · 수색조가 ' + C.SWEEP_AUTO_SECONDS + '초마다 한 칸' : ' · 칸을 눌러 뒤져요'));
-      fill($('search-bar'), C.totalBuildings(state) ? state.sweepClock / C.SWEEP_AUTO_SECONDS : 0);            // 수색조가 다음 칸을 뒤질 때까지
+      var patrol = C.autoOn(state, 0), every = C.sweepInterval(state);
+      setText($('search-note'), (state.sweeps + 1) + '번째 동네 · ' + (patrol ? '수색조가 ' + every.toFixed(1).replace('.0', '') + '초마다 한 칸' : '개조에서 순찰조를 사면 알아서 뒤져요'));
+      fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
+      $('search-bar').hidden = !patrol;
       setText($('search-bonus'), '다 뒤지면 물자 +' + fmt(C.sweepBonus(state)) + ' · 가게 ×1.25, 은닉처 ×2');
     }
     if (tab === 'z0' && play) {
@@ -5923,6 +6074,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
       sb.disabled = !(state.goods > 0);
       setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.PEAK_PRICE ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
+      // 자동 판매: 거간꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
+      var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= C.priceRange(state).mean;
+      var need = cap * (goodPrice ? C.AUTO_SELL_AT : 1);
+      $('auto-sell-row').hidden = !broker;
+      $('sell-bar').hidden = !selling;
+      fill($('sell-bar'), selling && need > 0 ? state.goods / need : 0);
+      $('sell-bar').classList.toggle('wait', !goodPrice);
+      setText($('sell-auto'), !broker ? '개조에서 거간꾼을 사면 알아서 팔아요.' : !state.autoSell ? '자동 판매가 꺼져 있어요.'
+        : goodPrice ? '시세가 평균 이상이에요. 조금만 쌓이면 바로 팔아요.' : '시세가 낮아서 기다려요. 창고가 차면 그냥 팔아요.');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
@@ -5953,7 +6113,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
       var sg = $('surge'), sOn = state.surgeLeft > 0;
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
       sg.className = 'surge' + (sOn ? ' on' : '');
-      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) + (C.assistOn(state) ? ' · 자동' : '') : '전력 투입 ×' + C.SURGE_MULT);
+      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) + (C.autoOn(state, 2) ? ' · 자동' : '') : '전력 투입 ×' + C.SURGE_MULT);
       // 진행 바: 투입 중에는 남은 시간이 줄어들고, 기다리는 동안은 다음 투입까지 차오른다(단추 바탕을 채운다)
       fill(sg, sOn ? state.surgeLeft / C.SURGE_SECONDS : state.surgeCool > 0 ? 1 - state.surgeCool / C.surgeCooldown(state) : 0);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
@@ -5979,7 +6139,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
       var gb = $('green'), running = 0;
       C.ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
       gb.disabled = state.greenCool > 0 || !running;
-      setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + (C.assistOn(state) ? ' · 알아서 켜져요' : '') : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
+      setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + (C.autoOn(state, 3) ? ' · 자동' : '') : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
       fill(gb, state.greenCool > 0 ? 1 - state.greenCool / C.greenCooldown(state) : 0);
       setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
         : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
@@ -6306,7 +6466,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.1";
       b.addEventListener('click', function () { pane = b.dataset.pane; render(); });
     });
     // 구역 지도: 구역 화면의 단추나 머리띠의 구역 번호를 누르면 열린다
-    var openMap = function () { renderZoneMap(); $('zmap').hidden = false; };
+    var openMap = function () { zmapPick = state.zone; renderZoneMap(); $('zmap').hidden = false; };
     $('zmap-open').addEventListener('click', openMap);
     $('route').addEventListener('click', openMap);
     $('zmap-close').addEventListener('click', function () { $('zmap').hidden = true; });
