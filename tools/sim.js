@@ -40,7 +40,8 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     // 목표를 보고 사는 것(사람도 목표 줄을 보고 산다): 수가 목표인 것은 살 수 있으면 목표까지 먼저 산다
     const goalBuy = (zi, id, have, buy) => { const g = C.GOALS[zi].find(x => x.id === id); for (let k = 0; g && s.zone >= zi && !s.goalsDone[id] && have() < g.need && k < 5 && buy().ok; k++); };
     goalBuy(3, 'z4a', () => s.trains, () => C.buyTrain(s, 1)); goalBuy(4, 'z5a', () => s.staff, () => C.buyStaff(s, 1));
-    goalBuy(5, 'z6a', () => s.posts, () => C.buyPost(s, 1)); goalBuy(6, 'z7a', () => s.antennas, () => C.buyAntenna(s, 1));
+    goalBuy(5, 'z6a', () => s.posts, () => C.buyPost(s, 1));
+    goalBuy(5, 'z6b', () => C.UPGRADES.filter(u => u.zone === 5).reduce((n, u) => n + (s.upgrades[u.id] || 0), 0), () => { const u = C.UPGRADES.filter(x => x.zone === 5 && isFinite(C.upgradeCost(s, x.id))).sort((x, y) => C.upgradeCost(s, x.id) - C.upgradeCost(s, y.id))[0]; return u ? C.buyUpgrade(s, u.id) : { ok: false }; }); goalBuy(6, 'z7a', () => s.antennas, () => C.buyAntenna(s, 1));
     // 6구역 목표(무리의 2배 방어력으로 밤 15번): 목표가 남아 있으면 가진 물자의 30%까지 써서 방어력을 2배 위로 올려 둔다
     if (s.zone === 5 && !s.goalsDone.z6b) {
       let budget = s.supplies * 0.3;

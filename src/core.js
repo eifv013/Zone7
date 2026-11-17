@@ -89,7 +89,7 @@
   var GREEN_COOLDOWN = 120;        // 청신호를 다시 켤 수 있을 때까지의 시간
   var FLEET_MILESTONES = [4, 8, 12, 16, 24, 32, 48, 64, 80, 100]; // 열차가 이 수에 닿을 때마다 화물 2배
   // 5구역 연구
-  var STAFF_COST = 5e22;           // 첫 연구원의 값
+  var STAFF_COST = 3e22;           // 첫 연구원의 값
   var STAFF_GROWTH = 1.25;         // 연구원을 한 명 더 뽑을 때마다 값이 오르는 배수
   var PROJECT_BASE = 60;           // 첫 연구 과제에 드는 연구 점수
   var PROJECT_GROWTH = 1.8;        // 과제를 하나 끝낼 때마다 다음 과제의 점수가 오르는 배수
@@ -315,7 +315,7 @@
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
           "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
-    { no: 6, name: '강변 검문소', kind: 'guard', cost: 2e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
+    { no: 6, name: '강변 검문소', kind: 'guard', cost: 1e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
@@ -333,7 +333,7 @@
           "새벽에 건너편에서 쇠 긁는 소리가 났다. 차단기가 올라가는 소리였다. 저쪽 차단기다. 절반쯤 올라가다 멈췄다.",
           "탐조등이 다리 한가운데를 비췄다. 버려진 버스 한 대가 가로로 서 있다. 그 지붕 위에 밧줄 뭉치가 놓여 있었다. 어제는 없던 것이다.",
           "아저씨가 말했다. “저쪽에서도 길을 내고 있는 거야. 우리가 여기서 버티는 걸 보고.” 나는 냉장 상자를 고쳐 멨다. 강은 넓고, 다리는 하나뿐이다."] }] },
-    { no: 7, name: '송신탑', kind: 'tower', cost: 1e30, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
+    { no: 7, name: '송신탑', kind: 'tower', cost: 5e29, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
       story: [
         { title: "밧줄", text: [
           "7구역. 버스 지붕의 밧줄을 잡고 건넜다. 밧줄은 저쪽에서 당겨 주었다. 당긴 손은 작았다. 여럿이었다.",
@@ -433,10 +433,17 @@
     { id: 'depot',   zone: 3, name: '차량 기지', desc: '열차 값 -4%',            key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
     { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e23, growth: 2.4, max: 40 },
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
-    { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 3e27, growth: 2.4, max: 40 },
-    { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 1e28, growth: 6,   max: 4 },
-    { id: 'amp',     zone: 6, name: '증폭기',    desc: '생존자가 모이는 속도 +25%', key: 'z7',    per: 0.25, baseCost: 3e30, growth: 2.4, max: 40 },
+    { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 1.5e27, growth: 2.4, max: 40 },
+    { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 5e27, growth: 6,   max: 4 },
+    { id: 'amp',     zone: 6, name: '증폭기',    desc: '생존자가 모이는 속도 +25%', key: 'z7',    per: 0.25, baseCost: 1.5e30, growth: 2.4, max: 40 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e23, growth: 3, max: 12 },
+    // 구역 사이 콘텐츠가 더 자주 나오게 하는 개조(1.3.1). 1구역의 '소문'(은닉처 확률)과 같은 자리다.
+    //   간격을 줄이는 셋은 곱으로 쌓이고 절반 아래로는 줄지 않는다. 확률을 올리는 둘은 %p 를 더한다(서류 35→60%, 통행인 50→80%).
+    { id: 'flyer',    zone: 1, name: '전단지',     desc: '단골 주문이 오는 간격 -8%',  key: 'ordergap',    per: -0.08, baseCost: 4e5,  growth: 4, max: 6 },
+    { id: 'catalog',  zone: 2, name: '견본 상자',  desc: '납품 의뢰가 오는 간격 -8%',  key: 'contractgap', per: -0.08, baseCost: 4e11, growth: 4, max: 6 },
+    { id: 'buoy',     zone: 3, name: '부표',       desc: '표류 화물이 나오는 간격 -8%', key: 'salvagegap', per: -0.08, baseCost: 2e18, growth: 4, max: 6 },
+    { id: 'archive',  zone: 4, name: '문서고 열쇠', desc: '서류를 찾을 확률 +5%p',     key: 'recordchance', per: 0.05, baseCost: 6e22, growth: 4, max: 5 },
+    { id: 'signpost', zone: 5, name: '다리 표지판', desc: '통행인이 건널 확률 +6%p',   key: 'passerchance', per: 0.06, baseCost: 1e27, growth: 4, max: 5 },
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
     // 방벽 개조(zone -1: 구역이 아니라 방벽 화면에 놓인다. 처음부터 살 수 있다)
     { id: 'architect', zone: -1, name: '건축가', desc: '방어력 +20%',              key: 'defense', per: 0.2,   baseCost: 5000, growth: 3,  max: 30 },
@@ -505,8 +512,8 @@
       { id: 'z5b', text: '연구 과제 10개 끝내기', need: 10, value: function (s) { return s.projectsDone; } },
       { id: 'z5c', text: '혈청 배양 2번 끝내기', need: 2, value: function (s) { return s.research.serum; } } ],
     [ { id: 'z6a', text: '초소 28곳', need: 28, value: function (s) { return s.posts; } },
-      { id: 'z6b', text: '무리의 2배 방어력으로 밤 10번 방어', need: 10, value: function (s) { return s.safeNights; } },
-      { id: 'z6c', text: '통행 물자 누적 1양', need: 1e28, value: function (s) { return s.guardEarned; } } ],
+      { id: 'z6b', text: '6구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 5); } },
+      { id: 'z6c', text: '통행 물자 누적 5,000자', need: 5e27, value: function (s) { return s.guardEarned; } } ],
     [ { id: 'z7a', text: '안테나 21기', need: 21, value: function (s) { return s.antennas; } },
       { id: 'z7b', text: '생존자 7만 명 모으기', need: 7e4, value: function (s) { return s.survivors; } },
       { id: 'z7c', text: '혈청 3단계 완성', need: 3, value: function (s) { return s.serumStage; } } ]
@@ -536,7 +543,7 @@
       // 2구역 거래
       sellClock: 0,                        // 흥정꾼이 마지막으로 판 뒤 흐른 시간(초)
       hands: { porter: 0, crier: 0 },      // 시장의 일손(HANDS)
-      stalls: 0, goods: 0, price: 1, priceClock: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
+      stalls: 0, goods: 0, price: 1, priceClock: 0, lowRun: 0, autoSell: true, tradeEarned: 0, peakSales: 0,
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
@@ -726,6 +733,7 @@
     // 시세는 강화 레벨에 따라 범위가 달라지므로 마지막에 맞춘다
     var range = priceRange(s);
     s.price = clamp(safeNum(raw.price, 1), range.floor, range.ceil);
+    s.lowRun = clamp(safeCount(raw.lowRun), 0, LOW_RUN_MAX);
     s.goods = Math.min(s.goods, goodsCap(s));
     s.lastSeen = safeNum(raw.lastSeen, safeNum(now, 0));
     return s;
@@ -742,8 +750,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -765,6 +773,7 @@
     m.z1cost = Math.max(0.2, m.z1cost);
     m.z3cost = Math.max(0.2, m.z3cost);
     m.routecost = Math.max(0.2, m.routecost); m.traincost = Math.max(0.2, m.traincost);
+    m.ordergap = Math.max(0.5, m.ordergap); m.contractgap = Math.max(0.5, m.contractgap); m.salvagegap = Math.max(0.5, m.salvagegap);      // 간격은 절반 아래로 줄지 않는다
     m.trip = Math.max(0.5, m.trip);        // 운행 시간은 절반 아래로 줄지 않는다
     return m;
   }
@@ -775,7 +784,7 @@
    *   전체 생산 배수 = 1 + TOWER_GAIN × log10(1 + 생존자).  10만 명이면 3.5배.
    *   혈청: 물자를 들여 세 단계로 완성한다(SERUM_COSTS). 마지막 단계를 끝내면 이야기가 끝난다(ended).
    */
-  var ANTENNA_COST = 1e29, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [2e30, 1e31, 4e31];
+  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [1e30, 4e30, 1.5e31];
   function towerMult(state) { return zoneOpen(state, 6) ? 1 + TOWER_GAIN * Math.log(1 + Math.max(0, state.survivors || 0)) / Math.LN10 : 1; }
   function globalMult(state) {
     return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state) * towerMult(state);
@@ -891,6 +900,7 @@
    */
   var PEAK_SHARE = (PEAK_PRICE - (PRICE_FLOOR + PRICE_CEIL) / 2) / (PRICE_CEIL - (PRICE_FLOOR + PRICE_CEIL) / 2);
   function peakPrice(state) { var r = priceRange(state); return Math.round((r.mean + (r.ceil - r.mean) * PEAK_SHARE) * 100) / 100; }
+  var LOW_RUN_MAX = 3;      // 평균 아래 시세가 이만큼 이어지면 다음은 평균 위
   function priceRange(state) {
     var m = mods(state), floor = PRICE_FLOOR + m.floor, ceil = PRICE_CEIL + m.ceil;
     return { floor: Math.min(floor, ceil), ceil: ceil, mean: (Math.min(floor, ceil) + ceil) / 2 };
@@ -993,6 +1003,8 @@
   function stepOrders(state, dt, rng, events) {
     if (!zoneOpen(state, 1) || !(goodsRate(state) > 0)) return;
     if (state.order) {
+      // 흥정꾼을 두고 자동 판매를 켜 놓았으면 주문도 알아서 넘긴다(1.3.1): 자리에 없어서 단골을 놓치는 손해가 없게
+      if (state.autoSell && autoOn(state, 1) && state.goods >= state.order.need) { var of = fillOrder(state); if (of.ok) { of.type = 'order-filled'; events.push(of); return; } }
       state.order.left -= dt;
       if (state.order.left <= 0) { events.push({ type: 'order-gone', who: state.order.who }); state.order = null; }
       return;
@@ -1004,7 +1016,7 @@
     // 주문량: 좌판이 45초쯤 만드는 양. 창고에 다 들어가지 않으면 창고의 8할로 줄인다
     var need = Math.max(10, Math.floor(Math.min(goodsCap(state) * 0.8, goodsRate(state) * 45)));
     state.order = { who: who.id, need: need, left: ORDER_SECONDS };
-    state.orderIn = ORDER_GAP_MIN + rng() * (ORDER_GAP_MAX - ORDER_GAP_MIN);
+    state.orderIn = (ORDER_GAP_MIN + rng() * (ORDER_GAP_MAX - ORDER_GAP_MIN)) * mods(state).ordergap;
     events.push({ type: 'order', who: who.id, name: who.name, need: need });
   }
   /** 쌓인 상품으로 주문을 넘긴다. 상품이 모자라면 실패(주문은 남는다). */
@@ -1030,7 +1042,14 @@
       if (state.priceHistory.length > PRICE_HISTORY) state.priceHistory.splice(0, state.priceHistory.length - PRICE_HISTORY);
       state.streakUsed = false;                                   // 새 시세에서는 다시 단계를 올릴 수 있다
       var r = priceRange(state);
-      state.price = Math.round((r.floor + rng() * (r.ceil - r.floor)) * 100) / 100;
+      /*
+       * 시세 뽑기(1.3.1): 바닥과 천장 사이에서 고르게 뽑되, 평균 아래가 LOW_RUN_MAX 번 이어지면 다음 시세는 반드시 평균 위에서 뽑는다.
+       *   고르게만 뽑으면 평균 아래가 다섯 번 넘게 이어지는 일이 서른 번에 한 번꼴로 생겨서, 하한가만 나온다는 느낌을 줬다.
+       *   이 보정으로 평균 위가 나오는 비율은 50% → 53%쯤, 평균 아래가 가장 길게 이어지는 길이는 3번이 된다.
+       */
+      var lowStreak = (state.lowRun || 0) >= LOW_RUN_MAX, from = lowStreak ? r.mean : r.floor;
+      state.price = Math.round((from + rng() * (r.ceil - from)) * 100) / 100;
+      state.lowRun = state.price < r.mean ? (state.lowRun || 0) + 1 : 0;
     }
     var cap = goodsCap(state);
     state.goods = Math.min(cap, state.goods + goodsRate(state) * dt);
@@ -1124,6 +1143,8 @@
     if (!zoneOpen(state, 2) || !(productFlow(state) > 0)) return;
     if (state.contract) {
       state.contract.have = Math.min(state.contract.need, state.contract.have + made);
+      // 자동 제어반이 있으면 다 채운 의뢰를 알아서 넘긴다(1.3.1)
+      if (autoOn(state, 2) && state.contract.have >= state.contract.need) { var cf = fillContract(state); if (cf.ok) { cf.type = 'contract-filled'; events.push(cf); return; } }
       state.contract.left -= dt;
       if (state.contract.left <= 0) { events.push({ type: 'contract-gone', who: state.contract.who }); state.contract = null; }
       return;
@@ -1134,7 +1155,7 @@
     var who = CLIENTS[Math.floor(rng() * CLIENTS.length) % CLIENTS.length];
     var need = Math.max(5, Math.ceil(productFlow(state) * CONTRACT_NEED_SECONDS));
     state.contract = { who: who.id, need: need, have: 0, left: CONTRACT_SECONDS };
-    state.contractIn = CONTRACT_GAP_MIN + rng() * (CONTRACT_GAP_MAX - CONTRACT_GAP_MIN);
+    state.contractIn = (CONTRACT_GAP_MIN + rng() * (CONTRACT_GAP_MAX - CONTRACT_GAP_MIN)) * mods(state).contractgap;
     events.push({ type: 'contract', who: who.id, name: who.name, need: need });
   }
   /** 다 찬 의뢰를 납품한다. 아직 덜 찼으면 실패(의뢰는 남는다). */
@@ -1285,6 +1306,8 @@
   function stepSalvage(state, dt, rng, events) {
     if (!zoneOpen(state, 3) || !(railRate(state) > 0)) return;
     if (state.salvage) {
+      // 자동 신호가 있으면 다 채운 화물을 알아서 거둔다(1.3.1)
+      if (autoOn(state, 3) && state.salvage.have >= state.salvage.need) { var sf = fillSalvage(state); if (sf.ok) { sf.type = 'salvage-filled'; events.push(sf); return; } }
       state.salvage.left -= dt;
       if (state.salvage.left <= 0) { events.push({ type: 'salvage-gone', who: state.salvage.who }); state.salvage = null; }
       return;
@@ -1294,7 +1317,7 @@
     rng = typeof rng === 'function' ? rng : Math.random;
     var who = CARGOS[Math.floor(rng() * CARGOS.length) % CARGOS.length];
     state.salvage = { who: who.id, need: railRate(state) * SALVAGE_NEED_SECONDS, have: 0, left: SALVAGE_SECONDS };
-    state.salvageIn = SALVAGE_GAP_MIN + rng() * (SALVAGE_GAP_MAX - SALVAGE_GAP_MIN);
+    state.salvageIn = (SALVAGE_GAP_MIN + rng() * (SALVAGE_GAP_MAX - SALVAGE_GAP_MIN)) * mods(state).salvagegap;
     events.push({ type: 'salvage', who: who.id, name: who.name });
   }
   /** 다 찬 표류 화물을 끌어온다. 덜 찼으면 실패(화물은 남는다). */
@@ -1394,7 +1417,7 @@
   /** 과제를 끝낸 뒤 부른다. 서류를 찾았으면 { id, name, first } 를, 못 찾았으면 null 을 돌려준다. */
   function findRecord(state, rng) {
     rng = typeof rng === 'function' ? rng : Math.random;
-    if (!(rng() < RECORD_CHANCE)) return null;
+    if (!(rng() < RECORD_CHANCE + mods(state).recordchance)) return null;
     var who = RECORDS[Math.floor(rng() * RECORDS.length) % RECORDS.length], first = !(state.records[who.id] > 0);
     state.records[who.id] = Math.min(1e9, (state.records[who.id] || 0) + 1);
     state.recordsRun = (state.recordsRun || 0) + 1;
@@ -1595,7 +1618,7 @@
    *   다리 안전도 = 방어력 ÷ 오늘 밤 무리 규모. SAFETY_MIN 아래로는 안 내려가고, SAFETY_MAX(+탐조등)까지만 쳐 준다.
    *   그래서 이 구역에서는 방벽을 무리보다 넉넉하게 올려 두는 것이 곧 벌이다(방어전).
    */
-  var POST_COST = 1e26, POST_GROWTH = 1.13, GUARD_VALUE = 1e21, POST_DEFENSE = 0.25, SAFETY_MIN = 0.5, SAFETY_MAX = 3, SAFE_NIGHT = 2;
+  var POST_COST = 5e25, POST_GROWTH = 1.13, GUARD_VALUE = 7e20, POST_DEFENSE = 0.25, SAFETY_MIN = 0.5, SAFETY_MAX = 3, SAFE_NIGHT = 2;
   function bridgeSafety(state) {
     var str = nightStrength(state), ratio = str > 0 ? defensePower(state) / str : SAFETY_MAX;
     return clamp(ratio, SAFETY_MIN, SAFETY_MAX + mods(state).margin);
@@ -1637,7 +1660,7 @@
   function passBridge(state, rng) {
     rng = typeof rng === 'function' ? rng : Math.random;
     if (!zoneOpen(state, 5) || !(state.posts > 0)) return null;
-    if (!(rng() < PASSER_CHANCE)) return null;
+    if (!(rng() < PASSER_CHANCE + mods(state).passerchance)) return null;
     var who = PASSERS[Math.floor(rng() * PASSERS.length) % PASSERS.length], first = !(state.passers[who.id] > 0);
     state.passers[who.id] = Math.min(1e9, (state.passers[who.id] || 0) + 1);
     state.passersRun = (state.passersRun || 0) + 1;
@@ -2514,7 +2537,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, effectNow: effectNow, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,

@@ -2241,3 +2241,59 @@ test('구역 값의 차례: 문 값은 구역이 뒤로 갈수록 커지고, 그
   assert.ok(C.SERUM_COSTS[0] >= C.ZONES[6].cost, '혈청은 7구역 문을 연 뒤의 일이다');
   C.UPGRADES.filter((u) => u.zone >= 2).forEach((u) => assert.ok(u.baseCost <= C.ZONES[u.zone].cost * 100, u.id + ' 값이 그 구역의 문 값에 견주어 너무 비싸다'));
 });
+
+test('구역 사이 콘텐츠를 자주 나오게 하는 개조: 간격은 곱으로 줄고 절반에서 멈추며, 확률은 %p 로 더해진다', () => {
+  const s = inLab(); s.zone = 5; s.supplies = 1e60; s.posts = 5;
+  assert.equal(C.mods(s).ordergap, 1); assert.equal(C.mods(s).recordchance, 0);
+  ['flyer', 'catalog', 'buoy'].forEach((id) => { const u = C.UPGRADES.find((x) => x.id === id); for (let i = 0; i < u.max; i++) assert.ok(C.buyUpgrade(s, id).ok, id); });
+  near(C.mods(s).ordergap, Math.pow(0.92, 6)); near(C.mods(s).contractgap, Math.pow(0.92, 6)); near(C.mods(s).salvagegap, Math.pow(0.92, 6));
+  s.upgrades.flyer = 99; assert.equal(C.mods(s).ordergap, 0.5, '절반 아래로는 줄지 않는다'); s.upgrades.flyer = 6;
+  // 다음 주문까지의 시간이 실제로 줄어든다
+  const a = inLab(); a.zone = 1; a.stalls = 5; a.orderIn = 0; C.stepOrders(a, 1, () => 0.5, []);
+  const b = inLab(); b.zone = 1; b.stalls = 5; b.orderIn = 0; b.upgrades.flyer = 6; C.stepOrders(b, 1, () => 0.5, []);
+  assert.ok(a.order && b.order); near(b.orderIn / a.orderIn, Math.pow(0.92, 6));
+  // 확률: 서류 35% → 60%, 통행인 50% → 80%
+  for (let i = 0; i < 5; i++) { assert.ok(C.buyUpgrade(s, 'archive').ok); assert.ok(C.buyUpgrade(s, 'signpost').ok); }
+  near(C.mods(s).recordchance, 0.25); near(C.mods(s).passerchance, 0.30);
+  assert.ok(C.findRecord(s, () => 0.59), '59% 눈금이면 찾는다'); assert.equal(C.findRecord(s, () => 0.61), null);
+  assert.ok(C.passBridge(s, () => 0.79)); assert.equal(C.passBridge(s, () => 0.81), null);
+  const plain = inLab(); plain.zone = 5; plain.posts = 5;
+  assert.equal(C.findRecord(plain, () => 0.36), null); assert.equal(C.passBridge(plain, () => 0.51), null);
+  assert.equal(C.effectNow(C.UPGRADES.find((u) => u.id === 'archive'), 3), '서류를 찾을 확률 +15%p');
+});
+
+test('주문·의뢰·화물 자동 넘기기: 그 구역의 자동 개조가 있을 때만 알아서 넘긴다', () => {
+  const mk = (auto) => { const s = inLab(); s.zone = 1; s.stalls = 5; s.goods = 1e6; s.autoSell = true; s.order = { who: C.REGULARS[0].id, need: 10, left: 60 }; if (auto) s.upgrades.broker = 1; return s; };
+  const a = mk(true), ev = []; C.stepOrders(a, 1, () => 0.5, ev);
+  assert.equal(a.order, null); assert.equal(ev[0].type, 'order-filled'); assert.ok(ev[0].gain > 0); assert.equal(a.ordersRun, 1); assert.equal(a.regulars[C.REGULARS[0].id], 1);
+  const b = mk(false), ev2 = []; C.stepOrders(b, 1, () => 0.5, ev2);
+  assert.ok(b.order, '흥정꾼이 없으면 기다린다'); assert.equal(ev2.length, 0);
+  const c = mk(true); c.autoSell = false; C.stepOrders(c, 1, () => 0.5, []); assert.ok(c.order, '자동 판매를 꺼 두면 주문도 넘기지 않는다');
+  const d = mk(true); d.goods = 5; C.stepOrders(d, 1, () => 0.5, []); assert.ok(d.order, '상품이 모자라면 기다린다');
+});
+
+test('6구역 목표는 무리와의 경주에 묶이지 않는다: 초소, 개조, 통행 물자', () => {
+  const g = C.GOALS[5].find((x) => x.id === 'z6b'), s = inLab(); s.zone = 5; s.supplies = 1e60;
+  assert.equal(g.value(s), 0);
+  for (let i = 0; i < 6; i++) assert.ok(C.buyUpgrade(s, 'booth').ok);
+  for (let i = 0; i < 4; i++) assert.ok(C.buyUpgrade(s, 'signpost').ok);
+  assert.equal(g.value(s), 10); assert.ok(g.value(s) >= g.need);
+  C.GOALS[5].forEach((x) => assert.ok(!/방어력/.test(x.text), x.text));
+});
+
+test('시세: 평균 아래가 세 번 이어지면 다음은 평균 위다. 그래도 범위는 벗어나지 않는다', () => {
+  const s = inLab(); s.zone = 1; s.stalls = 5;
+  const r = C.priceRange(s); let low = 0, maxLow = 0, above = 0, n = 0, seed = 7;
+  const rng = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < 4000; i++) {
+    const before = s.priceHistory.length ? s.priceHistory[s.priceHistory.length - 1] : null; const p0 = s.price;
+    C.tick(s, 1, rng); if (s.pendingPerks.length) C.choosePerk(s, s.pendingPerks[0]);
+    if (s.price === p0 && before === (s.priceHistory.length ? s.priceHistory[s.priceHistory.length - 1] : null)) continue;
+    n++; assert.ok(s.price >= r.floor - 1e-9 && s.price <= C.priceRange(s).ceil + 1e-9);
+    if (s.price < C.priceRange(s).mean) { low++; maxLow = Math.max(maxLow, low); } else { low = 0; above++; }
+  }
+  assert.ok(n > 100, '시세가 여러 번 바뀌었다(' + n + ')');
+  assert.ok(maxLow <= C.LOW_RUN_MAX, '평균 아래가 가장 길게 ' + maxLow + '번');
+  assert.ok(above / n > 0.5, '평균 위 비율 ' + (above / n).toFixed(2));
+  assert.equal(C.sanitizeState({ version: 2, lowRun: 99 }, 0).lowRun, C.LOW_RUN_MAX);
+});

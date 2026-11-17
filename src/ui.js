@@ -1543,7 +1543,7 @@
       var r = C.fillOrder(state);
       if (!r.ok) return;
       if (r.first) { toast('새 단골 · ' + r.name); log('새 단골이 생겼다. ' + r.name + '. 도감에 적었다.', 'good'); sfx('goal'); }
-      else { log(r.name + '의 주문을 넘겼다. 물자 ' + fmt(r.gain) + ' 확보.', 'good'); sfx('sell'); }
+      else { log(r.name + '에게 상품을 팔았다. 물자 ' + fmt(r.gain) + ' 확보.', 'good'); sfx('sell'); }
       buzz(20); Store.save(); render();
     });
   }
@@ -1873,11 +1873,11 @@
       if (od) {
         var reg = null; C.REGULARS.forEach(function (r) { if (r.id === od.who) reg = r; });
         setText($('order-left'), clock(od.left));
-        setText($('order-text'), (reg ? reg.name + (C.hasBatchim(reg.name) ? '이' : '가') : '단골이') + ' 상품 ' + fmt(od.need) + '개를 찾아요.\n넘기면 물자 +' + fmt(C.orderReward(state)) + ' · 간식 +' + C.ORDER_TREATS);
+        setText($('order-text'), (reg ? reg.name + (C.hasBatchim(reg.name) ? '이' : '가') : '단골이') + ' 상품 ' + fmt(od.need) + '개를 찾아요.\n팔면 물자 +' + fmt(C.orderReward(state)) + ' · 간식 +' + C.ORDER_TREATS);
         fill($('order-bar'), od.left / C.ORDER_SECONDS);
         var enough = state.goods >= od.need;
         $('order-fill').disabled = !enough;
-        setText($('order-fill'), enough ? '주문을 넘긴다' : '상품이 ' + fmt(od.need - state.goods) + '개 모자라요');
+        setText($('order-fill'), enough ? '단골에게 판다' : '상품이 ' + fmt(od.need - state.goods) + '개 모자라요');
       }
       setText($('order-note'), '단골 ' + C.regularCount(state) + ' / ' + C.REGULARS.length + ' · 이번 회차 주문 ' + state.ordersRun + '번 · 상품 값 +' + Math.round((C.orderMult(state) - 1) * 100) + '%');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
@@ -2271,6 +2271,12 @@
           break;
         case 'order':
           toast('단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          break;
+        case 'order-filled':      // 흥정꾼·자동 제어반·자동 신호가 알아서 넘긴 것(1.3.1)
+        case 'contract-filled':
+        case 'salvage-filled':
+          if (ev.first) { toast('새로 적었다 · ' + ev.name); log(ev.name + '. 도감에 적었다.', 'good'); }
+          else log(ev.name + (ev.type === 'order-filled' ? '에게 흥정꾼이 상품을 팔았다.' : ev.type === 'contract-filled' ? '에 알아서 납품했다.' : (C.hasBatchim(ev.name) ? '을' : '를') + ' 알아서 거뒀다.') + ' 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
           break;
         case 'order-gone':
           log('단골이 기다리다 돌아갔다.', '');
