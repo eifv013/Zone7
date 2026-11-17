@@ -1755,3 +1755,31 @@ test('좀비 도감: 15종. 밤이 지나면 만난 것이 적히고, 처음 만
   const raw = JSON.parse(C.serialize(n)); raw.zdex = { walker: -3, fake: 9, hair: 2 };
   assert.deepEqual(C.sanitizeState(raw).zdex, { hair: 2 });
 });
+
+/* ---------- 알파 0.9.3: 웹 앱 알림의 시각과 문구 ---------- */
+test('알림 시각: 낮에는 그대로, 밤 10시 ~ 아침 8시에 걸리면 아침 8시로 미룬다', () => {
+  const H = 3600000, base = Date.UTC(2026, 10, 17, 0, 0, 0), utcHour = (t) => new Date(t).getUTCHours();      // 시험에서는 UTC 를 현지 시각으로 본다
+  assert.equal(C.noticeAt(base + 10 * H, 4 * H, utcHour), base + 14 * H);
+  assert.equal(C.noticeAt(base + 17 * H + 59 * 60000, 4 * H, utcHour), base + 21 * H + 59 * 60000);
+  assert.equal(C.noticeAt(base + 19 * H, 4 * H, utcHour), base + 32 * H, '23시 → 다음 날 8시');
+  assert.equal(C.noticeAt(base + 1 * H + 1234, 4 * H, utcHour), base + 8 * H, '5시 → 같은 날 8시');
+  assert.equal(C.noticeAt(base + 4 * H, 4 * H, utcHour), base + 8 * H, '정각 8시는 그대로');
+  assert.ok(C.noticeAt(base, -5, utcHour) >= base);
+});
+
+test('알림 문구: 네 가지가 차례로 돌고, 이름과 조사가 맞고, 친구가 없으면 건너뛴다', () => {
+  const s = C.createState();
+  assert.equal(C.noticeBackText(s, 0), '여기는 7구역. 라라, 들리면 응답하라.');
+  assert.equal(C.noticeBackText(s, 1), '무전기가 하루째 조용해요.');
+  assert.equal(C.noticeBackText(s, 2), '무전기가 하루째 조용해요.', '친구가 없으면 두 번째 문구');
+  assert.equal(C.noticeBackText(s, 3), '방벽 너머가 시끄러워요. 한번 봐 주세요.');
+  assert.equal(C.noticeBackText(s, 4), C.noticeBackText(s, 0));
+  s.kennel.tabby = '딩딩'; s.pet = { kind: 'cat', breed: 'tabby', name: '딩딩' }; s.heroName = '민준';
+  assert.equal(C.noticeBackText(s, 2), '딩딩이 문 앞에서 기다리고 있어요.');
+  assert.equal(C.noticeBackText(s, 0), '여기는 7구역. 민준, 들리면 응답하라.');
+  for (const bad of [-3, NaN, 'x', null]) assert.ok(C.noticeBackText(s, bad).length > 5);
+  const plan = C.noticePlan(s, Date.UTC(2026, 10, 17, 10), 0, (t) => new Date(t).getUTCHours());
+  assert.deepEqual(plan.map(p => p.kind), ['full', 'back']);
+  assert.equal(plan[0].text, C.NOTICE_FULL_TEXT);
+  assert.ok(plan[0].at < plan[1].at);
+});

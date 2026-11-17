@@ -1608,6 +1608,40 @@
     });
   }
 
+  /* ---------- 알림(웹 앱용) ---------- */
+  /*
+   * 아이폰처럼 홈 화면에 추가한 웹 앱에 보내는 알림의 시각과 문구. 안드로이드 앱의 규칙(android 의 Notices.java)과 같게 맞춘다.
+   *   NOTICE_FULL_MS(4시간) 뒤 "창고가 가득 찼어요", NOTICE_BACK_MS(24시간) 뒤 네 문구 가운데 하나(차례로 돈다).
+   *   밤 10시 ~ 아침 8시에 걸리면 아침 8시로 미룬다. 시각은 기기의 현지 시각을 따른다.
+   */
+  var NOTICE_FULL_MS = 4 * 3600 * 1000, NOTICE_BACK_MS = 24 * 3600 * 1000, NOTICE_QUIET_FROM = 22, NOTICE_QUIET_TO = 8;
+  var NOTICE_FULL_TEXT = '창고가 가득 찼어요. 물자를 가져가세요.';
+  /** now(ms)부터 delay 뒤에 울릴 시각. 조용한 시간에 걸리면 다음 아침 8시. hourOf 는 시각 → 현지 시(0~23)를 주는 함수(테스트용, 없으면 기기 시각). */
+  function noticeAt(now, delay, hourOf) {
+    var at = now + Math.max(0, safeNum(delay, 0));
+    var d = new Date(at), hour = typeof hourOf === 'function' ? hourOf(at) : d.getHours();
+    if (!(hour >= NOTICE_QUIET_FROM || hour < NOTICE_QUIET_TO)) return at;
+    // 그날(또는 다음 날)의 아침 8시까지 남은 시간을 더한다
+    var into = d.getMinutes() * 60000 + d.getSeconds() * 1000 + d.getMilliseconds();
+    var hoursLeft = hour >= NOTICE_QUIET_FROM ? 24 - hour + NOTICE_QUIET_TO : NOTICE_QUIET_TO - hour;
+    return at + hoursLeft * 3600000 - into;
+  }
+  /** 오래 비웠을 때의 문구. index 는 지금까지 보낸 횟수(네 가지가 차례로 돈다). 친구가 없으면 세 번째 대신 두 번째를 쓴다. */
+  function noticeBackText(state, index) {
+    var k = ((Math.floor(safeNum(index, 0)) % 4) + 4) % 4, pet = petInfo(state), hero = state.heroName || HERO_DEFAULT;
+    if (k === 0) return '여기는 7구역. ' + hero + ', 들리면 응답하라.';
+    if (k === 2 && pet) return pet.name + (hasBatchim(pet.name) ? '이' : '가') + ' 문 앞에서 기다리고 있어요.';
+    if (k === 3) return '방벽 너머가 시끄러워요. 한번 봐 주세요.';
+    return '무전기가 하루째 조용해요.';
+  }
+  /** 지금 게임을 닫는다면 맡길 알림 목록 [{ at, text, kind }]. */
+  function noticePlan(state, now, index, hourOf) {
+    return [
+      { at: noticeAt(now, NOTICE_FULL_MS, hourOf), text: NOTICE_FULL_TEXT, kind: 'full' },
+      { at: noticeAt(now, NOTICE_BACK_MS, hourOf), text: noticeBackText(state, index), kind: 'back' }
+    ];
+  }
+
   /* ---------- 업적 ---------- */
   /*
    * 업적: 구역마다 15개, 공통 30개(모두 105개). 한 번 달성하면 철수해도 남는다.
@@ -1881,7 +1915,7 @@
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, noticeAt: noticeAt, noticeBackText: noticeBackText, noticePlan: noticePlan, NOTICE_FULL_TEXT: NOTICE_FULL_TEXT, NOTICE_FULL_MS: NOTICE_FULL_MS, NOTICE_BACK_MS: NOTICE_BACK_MS, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

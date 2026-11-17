@@ -201,19 +201,86 @@
     nativeNames = key;
     try { app.setNames(state.heroName || C.HERO_DEFAULT, pet ? pet.name : ''); } catch (e) { /* 알림 문구만 예전 이름으로 남는다 */ }
   }
+  /*
+   * 웹 앱 알림(아이폰 등, 홈 화면에 추가한 경우): 폰 안에서 예약할 수 없어서 알림 서버(push/worker.js)에 맡긴다.
+   *   켤 때   : 알림 허락을 받고, 서버의 공개 키로 구독한다.
+   *   닫을 때 : 알림 목록(C.noticePlan)을 폰의 서비스 워커가 읽을 곳에 적어 두고, 서버에는 "언제 깨워 달라"는 시각만 보낸다.
+   *   열 때   : 서버에 맡긴 것을 취소한다.
+   * 서버에는 글이 가지 않는다(시각과 알림 주소뿐). 무슨 글을 띄울지는 서비스 워커가 적어 둔 목록에서 고른다.
+   * PUSH_SERVER 가 비어 있거나 기기가 지원하지 않으면 이 기능은 없는 것처럼 동작한다.
+   */
+  var PUSH_SERVER = '';      // 알림 서버의 주소(예: https://zone7-push.계정.workers.dev). 서버를 올린 뒤에 채운다
+  var PUSH_KEY = 'zone7-push', PUSH_INDEX = 'zone7-push-index', PUSH_BACK_AT = 'zone7-push-back';
+  var NOTICE_CACHE = 'zone7-notice', NOTICE_PLAN = './notice-plan';      // 서비스 워커(sw.js)와 맞춘 이름
+  function webPushReady() {
+    try { return !!(PUSH_SERVER && window.ZONE7_PWA && !nativeApp() && navigator.serviceWorker && window.PushManager && window.Notification && window.caches); }
+    catch (e) { return false; }
+  }
+  function b64ToBytes(text) {
+    var raw = atob(String(text).replace(/-/g, '+').replace(/_/g, '/')), out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function pushPost(path, body) {
+    return fetch(PUSH_SERVER + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true });
+  }
+  /** 알림을 켠다: 허락 → 구독. 성공하면 true. 사용자가 누른 순간에 불러야 한다(아이폰은 그렇지 않으면 허락 창을 띄우지 않는다). */
+  async function webPushOn() {
+    var perm = await Notification.requestPermission();
+    if (perm !== 'granted') return false;
+    var reg = await navigator.serviceWorker.ready;
+    var sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      var res = await fetch(PUSH_SERVER + '/key'), data = await res.json();
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(data.key) });
+    }
+    return !!sub;
+  }
+  async function webPushOff() {
+    try {
+      var reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+      if (sub) { try { await pushPost('/cancel', { endpoint: sub.endpoint }); } catch (e) { /* 서버가 못 받아도 구독은 끊는다 */ } await sub.unsubscribe(); }
+    } catch (e) { /* 끊지 못해도 설정은 꺼 둔다 */ }
+  }
+  /** 화면이 가려질 때: 알림을 맡긴다. 다시 보일 때: 취소한다. */
+  async function webPushSync(hidden) {
+    if (!webPushReady() || recall(PUSH_KEY) !== 'on') return;
+    try {
+      var reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+      if (!sub) return;
+      if (!hidden) {
+        // 24시간 알림이 이미 나갔다면 다음에는 다음 문구를 쓴다
+        var backAt = Number(recall(PUSH_BACK_AT)) || 0;
+        if (backAt && Date.now() >= backAt) remember(PUSH_INDEX, (Number(recall(PUSH_INDEX)) || 0) + 1);
+        remember(PUSH_BACK_AT, 0);
+        await pushPost('/cancel', { endpoint: sub.endpoint });
+        return;
+      }
+      var plan = C.noticePlan(state, Date.now(), Number(recall(PUSH_INDEX)) || 0);
+      remember(PUSH_BACK_AT, plan[1].at);
+      var box = await caches.open(NOTICE_CACHE);
+      await box.put(NOTICE_PLAN, new Response(JSON.stringify({ items: plan }), { headers: { 'Content-Type': 'application/json' } }));
+      await pushPost('/schedule', { endpoint: sub.endpoint, times: plan.map(function (p) { return p.at; }) });
+    } catch (e) { /* 알림은 없어도 게임에는 지장이 없다 */ }
+  }
   function wireNotify() {
     var app = nativeApp(), row = $('notify-row');
-    if (!app || !row) return;
+    if (!row || (!app && !webPushReady())) return;
     row.hidden = false;
     function show(on) { document.querySelectorAll('[data-notify]').forEach(function (b) { b.setAttribute('aria-pressed', (b.getAttribute('data-notify') === 'on') === on ? 'true' : 'false'); }); }
-    var now = true;
-    try { now = !!app.getNotify(); } catch (e) { now = true; }
+    var now = false;
+    if (app) { try { now = !!app.getNotify(); } catch (e) { now = true; } }
+    else now = recall(PUSH_KEY) === 'on' && Notification.permission === 'granted';
     show(now);
     document.querySelectorAll('[data-notify]').forEach(function (b) {
       b.addEventListener('click', function () {
         var on = b.getAttribute('data-notify') === 'on';
-        try { app.setNotify(on); } catch (e) { return; }
-        show(on);
+        if (app) { try { app.setNotify(on); } catch (e) { return; } show(on); return; }
+        if (!on) { remember(PUSH_KEY, 'off'); show(false); webPushOff(); return; }
+        webPushOn().then(function (ok) {
+          remember(PUSH_KEY, ok ? 'on' : 'off'); show(ok);
+          toast(ok ? '알림을 켰어요' : '알림을 켜지 못했어요. 폰 설정에서 알림을 허용해 주세요.');
+        }, function () { show(false); toast('알림을 켜지 못했어요'); });
       });
     });
   }
@@ -2154,6 +2221,7 @@
 
     // 탭을 닫거나 숨길 때 마지막 순간을 저장한다.
     document.addEventListener('visibilitychange', function () {
+      webPushSync(document.hidden);      // 웹 앱 알림: 가려질 때 맡기고, 돌아오면 취소한다
       if (document.hidden) { if (!paused) Store.save(); Cloud.flush(); } // 진행 중인 기기면 최신 진행을 바로 올려 둔다
       else { Cloud.check(); Update.check(); } // 돌아왔을 때 다른 기기가 가져갔는지, 새 버전이 나왔는지 확인한다
     });

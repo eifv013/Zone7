@@ -1,0 +1,14 @@
+# 7구역 알림 서버(Cloudflare Workers). 설명은 worker.js 맨 위와 README.md 에 있다.
+name = "zone7-push"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+# 알림 예약 하나가 Durable Object 하나다. 정해진 시각에 스스로 깨어나(alarm) 알림을 보낸다.
+[[durable_objects.bindings]]
+name = "NOTICE"
+class_name = "Notice"
+
+# 무료 요금제에서는 SQLite 방식의 Durable Object 만 쓸 수 있다.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Notice"]
