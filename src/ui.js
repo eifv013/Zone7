@@ -413,7 +413,11 @@
   function fill(el, ratio) {
     if (!el) return;
     var p = typeof ratio === 'number' && ratio > 0 ? Math.min(1, ratio) : 0, v = p.toFixed(3);
-    if (el._p !== v) { el._p = v; el.style.setProperty('--p', v); }
+    if (el._p === v) return;
+    var back = parseFloat(v) < parseFloat(el._p || '0');
+    el._p = v;
+    if (back) { el.style.transition = 'none'; el.style.setProperty('--p', v); void el.offsetWidth; el.style.transition = ''; }   // 처음으로 돌아갈 때는 되감기지 않게 바로 바꾼다
+    else el.style.setProperty('--p', v);
   }
   function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
   function el(tag, cls, text) {
@@ -772,12 +776,12 @@
    * 위쪽(저장, 계정 저장, 업데이트, 일지 연출, 로그)은 예전 것을 그대로 쓴다.
    * ==================================================================== */
   var HINTS = {
-    z0: '1구역 주택가 · 수색. 시설을 지어 두면 가만히 있어도 물자가 들어와요.',
-    z1: '2구역 재래시장 · 거래. 좌판이 상품을 만들어요. 시세가 좋을 때 팔수록 많이 벌어요.',
-    z2: '3구역 공단 · 생산 라인. 기계 셋이 맞물려 돌아요. 가장 느린 기계만큼만 나와요.',
-    z3: '4구역 환승역 · 노선. 열차가 화물을 싣고 돌아와요. 멀리 가는 노선일수록 많이 실어요.',
-    z4: '5구역 대학 병원 · 연구. 연구 점수로 과제를 골라 끝내면 이번 판의 다른 구역이 강해져요.',
-    wall: '방벽은 거점 전체를 지켜요. 방어력이 오늘 밤 무리 규모보다 커야 해요.'
+    z0: '주택가 · 시설을 지으면 물자가 들어와요.',
+    z1: '재래시장 · 시세가 좋을 때 팔수록 많이 벌어요.',
+    z2: '공단 · 가장 느린 기계만큼만 나와요.',
+    z3: '환승역 · 먼 노선일수록 많이 실어 와요.',
+    z4: '대학 병원 · 과제를 끝내면 다른 구역이 강해져요.',
+    wall: '방어력이 무리 규모보다 커야 밤을 넘겨요.'
   };
   var perkShown = '', journalShown = '', statsShown = '';
   var ZONE_TABS = 6;   // 탭으로 만들어 둘 구역 수: 만든 구역 넷 + 문 앞까지 갈 수 있는 다음 구역 하나. 화면에는 연 구역과 그다음 구역까지만 보인다
@@ -878,6 +882,8 @@
     rows.tabs[id] = b; $('zone-tabs').appendChild(b);
   }
   /** 수량 모드(×1, ×10, 최대)에서 실제로 살 개수. max 는 지금 살 수 있는 최대 수, room 은 상한까지 남은 자리. */
+  /** 초를 글로: 정수면 '3초', 아니면 소수 한 자리 '2.6초'. */
+  function secs(v) { return (Math.round(v * 10) / 10).toFixed(1).replace('.0', '') + '초'; }
   function qtyFor(max, room) { return Math.max(1, Math.min(Math.max(1, room), qtyMode === 'max' ? Math.max(1, max) : qtyMode)); }
   function buy(result) { if (result && result.ok) { sfx('buy'); render(); } }
   function buildNotes() {
@@ -1044,8 +1050,8 @@
     setText(pill, safe ? '방어 가능' : sieging ? '농성 중' : '방벽 위험');
     pill.className = 'pill ' + (safe ? 'pill-safe' : sieging ? 'pill-siege' : 'pill-danger');
     var plan = safe ? null : C.defensePlan(state);
-    setText($('night-hint'), (boss ? '오늘은 변이체가 무리를 이끌어요. ' : '') + (safe ? '막으면 물자 ' + fmt(C.nightReward(state)) + ' 을 얻어요. 이번 판에서 ' + state.wavesCleared + '밤을 막았어요(생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%).'
-      : sieging ? '문을 걸어 잠그고 버티는 중이에요. 더 잃지는 않지만 얻는 것도 없어요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '% 를 잃어요.'));
+    setText($('night-hint'), (boss ? '오늘은 변이체가 무리를 이끌어요. ' : '') + (safe ? '막으면 물자 +' + fmt(C.nightReward(state)) + ' · 막아낸 밤 ' + state.wavesCleared + '번(생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%)'
+      : sieging ? '문을 잠그고 버티는 중이에요. 방벽을 보강하면 풀려요.' : '이대로면 뚫려서 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '% 를 잃어요.'));
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -1056,8 +1062,8 @@
     setText($('retreat-count'), state.retreats ? state.retreats + '번 철수함' : '');
     if (!rb.dataset.armed) setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
     setText($('retreat-hint'), can
-      ? '거점을 전부 버리고 1구역에서 다시 시작해요. 물자·시설·방벽·개조·특전은 사라지고, 항체 샘플과 영구 특성은 남아요. 더 모을수록 샘플도 많아져요.'
-      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에서 물자 ' + fmt(C.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요(지금 ' + fmt(state.runEarned) + '). 철수하면 항체 샘플을 얻고, 그걸로 영구 특성을 찍어요.');
+      ? '1구역에서 다시 시작해요. 항체 샘플과 영구 특성만 남아요.'
+      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '물자 ' + fmt(C.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요(지금 ' + fmt(state.runEarned) + ').');
 
     renderZone(m);
     if (!$('zmap').hidden) renderZoneMap();
@@ -1311,7 +1317,14 @@
       if ('z' + u.zone !== tab) return;
       var r = rows.upgrades[u.id], lv = state.upgrades[u.id], cost = C.upgradeCost(state, u.id);
       setText(r.count, 'Lv ' + lv + ' / ' + u.max);
-      setText(r.info, '개조');
+      // 순찰조: 지금 몇 초마다 뒤지는지와 사고 난 뒤의 초를 함께 보여 준다
+      var infoText = '개조';
+      if (u.id === 'patrol') {
+        var probe = Object.create(state); probe.upgrades = Object.create(state.upgrades); probe.upgrades.patrol = lv + 1;
+        var nowS = secs(C.sweepInterval(state)), nextS = secs(C.sweepInterval(probe));
+        infoText = !lv ? '사면 ' + nextS + '마다 한 칸' : lv >= u.max ? '지금 ' + nowS + '마다 한 칸' : '지금 ' + nowS + ' → ' + nextS;
+      }
+      setText(r.info, infoText);
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');
       r.btn.disabled = !(cost <= state.supplies);
       r.btn.classList.toggle('row-owned', lv >= u.max);
@@ -1363,7 +1376,15 @@
     C.TRAITS.forEach(function (t) {
       var r = rows.traits[t.id], lv = state.traits[t.id], cost = C.traitCost(state, t.id);
       setText(r.count, 'Lv ' + lv + ' / ' + t.max);
-      setText(r.info, '레벨당');
+      // 자동화: 전력 투입 대기 시간이 지금 몇 초이고 찍으면 몇 초가 되는지 보여 준다(청신호도 같은 비율로 줄어든다)
+      var tInfo = '레벨당';
+      if (t.id === 'auto') {
+        var lvNow = state.traits.auto || 0, tp = Object.create(state); tp.traits = Object.create(state.traits); tp.traits.auto = lvNow + 1;
+        var cNow = secs(C.surgeCooldown(state)), cNext = secs(C.surgeCooldown(tp)), gNow = secs(C.greenCooldown(state)), gNext = secs(C.greenCooldown(tp));
+        tInfo = lvNow >= t.max ? '전력 투입 ' + cNow + ' · 청신호 ' + gNow : !lvNow ? '찍으면 자동 켜짐 · 전력 투입 ' + cNow + ' · 청신호 ' + gNow
+          : '전력 투입 ' + cNow + ' → ' + cNext + ' · 청신호 ' + gNow + ' → ' + gNext;
+      }
+      setText(r.info, tInfo);
       setText(r.cost, isFinite(cost) ? '샘플 ' + fmt(cost) : '최대');
       r.btn.disabled = !(cost <= state.antibodies);
       r.btn.classList.toggle('row-owned', lv >= t.max);
@@ -1483,11 +1504,31 @@
     });
   }
   /** 자리를 비운 동안 벌어진 일을 한 번에 알린다. */
-  function reportAway(r) {
-    if (r.nights > 0) log('자리를 비운 동안 밤 ' + r.nights + '번을 막아냈다. 물자 ' + fmt(r.nightReward) + ' 확보.', 'good');
-    if (r.held) log('막을 수 없는 무리가 와서 문을 걸어 잠그고 버텼다. 방벽을 보강해야 한다.', 'bad');
+  /*
+   * 돌아왔을 때의 정산 화면: 게임을 켜 둔 채 다른 앱에 다녀오면 시작 화면이 다시 나오지 않으므로,
+   * 자리 비움 보상을 띄우기 전에 짧은 로딩 화면(우비 소년과 좀비의 추격)을 먼저 보여 준다.
+   *   길이는 비운 시간에 비례한다: 1.2초 ~ 3.2초(최대치인 4시간을 비웠을 때). done 은 끝난 뒤 부를 함수.
+   *   화면을 만들지 못하면(요소 없음 등) 바로 done 을 부른다.
+   */
+  var BACK_MIN_MS = 1200, BACK_SPAN_MS = 2000;
+  function backSplash(elapsed, done) {
+    var box = $('back');
+    if (!box || !box.hidden) { done(); return; }
+    var ms = BACK_MIN_MS + BACK_SPAN_MS * Math.max(0, Math.min(1, elapsed / C.OFFLINE_CAP));
+    setText($('back-text'), duration(Math.min(elapsed, C.OFFLINE_CAP)) + ' 동안의 일을 정산하는 중…');
+    var bar = $('back-bar');
+    bar.style.transition = 'none'; bar.style.width = '0'; void bar.offsetWidth;
+    bar.style.transition = 'width ' + ms + 'ms linear'; bar.style.width = '100%';
+    box.hidden = false;
+    setTimeout(function () { box.hidden = true; try { done(); } catch (e) { console.error(e); } }, ms);
+  }
+  function reportAway(r, splash) {
+    var first = !r.logged; r.logged = true;      // 정산 화면을 거쳐 두 번째로 불릴 때는 로그를 또 남기지 않는다
+    if (first && r.nights > 0) log('자리를 비운 동안 밤 ' + r.nights + '번을 막아냈다. 물자 ' + fmt(r.nightReward) + ' 확보.', 'good');
+    if (first && r.held) log('막을 수 없는 무리가 와서 문을 걸어 잠그고 버텼다. 방벽을 보강해야 한다.', 'bad');
     if (r.elapsed < AWAY_THRESHOLD || !(r.gain > 0)) return;
     // 돌아왔을 때의 보상 창: 쌓인 물자를 크게 보여 준다. 물자는 이미 들어와 있고, "받기"는 창을 닫을 뿐이다.
+    if (splash) { backSplash(r.elapsed, function () { reportAway(r, false); }); return; }
     var total = r.gain + (r.nightReward || 0), lines = [];
     setText($('away-gain'), '+' + fmt(total));
     setText($('away-text'), (r.capped ? '오래 비웠어요. 최대치인 ' + duration(r.counted) + '치만 계산했어요' : duration(r.elapsed) + ' 동안 거점이 돌아갔어요') + ' · 효율 ' + Math.round(r.rate * 100) + '%');
@@ -1529,7 +1570,7 @@
     if (!document.hidden && now - Update.lastCheck >= UPDATE_EVERY_MS) Update.check(); // 30분마다 새 버전 확인(설치형만)
     if (paused) return;    // 다른 기기가 진행 중: 이 기기의 시간은 흐르지 않는다
     if (!(dt > 0)) return; // 시스템 시계가 뒤로 간 경우
-    if (dt > AWAY_THRESHOLD) reportAway(C.applyOffline(state, dt)); // 탭이 잠들었다 깨어남
+    if (dt > AWAY_THRESHOLD) reportAway(C.applyOffline(state, dt), true); // 탭이 잠들었다 깨어남: 정산 화면을 먼저 보여 준다
     else handleEvents(C.tick(state, dt));
 
     if (now >= nextFlavor) {

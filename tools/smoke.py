@@ -144,6 +144,10 @@ def run_case(browser, name, size, state, mode):
         if not fits(): problems.append('한 화면에 들어오지 않는다(특성)')
         tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'journal', 'save']: tap('[data-rtab-set=%s]' % t)
+        # 0.8.3 자동화 설명: 영구 특성 '자동화' 줄에 전력 투입 대기 시간(초)이 나온다
+        tap('[data-mview-set=exped]')
+        if '전력 투입' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
+        tap('[data-mview-set=record]')
         # 0.8.0 기록 화면: 일지의 장 탭과 소설 본문, 도움말 탭, 지난 구역, 설정 단추
         tap('[data-rtab-set=journal]')
         if page.locator('#journal-tabs button').count() < 5: problems.append('일지에 장 탭이 없다')
