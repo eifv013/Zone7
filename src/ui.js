@@ -583,7 +583,10 @@
     if (back) { el.style.transition = 'none'; el.style.setProperty('--p', v); void el.offsetWidth; el.style.transition = ''; }   // 처음으로 돌아갈 때는 되감기지 않게 바로 바꾼다
     else el.style.setProperty('--p', v);
   }
-  /** 글을 줄 단위로 나눈다: 문장이 끝나는 곳과 괄호 앞에서 줄을 바꾼다. (CSS 의 white-space: pre-line 과 함께 쓴다) */
+  /**
+   * 글에서 문장이 끝나는 자리를 찾아 표시(SEP)를 넣는다. 화면에 넣을 때 fillText 가 문장마다 한 덩어리로 묶는다.
+   */
+  var SEP = '\u0001';
   function lines(text) {
     if (typeof text !== 'string') return text;
     // 따옴표(“ ”) 안에서는 줄을 바꾸지 않는다: 대사는 한 줄로 읽혀야 한다. 따옴표가 닫힌 뒤에 문장이 끝나면 거기서 바꾼다
@@ -592,19 +595,39 @@
       var ch = text[i];
       if (ch === '“') depth++;
       else if (ch === '”') depth = Math.max(0, depth - 1);
-      if (ch === ' ' && depth === 0 && i > 0 && i < text.length - 1 && /\S/.test(text[i + 1]) && /[.!?…]$|[.!?…][”’"')]$/.test(text.slice(Math.max(0, i - 2), i))) out += '\n';
+      if (ch === ' ' && depth === 0 && i > 0 && i < text.length - 1 && /\S/.test(text[i + 1]) && /[.!?…]$|[.!?…][”’"')]$/.test(text.slice(Math.max(0, i - 2), i))) out += SEP;
       else out += ch;
     }
     return out;
   }
-  /** 목표 글: 문장마다 한 줄에 더해, 진행 숫자(괄호)도 아랫줄로 내린다. */
-  function goalLines(text) { return lines(String(text)).replace(/ \(/g, '\n('); }
-  /** 글을 넣는다. 모든 글은 문장 끝에서 줄을 바꾼다(줄 정렬): 화면 너비에 따라 문장 중간에서 꺾이는 것을 줄인다. */
-  function setText(el, text) { text = lines(text); if (el && el.textContent !== text) el.textContent = text; }
+  /** 목표 글: 진행 숫자(괄호)도 한 덩어리로 묶어서, 자리가 모자라면 통째로 아랫줄로 내려가게 한다. */
+  function goalLines(text) { return String(text).replace(/ \(/g, SEP + '('); }
+  /**
+   * 줄 정렬(1.0.6): 문장 하나를 한 덩어리(inline-block)로 묶는다.
+   *   한 줄에 다 들어가면 한 줄로 나오고, 넘치면 문장 사이에서만 줄이 바뀐다. 문장 중간에서 꺾이는 것은 문장 하나가 한 줄보다 길 때뿐이다.
+   *   전에는 문장마다 무조건 줄을 바꿔서, 짧은 두 문장도 두 줄이 됐다.
+   *   글 안의 줄바꿈(\n)은 그대로 줄을 바꾼다.
+   */
+  function fillText(node, text) {
+    var marked = lines(text);
+    if (typeof marked !== 'string' || (marked.indexOf(SEP) < 0 && marked.indexOf('\n') < 0)) { node.textContent = text; return; }
+    node.textContent = '';
+    marked.split('\n').forEach(function (row, ri) {
+      if (ri > 0) node.appendChild(document.createElement('br'));
+      row.split(SEP).forEach(function (part, pi) {
+        if (pi > 0) node.appendChild(document.createTextNode(' '));
+        var span = document.createElement('span');
+        span.className = 'sn'; span.textContent = part;
+        node.appendChild(span);
+      });
+    });
+  }
+  /** 글을 넣는다. 같은 글이면 건드리지 않는다(매 프레임 다시 그리지 않게, 넣은 글을 기억해 둔다). */
+  function setText(el, text) { if (!el || el.__raw === text) return; el.__raw = text; fillText(el, text); }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (text !== undefined) n.textContent = lines(text);
+    if (text !== undefined) { n.__raw = text; fillText(n, text); }
     return n;
   }
   function pad3(n) { return n < 1000 ? ('00' + n).slice(-3) : String(n); }
@@ -813,7 +836,7 @@
   function svgEl(name, attrs, text) {
     var n = document.createElementNS('http://www.w3.org/2000/svg', name);
     for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
-    if (text !== undefined) n.textContent = lines(text);
+    if (text !== undefined) { n.__raw = text; fillText(n, text); }
     return n;
   }
   /** 구역 표지 위의 작은 건물 그림(도트). kind 는 구역 번호(0~6). */
@@ -1534,7 +1557,7 @@
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
     setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
-      : sieging ? '방어력이 모자라요.\n방벽을 보강해 주세요.' : '방어력이 모자라요.\n방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
+      : sieging ? '방어력이 모자라요. 방벽을 보강해 주세요.' : '방어력이 모자라요. 방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
     setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
     var fb = $('fortify');
     fb.hidden = safe;
@@ -2025,7 +2048,7 @@
           sfx('defended'); buzz(20); if (scene) scene.night(true);
           break;
         case 'breached':
-          log('방벽이 뚫렸다. 물자 ' + fmt(ev.lost) + ' 을 잃었다. 문을 걸어 잠그고 버틴다.', 'bad');
+          log('방벽이 뚫렸다. 문을 걸어 잠그고 버틴다.', 'bad');
           sfx('breached'); buzz([40, 60, 40]); flash(); if (scene) scene.night(false);
           break;
         case 'held':
