@@ -206,6 +206,7 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .row-mile .st.on { opacity: 1; }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
+.ach-card p.ach-lock { color: var(--blood); font-weight: 600; }
 .guard .track { margin: 8px 0 6px; }
 #guard-rate { text-align: right; }
 #guard-note { white-space: pre-line; }
@@ -992,7 +993,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.0.6</div>
+  <div class="boot-ver">7구역 알파 1.0.7</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1450,7 +1451,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.0.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.0.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1575,7 +1576,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.6";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.7";
 </script>
 <script>
 /*
@@ -1594,6 +1595,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.6";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.0.7', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '철수가 필요한 업적',
+      items: [
+        '업적을 한 회차에 다 깰 수 없게 했어요. "어려움" 업적 40개는 철수를 1번, "아주 어려움" 업적 18개는 철수를 3번 한 뒤에야 달성돼요.',
+        '조건을 채워도 철수 수가 모자라면 잠겨 있어요. 카드에 붉은 글씨로 몇 번이 필요한지 나와요.',
+        '이미 달성한 업적은 그대로 남아요.'
+      ] },
     { ver: '알파 1.0.6', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '한 줄에 들어가면 한 줄',
       items: [
         '줄 정렬을 다시 손봤어요. 문장들이 한 줄에 다 들어가면 한 줄로 나오고, 넘칠 때만 문장 사이에서 줄이 바뀌어요. 전에는 짧은 문장도 무조건 줄을 바꿨어요.',
@@ -4312,11 +4319,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.6";
     { id: 'arsenal', group: 'all', name: '빈틈없는 방벽', tier: 3, needs: [DEFENSES.length], value: function (s) { return defenseKinds(s); }, text: function () { return '방어 수단 여섯 가지를 모두 갖추기'; } }
   ];
   var ROMAN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
+  var ACH_RETREATS_HARD = 1, ACH_RETREATS_HARDEST = 3;      // 어려움 / 아주 어려움 업적에 필요한 철수 수
   var ACHIEVEMENTS = [];
   ACH_SERIES.forEach(function (sr) {
     sr.needs.forEach(function (need, k) {
       var a = { id: sr.id + '-' + (k + 1), group: sr.group, tier: sr.tier || Math.min(4, k + 1 + (sr.needs.length === 2 ? 1 : 0)),
         name: sr.name + (sr.needs.length > 1 ? ' ' + ROMAN[k] : ''), need: need, value: sr.value };
+      // 철수의 도움 없이는 다 깰 수 없게 한다(1.0.7): 어려움은 철수 1번, 아주 어려움은 철수 3번을 한 뒤에야 달성된다.
+      // 조건을 채워도 철수 수가 모자라면 잠겨 있고, 철수 수를 채운 뒤에 조건을 (다시) 채우면 달성된다
+      a.retreats = a.tier >= 4 ? ACH_RETREATS_HARDEST : a.tier >= 3 ? ACH_RETREATS_HARD : 0;
       // 조건 글은 읽을 때 만든다: 숫자 표기(만·억 / 지수) 설정을 따라가야 하고, 이 자리에서는 아직 숫자 단위 표가 준비되지 않았다
       Object.defineProperty(a, 'text', { enumerable: true, get: function () { return sr.text(need); } });
       ACHIEVEMENTS.push(a);
@@ -4329,7 +4340,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.6";
     var v = 0;
     try { v = a.value(state); } catch (e) { v = 0; }
     v = typeof v === 'number' && isFinite(v) && v > 0 ? v : 0;
-    return { value: Math.min(v, a.need), need: a.need, done: !!state.ach[a.id], at: typeof state.ach[a.id] === 'number' ? state.ach[a.id] : 0 };
+    return { value: Math.min(v, a.need), need: a.need, done: !!state.ach[a.id], at: typeof state.ach[a.id] === 'number' ? state.ach[a.id] : 0,
+      retreats: a.retreats || 0, locked: !state.ach[a.id] && (state.retreats || 0) < (a.retreats || 0) };
   }
   /** 조건을 채운 업적을 달성으로 바꾸고 'achievement' 사건을 남긴다. */
   function checkAchievements(state, events, now) {
@@ -4337,7 +4349,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.6";
     ACHIEVEMENTS.forEach(function (a) {
       if (state.ach[a.id]) return;
       var p = achProgress(state, a);
-      if (p.value >= a.need) { state.ach[a.id] = at; if (events) events.push({ type: 'achievement', id: a.id, name: a.name, text: a.text, group: a.group, tier: a.tier }); }
+      if (p.value >= a.need && !p.locked) { state.ach[a.id] = at; if (events) events.push({ type: 'achievement', id: a.id, name: a.name, text: a.text, group: a.group, tier: a.tier }); }
     });
   }
 
@@ -4528,7 +4540,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.6";
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, noticeAt: noticeAt, noticeBackText: noticeBackText, noticePlan: noticePlan, NOTICE_FULL_TEXT: NOTICE_FULL_TEXT, NOTICE_FULL_MS: NOTICE_FULL_MS, NOTICE_BACK_MS: NOTICE_BACK_MS, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, nightSpecials: nightSpecials, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, noticeAt: noticeAt, noticeBackText: noticeBackText, noticePlan: noticePlan, NOTICE_FULL_TEXT: NOTICE_FULL_TEXT, NOTICE_FULL_MS: NOTICE_FULL_MS, NOTICE_BACK_MS: NOTICE_BACK_MS, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, nightSpecials: nightSpecials, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, ACH_RETREATS_HARD: ACH_RETREATS_HARD, ACH_RETREATS_HARDEST: ACH_RETREATS_HARDEST, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
@@ -7384,8 +7396,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.0.6";
     var order = list.map(function (a, i) { return i; }).sort(function (x, y) { return (prog[x].done - prog[y].done) || (list[x].tier - list[y].tier) || (x - y); });
     order.forEach(function (i) {
       var a = list[i], p = prog[i], card = el('div', 'ach-card tier' + a.tier + (p.done ? ' done' : '')), head = el('div', 'ach-head');
-      head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier]));      // 달성한 날짜(적어 둔 것만)
+      head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier] + (p.retreats ? ' · 철수 ' + p.retreats + '번 뒤' : '')));      // 달성한 날짜(적어 둔 것만)
       card.appendChild(head); card.appendChild(el('p', '', a.text));
+      if (p.locked) card.appendChild(el('p', 'ach-lock', '철수를 ' + p.retreats + '번 한 뒤에 달성할 수 있어요(지금 ' + state.retreats + '번).'));
       if (!p.done) {
         var bar = el('div', 'autobar');
         fill(bar, p.value / p.need);

@@ -1713,7 +1713,7 @@ test('업적: 조건을 채우면 달성되어 알림이 오고, 하나마다 �
   assert.ok(s.ach['z1click-1']); assert.ok(!s.ach['z1click-2']);
   near(C.achMult(s), 1 + C.ACH_BONUS * C.achCount(s));
   const a = C.ACHIEVEMENTS.find(x => x.id === 'z1click-2');
-  assert.deepEqual(C.achProgress(s, a), { value: 150, need: 1000, done: false, at: 0 });
+  { const pr = C.achProgress(s, a); assert.equal(pr.value, 150); assert.equal(pr.need, 1000); assert.equal(pr.done, false); assert.equal(pr.at, 0); }
   // 값을 읽다 오류가 나도 0 으로 본다
   assert.equal(C.achProgress(s, { id: 'x', need: 5, value: () => { throw new Error('x'); } }).value, 0);
   const n = C.achCount(s);
@@ -2033,4 +2033,22 @@ test('6구역 강변 검문소: 초소가 통행 물자를 벌고, 방어력이 
   assert.equal(C.buyPost(closed, 1).reason, 'locked');
   const bad = C.sanitizeState({ version: 2, zone: 2, posts: 50, guardEarned: -3, safeNights: 'x' }, 0);
   assert.equal(bad.posts, 0); assert.equal(bad.guardEarned, 0); assert.equal(bad.safeNights, 0);
+});
+
+test('업적은 철수의 도움 없이는 다 깰 수 없다: 어려움은 철수 1번, 아주 어려움은 3번 뒤에 달성된다', () => {
+  const hard = C.ACHIEVEMENTS.filter((a) => a.tier === 3), hardest = C.ACHIEVEMENTS.filter((a) => a.tier === 4);
+  assert.ok(hard.length >= 30 && hardest.length >= 10);
+  hard.forEach((a) => assert.equal(a.retreats, C.ACH_RETREATS_HARD, a.id));
+  hardest.forEach((a) => assert.equal(a.retreats, C.ACH_RETREATS_HARDEST, a.id));
+  C.ACHIEVEMENTS.filter((a) => a.tier <= 2).forEach((a) => assert.equal(a.retreats, 0, a.id));
+  // 수색 1만 번(어려움 이상)을 채워도 철수 전에는 잠겨 있다
+  const s = fresh(); s.clicks = 1e9;
+  C.checkAchievements(s, [], 5);
+  const clickAch = C.ACHIEVEMENTS.filter((a) => a.id.startsWith('z1click-'));
+  clickAch.forEach((a) => { const p = C.achProgress(s, a); assert.equal(!!s.ach[a.id], a.retreats === 0, a.id); assert.equal(p.locked, a.retreats > 0); });
+  assert.ok(C.ACHIEVEMENTS.some((a) => !s.ach[a.id] && C.achProgress(s, a).value >= a.need), '조건을 채우고도 잠긴 업적이 있다');
+  s.retreats = 1; C.checkAchievements(s, [], 6);
+  clickAch.forEach((a) => assert.equal(!!s.ach[a.id], a.retreats <= 1, a.id));
+  s.retreats = 3; C.checkAchievements(s, [], 7);
+  clickAch.forEach((a) => assert.ok(s.ach[a.id], a.id));
 });

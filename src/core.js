@@ -1961,11 +1961,15 @@
     { id: 'arsenal', group: 'all', name: '빈틈없는 방벽', tier: 3, needs: [DEFENSES.length], value: function (s) { return defenseKinds(s); }, text: function () { return '방어 수단 여섯 가지를 모두 갖추기'; } }
   ];
   var ROMAN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
+  var ACH_RETREATS_HARD = 1, ACH_RETREATS_HARDEST = 3;      // 어려움 / 아주 어려움 업적에 필요한 철수 수
   var ACHIEVEMENTS = [];
   ACH_SERIES.forEach(function (sr) {
     sr.needs.forEach(function (need, k) {
       var a = { id: sr.id + '-' + (k + 1), group: sr.group, tier: sr.tier || Math.min(4, k + 1 + (sr.needs.length === 2 ? 1 : 0)),
         name: sr.name + (sr.needs.length > 1 ? ' ' + ROMAN[k] : ''), need: need, value: sr.value };
+      // 철수의 도움 없이는 다 깰 수 없게 한다(1.0.7): 어려움은 철수 1번, 아주 어려움은 철수 3번을 한 뒤에야 달성된다.
+      // 조건을 채워도 철수 수가 모자라면 잠겨 있고, 철수 수를 채운 뒤에 조건을 (다시) 채우면 달성된다
+      a.retreats = a.tier >= 4 ? ACH_RETREATS_HARDEST : a.tier >= 3 ? ACH_RETREATS_HARD : 0;
       // 조건 글은 읽을 때 만든다: 숫자 표기(만·억 / 지수) 설정을 따라가야 하고, 이 자리에서는 아직 숫자 단위 표가 준비되지 않았다
       Object.defineProperty(a, 'text', { enumerable: true, get: function () { return sr.text(need); } });
       ACHIEVEMENTS.push(a);
@@ -1978,7 +1982,8 @@
     var v = 0;
     try { v = a.value(state); } catch (e) { v = 0; }
     v = typeof v === 'number' && isFinite(v) && v > 0 ? v : 0;
-    return { value: Math.min(v, a.need), need: a.need, done: !!state.ach[a.id], at: typeof state.ach[a.id] === 'number' ? state.ach[a.id] : 0 };
+    return { value: Math.min(v, a.need), need: a.need, done: !!state.ach[a.id], at: typeof state.ach[a.id] === 'number' ? state.ach[a.id] : 0,
+      retreats: a.retreats || 0, locked: !state.ach[a.id] && (state.retreats || 0) < (a.retreats || 0) };
   }
   /** 조건을 채운 업적을 달성으로 바꾸고 'achievement' 사건을 남긴다. */
   function checkAchievements(state, events, now) {
@@ -1986,7 +1991,7 @@
     ACHIEVEMENTS.forEach(function (a) {
       if (state.ach[a.id]) return;
       var p = achProgress(state, a);
-      if (p.value >= a.need) { state.ach[a.id] = at; if (events) events.push({ type: 'achievement', id: a.id, name: a.name, text: a.text, group: a.group, tier: a.tier }); }
+      if (p.value >= a.need && !p.locked) { state.ach[a.id] = at; if (events) events.push({ type: 'achievement', id: a.id, name: a.name, text: a.text, group: a.group, tier: a.tier }); }
     });
   }
 
@@ -2177,7 +2182,7 @@
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, noticeAt: noticeAt, noticeBackText: noticeBackText, noticePlan: noticePlan, NOTICE_FULL_TEXT: NOTICE_FULL_TEXT, NOTICE_FULL_MS: NOTICE_FULL_MS, NOTICE_BACK_MS: NOTICE_BACK_MS, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, nightSpecials: nightSpecials, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, noticeAt: noticeAt, noticeBackText: noticeBackText, noticePlan: noticePlan, NOTICE_FULL_TEXT: NOTICE_FULL_TEXT, NOTICE_FULL_MS: NOTICE_FULL_MS, NOTICE_BACK_MS: NOTICE_BACK_MS, ZOMBIE_KINDS: ZOMBIE_KINDS, ZOMBIE_RARITIES: ZOMBIE_RARITIES, sightZombies: sightZombies, nightSpecials: nightSpecials, sightRoll: sightRoll, zdexCount: zdexCount, ACHIEVEMENTS: ACHIEVEMENTS, ACH_BONUS: ACH_BONUS, ACH_RETREATS_HARD: ACH_RETREATS_HARD, ACH_RETREATS_HARDEST: ACH_RETREATS_HARDEST, achCount: achCount, achMult: achMult, achProgress: achProgress, checkAchievements: checkAchievements, SIGNAL_TREATS: SIGNAL_TREATS, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

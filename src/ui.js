@@ -1246,8 +1246,9 @@
     var order = list.map(function (a, i) { return i; }).sort(function (x, y) { return (prog[x].done - prog[y].done) || (list[x].tier - list[y].tier) || (x - y); });
     order.forEach(function (i) {
       var a = list[i], p = prog[i], card = el('div', 'ach-card tier' + a.tier + (p.done ? ' done' : '')), head = el('div', 'ach-head');
-      head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier]));      // 달성한 날짜(적어 둔 것만)
+      head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier] + (p.retreats ? ' · 철수 ' + p.retreats + '번 뒤' : '')));      // 달성한 날짜(적어 둔 것만)
       card.appendChild(head); card.appendChild(el('p', '', a.text));
+      if (p.locked) card.appendChild(el('p', 'ach-lock', '철수를 ' + p.retreats + '번 한 뒤에 달성할 수 있어요(지금 ' + state.retreats + '번).'));
       if (!p.done) {
         var bar = el('div', 'autobar');
         fill(bar, p.value / p.need);
