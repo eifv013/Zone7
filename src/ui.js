@@ -1286,7 +1286,7 @@
     if (tab === 'z0' && play) {
       var nextIdx = C.nextTile(state), done = C.sweepCount(state);
       rows.tiles.forEach(function (b, i) {
-        var searched = C.tileSearched(state, i), kind = C.tileKind(state.sweepSeed, i);
+        var searched = C.tileSearched(state, i), kind = C.tileKind(state.sweepSeed, i, C.cacheExtra(state));
         var cls = 'tile' + (searched ? ' done ' + kind.id : i === nextIdx ? ' next' : '') + (b.classList.contains('hit') ? ' hit' : '');
         if (b.className !== cls) b.className = cls;
         setText(b, searched ? kind.name : '');

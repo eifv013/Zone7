@@ -2,7 +2,7 @@
 from PIL import Image, ImageDraw
 import json, sys
 
-PAL = {'Y':'#f0b400','K':'#17180f','N':'#131827','P':'#e6e5db','R':'#e0392b','T':'#7d8c90','S':'#e2b48c','H':'#3a2a1e',
+PAL = {'Y':'#f0b400','K':'#17180f','N':'#1e2947','P':'#e6e5db','R':'#e0392b','T':'#c3ced2','S':'#e2b48c','H':'#3a2a1e',
        'M':'#8b8f8a','D':'#6b6f6a','L':'#a3a7a1','y':'#c99600','G':'#7da35a','g':'#4a6a36','n':'#232a40','O':'#f08a3c'}
 
 ICONS = {

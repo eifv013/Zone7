@@ -333,6 +333,7 @@
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e24, growth: 3.5, max: 10 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e24, growth: 3, max: 12 },
     // 자동: 구역마다 개조를 사야 그 구역의 일이 알아서 돌아간다(AUTO_KEYS). 영구 특성 '자동화'가 있으면 개조 없이도 전부 돈다.
+    { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '거간꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
     { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 5e13, growth: 1, max: 1 },
@@ -570,8 +571,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -1165,14 +1166,21 @@
    * 스무 칸을 다 뒤지면 보너스를 받고 다음 동네로 넘어간다. 시설이 있으면 몇 초마다 한 칸씩 알아서 뒤진다(자동 수색은 칸 수익 없이 진행만 시킨다).
    * 칸의 배치는 동네 번호(sweepSeed)로 정해지므로 저장했다 불러와도 같은 동네가 나온다.
    */
+  var CACHE_EXTRA_MAX = 40;      // 개조로 더할 수 있는 은닉처 확률의 상한(%p)
+  /** 은닉처가 나올 확률에 개조(소문)로 더해지는 값(%p). */
+  function cacheExtra(state) { return Math.min(CACHE_EXTRA_MAX, mods(state).rumor); }
   /** 동네 seed 의 index 번째 칸의 종류. 같은 입력에는 언제나 같은 답을 준다. */
-  function tileKind(seed, index) {
+  function tileKind(seed, index, extraCache) {
     // 두 수를 섞어 고르게 흩는다(murmur3 의 마무리 섞기). 단순히 곱해서 더하면 종류가 한쪽으로 쏠린다.
     var h = (Math.imul((seed | 0) + 1, 0x9E3779B1) + Math.imul((index | 0) + 1, 0x85EBCA6B)) | 0;
     h ^= h >>> 16; h = Math.imul(h, 0x85EBCA6B); h ^= h >>> 13; h = Math.imul(h, 0xC2B2AE35); h ^= h >>> 16;
     var roll = (h >>> 0) % 100, acc = 0;
-    for (var i = 0; i < TILE_KINDS.length; i++) { acc += TILE_KINDS[i].weight; if (roll < acc) return TILE_KINDS[i]; }
-    return TILE_KINDS[0];
+    // 은닉처가 늘어난 만큼(extraCache, %p) 은닉처의 몫을 키우고, 나머지 종류는 원래 비율대로 줄인다. 0 이면 원래 배치 그대로다
+    var extra = typeof extraCache === 'number' && extraCache > 0 ? Math.min(CACHE_EXTRA_MAX, extraCache) : 0;
+    var cache = TILE_KINDS[TILE_KINDS.length - 1], rest = 100 - cache.weight;
+    if (roll >= 100 - cache.weight - extra) return cache;
+    for (var i = 0; i < TILE_KINDS.length - 1; i++) { acc += TILE_KINDS[i].weight * (rest - extra) / rest; if (roll < acc) return TILE_KINDS[i]; }
+    return TILE_KINDS[TILE_KINDS.length - 2];
   }
   function tileSearched(state, index) { return index >= 0 && index < SWEEP_TILES && (state.sweepMask & (1 << index)) !== 0; }
   function sweepCount(state) { var n = 0; for (var i = 0; i < SWEEP_TILES; i++) if (state.sweepMask & (1 << i)) n++; return n; }
@@ -1196,7 +1204,7 @@
    */
   function scavenge(state, index) {
     var i = typeof index === 'number' && index === Math.floor(index) && index >= 0 && index < SWEEP_TILES && !tileSearched(state, index) ? index : nextTile(state);
-    var kind = tileKind(state.sweepSeed, i), g = clickValue(state) * kind.mult;
+    var kind = tileKind(state.sweepSeed, i, cacheExtra(state)), g = clickValue(state) * kind.mult;
     earn(state, g);
     state.clicks++;
     var bonus = markTile(state, i);
@@ -1700,7 +1708,7 @@
   }
 
   return {
-    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    HANDS: HANDS, handBonus: handBonus, handCost: handCost, maxHands: maxHands, buyHand: buyHand, cacheExtra: cacheExtra, CACHE_EXTRA_MAX: CACHE_EXTRA_MAX, TREAT_NIGHT: TREAT_NIGHT, TREAT_BOSS: TREAT_BOSS, PET_LEVEL_MAX: PET_LEVEL_MAX, PET_LEVEL_STEP: PET_LEVEL_STEP, petLevel: petLevel, petFeedCost: petFeedCost, feedPet: feedPet, petEffectText: petEffectText, HERO_DEFAULT: HERO_DEFAULT, fillStory: fillStory, GENDERS: GENDERS, setHeroGender: setHeroGender, hasBatchim: hasBatchim, autoOn: autoOn, AUTO_KEYS: AUTO_KEYS, SELL_AUTO_SECONDS: SELL_AUTO_SECONDS, sellInterval: sellInterval, sweepInterval: sweepInterval, setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,

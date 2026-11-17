@@ -1653,3 +1653,17 @@ test('간식과 친구 키우기: 밤을 막으면 간식을 얻고, 간식을 �
   const back = C.sanitizeState(raw);
   assert.equal(back.treats, 0); assert.deepEqual(back.petLv, { [breed]: C.PET_LEVEL_MAX });
 });
+
+test('소문(1구역 개조): 은닉처가 나올 확률이 오른다. 올리지 않으면 칸의 배치는 전과 같다', () => {
+  const count = (extra) => { let n = 0; for (let seed = 1; seed <= 200; seed++) for (let i = 0; i < C.SWEEP_TILES; i++) if (C.tileKind(seed, i, extra).id === 'cache') n++; return n / (200 * C.SWEEP_TILES); };
+  for (let seed = 1; seed <= 30; seed++) for (let i = 0; i < C.SWEEP_TILES; i++) assert.equal(C.tileKind(seed, i, 0).id, C.tileKind(seed, i).id);
+  const base = count(0), more = count(24);
+  assert.ok(Math.abs(base - 0.10) < 0.03, '기본 10%: ' + base);
+  assert.ok(Math.abs(more - 0.34) < 0.04, '24%p 더하면 34%: ' + more);
+  for (const bad of [-5, NaN, 'x', null]) assert.equal(C.tileKind(3, 4, bad).id, C.tileKind(3, 4).id);
+  assert.ok(count(999) <= 0.5 + 0.04, '상한을 넘지 않는다');
+  const s = C.createState();
+  assert.equal(C.cacheExtra(s), 0);
+  s.upgrades.rumor = 8;
+  assert.equal(C.cacheExtra(s), 24);
+});

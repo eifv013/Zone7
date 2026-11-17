@@ -20,12 +20,13 @@ from combo import HERO, TOWER, PLATE, put, rect, body_to
 CORE = 24          # 그림 본체의 한 변(칸)
 TAPE = 2           # 본체 안에서 테이프가 차지하는 줄 수(위, 아래 각각)
 STRIPE = 2         # 사선 줄무늬 한 줄의 굵기(칸)
-STARS = [(13, 3), (22, 4), (1, 16), (3, 19)]   # 본체 좌표 기준 별의 위치
+STARS = [(13, 3), (22, 4), (1, 16), (3, 19), (20, 14), (2, 13), (22, 19), (18, 3)]   # 본체 좌표 기준 별의 위치
 
 
 def tape_color(col, row):
     """사선 줄무늬에서 (col, row) 칸의 색. 좌표가 음수여도 무늬가 끊기지 않게 나머지 연산만 쓴다."""
-    return 'K' if ((col + row) // STRIPE) % 2 == 0 else 'Y'
+    # 0.8.11: 아이콘이 어둡다는 의견에 따라 노랑을 넓혔다. 다섯 칸마다 검정 두 칸, 노랑 세 칸
+    return 'K' if (col + row) % 5 < 2 else 'Y'
 
 
 def icon_grid(margin=0):
@@ -89,6 +90,23 @@ def export(out_dir):
         path = os.path.join(out_dir, name)
         render(icon_grid(margin), size).save(path)
         written.append(path)
+    return written
+
+
+# 안드로이드 런처 아이콘: 밀도마다의 (이전 방식 아이콘 크기, 적응형 전경 크기). 전경은 108dp 가운데 66% 만 보이므로 여백 8칸을 둔다.
+ANDROID = {'mdpi': (48, 108), 'hdpi': (72, 162), 'xhdpi': (96, 216), 'xxhdpi': (144, 324), 'xxxhdpi': (192, 432)}
+
+
+def export_android(res_dir):
+    """android/app/src/main/res 아래의 mipmap-* 폴더에 런처 아이콘을 쓴다. 폴더가 없으면 알린다."""
+    written = []
+    for density, (legacy, fg) in ANDROID.items():
+        folder = os.path.join(res_dir, 'mipmap-' + density)
+        if not os.path.isdir(folder):
+            raise FileNotFoundError('안드로이드 아이콘 폴더가 없다: ' + folder)
+        render(icon_grid(0), legacy).save(os.path.join(folder, 'ic_launcher.png'))
+        render(icon_grid(8), fg).save(os.path.join(folder, 'ic_launcher_foreground.png'))
+        written.append(folder)
     return written
 
 
