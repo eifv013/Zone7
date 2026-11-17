@@ -296,7 +296,14 @@
           if (off && C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) { off.classList.remove('nope'); void off.offsetWidth; off.classList.add('nope'); (function (b) { setTimeout(function () { b.classList.remove('nope'); }, 350); })(off); }
           if (!(multi || quick) || !s || !C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) continue;
           var btn = s.target && s.target.closest ? s.target.closest('button') : null, under = document.elementFromPoint(t.clientX, t.clientY);
-          if (btn && !btn.disabled && under && btn.contains(under)) { synth = { btn: btn, at: Date.now() }; btn.click(); made = true; }
+          /*
+           * 1.3.0: 예전에는 손을 뗀 자리에 그 단추가 그대로 있어야만(elementFromPoint) 눌러 주었다.
+           *   수색 지도의 칸은 눌리면 잠깐 작아졌다 커지고(tile-hit), 칸 사이에 틈도 있어서, 빠르게 두드리면 손끝이 칸 가장자리를 벗어난 것으로 읽혀 누름이 버려졌다.
+           *   손가락이 거의 움직이지 않았다는 것은 isTap 이 이미 확인했으므로, 누르기 시작한 단추를 그대로 눌러 준다.
+           *   다만 그 사이에 창(일지, 특전 고르기 등)이 위에 떴으면 아래 단추는 누르지 않는다.
+           */
+          var veil = under && under.closest ? under.closest('.story-veil, [role="dialog"], [role="alert"]') : null;
+          if (btn && !btn.disabled && !(veil && !veil.contains(btn))) { synth = { btn: btn, at: Date.now() }; btn.click(); made = true; }
           else if (quick && !(s.target && s.target.closest && s.target.closest('input, textarea, select, a'))) made = true;      // 빈 곳을 두 번 눌러도 화면이 커지지 않게
         }
         if (made && e.cancelable) e.preventDefault();      // 브라우저가 뒤늦게 한 번 더 누르지 않게
@@ -610,15 +617,21 @@
    */
   function fillText(node, text) {
     var marked = lines(text);
-    if (typeof marked !== 'string' || (marked.indexOf(SEP) < 0 && marked.indexOf('\n') < 0)) { node.textContent = text; return; }
+    if (typeof marked !== 'string' || (marked.indexOf(SEP) < 0 && marked.indexOf('\n') < 0 && marked.indexOf(' · ') < 0)) { node.textContent = text; return; }
     node.textContent = '';
     marked.split('\n').forEach(function (row, ri) {
       if (ri > 0) node.appendChild(document.createElement('br'));
       row.split(SEP).forEach(function (part, pi) {
         if (pi > 0) node.appendChild(document.createTextNode(' '));
-        var span = document.createElement('span');
-        span.className = 'sn'; span.textContent = part;
-        node.appendChild(span);
+        // 가운뎃점( · )으로 이은 글은 토막마다 묶는다(1.3.0): "연속 호가 5 · 판매 +50% · 직접 팔면 끊겨요"가 토막 중간에서 끊기지 않게.
+        // 구분점은 앞 토막에 붙여 두어서, 줄이 바뀌어도 새 줄이 점으로 시작하지 않는다
+        var bits = part.split(' · ');
+        bits.forEach(function (bit, bi) {
+          if (bi > 0) node.appendChild(document.createTextNode(' '));
+          var span = document.createElement('span');
+          span.className = 'sn'; span.textContent = bit + (bi < bits.length - 1 ? ' ·' : '');
+          node.appendChild(span);
+        });
       });
     });
   }
@@ -1191,6 +1204,22 @@
     C.ZONES.forEach(function (z) { var li = el('li', '', String(z.no)); li.title = z.no + '구역 ' + z.name; $('route').appendChild(li); });
     setText($('signal-gain'), '물자, 간식, 생산 ' + C.BUFF_MULT + '배 가운데 하나');
     buildNotes(); buildHelp(); buildStats();
+    alignStatic();
+  }
+  /**
+   * 화면 틀(template.html)에 처음부터 적혀 있는 글도 문장 단위로 묶는다(1.3.0).
+   * 줄 정렬은 setText 로 넣는 글에만 걸려 있어서, 틀에 박아 둔 설명 글(특전 안내 등)은 문장 중간에서 줄이 바뀌었다.
+   * 글만 든 요소(자식 요소가 없는 것) 가운데 문장이 둘 이상인 것만 건드린다.
+   */
+  function alignStatic() {
+    try {
+      Array.prototype.forEach.call(document.querySelectorAll('p, .hint, .label, .sync-q, .note, li, small'), function (n) {
+        if (n.children.length || n.__raw !== undefined) return;
+        var t = n.textContent;
+        if (!t || (lines(t).indexOf(SEP) < 0 && t.indexOf(' · ') < 0)) return;
+        n.__raw = t; fillText(n, t);
+      });
+    } catch (e) { /* 정렬은 꾸밈이다: 실패해도 글은 그대로 보인다 */ }
   }
   function addTab(id, label) {
     var b = el('button', '', label);
@@ -1822,7 +1851,7 @@
       rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
       var mult = C.streakMult(state);
       setText($('streak-note'), state.streak
-        ? '연속 호가 ' + state.streak + ' · 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 지금 직접 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
+        ? '연속 호가 ' + state.streak + ' · 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 직접 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
         : '평균 이상에서 팔리면 연속 호가가 쌓여요');
       var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
@@ -2042,6 +2071,7 @@
         infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '현재 ' + bNow + '마다 판매' : '현재 ' + bNow + ' → ' + bNext;
       }
       if (u.id === 'repair') infoText = !lv ? '사면 5초마다 하나' : '현재 ' + secs(C.repairInterval(state)) + '마다 하나';
+      if (!infoText && lv > 0 && C.effectNow(u, lv)) infoText = '현재 ' + C.effectNow(u, lv);      // 지금까지 쌓인 효과(1.3.0). 설명 줄은 레벨당 오르는 양이다
       setText(r.info, infoText);
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');
       r.btn.disabled = !(cost <= state.supplies);
@@ -2105,6 +2135,7 @@
         var cNow = secs(C.surgeCooldown(state)), cNext = secs(C.surgeCooldown(tp)), gNow = secs(C.greenCooldown(state)), gNext = secs(C.greenCooldown(tp));
         tInfo = lvNow >= t.max ? '전력 투입 ' + cNow + ' · 청신호 ' + gNow : '전력 투입 ' + cNow + ' → ' + cNext + ' · 청신호 ' + gNow + ' → ' + gNext;
       }
+      if (!tInfo && lv > 0) tInfo = C.effectNow(t, lv) ? '현재 ' + C.effectNow(t, lv) : t.id === 'pioneer' ? '현재 시작 물자 ' + fmt(100 * Math.pow(10, lv)) : t.id === 'reroll' ? '현재 한 회차에 ' + lv + '번' : '';
       setText(r.info, tInfo);
       setText(r.cost, isFinite(cost) ? '샘플 ' + fmt(cost) : '최대');
       r.btn.disabled = !(cost <= state.antibodies);
@@ -2122,7 +2153,7 @@
     owned.forEach(function (p) {
       var li = el('li');
       li.appendChild(el('span', '', p.name + ' Lv ' + state.perks[p.id]));
-      li.appendChild(el('span', 'num', '레벨당 ' + p.desc));
+      li.appendChild(el('span', 'num', C.effectNow(p, state.perks[p.id]) || p.desc));      // 지금 쌓인 효과를 적는다(전에는 레벨당 수치만 있었다)
       list.appendChild(li);
     });
   }
@@ -2496,7 +2527,7 @@
       sfx('relocate'); Store.save(); Cloud.flush(); render();
     }
     $('trait-reset').addEventListener('click', function () {
-      confirmBox('특성 되돌리기', '찍은 특성을 모두 지우고, 쓴 항체 샘플을 전부 돌려받아요. 드는 값은 없고 바로 다시 찍을 수 있어요.', '그만둔다', '되돌린다', function () {
+      confirmBox('특성 되돌리기', '찍은 특성을 모두 지우고, 쓴 항체 샘플을 전부 돌려받아요. 비용 없이 바로 다시 찍을 수 있어요.', '그만둔다', '되돌린다', function () {
         var r = C.resetTraits(state);
         if (r.ok) { log('특성을 되돌렸다. 항체 샘플 ' + fmt(r.refunded) + '개를 돌려받았다.'); Store.save(); render(); }
       });

@@ -37,6 +37,10 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       C.runProject(s, s.offers.slice().sort((a, b) => worth(b) - worth(a))[0], rng);
     }
     C.fortify(s);
+    // 목표를 보고 사는 것(사람도 목표 줄을 보고 산다): 수가 목표인 것은 살 수 있으면 목표까지 먼저 산다
+    const goalBuy = (zi, id, have, buy) => { const g = C.GOALS[zi].find(x => x.id === id); for (let k = 0; g && s.zone >= zi && !s.goalsDone[id] && have() < g.need && k < 5 && buy().ok; k++); };
+    goalBuy(3, 'z4a', () => s.trains, () => C.buyTrain(s, 1)); goalBuy(4, 'z5a', () => s.staff, () => C.buyStaff(s, 1));
+    goalBuy(5, 'z6a', () => s.posts, () => C.buyPost(s, 1)); goalBuy(6, 'z7a', () => s.antennas, () => C.buyAntenna(s, 1));
     // 6구역 목표(무리의 2배 방어력으로 밤 15번): 목표가 남아 있으면 가진 물자의 30%까지 써서 방어력을 2배 위로 올려 둔다
     if (s.zone === 5 && !s.goalsDone.z6b) {
       let budget = s.supplies * 0.3;
@@ -50,7 +54,10 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (n && n.ready && !(n.soon && s.gate) && C.openZone(s).ok && s.gate && !marks.some(m => m.gate)) marks.push({ gate: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 회수가 가장 빠른 것부터 산다: 시설, 좌판, 구역 강화
     // 살 것을 고르는 일은 3초에 한 번만 한다(매초 하면 계산이 너무 느리다. 결과는 거의 같다)
-    for (let g = 0; g < (+process.env.BUYS || 60) && (dt >= 3 || active % 3 === 0); g++) {
+    // 7구역의 마지막 목표가 혈청뿐이고 3시간 안에 모을 수 있으면, 다른 것을 사지 않고 모은다(사람도 그렇게 한다)
+    const saving = s.zone >= 6 && !s.goalsDone.z7c && s.goalsDone.z7a && (C.serumCost(s) - s.supplies) < C.incomePerSec(s) * 3 * 3600;
+    if (saving && C.serumCost(s) <= s.supplies) C.buySerum(s);
+    for (let g = 0; g < (+process.env.BUYS || 60) && !saving && (dt >= 3 || active % 3 === 0); g++) {
       let best = null; const per = Math.max(1e-9, C.productionPerSec(s));
       cheapest = Infinity;      // 못 산 것 중 가장 싼 값: 이것조차 한참 걸리면 '막혔다'고 본다
       const consider = (cost, gain, buy) => { if (cost > s.supplies && gain > 0) cheapest = Math.min(cheapest, cost); if (cost <= s.supplies && gain > 0 && (!best || cost / gain < best.pay)) best = { pay: cost / gain, buy }; };
@@ -78,8 +85,8 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     // 철수: 판을 30분 넘게 했고, 얻을 항체가 지금까지의 절반 이상이며, 다음 살 것까지 stuck 초 넘게 걸릴 만큼 막혔을 때
     const isStuck = cheapest - s.supplies > C.productionPerSec(s) * stuck;
     const nz = C.nextZone(s), wall = nz && nz.ready && (nz.cost - s.supplies) > C.incomePerSec(s) * 6 * 3600;      // 문 값의 벽: 목표는 다 채웠는데 문 값이 한참 멀다
-    const endWall = !nz && s.zone >= 6 && !s.endedRun && (C.serumCost(s) - s.supplies) > C.incomePerSec(s) * 6 * 3600;
-    if (C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone }); s = C.retreat(s, 0).state; spendTraits(); }
+    const endWall = !nz && s.zone >= 6 && !s.endedRun && isFinite(C.serumCost(s)) && (C.serumCost(s) - s.supplies) > C.incomePerSec(s) * 6 * 3600;
+    if (C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', goals: Object.keys(s.goalsDone).length }); s = C.retreat(s, 0).state; spendTraits(); }
   };
   const gap = Math.max(0, 16 * 3600 / sessions - minutes * 60);
   while (day < days && !marks.some(m => m.end)) {

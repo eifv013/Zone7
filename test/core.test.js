@@ -2207,3 +2207,37 @@ test('일지와 화면 글의 맞춤법: 고쳐 달라고 했던 표기가 다�
   const story = C.BEATS.map((b) => b.text).join('\n');
   assert.ok(!story.includes('그다음'), '"그 다음"으로 띄어 쓴다');
 });
+
+test('쌓인 효과 글: 더하는 것은 레벨만큼, 깎는 것은 곱으로 쌓아 적는다', () => {
+  assert.equal(C.effectNow({ desc: '상품 값 +25%' }, 3), '상품 값 +75%');
+  assert.equal(C.effectNow({ desc: '시세의 바닥 +0.1' }, 3), '시세의 바닥 +0.3');
+  assert.equal(C.effectNow({ desc: '은닉처가 나올 확률 +3%p' }, 4), '은닉처가 나올 확률 +12%p');
+  assert.equal(C.effectNow({ desc: '모든 값 -4%' }, 2), '모든 값 -7.8%');      // 1 - 0.96² = 7.84%
+  assert.equal(C.effectNow({ desc: '정속 가동으로 치는 가동률 -3%p' }, 2), '정속 가동으로 치는 가동률 -6%p');
+  assert.equal(C.effectNow({ desc: '청신호가 알아서 켜진다' }, 1), '');
+  assert.equal(C.effectNow({ desc: '상품 값 +25%' }, 0), ''); assert.equal(C.effectNow(null, 3), ''); assert.equal(C.effectNow({}, 3), '');
+  // 실제 mods 와 맞는다: 절약 2레벨이면 값이 0.96² 배
+  const s = C.createState(0); s.traits.thrift = 2; near(C.mods(s).cost, 0.9216);
+});
+
+test('6구역 초소는 방어력도 올린다: 초소마다 더하고, 문턱마다 2배. 보강 계획도 같은 배수로 셈한다', () => {
+  const s = inLab(); s.defenses.rail = 10;
+  const base = C.defensePower(s);
+  s.posts = 28; assert.equal(C.postDefense(s), 1, '6구역을 열기 전에는 그대로'); assert.equal(C.defensePower(s), base);
+  s.zone = 5; near(C.postDefense(s), 1 + C.POST_DEFENSE * 28 * 4);      // 10곳, 25곳 문턱 → 4배
+  assert.ok(Math.abs(C.defensePower(s) / base - C.postDefense(s)) < 0.01);
+  s.posts = 0; assert.equal(C.postDefense(s), 1);
+  // 보강 계획: 초소 배수를 넣고 셈해야 실제로 산 뒤의 방어력이 모자라지 않는다
+  s.posts = 12; s.day = 200; s.supplies = 1e12;
+  const plan = C.defensePlan(s);
+  if (plan.picks.length && plan.enough && plan.cost <= s.supplies) { assert.ok(C.fortify(s).ok); assert.ok(C.defensePower(s) >= C.nightStrength(s)); }
+});
+
+test('구역 값의 차례: 문 값은 구역이 뒤로 갈수록 커지고, 그 구역에서 처음 살 것은 문 값보다 싸다', () => {
+  for (let i = 2; i < C.ZONES.length; i++) assert.ok(C.ZONES[i].cost > C.ZONES[i - 1].cost * 100, C.ZONES[i].name);
+  assert.ok(C.TRAIN_COST < C.ZONES[3].cost && C.STAFF_COST < C.ZONES[4].cost);
+  const s = inLab(); s.zone = 6;
+  assert.ok(C.postCost(s, 1) < C.ZONES[5].cost * 1.01 && C.antennaCost(s, 1) < C.ZONES[6].cost * 1.01);
+  assert.ok(C.SERUM_COSTS[0] >= C.ZONES[6].cost, '혈청은 7구역 문을 연 뒤의 일이다');
+  C.UPGRADES.filter((u) => u.zone >= 2).forEach((u) => assert.ok(u.baseCost <= C.ZONES[u.zone].cost * 100, u.id + ' 값이 그 구역의 문 값에 견주어 너무 비싸다'));
+});

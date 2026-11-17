@@ -82,8 +82,8 @@ CASES = [
     ('PC · 5구역 연구', (1280, 900), lab(), 'lab'),
     ('폰 · 6구역 검문소', (390, 760), guard(), 'guard'),
     ('PC · 6구역 검문소', (1280, 900), guard(), 'guard'),
-    ('폰 · 7구역 송신탑과 끝', (390, 760), tower(survivors=99000), 'tower'),
-    ('PC · 7구역 송신탑과 끝', (1280, 900), tower(survivors=99000), 'tower'),
+    ('폰 · 7구역 송신탑과 끝', (390, 760), tower(survivors=69000), 'tower'),
+    ('PC · 7구역 송신탑과 끝', (1280, 900), tower(survivors=69000), 'tower'),
 ]
 
 def run_case(browser, name, size, state, mode):
