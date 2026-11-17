@@ -207,7 +207,8 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
 /* 줄 정렬: 글에 넣은 줄바꿈을 그대로 지키고, 낱말 중간에서는 꺾지 않는다 */
-#goal, #m-goal, #night-hint, .hint, .row-desc, .oz-main { white-space: pre-line; word-break: keep-all; }
+body { word-break: keep-all; }
+#goal, #m-goal, #night-hint, .hint, .row-desc, .oz-main, .log-text, .m-story, #story-latest, .toast, .journal p, .story-card p, #story-text, .sync-q, .ach-card p, .note li, .help li, .help p, #away-text, .notice p, #confirm-text, .dex-card p, .perk-list span, .auto-def { white-space: pre-line; }
 #search-bar { margin-bottom: 8px; }      /* 자동 수색 막대와 동네 칸 사이 */
 .row-mile[hidden] { display: none; }      /* 2배가 없는 줄(짐꾼, 호객꾼 등)에서는 딱지를 숨긴다. inline-flex 가 hidden 을 덮어써서 빈 테두리가 보였다 */
 /* 누름 표시: 터치에서는 직접 켠 .pressed 만 쓴다(:active 는 들쭉날쭉했다) */
@@ -973,7 +974,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.24</div>
+  <div class="boot-ver">7구역 알파 0.9.25</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1417,7 +1418,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.24 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.25 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1542,7 +1543,7 @@ setTimeout(function () {
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.25";
 </script>
 <script>
 /*
@@ -1561,6 +1562,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.9.25', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '줄 정렬 전체',
+      items: [
+        '모든 글이 문장 끝에서 줄을 바꿔요. 무전, 일지, 알림, 설명, 도움말, 패치노트까지 같은 규칙이에요. 낱말 중간에서 꺾이지도 않아요.',
+        '수리공의 자동 구입을 "지금 가진 수에서 몇 개 더"로 바꿨어요. 전에는 "모두 합쳐 몇 개까지"라서, 이미 많이 가진 방어 수단은 골라도 사지 않았어요. 누를 때마다 10, 25, 50, 100, 200, 500개 더로 넘어가요.',
+        '무전의 어색한 문장을 고쳤어요.'
+      ] },
     { ver: '알파 0.9.24', date: '2026-11-17', at: '2026-11-17 23:59:59', title: '소리와 균형',
       items: [
         '사는 것마다 소리가 달라요. 전에는 무엇을 사든 같은 소리였어요. 좌판은 나무 두드리는 소리, 기계는 철컥, 열차는 경적, 노선은 덜컹덜컹, 방어 수단은 못 박는 소리, 개조는 세 음이 올라가는 소리, 특성은 반짝, 특전은 화음이에요.',
@@ -2826,7 +2833,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
     s.gate = !!raw.gate;
     s.stalls = Math.min(s.stalls, COUNT_MAX);
     s.sellClock = clamp(safeNum(raw.sellClock, 0), 0, SELL_AUTO_SECONDS);
-    DEFENSES.forEach(function (d) { var t = raw.autoDef && typeof raw.autoDef === 'object' ? raw.autoDef[d.id] : 0; s.autoDef[d.id] = AUTO_DEF_STEPS.indexOf(t) >= 0 ? t : 0; });
+    DEFENSES.forEach(function (d) { var t = raw.autoDef && typeof raw.autoDef === 'object' ? raw.autoDef[d.id] : 0; s.autoDef[d.id] = clamp(safeCount(t), 0, 1e6); });
     s.repairClock = clamp(safeNum(raw.repairClock, 0), 0, 10);
     HANDS.forEach(function (d) { s.hands[d.id] = clamp(safeCount(raw.hands && typeof raw.hands === 'object' ? raw.hands[d.id] : 0), 0, d.max); });
     s.day = Math.max(1, safeCount(raw.day));
@@ -3696,10 +3703,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
   function cycleAutoDef(state, id) {
     if (!findById(DEFENSES, id)) return fail('unknown');
     if (!(mods(state).repair >= 1)) return fail('locked');
-    var i = AUTO_DEF_STEPS.indexOf(state.autoDef[id] || 0);
-    state.autoDef[id] = AUTO_DEF_STEPS[(i + 1) % AUTO_DEF_STEPS.length];
-    return { ok: true, target: state.autoDef[id] };
+    // 목표는 "지금 가진 수에서 몇 개 더"로 정한다(0.9.25). 전에는 "모두 합쳐 몇 개까지"라서, 이미 100개가 있으면 10·25·50 을 골라도 아무것도 사지 않았다.
+    // 누를 때마다 남은 수가 다음 단계(10 → 25 → 50 → …)로 늘고, 끝까지 가면 끈다.
+    var owned = state.defenses[id] || 0, left = autoDefLeft(state, id), next = 0;
+    for (var i = 1; i < AUTO_DEF_STEPS.length; i++) if (AUTO_DEF_STEPS[i] > left) { next = AUTO_DEF_STEPS[i]; break; }
+    state.autoDef[id] = next ? owned + next : 0;
+    return { ok: true, target: state.autoDef[id], left: next };
   }
+  /** 방어 수단 id 를 앞으로 몇 개 더 살 것인지(0 이면 꺼져 있거나 다 샀다). */
+  function autoDefLeft(state, id) { return Math.max(0, (state.autoDef[id] || 0) - (state.defenses[id] || 0)); }
   function stepRepair(state, dt) {
     if (!(mods(state).repair >= 1)) return;
     state.repairClock += dt;
@@ -4343,7 +4355,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
@@ -6508,12 +6520,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
     else el.style.setProperty('--p', v);
   }
   /** 글을 줄 단위로 나눈다: 문장이 끝나는 곳과 괄호 앞에서 줄을 바꾼다. (CSS 의 white-space: pre-line 과 함께 쓴다) */
-  function lines(text) { return String(text).replace(/([.!?요다]\.?) (?=[^\s(])/g, function (m, a) { return /[.!?]$/.test(a) ? a + '\n' : m; }).replace(/ \(/g, '\n('); }
-  function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
+  function lines(text) { return typeof text === 'string' ? text.replace(/([.!?…][”’"')]?) (?=\S)/g, '$1\n') : text; }
+  /** 목표 글: 문장마다 한 줄에 더해, 진행 숫자(괄호)도 아랫줄로 내린다. */
+  function goalLines(text) { return lines(String(text)).replace(/ \(/g, '\n('); }
+  /** 글을 넣는다. 모든 글은 문장 끝에서 줄을 바꾼다(줄 정렬): 화면 너비에 따라 문장 중간에서 꺾이는 것을 줄인다. */
+  function setText(el, text) { text = lines(text); if (el && el.textContent !== text) el.textContent = text; }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (text !== undefined) n.textContent = text;
+    if (text !== undefined) n.textContent = lines(text);
     return n;
   }
   function pad3(n) { return n < 1000 ? ('00' + n).slice(-3) : String(n); }
@@ -6536,7 +6551,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
     '옥상 감시조 보고: 서쪽 아파트 단지, 움직임 다수.',
     '누군가 달력에 오늘도 줄을 그었다.',
     '발전기 소리가 멎자 모두가 숨을 죽였다. 다시 돌아간다.',
-    '떠돌이 상인이 건전지와 소문을 두고 갔다.',
+    '떠돌이 상인이 건전지를 두고 갔다. 소문도 하나 흘리고 갔다.',
     '방벽 너머에서 긁는 소리가 밤새 이어졌다.'
   ];
   /** 잡담 한 줄: 주머니에서 하나씩 꺼내 쓰고, 다 쓰면 다시 채운다(같은 줄이 연달아 나오지 않게). */
@@ -6722,7 +6737,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
   function svgEl(name, attrs, text) {
     var n = document.createElementNS('http://www.w3.org/2000/svg', name);
     for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
-    if (text !== undefined) n.textContent = text;
+    if (text !== undefined) n.textContent = lines(text);
     return n;
   }
   /** 구역 표지 위의 작은 건물 그림(도트). kind 는 구역 번호(0~6). */
@@ -7383,7 +7398,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
     // 다음 할 일
     guideNow = C.guide(state);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
-    var guideText = lines(guideNow.text);
+    var guideText = goalLines(guideNow.text);
     ['', 'm-'].forEach(function (pre) { setText($(pre + 'goal'), guideText); $(pre + 'goal-go').hidden = !guideNow.view; });
 
     // 구조 신호
@@ -7691,12 +7706,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.9.24";
         setText(r.info, '하나에 방어력 +' + fmt(d.power * m.defense));
         setText(r.cost, '×' + q + ' ' + fmt(cost));
         r.btn.disabled = !(cost <= state.supplies);
-        setText(rows.autoDef[d.id], d.name + ' · ' + (state.autoDef[d.id] ? state.autoDef[d.id] + '개까지' : '끔'));
-        rows.autoDef[d.id].setAttribute('aria-pressed', state.autoDef[d.id] ? 'true' : 'false');
+        var adLeft = C.autoDefLeft(state, d.id);
+        setText(rows.autoDef[d.id], d.name + ' · ' + (adLeft ? adLeft + '개 더' : '끔'));
+        rows.autoDef[d.id].setAttribute('aria-pressed', adLeft ? 'true' : 'false');
       });
       var fixer = m.repair >= 1;
       $('auto-defs').hidden = !fixer;
-      setText($('auto-def-note'), fixer ? '수리공이 ' + secs(C.repairInterval(state)) + '마다 하나씩 사요. 눌러서 몇 개까지 살지 정해요.' : '개조에서 수리공을 사면 방어 수단을 알아서 사 줘요.');
+      setText($('auto-def-note'), fixer ? '수리공이 ' + secs(C.repairInterval(state)) + '마다 하나씩 사요.\n눌러서 몇 개 더 살지 정해요.' : '개조에서 수리공을 사면 방어 수단을 알아서 사 줘요.');
     }
     C.UPGRADES.forEach(function (u) {
       if ((u.zone < 0 ? 'wall' : 'z' + u.zone) !== tab) return;

@@ -584,12 +584,15 @@
     else el.style.setProperty('--p', v);
   }
   /** 글을 줄 단위로 나눈다: 문장이 끝나는 곳과 괄호 앞에서 줄을 바꾼다. (CSS 의 white-space: pre-line 과 함께 쓴다) */
-  function lines(text) { return String(text).replace(/([.!?요다]\.?) (?=[^\s(])/g, function (m, a) { return /[.!?]$/.test(a) ? a + '\n' : m; }).replace(/ \(/g, '\n('); }
-  function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
+  function lines(text) { return typeof text === 'string' ? text.replace(/([.!?…][”’"')]?) (?=\S)/g, '$1\n') : text; }
+  /** 목표 글: 문장마다 한 줄에 더해, 진행 숫자(괄호)도 아랫줄로 내린다. */
+  function goalLines(text) { return lines(String(text)).replace(/ \(/g, '\n('); }
+  /** 글을 넣는다. 모든 글은 문장 끝에서 줄을 바꾼다(줄 정렬): 화면 너비에 따라 문장 중간에서 꺾이는 것을 줄인다. */
+  function setText(el, text) { text = lines(text); if (el && el.textContent !== text) el.textContent = text; }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (text !== undefined) n.textContent = text;
+    if (text !== undefined) n.textContent = lines(text);
     return n;
   }
   function pad3(n) { return n < 1000 ? ('00' + n).slice(-3) : String(n); }
@@ -612,7 +615,7 @@
     '옥상 감시조 보고: 서쪽 아파트 단지, 움직임 다수.',
     '누군가 달력에 오늘도 줄을 그었다.',
     '발전기 소리가 멎자 모두가 숨을 죽였다. 다시 돌아간다.',
-    '떠돌이 상인이 건전지와 소문을 두고 갔다.',
+    '떠돌이 상인이 건전지를 두고 갔다. 소문도 하나 흘리고 갔다.',
     '방벽 너머에서 긁는 소리가 밤새 이어졌다.'
   ];
   /** 잡담 한 줄: 주머니에서 하나씩 꺼내 쓰고, 다 쓰면 다시 채운다(같은 줄이 연달아 나오지 않게). */
@@ -798,7 +801,7 @@
   function svgEl(name, attrs, text) {
     var n = document.createElementNS('http://www.w3.org/2000/svg', name);
     for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
-    if (text !== undefined) n.textContent = text;
+    if (text !== undefined) n.textContent = lines(text);
     return n;
   }
   /** 구역 표지 위의 작은 건물 그림(도트). kind 는 구역 번호(0~6). */
@@ -1459,7 +1462,7 @@
     // 다음 할 일
     guideNow = C.guide(state);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
-    var guideText = lines(guideNow.text);
+    var guideText = goalLines(guideNow.text);
     ['', 'm-'].forEach(function (pre) { setText($(pre + 'goal'), guideText); $(pre + 'goal-go').hidden = !guideNow.view; });
 
     // 구조 신호
@@ -1767,12 +1770,13 @@
         setText(r.info, '하나에 방어력 +' + fmt(d.power * m.defense));
         setText(r.cost, '×' + q + ' ' + fmt(cost));
         r.btn.disabled = !(cost <= state.supplies);
-        setText(rows.autoDef[d.id], d.name + ' · ' + (state.autoDef[d.id] ? state.autoDef[d.id] + '개까지' : '끔'));
-        rows.autoDef[d.id].setAttribute('aria-pressed', state.autoDef[d.id] ? 'true' : 'false');
+        var adLeft = C.autoDefLeft(state, d.id);
+        setText(rows.autoDef[d.id], d.name + ' · ' + (adLeft ? adLeft + '개 더' : '끔'));
+        rows.autoDef[d.id].setAttribute('aria-pressed', adLeft ? 'true' : 'false');
       });
       var fixer = m.repair >= 1;
       $('auto-defs').hidden = !fixer;
-      setText($('auto-def-note'), fixer ? '수리공이 ' + secs(C.repairInterval(state)) + '마다 하나씩 사요. 눌러서 몇 개까지 살지 정해요.' : '개조에서 수리공을 사면 방어 수단을 알아서 사 줘요.');
+      setText($('auto-def-note'), fixer ? '수리공이 ' + secs(C.repairInterval(state)) + '마다 하나씩 사요.\n눌러서 몇 개 더 살지 정해요.' : '개조에서 수리공을 사면 방어 수단을 알아서 사 줘요.');
     }
     C.UPGRADES.forEach(function (u) {
       if ((u.zone < 0 ? 'wall' : 'z' + u.zone) !== tab) return;

@@ -1897,25 +1897,32 @@ test('방벽 개조: 건축가는 방어력을, 건설자는 방어 수단 값�
   assert.ok(C.defenseCost(s, 'wire', 1) < c0 && C.defenseCost(s, 'wire', 1) > c0 * 0.9);
 });
 
-test('수리공: 없으면 목표를 못 정하고, 있으면 정한 수까지만 하나씩 산다', () => {
+test('수리공: 없으면 목표를 못 정하고, 있으면 "지금 가진 수에서 몇 개 더"를 하나씩 산다', () => {
   const s = fresh(); s.supplies = 1e12;
   assert.equal(C.cycleAutoDef(s, 'wire').ok, false);
   assert.equal(C.cycleAutoDef(s, '없는것').ok, false);
   C.tick(s, 30, Math.random);
   assert.equal(s.defenses.wire, 0, '수리공이 없으면 사지 않는다');
   assert.ok(C.buyUpgrade(s, 'repair').ok);
-  assert.equal(C.cycleAutoDef(s, 'wire').target, 10);
+  s.defenses.wire = 100;                                   // 이미 100개가 있어도
+  assert.equal(C.cycleAutoDef(s, 'wire').left, 10);        // 10개 "더" 산다
+  assert.equal(C.autoDefLeft(s, 'wire'), 10);
   assert.equal(C.repairInterval(s), 5);
   for (let i = 0; i < 200; i++) C.tick(s, 1, Math.random);
-  assert.equal(s.defenses.wire, 10, '목표에서 멈춘다');
+  assert.equal(s.defenses.wire, 110, '목표에서 멈춘다');
+  assert.equal(C.autoDefLeft(s, 'wire'), 0, '다 사면 꺼진 것으로 보인다');
   assert.equal(s.defenses.tower, 0, '끈 것은 사지 않는다');
-  s.supplies = 0; s.autoDef.tower = 10;
+  assert.equal(C.cycleAutoDef(s, 'tower').left, 10);
+  assert.equal(C.cycleAutoDef(s, 'tower').left, 25, '또 누르면 다음 단계');
+  s.supplies = 0;
   for (let i = 0; i < 20; i++) C.tick(s, 1, () => 0.99);
   assert.equal(s.defenses.tower, 0, '물자가 없으면 건너뛴다');
-  const back = C.sanitizeState(JSON.parse(JSON.stringify(Object.assign({}, s, { autoDef: { wire: 25, tower: 7, 가짜: 3 } }))), 0);
-  assert.equal(back.autoDef.wire, 25); assert.equal(back.autoDef.tower, 0); assert.equal(back.autoDef['가짜'], undefined);
-  for (let k = 0; k < C.AUTO_DEF_STEPS.length; k++) C.cycleAutoDef(s, 'rail');
-  assert.equal(s.autoDef.rail, 0, '한 바퀴 돌면 끔');
+  let presses = 0;
+  while (C.cycleAutoDef(s, 'tower').left > 0 && presses++ < 20) { /* 500개 더까지 올라간 뒤 */ }
+  assert.equal(C.autoDefLeft(s, 'tower'), 0, '끝까지 누르면 끔');
+  assert.ok(presses <= C.AUTO_DEF_STEPS.length);
+  const back = C.sanitizeState(JSON.parse(JSON.stringify(Object.assign({}, s, { autoDef: { wire: 125, tower: -7, 가짜: 3 } }))), 0);
+  assert.equal(back.autoDef.wire, 125); assert.equal(back.autoDef.tower, 0); assert.equal(back.autoDef['가짜'], undefined);
 });
 
 test('특전 다시 뽑기: 특성 레벨만큼만 쓸 수 있고, 철수하면 다시 찬다', () => {

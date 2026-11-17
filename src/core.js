@@ -559,7 +559,7 @@
     s.gate = !!raw.gate;
     s.stalls = Math.min(s.stalls, COUNT_MAX);
     s.sellClock = clamp(safeNum(raw.sellClock, 0), 0, SELL_AUTO_SECONDS);
-    DEFENSES.forEach(function (d) { var t = raw.autoDef && typeof raw.autoDef === 'object' ? raw.autoDef[d.id] : 0; s.autoDef[d.id] = AUTO_DEF_STEPS.indexOf(t) >= 0 ? t : 0; });
+    DEFENSES.forEach(function (d) { var t = raw.autoDef && typeof raw.autoDef === 'object' ? raw.autoDef[d.id] : 0; s.autoDef[d.id] = clamp(safeCount(t), 0, 1e6); });
     s.repairClock = clamp(safeNum(raw.repairClock, 0), 0, 10);
     HANDS.forEach(function (d) { s.hands[d.id] = clamp(safeCount(raw.hands && typeof raw.hands === 'object' ? raw.hands[d.id] : 0), 0, d.max); });
     s.day = Math.max(1, safeCount(raw.day));
@@ -1429,10 +1429,15 @@
   function cycleAutoDef(state, id) {
     if (!findById(DEFENSES, id)) return fail('unknown');
     if (!(mods(state).repair >= 1)) return fail('locked');
-    var i = AUTO_DEF_STEPS.indexOf(state.autoDef[id] || 0);
-    state.autoDef[id] = AUTO_DEF_STEPS[(i + 1) % AUTO_DEF_STEPS.length];
-    return { ok: true, target: state.autoDef[id] };
+    // 목표는 "지금 가진 수에서 몇 개 더"로 정한다(0.9.25). 전에는 "모두 합쳐 몇 개까지"라서, 이미 100개가 있으면 10·25·50 을 골라도 아무것도 사지 않았다.
+    // 누를 때마다 남은 수가 다음 단계(10 → 25 → 50 → …)로 늘고, 끝까지 가면 끈다.
+    var owned = state.defenses[id] || 0, left = autoDefLeft(state, id), next = 0;
+    for (var i = 1; i < AUTO_DEF_STEPS.length; i++) if (AUTO_DEF_STEPS[i] > left) { next = AUTO_DEF_STEPS[i]; break; }
+    state.autoDef[id] = next ? owned + next : 0;
+    return { ok: true, target: state.autoDef[id], left: next };
   }
+  /** 방어 수단 id 를 앞으로 몇 개 더 살 것인지(0 이면 꺼져 있거나 다 샀다). */
+  function autoDefLeft(state, id) { return Math.max(0, (state.autoDef[id] || 0) - (state.defenses[id] || 0)); }
   function stepRepair(state, dt) {
     if (!(mods(state).repair >= 1)) return;
     state.repairClock += dt;
@@ -2076,7 +2081,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, tradeRate: tradeRate,
