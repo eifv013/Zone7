@@ -418,7 +418,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .pet-odds { margin: 8px 0 0; }
 .pet-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .pet-face { flex: none; width: 36px; height: 36px; border: 2px solid var(--ink); }
-.pet-name { font: 400 26px/1.1 var(--font-display); }
+.pet-name { font: 700 22px/1.2 var(--font-body); }      /* 직접 지은 이름: 제목 글꼴에는 없는 글자가 있어 섞여 보였다. 본문 글꼴로 쓴다 */
 .pet-rename { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
 .pet-rename input { min-width: 0; padding: 7px 9px; font: 400 15px/1.4 var(--font-body); color: var(--ink); background: var(--paper); border: 2px solid var(--ink); }
 .pet-rename button { padding: 7px 12px; background: var(--ink); color: var(--paper); border: 2px solid var(--ink); font: 600 13px/1.4 var(--font-body); cursor: pointer; }
@@ -930,7 +930,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.9.9</div>
+  <div class="boot-ver">7구역 알파 0.9.10</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -959,7 +959,6 @@ setTimeout(function () {
 <div class="update-bar" id="update-bar" role="status" hidden>
   <p id="update-text"></p>
   <button type="button" id="update-now">지금 업데이트</button>
-  <button type="button" class="update-later" id="update-later">나중에</button>
 </div>
 <div class="tape" aria-hidden="true"></div>
 <header class="mast">
@@ -1038,10 +1037,10 @@ setTimeout(function () {
     </section>
     <section class="panel" aria-labelledby="h-retreat">
       <div class="panel-head"><h2 id="h-retreat">철수</h2><span class="label" id="retreat-count"></span></div>
-      <button type="button" class="relocate" id="retreat" disabled>아직 철수할 수 없다</button>
       <p class="hint num" id="retreat-hint"></p>
       <div class="oz-bar retreat-bar" id="retreat-bar" hidden><i></i></div>
       <p class="hint" id="retreat-sub"></p>
+      <button type="button" class="relocate" id="retreat" disabled>아직 철수할 수 없다</button>
     </section>
     </div>
   </div>
@@ -1231,7 +1230,7 @@ setTimeout(function () {
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 0.9.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 0.9.10 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

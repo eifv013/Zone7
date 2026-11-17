@@ -153,8 +153,8 @@ def run_case(browser, name, size, state, mode):
         if '/ 105' not in text('ach-count'): problems.append('업적 달성 수가 없다: ' + text('ach-count'))
         # 0.9.0 업데이트 알림 띠: '나중에'를 누르면 사라진다(단추가 연결돼 있는지 본다)
         page.evaluate("document.getElementById('update-bar').hidden = false")
-        page.click('#update-later'); page.wait_for_timeout(100)
-        if page.evaluate("!document.getElementById('update-bar').hidden"): problems.append("업데이트 알림의 '나중에'가 듣지 않는다")
+        if page.locator('#update-bar button').count() != 1 or not page.locator('#update-now').is_visible(): problems.append('업데이트 알림에는 단추가 하나(지금 업데이트)만 있어야 한다')
+        page.evaluate("document.getElementById('update-bar').hidden = true")
         # 0.8.10 저장 코드: 한글 이름이 있어도 코드가 만들어지고, 그 코드를 다시 불러올 수 있다
         tap('[data-mview-set=record]'); tap('[data-rtab-set=save]')
         tap('#export'); page.wait_for_timeout(200)

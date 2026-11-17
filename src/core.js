@@ -619,8 +619,8 @@
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
     ZOMBIE_KINDS.forEach(function (z) { var n = clamp(safeCount(rz[z.id]), 0, 1e9); if (n > 0) s.zdex[z.id] = n; });
     var ra = raw.ach && typeof raw.ach === 'object' ? raw.ach : {};
-    // 값은 달성한 시각(ms). 날짜를 적기 전의 저장(true)은 그대로 true 로 둔다(날짜 없이 '달성'만 보인다)
-    ACHIEVEMENTS.forEach(function (a) { var v = ra[a.id]; if (v) s.ach[a.id] = typeof v === 'number' && isFinite(v) && v > 0 ? Math.floor(v) : true; });
+    // 값은 달성한 시각(ms). 날짜를 적기 전의 저장(true)은 버린다: 조건을 아직 채우고 있으면 곧바로 오늘 날짜로 다시 달성된다(0.9.10 에서 한 번 초기화)
+    ACHIEVEMENTS.forEach(function (a) { var v = ra[a.id]; if (typeof v === 'number' && isFinite(v) && v > 0) s.ach[a.id] = Math.floor(v); });
     // 예전에는 '문 앞'까지만 갈 수 있던 구역이 그 뒤 버전에서 열린 경우: 문값은 이미 치렀으므로 들여보낸다.
     if (s.gate && s.zone + 1 < ZONES.length && ZONES[s.zone + 1].kind !== 'soon') {
       s.zone++; s.gate = false; s.bestZone = Math.max(s.bestZone, s.zone);

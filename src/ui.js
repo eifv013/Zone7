@@ -1460,8 +1460,9 @@
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 판에 모은 물자 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
     setText($('retreat-sub'), can ? '더 모으고 철수하면 샘플이 늘어요. 쓴 물자도 쳐요.'
       : state.pendingPerks.length ? '' : '다 채우면 철수할 수 있어요. 쓴 물자도 쳐요.');
-    $('retreat-bar').hidden = can || !!state.pendingPerks.length;
-    $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / C.RETREAT_MIN * 100).toFixed(1) + '%';
+    // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
+    $('retreat-bar').hidden = !!state.pendingPerks.length && !can;
+    $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / (can ? C.nextAntibodyAt(state) : C.RETREAT_MIN) * 100).toFixed(1) + '%';
 
     renderZone(m);
     if (!$('zmap').hidden) renderZoneMap();
@@ -1884,6 +1885,9 @@
 
   /* ---------- 일어난 일 알리기 ---------- */
   function handleEvents(events) {
+    // 업적이 한꺼번에 여럿 달성되면(초기화 뒤 다시 채워질 때 등) 알림을 하나로 묶는다
+    var achN = events.filter(function (ev) { return ev.type === 'achievement'; }).length, achMany = achN > 3;
+    if (achMany) { toast('업적 ' + achN + '개 달성'); log('업적 ' + achN + '개를 달성했다.', 'good'); sfx('goal'); }
     events.forEach(function (ev) {
       if (ev.found) ev.found.forEach(function (f) {      // 도감에 새로 적힌 좀비
         toast('도감 · 새 좀비 〈' + f.name + '〉'); log('처음 보는 것이 무리에 섞여 있었다. 〈' + f.name + '〉 ' + C.ZOMBIE_RARITIES[f.rarity] + '.', 'story');
@@ -1918,6 +1922,7 @@
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
           break;
         case 'achievement':
+          if (achMany) break;
           toast('업적 달성 · ' + ev.name); log('업적을 달성했다. 〈' + ev.name + '〉 ' + ev.text + '.', 'good'); sfx('goal'); buzz(25);
           break;
         case 'story':
@@ -2164,7 +2169,7 @@
       state = r.state;
       tab = 'z0'; perkShown = '';
       log('거점을 버리고 철수했다. 항체 샘플 ' + fmt(r.gained) + '개를 챙겼다. 다시 1구역이다.', 'good');
-      notice('항체 샘플 ' + fmt(r.gained) + '개를 얻었어요. 특성 화면에서 영구 특성을 찍으면 다음 판이 빨라져요.');
+      notice('항체 샘플 ' + fmt(r.gained) + '개를 얻었어요. 특성 화면에서 영구 특성을 찍어 보세요.');
       sfx('relocate'); Store.save(); Cloud.flush(); render();
     }
     $('trait-reset').addEventListener('click', function () {
@@ -2249,10 +2254,6 @@
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
     // 업데이트 알림 띠의 두 단추. 알파 0.6 에서 화면을 새로 짜면서 이 연결이 빠져 있었다(눌러도 반응이 없던 원인, 0.9.0 에서 고침).
     $('update-now').addEventListener('click', function () { Update.apply(); });
-    $('update-later').addEventListener('click', function () {
-      Update.offered = $('update-bar').dataset.version || '';      // 이 버전은 다시 묻지 않는다(앱을 다시 열면 또 묻는다)
-      $('update-bar').hidden = true;
-    });
     wirePrefs();
     wireNotify();
     wireMultiTouch();

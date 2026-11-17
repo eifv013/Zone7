@@ -1855,7 +1855,7 @@ test('누르기 판정: 조금 움직인 짧은 터치만 누르기다', () => {
   assert.ok(!C.isTap(0, 0, -5));
 });
 
-test('업적에 달성한 시각이 남고, 예전 저장(true)도 그대로 달성으로 읽힌다', () => {
+test('업적에 달성한 시각이 남고, 날짜 없는 예전 기록은 초기화된다', () => {
   const s = fresh(); s.clicks = 1e6;
   C.checkAchievements(s, [], 1700000000000);
   const done = C.ACHIEVEMENTS.filter((a) => s.ach[a.id]);
@@ -1864,9 +1864,9 @@ test('업적에 달성한 시각이 남고, 예전 저장(true)도 그대로 달
   assert.equal(C.achProgress(s, done[0]).at, 1700000000000);
   const raw = JSON.parse(JSON.stringify(s)); raw.ach[done[0].id] = true; raw.ach.fake = 5;
   const back = C.sanitizeState(raw, 0);
-  assert.equal(back.ach[done[0].id], true);
-  assert.equal(C.achProgress(back, done[0]).at, 0);
-  assert.ok(C.achProgress(back, done[0]).done);
+  assert.equal(back.ach[done[0].id], undefined, '날짜 없는 예전 기록은 지운다');
+  C.checkAchievements(back, [], 1800000000000);
+  assert.equal(back.ach[done[0].id], 1800000000000, '조건을 채우고 있으면 새 날짜로 다시 달성된다');
   assert.equal(back.ach.fake, undefined);
 });
 
