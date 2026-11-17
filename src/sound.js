@@ -15,8 +15,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var MAX_GAIN = 0.7;  // 어떤 소리도 이보다 크게 내지 않는다(음량 100 에서도)
-  var VOLUME = 2.6;    // 전체 음량 배수(0.8.6: 소리가 작다는 의견에 따라 전체를 키웠다). 소리마다의 g 에 곱한다
+  var MAX_GAIN = 0.95;  // 어떤 소리도 이보다 크게 내지 않는다(음량 100 에서도)
+  var VOLUME = 5.2;    /* 0.9.23: 음량 100 에서도 작다는 의견에 따라 두 배로 키웠다. 겹쳐서 터지지 않게 끝에 누름막(compressor)을 둔다 */ var VOLUME_OLD = 2.6;    // 전체 음량 배수(0.8.6: 소리가 작다는 의견에 따라 전체를 키웠다). 소리마다의 g 에 곱한다
 
   /*
    * 0.8.5: 소리를 부드럽게 다듬었다. 날카롭게 들리던 네모파·톱니파를 빼고 사인파·세모파만 쓴다.
@@ -102,7 +102,18 @@
     }
     // 마지막에 높은 소리를 한 번 더 걸러서 부드럽게 한다
     var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = SOFT_CUT;
-    gain.connect(soft); soft.connect(ctx.destination);
+    gain.connect(soft);
+    // 누름막: 여러 소리가 겹쳐 커질 때만 눌러서 찢어지는 소리를 막는다. 기기가 지원하지 않으면 그냥 내보낸다
+    var out = ctx.destination;
+    try {
+      if (!ctx.__zone7Comp && ctx.createDynamicsCompressor) {
+        var comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -10; comp.knee.value = 12; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.15;
+        comp.connect(ctx.destination); ctx.__zone7Comp = comp;
+      }
+      if (ctx.__zone7Comp) out = ctx.__zone7Comp;
+    } catch (e) { out = ctx.destination; }
+    soft.connect(out);
     src.start(start); src.stop(start + n.d + 0.02);
   }
 
