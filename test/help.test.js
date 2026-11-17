@@ -64,3 +64,9 @@ test('도움말: 받침에 따라 은/는을 고른다', () => {
   const next = C.ZONES.find(z => z.kind === 'soon');
   assert.ok(find('flow').includes(H.topic(next.name) + ' 문 앞까지만'));
 });
+
+test('도움말 항목마다 탭에 쓸 짧은 이름이 있고 서로 겹치지 않는다', () => {
+  const secs = require('../src/help.js').sections(require('../src/core.js'));
+  for (const s of secs) assert.ok(typeof s.tab === 'string' && s.tab.length > 0 && s.tab.length <= 6, s.id);
+  assert.equal(new Set(secs.map(s => s.tab)).size, secs.length);
+});

@@ -46,15 +46,15 @@
   var Story = {
     queue: [], timer: null, full: '', shown: 0,
     /** 새 일지를 대기열에 넣는다. 이미 하나가 떠 있으면 닫힌 뒤에 이어서 나온다. */
-    push: function (zoneLabel, text) {
-      Story.queue.push({ zone: zoneLabel, text: text });
+    push: function (zoneLabel, text, title) {
+      Story.queue.push({ zone: zoneLabel, text: text, title: title || '' });
       if ($('story').hidden) Story.next();
     },
     next: function () {
       var item = Story.queue.shift();
       if (!item) { $('story').hidden = true; return; }
       Story.full = item.text; Story.shown = 0;
-      setText($('story-zone'), item.zone);
+      setText($('story-zone'), item.zone); setText($('story-title'), item.title);
       $('story-text').textContent = '';
       $('story').hidden = false;
       sfx('story');
@@ -63,15 +63,17 @@
       if (still) { Story.finish(); return; }
       Story.timer = setInterval(function () {
         Story.shown++;
-        $('story-text').textContent = Story.full.slice(0, Story.shown);
-        if (Story.shown % 3 === 0) sfx('type');
+        var box = $('story-text');
+        box.textContent = Story.full.slice(0, Story.shown);
+        box.scrollTop = box.scrollHeight;                    // 긴 글은 쓰이는 줄을 따라 내려간다
+        if (Story.shown % 4 === 0) sfx('type');
         if (Story.shown >= Story.full.length) Story.finish();
-      }, 34);
+      }, 22);
     },
     finish: function () {
       clearInterval(Story.timer); Story.timer = null;
       Story.shown = Story.full.length;
-      $('story-text').textContent = Story.full;
+      $('story-text').textContent = Story.full; $('story-text').scrollTop = 0;      // 다 나오면 처음부터 읽게 맨 위로
     },
     /** 한 번 누르면 남은 글을 전부 보여 주고, 다 나온 뒤에 누르면 닫는다. */
     advance: function () {
@@ -147,6 +149,29 @@
   var DEVICE_KEY = 'zone7-device', STAMP_KEY = 'zone7-sync';
   var LIVE_MS = 150000;        // 마지막 저장이 이보다 최근이면 그 기기가 아직 켜져 있다고 본다
   var HANDOFF_WAIT_MS = 4000;  // 넘겨받기 요청 뒤 상대의 응답을 기다리는 시간
+  /*
+   * 설정: 기기에 따로 기억한다(저장 코드에는 들어가지 않는다). 모르는 값은 기본값으로 읽는다.
+   *   vibrate 진동, notation 숫자 표기, storyPop 새 일지를 바로 띄울지, shake 화면 흔들림
+   */
+  var PREF_DEFAULTS = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on' };
+  var PREF_VALUES = { vibrate: ['on', 'off'], notation: ['kr', 'sci'], storyPop: ['on', 'off'], shake: ['on', 'off'] };
+  var prefs = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on' };
+  function setPref(name, value, keep) {
+    if (!PREF_VALUES[name]) return;
+    prefs[name] = PREF_VALUES[name].indexOf(value) >= 0 ? value : PREF_DEFAULTS[name];
+    if (name === 'notation') C.setNotation(prefs.notation);
+    if (name === 'shake') document.body.setAttribute('data-shake', prefs.shake);
+    if (keep) remember('zone7-pref-' + name, prefs[name]);
+    document.querySelectorAll('[data-pref="' + name + '"]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-value') === prefs[name] ? 'true' : 'false'); });
+  }
+  function wirePrefs() {
+    Object.keys(PREF_DEFAULTS).forEach(function (name) { setPref(name, recall('zone7-pref-' + name), false); });
+    document.querySelectorAll('[data-pref]').forEach(function (b) {
+      b.addEventListener('click', function () { setPref(b.getAttribute('data-pref'), b.getAttribute('data-value'), true); buzz(12); });
+    });
+  }
+  /** 짧은 진동. 설정에서 껐거나 기기가 지원하지 않으면 아무 일도 하지 않는다. */
+  function buzz(ms) { try { if (prefs.vibrate === 'on' && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
   function recall(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function remember(key, value) { try { localStorage.setItem(key, String(value)); } catch (e) { /* 기억만 못 한다 */ } }
   function hasProgress(st) { return !!st && (st.lifetimeEarned > 0 || st.clicks > 0); }
@@ -378,7 +403,6 @@
       if (seen && seen !== Update.current) {
         var name = PATCH_NOTES.length ? PATCH_NOTES[0].ver : Update.current;
         notice(name + ' 으로 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.');
-        log(name + ' 으로 업데이트됐다.', 'good');
       }
     }
   };
@@ -538,6 +562,7 @@
     var tile = rows.tiles[r.tile];
     if (tile) { tile.classList.remove('hit'); void tile.offsetWidth; tile.classList.add('hit'); }
     if (scene) scene.poke();
+    buzz(r.swept ? 30 : 8);
     if (r.swept) {
       toast('동네 하나를 다 뒤졌다 · 물자 +' + fmt(r.bonus));
       var box = $('search'); box.classList.remove('swept'); void box.offsetWidth; box.classList.add('swept');
@@ -738,7 +763,6 @@
       b.addEventListener('click', function () {
         var r = C.runProject(state, state.offers[slot]);
         if (!r.ok) return;
-        log('연구 과제 완료: ' + r.name + ' (' + r.level + '번째).' + (r.gain ? ' 물자 ' + fmt(r.gain) + ' 확보.' : ''), 'good');
         if (r.gain) popNumber('+' + fmt(r.gain));
         sfx('buy'); Store.save(); render();
       });
@@ -800,45 +824,77 @@
     var list = [];
     try { if (window.Help) list = window.Help.sections(C); } catch (e) { console.warn('help', e); list = []; }
     if (!list.length) { $('help').appendChild(el('p', 'hint', '도움말을 불러오지 못했다.')); return; }
-    list.forEach(function (sec) {
-      var box = el('div', 'note'), ul = el('ul');
+    // 항목마다 탭 하나. 한 번에 한 항목만 보여서 길게 내리지 않아도 된다
+    var tabs = $('help-tabs'), shown = 0;
+    function show(n) {
+      shown = n;
+      var sec = list[n], box = el('div', 'note'), ul = el('ul');
+      $('help').textContent = '';
       box.appendChild(el('div', 'note-ver help-title', sec.title));
       sec.items.forEach(function (text) { ul.appendChild(el('li', '', text)); });
       box.appendChild(ul);
       $('help').appendChild(box);
+      Array.prototype.forEach.call(tabs.children, function (b, k) { b.setAttribute('aria-pressed', k === n ? 'true' : 'false'); });
+    }
+    list.forEach(function (sec, n) {
+      var btn = el('button', '', sec.tab || sec.title);
+      btn.type = 'button';
+      btn.addEventListener('click', function () { show(n); });
+      tabs.appendChild(btn);
     });
+    show(0);
   }
-  var STAT_CELLS = [['total', '진행 시간'], ['play', '켜 둔 시간'], ['away', '자리 비움으로 받은 시간'], ['days', '시작한 지'], ['run', '이번 판'], ['retreats', '철수'],
-    ['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['runEarned', '이번 판에서 모은 물자'], ['lifetime', '모은 물자(전체)'], ['waves', '이번 판 막아낸 밤'], ['clicks', '직접 수색']];
+  /*
+   * 통계: 맨 위에 큰 숫자 셋(어디까지 갔나, 항체, 진행 시간), 그 아래 '이번 판'과 '전체'를 나눠 보여 준다.
+   *   [id, 이름] 의 id 는 renderStats 가 값을 채우는 자리(rows.stats)다.
+   */
+  var STAT_HERO = [['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['total', '진행 시간']];
+  var STAT_GROUPS = [
+    ['이번 판', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '막아낸 밤']]],
+    ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비움으로 받은 시간'], ['days', '시작한 지']]]
+  ];
   function buildStats() {
-    STAT_CELLS.forEach(function (c) {
-      var box = el('div');
-      box.appendChild(el('dt', '', c[1]));
-      rows.stats[c[0]] = el('dd', 'stat-small', '-');
-      box.appendChild(rows.stats[c[0]]);
-      $('stats-grid').appendChild(box);
-    });
+    var root = $('stats-grid');
+    function cells(list, cls) {
+      var dl = el('dl', 'stats ' + cls);
+      list.forEach(function (c) {
+        var box = el('div');
+        box.appendChild(el('dt', '', c[1]));
+        rows.stats[c[0]] = el('dd', '', '-');
+        box.appendChild(rows.stats[c[0]]);
+        dl.appendChild(box);
+      });
+      return dl;
+    }
+    root.appendChild(cells(STAT_HERO, 'stats-hero'));
+    STAT_GROUPS.forEach(function (g) { root.appendChild(el('h3', 'stats-h', g[0])); root.appendChild(cells(g[1], '')); });
   }
   function renderStats() {
     var st = C.stats(state, Date.now()), d = C.formatDuration, c = rows.stats;
     setText(c.total, d(st.total)); setText(c.play, d(st.play)); setText(c.away, d(st.away));
     setText(c.days, st.days === null ? '기록 없음' : st.days + '일째');
     setText(c.run, d(st.run)); setText(c.retreats, st.retreats + '번');
-    setText(c.best, (st.bestZone + 1) + '구역 ' + C.ZONES[st.bestZone].name);
+    setText(c.best, (st.bestZone + 1) + '구역');
     setText(c.antibody, fmt(st.antibodyTotal) + '개'); setText(c.runEarned, fmt(st.runEarned)); setText(c.lifetime, fmt(st.lifetimeEarned));
     setText(c.waves, st.wavesCleared + '밤'); setText(c.clicks, fmt(st.clicks) + '번');
-    var key = st.runs.map(function (r) { return r.zone + ':' + r.seconds + ':' + r.antibodies; }).join('|');
+    // 지난 구역: 이번 판에 지나온 구역마다 머문 시간(지금 있는 구역은 계속 늘어난다)
+    var key = st.zones.map(function (r) { return r.zone + ':' + (r.seconds === null ? '-' : Math.floor(r.seconds)); }).join('|');
     if (key === statsShown) return;
     statsShown = key;
-    var list = $('stats-runs');
+    var list = $('stats-zones'), longest = 1;
     list.textContent = '';
-    if (!st.runs.length) list.appendChild(el('li', 'hint', '첫 철수를 하면 판마다 어디까지 갔고 얼마나 걸렸는지가 여기에 쌓인다.'));
-    st.runs.forEach(function (r) {
-      var li = el('li');
-      li.appendChild(el('span', '', (r.zone + 1) + '구역까지 · ' + d(r.seconds)));
-      li.appendChild(el('span', 'num', '항체 +' + fmt(r.antibodies)));
+    st.zones.forEach(function (r) { if (r.seconds > longest) longest = r.seconds; });
+    st.zones.forEach(function (r) {
+      var li = el('li', r.here ? 'bar here' : 'bar');
+      fill(li, r.seconds === null ? 0 : r.seconds / longest);      // 머문 시간만큼 막대가 찬다(가장 오래 머문 구역이 가득)
+      li.appendChild(el('span', '', (r.zone + 1) + '구역 ' + r.name + (r.here ? ' · 지금 여기' : '')));
+      li.appendChild(el('span', 'num', r.seconds === null ? '기록 없음' : (r.here ? '' : '머문 시간 ') + d(r.seconds)));
       list.appendChild(li);
     });
+    if (st.runs.length) {
+      var last = st.runs[0], note = el('li', 'hint', '지난 판: ' + (last.zone + 1) + '구역까지 · ' + d(last.seconds) + ' · 항체 +' + fmt(last.antibodies));
+      list.appendChild(note);
+    }
   }
 
   /* ---------- 특전 고르기 ---------- */
@@ -1235,22 +1291,47 @@
   }
 
   /** 일지 목록과 '최근 일지' 한 줄. 열린 일지가 바뀔 때만 다시 그린다. */
+  /**
+   * 일지: 구역(장)마다 탭이 하나씩 있고, 고른 장의 글을 편 순서대로 보여 준다.
+   * 아직 열리지 않은 편은 자리만 보이고(몇 편이 남았는지 알 수 있게), 아직 가지 못한 구역의 장은 누를 수 없다.
+   */
+  var journalTab = 0;        // 보고 있는 장(구역 번호). 0 이면 가장 최근에 글이 적힌 장을 고른다
   function renderJournal() {
-    var entries = C.BEATS.filter(function (b) { return state.story[b.id]; }), key = entries.map(function (b) { return b.id; }).join(',');
+    var read = C.BEATS.filter(function (b) { return state.story[b.id]; });
+    var chapters = [], byZone = {};
+    C.BEATS.forEach(function (b) { if (!byZone[b.zone]) { byZone[b.zone] = []; chapters.push(b.zone); } byZone[b.zone].push(b); });
+    // 처음에는 글이 적힌 장 가운데 가장 뒤의 장을 연다(철수 글은 1장에 있으므로 '마지막에 적힌 글'로 고르면 1장이 열린다)
+    if (!journalTab || !byZone[journalTab]) { journalTab = chapters[0]; read.forEach(function (b) { if (b.zone > journalTab) journalTab = b.zone; }); }
+    var key = read.map(function (b) { return b.id; }).join(',') + '|' + journalTab;
     if (key === journalShown) return;
     journalShown = key;
-    var list = $('journal'), latest = entries.length ? entries[entries.length - 1].text : '아직 적힌 것이 없다.';
-    list.textContent = '';
-    if (!entries.length) list.appendChild(el('li', '')).appendChild(el('span', 'j-empty', '아직 적힌 것이 없다.'));
-    entries.forEach(function (b) {
+    var tabs = $('journal-tabs'), list = $('journal'), latest = read.length ? read[read.length - 1] : null;
+    tabs.textContent = ''; list.textContent = '';
+    chapters.forEach(function (zone) {
+      var got = byZone[zone].filter(function (b) { return state.story[b.id]; }).length;
+      var btn = el('button', '', zone + '장 ' + byZone[zone][0].zoneName + ' ' + got + '/' + byZone[zone].length);
+      btn.type = 'button'; btn.disabled = !got; btn.setAttribute('aria-pressed', zone === journalTab ? 'true' : 'false');
+      btn.addEventListener('click', function () { journalTab = zone; renderJournal(); });
+      tabs.appendChild(btn);
+    });
+    byZone[journalTab].forEach(function (b, k) {
       var li = el('li');
-      li.appendChild(el('span', 'j-zone', b.zone + '구역 ' + b.zoneName));
-      li.appendChild(el('span', '', b.text));
+      if (!state.story[b.id]) {
+        li.className = 'locked';
+        li.appendChild(el('span', 'j-no', (k + 1) + '편'));
+        li.appendChild(el('span', 'j-title', '아직 적지 않았어요. 이 구역의 목표를 채우면 이어져요.'));
+      } else {
+        li.appendChild(el('span', 'j-no', b.zone + '장 ' + (k + 1) + '편'));
+        li.appendChild(el('span', 'j-title', b.title));
+        b.text.split('\n\n').forEach(function (para) { li.appendChild(el('p', '', para)); });
+      }
       list.appendChild(li);
     });
-    setText($('journal-count'), entries.length + ' / ' + C.BEATS.length);
-    setText($('story-latest'), latest);
-    setText($('m-story'), latest);
+    setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
+    // 상황 화면의 한 줄: 가장 최근 글의 제목과 첫 문단
+    var line = latest ? '〈' + latest.title + '〉 ' + latest.text.split('\n\n')[0] : '아직 적힌 것이 없어요.';
+    setText($('story-latest'), line);
+    setText($('m-story'), line);
   }
 
   /** 도트 화면에 넘길 값. 장면은 예전 구조의 이름(시설 열 종, 연구, 장비)을 쓰므로 지금 상태를 거기에 맞춰 옮긴다. */
@@ -1262,6 +1343,7 @@
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker',
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },
       upgrades: { crowbar: state.upgrades.crowbar > 0, backpack: state.upgrades.cart > 0 }, gear: {},
+      still: prefs.shake === 'off',
       pet: (function () { var p = C.petInfo(state); return p ? { kind: p.kind, body: p.breed.body, patch: p.breed.patch } : null; })() };
   }
 
@@ -1271,12 +1353,13 @@
       switch (ev.type) {
         case 'defended':
           heldLogged = false;
-          log((ev.boss ? '변이체가 이끈 무리를 막아냈다. ' : ev.wave + '번째 밤을 막아냈다. ') + '물자 ' + fmt(ev.reward) + ' 확보.', 'good');
-          sfx('defended'); if (scene) scene.night(true);
+          // 무전 로그에는 굵직한 일만 남긴다: 변이체를 막은 밤과 10번째마다의 밤
+          if (ev.boss || ev.wave % 10 === 0) log((ev.boss ? '변이체가 이끈 무리를 막아냈다. ' : ev.wave + '번째 밤을 막아냈다. ') + '물자 ' + fmt(ev.reward) + ' 확보.', 'good');
+          sfx('defended'); buzz(20); if (scene) scene.night(true);
           break;
         case 'breached':
           log('방벽이 뚫렸다. 물자 ' + fmt(ev.lost) + ' 을 잃었다. 문을 걸어 잠그고 버틴다.', 'bad');
-          sfx('breached'); flash(); if (scene) scene.night(false);
+          sfx('breached'); buzz([40, 60, 40]); flash(); if (scene) scene.night(false);
           break;
         case 'held':
           if (!heldLogged) { heldLogged = true; log('무리가 문을 두드리다 물러갔다. 방벽을 보강하기 전까지는 버티기만 한다.', 'bad'); }
@@ -1285,10 +1368,6 @@
         case 'arrive':
           if (!ev.siege && ev.defense < ev.strength) { log('무리가 도착했다. ' + C.BATTLE_SECONDS + '초 안에 방벽을 보강하지 않으면 뚫린다.', 'bad'); sfx('dusk'); }
           break;
-        case 'signal': log('무전기에 구조 신호가 잡혔다. ' + C.SIGNAL_WINDOW + '초 안에 응답하면 물자나 생산 ' + C.BUFF_MULT + '배를 얻는다.'); sfx('signal'); break;
-        case 'signal-missed': log('구조 신호가 끊겼다.'); break;
-        case 'sweep': log('수색조가 동네 하나를 다 뒤졌다. 물자 ' + fmt(ev.bonus) + ' 확보.', 'good'); break;
-        case 'buff-end': log('지원 물자가 바닥났다. 생산이 평소대로 돌아왔다.'); break;
         case 'goal':
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
           toast('목표 달성 · ' + ev.text); sfx('buy');
@@ -1296,13 +1375,14 @@
         case 'surge': if (tab === 'z2' && pane === 'play') sfx('defended'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
-          if (ev.long) { log(ev.name + '이 돌아왔다. 화물 ' + fmt(ev.gain) + '.', 'good'); toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
+          if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
           break;
-        case 'sold': if (ev.peak) log('좋은 시세(×' + ev.price.toFixed(2) + ')에 상품이 팔렸다. 물자 ' + fmt(ev.gain) + '.', 'good'); break;
         case 'story':
-          log('일지에 새 기록을 남겼다. ' + ev.text, 'story');
-          Story.push(ev.zone + '구역 ' + ev.zoneName + ' · 생존 일지', ev.text);
+          log('일지에 새 글을 적었다. 〈' + ev.title + '〉', 'story');
+          journalTab = ev.zone;                                 // 일지를 열면 방금 적힌 장이 보인다
+          if (prefs.storyPop !== 'off') Story.push(ev.zone + '구역 ' + ev.zoneName + ' · 생존 일지', ev.text, ev.title);
+          else notice('일지에 새 글이 적혔어요. 기록 > 일지에서 읽을 수 있어요.');
           break;
       }
     });
@@ -1339,6 +1419,7 @@
   }
 
   function flash() {
+    if (prefs.shake === 'off') return;                 // 설정에서 화면 흔들림을 껐다
     var p = $('night');
     p.classList.remove('shake');
     void p.offsetWidth; // 애니메이션을 다시 시작시키기 위한 리플로
@@ -1422,13 +1503,11 @@
     $('signal').addEventListener('click', function () {
       var r = C.answerSignal(state);
       if (!r.ok) return; // 누르는 순간 신호가 끊긴 경우
-      log('신호에 응답했다. ' + (r.kind === 'supplies' ? '보급품을 받았다. 물자 ' + fmt(r.gain) + '.' : r.seconds + '초 동안 생산이 ' + r.mult + '배가 된다.'), 'good');
       sfx('buy'); render();
     });
     $('fortify').addEventListener('click', function () {
       var r = C.fortify(state);
       if (!r.ok) return; // 그사이 물자가 모자라졌거나 이미 충분해진 경우
-      log('방벽을 보강했다. 물자 ' + fmt(r.cost) + ' 을 썼다.');
       sfx('buy'); render();
     });
     $('open-zone').addEventListener('click', function () {
@@ -1459,7 +1538,7 @@
       b.addEventListener('click', function () {
         var r = C.adoptPet(state, kind);
         if (!r.ok) return;
-        if (r.dup) { log('이미 함께 있는 ' + r.breed.name + '(이)가 또 따라왔다. 항체 샘플 ' + fmt(r.refund) + ' 을 돌려받았다.'); toast(r.rarity.name + ' · ' + r.breed.name + ' · 이미 함께 있어요'); sfx('buy'); }
+        if (r.dup) { toast(r.rarity.name + ' · ' + r.breed.name + ' · 이미 함께 있어요'); sfx('buy'); }
         else {
           log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + '(이)가 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
           toast((r.rarity.id === 'rare' ? '희귀! ' : '') + r.rarity.name + ' · ' + r.breed.name + ' · 새 친구예요');
@@ -1484,7 +1563,6 @@
     // 3구역: 전력 투입
     $('surge').addEventListener('click', function () {
       if (!C.surge(state).ok) return;
-      log('공단에 전력을 몰아넣었다. ' + C.SURGE_SECONDS + '초 동안 라인이 ' + C.SURGE_MULT + '배로 돈다.', 'good');
       sfx('defended'); render();
     });
     // 3구역: 병목인 기계를 올린다. 수량 모드를 따른다(×1 한 번, ×10 열 번, 최대는 물자가 되는 만큼).
@@ -1497,7 +1575,6 @@
       var r = C.sellGoods(state);
       if (!r.ok) return;
       popNumber('+' + fmt(r.gain));
-      if (r.peak) log('고점(×' + r.price.toFixed(2) + ')에 팔았다. 물자 ' + fmt(r.gain) + '.', 'good');
       if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
       var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
       sfx(r.peak ? 'defended' : 'buy'); render();
@@ -1589,6 +1666,7 @@
     });
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
+    wirePrefs();
     wireFeedback();
     $('export').addEventListener('click', function () {
       var code;

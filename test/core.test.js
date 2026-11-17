@@ -1514,3 +1514,43 @@ test('자동화: 레벨이 오를수록 대기 시간이 줄고, 절반 아래�
   C.resetTraits(b);
   assert.equal(C.assistOn(b), false, '되돌리면 꺼진다');
 });
+
+/* ---------- 알파 0.8.0: 소설 일지, 지난 구역, 숫자 표기 ---------- */
+test('일지: 편마다 제목과 여러 문단이 있고, 구역마다 3편씩이다', () => {
+  for (const b of C.BEATS) {
+    assert.ok(typeof b.title === 'string' && b.title.length > 0, b.id);
+    assert.ok(b.text.split('\n\n').length >= 4, b.id + ' 는 문단이 너무 적다');
+    assert.ok(b.part >= 1);
+  }
+  for (const no of [1, 2, 3, 4, 5]) assert.equal(C.BEATS.filter(b => b.id.startsWith('z' + no + '-')).length, 3);
+  const story = C.tick(C.createState(), 0.1, () => 0.5).find(e => e.type === 'story');
+  assert.equal(story.title, '열두 번째 날');
+});
+
+test('지난 구역: 구역을 열 때마다 기록이 남고, 구역마다 머문 시간이 나온다', () => {
+  const s = C.createState();
+  s.runSeconds = 100;
+  assert.deepEqual(C.zoneHistory(s), [{ zone: 0, name: '주택가', here: true, day: 1, seconds: 100 }]);
+  s.zoneLog.push({ zone: 1, seconds: 60, day: 3 }); s.zone = 1;
+  const h = C.zoneHistory(s);
+  assert.deepEqual(h.map(r => r.seconds), [60, 40]);
+  assert.deepEqual(h.map(r => r.here), [false, true]);
+  assert.equal(C.stats(s, Date.now()).zones.length, 2);
+  // 기록이 없는 예전 저장: 시간은 모른다(null), 오류는 없다
+  const old = C.createState(); old.zone = 2; old.runSeconds = 500;
+  assert.deepEqual(C.zoneHistory(old).map(r => r.seconds), [null, null, null]);
+  // 저장을 거쳐도 남고, 잘못된 기록은 버린다
+  const back = C.deserialize(C.serialize(s), 0);
+  assert.deepEqual(back.zoneLog, [{ zone: 1, seconds: 60, day: 3 }]);
+  const raw = JSON.parse(C.serialize(s)); raw.zoneLog = [{ zone: 99, seconds: 1, day: 1 }, { zone: 1, seconds: -5, day: 1 }, null, 'x', { zone: 1.5, seconds: 1, day: 1 }];
+  assert.deepEqual(C.sanitizeState(raw).zoneLog, []);
+});
+
+test('숫자 표기: 지수 표기로 바꿀 수 있고, 모르는 값은 기본(만·억)으로 돌아간다', () => {
+  assert.equal(C.formatNumber(123456789), '1.23억');
+  assert.equal(C.setNotation('sci'), 'sci');
+  assert.equal(C.formatNumber(123456789), '1.23e8');
+  assert.equal(C.formatNumber(999), '999');
+  assert.equal(C.setNotation('nonsense'), 'kr');
+  assert.equal(C.formatNumber(123456789), '1.23억');
+});

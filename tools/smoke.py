@@ -144,6 +144,25 @@ def run_case(browser, name, size, state, mode):
         if not fits(): problems.append('한 화면에 들어오지 않는다(특성)')
         tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'journal', 'save']: tap('[data-rtab-set=%s]' % t)
+        # 0.8.0 기록 화면: 일지의 장 탭과 소설 본문, 도움말 탭, 지난 구역, 설정 단추
+        tap('[data-rtab-set=journal]')
+        if page.locator('#journal-tabs button').count() < 5: problems.append('일지에 장 탭이 없다')
+        if page.locator('#journal li p').count() < 4: problems.append('일지 본문에 문단이 없다')
+        tap('[data-rtab-set=help]')
+        n = page.locator('#help-tabs button').count()
+        if n < 10: problems.append('도움말 탭이 없다')
+        page.locator('#help-tabs button').nth(n - 1).click(); page.wait_for_timeout(80)
+        if page.locator('#help .note').count() != 1: problems.append('도움말은 한 번에 한 항목만 보여야 한다')
+        tap('[data-rtab-set=stats]')
+        if page.locator('#stats-zones li').count() < 1 or page.locator('#stats-grid dd').count() != 12: problems.append('통계에 지난 구역이 없다')
+        tap('[data-rtab-set=save]')
+        page.click('[data-pref=notation][data-value=sci]'); page.wait_for_timeout(300)
+        big = any(c in text('supplies') for c in '만억조경해e')
+        page.click('[data-pref=notation][data-value=kr]'); page.wait_for_timeout(300); kr = text('supplies')
+        page.click('[data-pref=notation][data-value=sci]'); page.wait_for_timeout(300)
+        if big and 'e' not in page.inner_text('#supplies'): problems.append('숫자 표기를 바꿨는데 물자 표시가 그대로다: ' + page.inner_text('#supplies'))
+        page.click('[data-pref=notation][data-value=kr]'); page.click('[data-pref=vibrate][data-value=off]'); page.click('[data-pref=shake][data-value=off]')
+        if page.get_attribute('[data-pref=shake][data-value=off]', 'aria-pressed') != 'true': problems.append('설정 단추가 눌린 표시가 안 된다')
         # 의견 보내기: 빈 글로는 못 보내고, 글을 쓰면 단추가 켜지고, 복사하면 안내가 뜨고, 닫힌다
         if not tap('#feedback-open'): problems.append('의견 보내기 단추를 누를 수 없다')
         if not page.locator('#feedback').is_visible(): problems.append('의견 창이 뜨지 않았다')
@@ -278,7 +297,9 @@ def run_case(browser, name, size, state, mode):
         page.wait_for_timeout(65000)     # 무리 도착(50초)과 밤 결과(60초)를 지나간다
         close_story()
         logs = page.evaluate("[...document.querySelectorAll('#log li .log-text')].map(e => e.textContent).join(' / ')")
-        if not any(k in logs for k in ['막아냈다', '뚫렸다', '버티기만']): problems.append('밤 결과가 무전 로그에 없다')
+        # 막아낸 밤은 변이체와 10번째마다만 로그에 남는다(0.8.0). 그 밖의 밤은 통계의 '막아낸 밤'이 늘었는지로 본다
+        waves = page.evaluate("JSON.parse(localStorage.getItem('%s') || '{}').wavesCleared || 0" % SAVE_KEY)      # 10초마다 자동 저장된 값
+        if not any(k in logs for k in ['막아냈다', '뚫렸다', '버티기만']) and waves <= (state or {}).get('wavesCleared', 0): problems.append('밤이 지났는데 결과가 남지 않았다')
         if name.startswith('폰') and '무리가 도착했다' not in logs: problems.append('도착 경보가 무전 로그에 없다')
         # 철수: 두 번 눌러야 한다
         zone_before = text('base-no')

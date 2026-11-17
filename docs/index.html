@@ -160,10 +160,14 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 @keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 
 /* 기록 수치 */
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0; border: 2px solid var(--ink); background: var(--paper); }
-.stats div { padding: 10px 12px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
-.stats dt { font-size: 12px; color: var(--ink-soft); letter-spacing: .06em; }
-.stats dd { margin: 2px 0 0; font: 600 20px/1.2 var(--font-mono); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.stats div { padding: 9px 10px; border-radius: 6px; background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.stats dt { font-size: 12px; line-height: 1.35; color: var(--ink-soft); }
+.stats dd { margin: 3px 0 0; font: 600 15px/1.25 var(--font-mono); }
+.stats-hero div { padding: 12px 10px; background: color-mix(in srgb, var(--hazard) 16%, transparent); }
+.stats-hero dd { font: 400 26px/1.1 var(--font-display); }
+.stats-list li.bar { position: relative; padding: 7px 8px; border-top: 0; margin-top: 4px; border-radius: 6px; background: linear-gradient(to right, color-mix(in srgb, var(--ink) 12%, transparent) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--ink) 4%, transparent) 0); }
+.stats-list li.bar.here { background: linear-gradient(to right, color-mix(in srgb, var(--hazard) 40%, transparent) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--hazard) 10%, transparent) 0); }
 
 /* 구매 목록 */
 .qty { display: flex; border: 2px solid var(--ink); }
@@ -204,6 +208,18 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .stats-list { margin: 0 0 14px; padding: 0; list-style: none; font-size: 14px; }
 .stats-list li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-top: 1px solid var(--rule); }
 .stats-list li.hint { display: block; }
+.subtabs { display: flex; gap: 6px; margin: 0 0 12px; overflow-x: auto; scrollbar-width: none; }
+.subtabs::-webkit-scrollbar { display: none; }
+.subtabs button { flex: none; padding: 5px 11px; background: transparent; color: var(--ink-soft); border: 1px solid var(--rule); border-radius: 999px; font: 600 13px/1.4 var(--font-body); cursor: pointer; white-space: nowrap; }
+.subtabs button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.subtabs button:disabled { opacity: .45; cursor: default; }
+.subtabs button.new::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--hazard); vertical-align: 2px; }
+.set-rows { display: grid; gap: 8px; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid var(--rule); }
+.set-row:first-child { border-top: 0; }
+.set-row .qty button { font: 600 13px/1.4 var(--font-body); padding: 5px 12px; }
+.reset-row { align-items: center; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.reset-row .label { flex: 1 1 160px; }
 .stats-h { margin: 16px 0 4px; font: 600 14px/1.4 var(--font-body); }
 
 /* 구역 경로, 현재 위치, 일지 */
@@ -222,12 +238,15 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .brief-zone #sector-text { margin-top: 6px; font-size: 12px; }
 .brief-story p { margin: 0; font-size: 15.5px; line-height: 1.6; max-width: 62ch; }
 @media (max-width: 640px) { .brief { grid-template-columns: minmax(0, 1fr); } }
-.journal { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow-y: auto; }
-.journal li { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 14px; line-height: 1.6; }
+.journal { list-style: none; margin: 0; padding: 0; }
+.journal li { padding: 14px 0 6px; border-top: 1px solid var(--rule); }
 .journal li:first-child { border-top: 2px solid var(--ink); }
-.journal .j-zone { font: 600 12px/1.9 var(--font-mono); color: var(--ink-soft); }
-.journal .j-empty { grid-column: 1 / -1; color: var(--ink-soft); }
-@media (max-width: 480px) { .journal li { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+.journal .j-no { display: block; font: 600 12px/1.6 var(--font-mono); color: var(--ink-soft); }
+.journal .j-title { display: block; margin: 0 0 8px; font: 400 22px/1.2 var(--font-display); }
+.journal p { margin: 0 0 .9em; font-size: 15.5px; line-height: 1.85; }
+.journal li.locked { color: var(--ink-soft); }
+.journal li.locked .j-title { font: 600 15px/1.5 var(--font-body); margin: 0; }
+.journal .j-empty { color: var(--ink-soft); }
 .log-story .log-text { font-weight: 600; }
 .foot-block { margin-bottom: 20px; }
 
@@ -533,7 +552,6 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 .quest-foot .num { font-size: 14px; }
 .pill-idle { color: var(--ink-soft); }
 .pill-siege { color: var(--on-hazard); background: var(--hazard); border-color: var(--hazard); }
-.stats .stat-small { font-size: 15px; }
 
 /* 다음 할 일, 살 수 있음 표시, 알림 쪽지, 버전 */
 .goal { display: flex; gap: 10px; align-items: baseline; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 14px; font-weight: 500; }
@@ -551,7 +569,8 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
 @keyframes veil { from { opacity: 0; } }
 .story-card { width: min(100%, 520px); display: flex; flex-direction: column; gap: 14px; color: #e6e5db; }
 .story-card .label { color: #f0b400; font-size: 13px; }
-.story-card p { margin: 0; min-height: 6.4em; font-size: 19px; line-height: 1.7; }
+.story-title { margin: 0; font: 400 28px/1.15 var(--font-display); color: #f0b400; }
+.story-card p { margin: 0; min-height: 6.4em; max-height: 52vh; overflow-y: auto; white-space: pre-line; font-size: 17px; line-height: 1.8; }
 .story-card p::after { content: '▌'; margin-left: 2px; animation: caret 1s steps(2, start) infinite; }
 @keyframes caret { 50% { opacity: 0; } }
 .story-card button { align-self: flex-end; background: #f0b400; color: #17180f; border: 2px solid #f0b400; padding: 8px 22px; font-weight: 600; cursor: pointer; }
@@ -633,7 +652,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
   .foot { max-width: none; margin: 0; }
   .record-tabs { margin-bottom: 0; }
   .foot-block { margin: 0; }
-  .story-card p { font-size: 17px; }
+  .story-card p { font-size: 16px; }
   .panel { padding: 12px; }
   .log, .journal { max-height: none; }
   .m-only { display: block; }
@@ -670,7 +689,7 @@ h2 { margin: 0; font: 400 22px/1.1 var(--font-display); }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 0.7.10</div>
+  <div class="boot-ver">7구역 알파 0.8.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1014,6 +1033,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   </div>
   <section class="panel" data-rpane="journal" aria-labelledby="h-journal">
     <div class="panel-head"><h2 id="h-journal">생존 일지</h2><span class="label" id="journal-count">0 / 0</span></div>
+    <div class="subtabs" id="journal-tabs" role="group" aria-label="장 고르기"></div>
     <ol class="journal" id="journal"></ol>
   </section>
   <section class="panel" data-rpane="radio" aria-labelledby="h-log">
@@ -1026,36 +1046,43 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   </section>
   <section class="panel" data-rpane="stats" aria-labelledby="h-stats">
     <div class="panel-head"><h2 id="h-stats">통계</h2><span class="label">시간은 게임이 진행된 시간 기준</span></div>
-    <dl class="stats" id="stats-grid"></dl>
-    <h3 class="stats-h">지난 판</h3>
-    <ul class="stats-list" id="stats-runs"></ul>
+    <div id="stats-grid"></div>
+    <h3 class="stats-h">지난 구역</h3>
+    <ul class="stats-list" id="stats-zones"></ul>
   </section>
   <section class="panel" data-rpane="help" aria-labelledby="h-help">
     <div class="panel-head"><h2 id="h-help">도움말</h2></div>
+    <div class="subtabs" id="help-tabs" role="group" aria-label="도움말 항목"></div>
     <div class="notes" id="help"></div>
   </section>
   <section class="panel" data-rpane="save" aria-labelledby="h-save">
-    <div class="panel-head"><h2 id="h-save">기록 보관</h2><span class="label" id="cloud-status">10초마다 이 브라우저에 자동 저장</span></div>
+    <div class="panel-head"><h2 id="h-save">설정</h2><span class="label" id="cloud-status">10초마다 이 브라우저에 자동 저장</span></div>
+    <div class="set-rows">
+      <div class="set-row"><span class="label">화면 테마</span>
+        <div class="qty" role="group" aria-label="화면 테마"><button type="button" data-skin-set="light" aria-pressed="true">라이트</button><button type="button" data-skin-set="dark" aria-pressed="false">다크</button></div></div>
+      <div class="set-row"><span class="label">효과음</span>
+        <div class="qty"><button type="button" data-sound-toggle aria-pressed="true">소리 켬</button></div></div>
+      <div class="set-row"><span class="label">진동</span>
+        <div class="qty" role="group" aria-label="진동"><button type="button" data-pref="vibrate" data-value="on">켬</button><button type="button" data-pref="vibrate" data-value="off">끔</button></div></div>
+      <div class="set-row"><span class="label">숫자 표기</span>
+        <div class="qty" role="group" aria-label="숫자 표기"><button type="button" data-pref="notation" data-value="kr">1.23억</button><button type="button" data-pref="notation" data-value="sci">1.23e8</button></div></div>
+      <div class="set-row"><span class="label">새 일지</span>
+        <div class="qty" role="group" aria-label="새 일지가 열릴 때"><button type="button" data-pref="storyPop" data-value="on">바로 띄우기</button><button type="button" data-pref="storyPop" data-value="off">조용히 쌓기</button></div></div>
+      <div class="set-row"><span class="label">화면 흔들림</span>
+        <div class="qty" role="group" aria-label="화면 흔들림"><button type="button" data-pref="shake" data-value="on">켬</button><button type="button" data-pref="shake" data-value="off">끔</button></div></div>
+    </div>
+    <h3 class="stats-h">저장</h3>
     <div class="save-actions">
       <button type="button" id="save-now">지금 저장</button>
       <button type="button" id="export">저장 코드 복사</button>
       <button type="button" id="import">저장 코드 불러오기</button>
       <button type="button" id="feedback-open">의견 보내기</button>
-      <button type="button" class="danger" id="reset">처음부터 다시</button>
-    </div>
-    <div class="save-actions theme-row">
-      <span class="label">화면 테마</span>
-      <div class="qty" role="group" aria-label="화면 테마">
-        <button type="button" data-skin-set="light" aria-pressed="true">라이트</button>
-        <button type="button" data-skin-set="dark" aria-pressed="false">다크</button>
-      </div>
-      <span class="label">효과음</span>
-      <div class="qty"><button type="button" data-sound-toggle aria-pressed="true">소리 켬</button></div>
     </div>
     <label class="label" for="save-code" style="display:block;margin-top:12px">저장 코드</label>
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
-    <p class="ver">7구역 알파 0.7.10 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <div class="save-actions reset-row"><span class="label">모든 기록을 지우고 처음으로 돌아가요. 되돌릴 수 없어요.</span><button type="button" class="danger" id="reset">처음부터 다시</button></div>
+    <p class="ver">7구역 알파 0.8.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1149,6 +1176,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 <div class="story-veil" id="story" role="dialog" aria-modal="true" aria-labelledby="story-zone" hidden>
   <div class="story-card">
     <div class="label" id="story-zone"></div>
+    <h2 class="story-title" id="story-title"></h2>
     <p id="story-text"></p>
     <button type="button" id="story-close">계속</button>
   </div>
@@ -1162,7 +1190,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.8.0";
 </script>
 <script>
 /*
@@ -1181,6 +1209,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 0.8.0', date: '2026-11-17', at: '2026-11-17 11:40:00', title: '일지가 소설이 됐어요',
+      items: [
+        '생존 일지를 처음부터 다시 썼어요. 노란 우비를 입은 아이가 냉장 상자를 들고 7구역으로 가는 이야기예요. 한 편마다 제목이 있고 길이가 훨씬 길어졌어요. 지금 17편이에요.',
+        '일지에 장 탭이 생겼어요. 구역마다 한 장이고, 아직 적지 않은 편은 자리만 보여요. 이미 읽은 편은 새 글로 바뀌어 있으니 다시 읽어 보세요.',
+        '도움말에 탭이 생겼어요. 한 번에 한 항목만 보여서 길게 내리지 않아도 돼요.',
+        '통계 화면을 새로 짰어요. 맨 위에 큰 숫자 셋, 그 아래 이번 판과 전체를 나눠 보여 줘요. "지난 판" 대신 "지난 구역"에서 구역마다 머문 시간을 막대로 볼 수 있어요.',
+        '무전 로그를 정리했어요. 업데이트 알림, 신호 수신, 방벽 보강, 판매, 수색조 같은 되풀이되는 줄을 뺐고, 막아낸 밤은 변이체와 10번째마다만 남아요.',
+        '설정이 늘었어요: 진동, 숫자 표기(1.23억 / 1.23e8), 새 일지를 바로 띄울지, 화면 흔들림. "처음부터 다시"는 맨 아래로 내렸어요.'
+      ] },
     { ver: '알파 0.7.10', date: '2026-11-17', at: '2026-11-17 11:05:00', title: '밤마다 다른 방어 수단이 앞장서요',
       items: [
         '가진 방어 수단 가운데 하나가 그날의 주역으로 뽑혀 방벽 위에 크게 올라와요. 낮에도 보여서 오늘 밤 무엇이 앞장서는지 미리 알 수 있어요.',
@@ -1752,31 +1789,118 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
   /*
    * 구역: kind 가 그 구역에서 하는 일. 'soon' 은 아직 만들지 않은 구역(문 앞까지만 갈 수 있다).
    *   cost  : 그 구역의 문을 여는 데 드는 물자
-   *   story : 그 구역에 들어설 때, 목표 둘을 채웠을 때, 목표를 모두 채웠을 때 열리는 일지 3편
+   *   story : 그 구역에 들어설 때, 목표 둘을 채웠을 때, 목표를 모두 채웠을 때 열리는 일지 3편.
+   *           한 편은 { title 제목, text [문단, ...] }. 주인공(노란 우비를 입은 아이)이 쓰는 글이다.
    */
   var ZONES = [
     { no: 1, name: '주택가', kind: 'search', cost: 0, lead: '잔해를 뒤지고 사람을 모은다',
-      story: ['사태 12일째. 무전기에서 같은 말이 반복된다. “여기는 7구역. 생존자는 7구역으로 오라.” 우리는 아직 1구역에 있다.',
-        '옆집 지붕에 누군가 페인트로 숫자를 남겼다. 7, 그리고 화살표.',
-        '이 동네의 통조림은 바닥을 보인다. 골목 끝, 셔터 내린 시장이 다음이다. 여기는 남겨 두고 간다. 돌아올 사람들을 위해서.'] },
+      story: [
+        { title: "열두 번째 날", text: [
+          "사태 12일째. 무전기는 오늘도 같은 말만 한다. “여기는 7구역. 생존자는 7구역으로 오라.” 여자 목소리다. 숨 쉴 틈도 없이 되풀이한다.",
+          "엄마는 사흘 전 밤에 나갔다. 병원에 다녀온다고 했다. 현관에서 노란 우비를 내 어깨에 걸쳐 주고, 파란 냉장 상자를 내 무릎에 올려놓았다. “열지 마. 엄마가 안 오면 이걸 들고 7구역으로 가.”",
+          "나는 왜냐고 묻지 않았다. 엄마의 손이 떨리고 있었기 때문이다. 그 손이 내 왼쪽 소매를 끝까지 내려 주었다. 그 아래에 뭐가 있는지는 엄마와 나만 안다.",
+          "통조림은 엿새 치가 남았다. 창밖 골목에는 어제보다 하나가 더 서 있다. 지도를 펴 보니 여기는 1구역이다. 7은 강 건너, 지도의 맨 끝에 있다.",
+          "기다리는 건 오늘까지만 하기로 했다. 내일부터는 뒤진다. 옆집부터."] },
+        { title: "지붕 위의 7", text: [
+          "옆집 지붕에 누가 흰 페인트로 숫자를 써 놓았다. 7, 그리고 화살표. 화살표는 강 쪽을 가리킨다. 다음 집 지붕에도, 그다음 집에도 있다. 누군가 지붕을 타고 가면서 길을 남긴 것이다.",
+          "세 번째 집 다락에서 사람들을 만났다. 정수기 기사였다는 아저씨, 쌍둥이를 데리고 있는 아주머니, 말이 없는 고등학생 형. 다들 같은 방송을 듣고 있었다.",
+          "아저씨가 물었다. “꼬마야, 그 상자엔 뭐가 들었냐.” 나는 모른다고 했다. 정말로 모른다. 아저씨는 더 묻지 않고 내 우비의 모자를 씌워 주었다. “비 온다. 노란색이라 멀리서도 보이겠네. 길 잃을 일은 없겠다.”",
+          "밤에 방벽 너머에서 손톱으로 철판을 긁는 소리가 났다. 사람들이 숨을 죽였다. 나는 왼쪽 소매를 꼭 쥐고 있었다. 아홉 번째 날에 물린 자리가 가려웠다.",
+          "물리면 반나절이라고들 한다. 나는 사흘째 멀쩡하다."] },
+        { title: "남겨 두는 것", text: [
+          "동네의 통조림이 바닥을 보인다. 뒤질 집이 이제 없다. 골목 끝에 셔터 내린 시장이 보인다. 다음은 거기다.",
+          "떠나기 전에 아저씨가 이상한 일을 시켰다. 창고의 절반을 그대로 두고 가자는 것이다. 물, 통조림, 건전지. 문에는 분필로 썼다. “쓰고 채워 놓을 것.”",
+          "고등학생 형이 화를 냈다. 우리도 모자란데 누굴 주느냐고. 아저씨는 지붕을 가리켰다. “저 숫자 써 놓은 사람도 모자랐을 거다. 그래도 썼잖냐.”",
+          "나는 우리 집 현관에 쪽지를 붙였다. “엄마, 나 7구역으로 가. 상자는 잘 들고 있어.” 붙이고 나서 한참 서 있었다. 엄마가 이걸 읽을 일이 있을까.",
+          "돌아보지 않으려고 했는데 한 번 돌아봤다. 지붕 위의 7이 비에 젖어 번들거렸다."] }] },
     { no: 2, name: '재래시장', kind: 'trade', cost: 5e7, lead: '좌판을 열고 시세를 봐 가며 판다',
-      story: ['2구역. 셔터 내린 시장 골목은 뒤질 곳투성이다. 좌판 위에 저울이 그대로 놓여 있다. 물건이 있으면 사람이 온다.',
-        '생선 가게 냉동고 안에서 쪽지를 찾았다. “먼저 갑니다. 7구역에서 만나요. 3반 일동.”',
-        '시장이 다시 시끄럽다. 그런데 밤마다 무리가 불어난다. 놈들도 강 쪽으로, 우리와 같은 방향으로 걷고 있다.'] },
+      story: [
+        { title: "저울", text: [
+          "2구역. 시장 골목은 셔터가 전부 내려가 있다. 그런데 좌판 하나에 저울이 그대로 놓여 있었다. 바늘이 0을 가리키고 있다. 누가 닦아 놓은 것처럼 깨끗하다.",
+          "저울 주인은 건어물 가게 뒤에 숨어 있던 할머니였다. 할머니는 우리를 보자마자 말했다. “공짜는 없다. 뭘 가져왔는지부터 보자.”",
+          "아저씨가 통조림 두 개를 올렸다. 할머니는 무게를 달고, 멸치 한 봉지를 내주고, 장부에 적었다. 세상이 이렇게 됐는데 장부를 쓴다. 나는 그게 이상하게 마음이 놓였다.",
+          "“물건이 있으면 사람이 온다. 사람이 오면 소문이 돈다. 소문이 돌면 살 길이 보인다.” 할머니는 저울을 툭 쳤다. “장사는 그러려고 하는 거다.”",
+          "그날 저녁에 벌써 두 사람이 더 왔다. 한 사람은 라디오 건전지를 들고 왔다."] },
+        { title: "3반 일동", text: [
+          "생선 가게 냉동고를 열었다가 쪽지를 찾았다. 비닐에 싸서 얼음 틈에 끼워 놓았다. “먼저 갑니다. 7구역에서 만나요. 3반 일동.”",
+          "글씨를 알아봤다. 반장 글씨다. 받침을 꼭 네모나게 쓴다. 3반은 우리 반이다.",
+          "쪽지 뒷면에는 이름이 적혀 있었다. 열일곱 명. 내 이름은 없다. 나는 그 주에 학교에 가지 않았다. 열이 나서. 엄마가 밤새 내 팔에서 피를 뽑던 그 주다.",
+          "할머니가 쪽지를 들여다보고 말했다. “애들끼리 갔구나. 어른 이름이 하나도 없네.” 그러고는 멸치를 한 줌 더 싸 주었다. 장부에는 적지 않았다.",
+          "열일곱 명이 이 길을 먼저 지나갔다. 그러니까 이 길은 갈 수 있는 길이다. 나는 쪽지를 접어서 냉장 상자 손잡이에 묶었다."] },
+        { title: "같은 방향", text: [
+          "시장이 다시 시끄럽다. 좌판이 스무 개를 넘었다. 할머니는 목이 쉬었다.",
+          "그런데 밤마다 무리가 불어난다. 망을 보던 형이 이상한 걸 알아챘다. 놈들은 우리를 보고 오는 게 아니다. 시장 앞을 그냥 지나간다. 우리가 소리를 내면 그때 고개를 돌린다.",
+          "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
+          "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
+          "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
     { no: 3, name: '공단', kind: 'line', cost: 1e12, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
-      story: ['3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 문을 뜯고 들어가니 기계들이 멈춘 자리 그대로 서 있다. 컨베이어 위에는 만들다 만 것들이 줄지어 있다.',
-        '작업 일지의 마지막 장. “야간조 전원 7구역으로 이동. 설비는 두고 간다. 돌릴 줄 아는 사람이 오면 쓰라.”',
-        '라인이 돈다. 밤에도 공단에 불이 켜진다. 불빛을 보고 사람이 오고, 소리를 듣고 무리가 온다. 선로를 따라가면 환승역이다.'] },
+      story: [
+        { title: "멈춘 자리", text: [
+          "3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 밖에서 잠근 게 아니다. 안에 있던 사람들이 잠그고, 다른 길로 나간 것이다.",
+          "문을 뜯고 들어가니 기계들이 멈춘 자리 그대로 서 있다. 컨베이어 위에는 만들다 만 것들이 한 줄로 늘어서 있다. 맨 앞의 것에는 나사가 세 개 박혀 있고, 그다음은 두 개, 그다음은 하나.",
+          "누군가 네 번째 나사를 박으려다 손을 놓았다. 드라이버가 바닥에 떨어져 있다. 그 옆에 보온병. 뚜껑을 여니 아직 커피 냄새가 났다.",
+          "아저씨가 배전반을 열어 보고 휘파람을 불었다. “죽은 게 아니야. 꺼 놓은 거지. 순서대로, 얌전하게.” 여기 사람들은 도망친 게 아니라 퇴근한 것이다.",
+          "나는 드라이버를 주워서 제자리에 걸어 두었다. 벽에 공구 모양대로 그림자가 그려져 있었다."] },
+        { title: "야간조", text: [
+          "사무실 책상에서 작업 일지를 찾았다. 마지막 장. “야간조 전원 7구역으로 이동. 설비는 두고 간다. 돌릴 줄 아는 사람이 오면 쓰라.”",
+          "그 아래에 다른 글씨로 한 줄이 더 있다. “프레스 2번은 왼쪽으로 쏠린다. 발로 한 번 차 주면 된다. 미안하다, 못 고치고 간다.”",
+          "아저씨가 프레스 2번을 찼다. 정말로 돌았다. 다들 웃었다. 쌍둥이들이 따라서 기계를 차고 다녀서 아주머니한테 혼이 났다.",
+          "일지 사이에 사진이 끼워져 있었다. 작업복을 입은 사람들이 공장 앞에 줄지어 서 있다. 뒷줄의 한 사람이 간호사복을 입고 있다. 얼굴은 구겨져서 보이지 않는다. 손에 파란 상자를 들고 있다.",
+          "나는 사진을 오래 봤다. 파란 상자는 세상에 많다. 그렇게 생각하기로 했다."] },
+        { title: "불빛", text: [
+          "라인이 돈다. 밤에도 공단에 불이 켜진다. 불빛을 보고 사람이 온다. 어제는 여섯, 오늘은 열하나.",
+          "소리를 듣고 무리도 온다. 오늘 밤 철망 앞에 선 것들 가운데 하나가 체육복을 입고 있었다. 우리 학교 체육복이다. 가슴에 이름표가 그대로 달려 있다.",
+          "반장이었다. 받침을 네모나게 쓰던 애. 쪽지에 제일 먼저 이름을 적은 애.",
+          "반장은 철망을 잡고 흔들지 않았다. 그냥 서서 강 쪽을 보고 있었다. 내가 이름을 불렀다. 고개가 아주 천천히 돌아왔다. 그리고 내 노란 우비를 한참 봤다. 나는 그 눈이 나를 알아봤다고 지금도 생각한다.",
+          "새벽에 무리가 움직이자 반장도 따라갔다. 선로 쪽으로. 열일곱 명 중에 몇이나 건넜을까. 나는 쪽지 뒷면의 이름 하나에 줄을 그었다. 선로를 따라가면 환승역이다."] }] },
     { no: 4, name: '환승역', kind: 'rail', cost: 1e19, lead: '끊긴 노선을 잇고 열차를 보낸다',
-      story: ['4구역. 환승역 계단 아래로 선로가 네 갈래로 갈라진다. 전광판 하나가 아직 켜져 있다. 행선지: 7구역. 승강장에 열차 한 대가 문을 연 채 서 있다.',
-        '역무실 칠판에 분필 글씨가 남아 있다. “막차는 7구역행. 못 탄 사람은 선로를 따라 걸을 것. 터널 안에서는 소리 내지 말 것.”',
-        '열차가 다시 다닌다. 멀리 간 열차일수록 많이 싣고 돌아온다. 심야 급행의 기관사가 말했다. 강 건너 병원 옥상에 아직 불이 켜져 있다고.'] },
+      story: [
+        { title: "행선지", text: [
+          "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
+          "승강장에 열차 한 대가 문을 연 채 서 있다. 좌석마다 가방이 놓여 있다. 사람은 없다. 가방들만 줄 맞춰 앉아서 출발을 기다리고 있다.",
+          "맨 앞 칸에서 기관사를 찾았다. 살아 있었다. 운전석에 앉아서 컵라면을 먹고 있었다. “손님이네. 표는 없어도 돼.”",
+          "기관사 누나는 열이틀째 여기 있었다고 했다. 전기가 나갔는데 왜 안 떠났느냐고 물으니 전광판을 가리켰다. “저게 안 꺼지잖아. 저게 켜져 있는 동안은 운행 중인 거야. 내가 정한 건 아니고.”",
+          "아저씨가 변전실을 보러 갔다. 나는 누나 옆에 앉아서 전광판을 봤다. --분. 숫자가 들어갈 자리가 비어 있다."] },
+        { title: "막차", text: [
+          "역무실 칠판에 분필 글씨가 남아 있다. “막차는 7구역행. 못 탄 사람은 선로를 따라 걸을 것. 터널 안에서는 소리 내지 말 것.” 마지막 줄에는 밑줄이 세 번 그어져 있다.",
+          "끊긴 선로를 보러 터널에 들어갔다. 누나가 앞장서고 내가 손전등을 들었다. 터널 벽에 손자국이 있다. 어른 것, 그리고 그 아래 내 손만 한 것들. 열 몇 개. 벽을 짚으며 걸어간 자국이다.",
+          "한가운데쯤 왔을 때 가방 속 무전기가 저절로 켜졌다. “여기는 7구역. 생존자는—” 누나가 내 입을 막았다. 입을 막을 건 내가 아닌데. 나는 가방을 끌어안고 스위치를 더듬었다.",
+          "끄기 직전에 들었다. 문장과 문장 사이에 아주 작은 소리가 있다. 딸깍. 테이프가 처음으로 돌아가는 소리다. 방송은 누가 말하고 있는 게 아니다. 녹음이다.",
+          "터널 저쪽 어둠에서 수십 개의 발이 한꺼번에 멈췄다가, 한참 뒤에 다시 걷기 시작했다. 우리는 그 자리에서 삼십 분을 서 있었다. 누나의 손이 내 입 위에서 계속 떨렸다."] },
+        { title: "옥상의 불", text: [
+          "열차가 다시 다닌다. 멀리 간 열차일수록 많이 싣고 돌아온다. 전광판의 --분 자리에 처음으로 숫자가 들어갔다. 누나가 그걸 보고 울었다. 컵라면을 먹으면서.",
+          "심야 급행에서 돌아온 누나가 말했다. 강 건너 병원 옥상에 불이 켜져 있다고. 깜박이는 불이라고. 길게, 짧게, 길게.",
+          "아저씨가 그건 신호라고 했다. 누가 거기서 손으로 켰다 껐다 하는 거라고. 녹음이 아니라 사람이라고.",
+          "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. 고등학생 형이 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
+          "아무도 대답하지 못했다. 나는 방송의 목소리를 한 번 더 떠올렸다. 숨 쉴 틈 없이 말하는 여자. 엄마는 급할 때 그렇게 말한다. 그 생각은 입 밖에 내지 않았다. 다음 급행은 병원 앞까지 간다."] }] },
     { no: 5, name: '대학 병원', kind: 'lab', cost: 1e24, lead: '남은 연구를 이어 가며 과제를 고른다',
-      story: ['5구역. 응급실 문의 쇠사슬을 끊었다. 복도에 비상등이 깜박인다. 안내판의 화살표는 한 곳을 가리킨다. 감염내과, 7층. 연구실 냉장고는 아직 돌아가고 있다.',
-        '실험 노트의 마지막 쪽. “샘플 114번에서 반응. 양이 모자란다. 사람이 더 필요하다. 살아서 여기까지 온 사람들의 피가.” 날짜는 사태 9일째다.',
-        '연구가 다시 굴러간다. 우리가 들고 다니던 냉장 상자가 무엇이었는지 이제 안다. 옥상에서 보면 강 건너 검문소의 탐조등이 아직 돈다. 그 너머가 7구역이다.'] },
+      story: [
+        { title: "감염내과, 7층", text: [
+          "5구역. 응급실 문의 쇠사슬을 끊었다. 복도에 비상등이 깜박인다. 안내판의 화살표가 전부 한 곳을 가리킨다. 누가 매직으로 덧그려 놓았다. 감염내과, 7층.",
+          "7층. 또 7이다.",
+          "계단으로 올라갔다. 층마다 문이 침대로 막혀 있다. 안에서 막은 것이다. 6층 문에는 종이가 붙어 있었다. “이 아래는 포기했습니다. 죄송합니다.”",
+          "7층 탈의실에서 사물함 하나가 열려 있었다. 이름표를 읽기 전에 알았다. 문 안쪽에 내 사진이 붙어 있었으니까. 유치원 때 노란 우비를 입고 찍은 사진이다. 지금 입고 있는 건 그때보다 네 치수가 크다.",
+          "사물함 안에는 갈아입은 옷과 식은 도시락, 그리고 수첩이 있었다. 연구실 냉장고는 아직 돌아가고 있다. 누가 발전기에 기름을 채우고 있다는 뜻이다."] },
+        { title: "114번", text: [
+          "수첩은 실험 노트였다. 엄마 글씨다. 마지막 쪽. “샘플 114번에서 반응. 양이 모자란다. 사람이 더 필요하다. 살아서 여기까지 온 사람들의 피가.” 날짜는 사태 9일째.",
+          "9일째는 내가 물린 날이다.",
+          "앞쪽을 넘겨 봤다. 1번부터 113번까지는 전부 한 줄씩이고, 끝에 같은 말이 적혀 있다. 반응 없음. 114번만 세 쪽이다. “물린 지 6시간, 열 39도. 12시간, 열 내림. 24시간, 밥을 달라고 함.” 그리고 줄을 벅벅 그어 지운 한 줄. 불빛에 비춰 보니 읽을 수 있었다. “내 아들을 숫자로 적고 있다.”",
+          "나는 왼쪽 소매를 걷었다. 처음으로 사람들 앞에서. 이빨 자국은 하얗게 아물어 있다. 아저씨는 한참 보다가 소매를 도로 내려 주었다. “그래서 비도 안 오는데 맨날 우비를 입고 있었구나.”",
+          "쌍둥이 중 하나가 물었다. “그럼 오빠는 안 변해?” 나는 모른다고 했다. 엄마도 몰랐을 것이다. 그래서 병원에 온 것이다."] },
+        { title: "냉장 상자", text: [
+          "연구가 다시 굴러간다. 아주머니는 알고 보니 임상병리사였다. 열이틀 동안 아무도 묻지 않아서 말하지 않았다고 했다.",
+          "냉장 상자를 열었다. 엄마가 열지 말라고 했지만, 엄마의 노트가 열라고 하고 있었다. 안에는 피가 든 관이 여섯 개. 라벨은 114-2부터 114-7. 첫 번째 관은 엄마가 들고 간 것이다.",
+          "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
+          "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
+          "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
     { no: 6, name: '강변 검문소', kind: 'soon', cost: 1e31, lead: '다리를 지키며 밀려오는 무리를 막는다',
-      story: ['다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 다리 위에는 버려진 차들이 끝까지 늘어서 있다. 건너편 어둠 속에서 무언가 움직인다.'] },
+      story: [
+        { title: "다리", text: [
+          "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
+          "열일곱 명 중에 열여섯이 건넜다. 나는 쪽지 뒷면을 꺼내서, 줄 그은 이름 하나를 뺀 나머지를 소리 내어 읽었다. 열여섯 개. 맞다.",
+          "다리 위에는 버려진 차들이 끝까지 늘어서 있다. 그 사이사이에 놈들이 서 있다. 걷지 않는다. 다리 한가운데부터는 전부 멈춰서 건너편을 보고 있다. 방송이 저기서 나오기 때문이다.",
+          "그때 건너편 탐조등이 돌던 것을 멈추고 이쪽으로 내려왔다. 빛이 차들을 훑고, 놈들을 훑고, 차단기 앞의 나한테 와서 섰다. 노란 우비가 대낮처럼 환해졌다.",
+          "불빛이 한 번 꺼졌다 켜졌다. 그리고 또 한 번. 누가 저기서 나를 보고 있다. 다리를 건너려면 여기를 먼저 지켜야 한다."] }] },
     { no: 7, name: '송신탑', kind: 'soon', cost: 1e30, lead: '', story: [] }
   ];
 
@@ -1963,6 +2087,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       bestZone: 0,           // 가장 멀리 갔던 구역
       story: {},
       startedAt: safeNum(now, 0), playSeconds: 0, awaySeconds: 0, runSeconds: 0,
+      zoneLog: [],           // 이번 판에 구역을 연 기록 [{ zone 구역 번호(0부터), seconds 판을 시작한 뒤 흐른 시간, day 날짜 }]
       runLog: [],            // 지난 판들 [{ zone, seconds, antibodies }] (최근 10판)
       lastSeen: safeNum(now, 0)
     };
@@ -2052,6 +2177,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       s.zone++; s.gate = false; s.bestZone = Math.max(s.bestZone, s.zone);
       delete s.story['z' + ZONES[s.zone].no + '-0'];      // 그때 읽은 것은 '문 앞' 글이다. 들어설 때의 일지는 새로 보여 준다.
     }
+    s.zoneLog = (Array.isArray(raw.zoneLog) ? raw.zoneLog : []).filter(function (r) {
+      return r && typeof r === 'object' && isFinite(r.seconds) && r.seconds >= 0 && isFinite(r.day) && Math.floor(r.zone) === r.zone && r.zone >= 1 && r.zone < ZONES.length;
+    }).slice(0, ZONES.length).map(function (r) { return { zone: r.zone, seconds: r.seconds, day: Math.max(1, Math.floor(r.day)) }; });
     s.runLog = (Array.isArray(raw.runLog) ? raw.runLog : []).filter(function (r) { return r && typeof r === 'object' && isFinite(r.seconds) && isFinite(r.antibodies) && isFinite(r.zone); })
       .slice(-10).map(function (r) { return { zone: clamp(safeCount(r.zone), 0, ZONES.length - 1), seconds: safeNum(r.seconds, 0), antibodies: safeCount(r.antibodies) }; });
     // 시세는 강화 레벨에 따라 범위가 달라지므로 마지막에 맞춘다
@@ -2693,6 +2821,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
     state.supplies -= n.cost;
     if (n.soon) { state.gate = true; state.bestZone = Math.max(state.bestZone, n.index); return { ok: true, soon: true, index: n.index, zone: n.zone }; }
     state.zone = n.index;
+    state.zoneLog.push({ zone: n.index, seconds: state.runSeconds, day: state.day });      // 통계의 '지난 구역'
     state.bestZone = Math.max(state.bestZone, n.index);
     return { ok: true, soon: false, index: n.index, zone: n.zone };
   }
@@ -2881,9 +3010,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
    */
   var BEATS = [];
   ZONES.forEach(function (z, zi) {
-    z.story.forEach(function (text, k) {
+    z.story.forEach(function (ep, k) {
+      var text = ep.text.join('\n\n');
       // 아직 없는 구역의 글은 '문 앞'(gate-번호)이다. 나중에 그 구역이 열려도 들어설 때의 일지(z번호-0)와 겹치지 않는다.
-      BEATS.push({ id: (z.kind === 'soon' ? 'gate-' + z.no : 'z' + z.no + '-' + k), zone: z.no, zoneName: z.name, text: text, when: function (s) {
+      BEATS.push({ id: (z.kind === 'soon' ? 'gate-' + z.no : 'z' + z.no + '-' + k), zone: z.no, zoneName: z.name, title: ep.title, part: k + 1, text: text, when: function (s) {
         if (ZONES[zi].kind === 'soon') return s.gate && s.zone === zi - 1;          // 아직 없는 구역: 문 앞에 닿았을 때
         if (s.zone < zi) return false;
         var done = (GOALS[zi] || []).filter(function (g) { return !!s.goalsDone[g.id]; }).length;
@@ -2891,7 +3021,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       } });
     });
   });
-  BEATS.push({ id: 'retreat-1', zone: 1, zoneName: '주택가', text: '거점을 버렸다. 등 뒤에서 방벽이 무너지는 소리가 났다. 손에 남은 것은 냉장 상자 하나, 그 안의 혈액 샘플뿐이다. 다시 1구역이다. 하지만 이번에는 무엇을 먼저 해야 하는지 안다.',
+  BEATS.push({ id: 'retreat-1', zone: 1, zoneName: '주택가', title: "다시, 1구역", part: 4,
+    text: [
+      "거점을 버렸다. 등 뒤에서 방벽이 무너지는 소리가 났다. 아저씨가 쌍둥이를 하나씩 옆구리에 끼고 뛰었다. 나는 냉장 상자만 안고 뛰었다.",
+      "손에 남은 것은 상자 하나, 그 안의 혈액 샘플뿐이다. 창고도, 좌판도, 기계도 전부 저 뒤에 있다.",
+      "그런데 이상하다. 무섭지가 않다. 어디에 뭐가 있는지 안다. 어느 집 지붕이 튼튼한지, 누가 장부를 쓰는지, 프레스 2번을 어디를 차야 하는지.",
+      "아저씨가 숨을 고르며 말했다. “집은 무너져도 짓는 법은 안 무너진다.” 그러고는 분필을 꺼내 첫 번째 문에 썼다. “쓰고 채워 놓을 것.”",
+      "다시 1구역이다. 하지만 이번에는 무엇을 먼저 해야 하는지 안다."].join('\n\n'),
     when: function (s) { return s.retreats >= 1; } });
   function checkStory(state, events) {
     BEATS.forEach(function (b) {
@@ -2900,7 +3036,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       try { hit = !!b.when(state); } catch (e) { hit = false; }
       if (!hit) return;
       state.story[b.id] = true;
-      events.push({ type: 'story', id: b.id, zone: b.zone, zoneName: b.zoneName, text: b.text });
+      events.push({ type: 'story', id: b.id, zone: b.zone, zoneName: b.zoneName, title: b.title, text: b.text });
     });
   }
 
@@ -3024,7 +3160,21 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       days: started ? Math.floor((now - state.startedAt) / 86400000) + 1 : null,
       retreats: state.retreats, bestZone: state.bestZone, antibodyTotal: state.antibodyTotal, lifetimeEarned: state.lifetimeEarned, runEarned: state.runEarned,
       clicks: state.clicks, wavesCleared: state.wavesCleared, breaches: state.breaches, signals: state.signalsAnswered,
-      runs: state.runLog.slice().reverse() };
+      runs: state.runLog.slice().reverse(), zones: zoneHistory(state) };
+  }
+  /**
+   * 지난 구역: 이번 판에 지나온 구역마다 머문 시간. [{ zone, name, seconds 머문 시간, day 연 날짜, here 지금 있는 구역인가 }]
+   *   1구역은 판을 시작할 때 열린 것으로 본다. 기록이 없는 예전 저장(구역은 열려 있는데 기록이 없다)은 seconds 가 null 이다.
+   */
+  function zoneHistory(state) {
+    var at = {}, out = [], i;
+    state.zoneLog.forEach(function (r) { at[r.zone] = r; });
+    for (i = 0; i <= state.zone; i++) {
+      var from = i === 0 ? { seconds: 0, day: 1 } : at[i], to = i === state.zone ? { seconds: state.runSeconds } : at[i + 1];
+      out.push({ zone: i, name: ZONES[i].name, here: i === state.zone, day: from ? from.day : null,
+        seconds: from && to ? Math.max(0, to.seconds - from.seconds) : null });
+    }
+    return out;
   }
   function formatDuration(sec) {
     if (typeof sec !== 'number' || !isFinite(sec) || sec < 0) return '0초';
@@ -3048,12 +3198,18 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
   /* ---------- 표시용 숫자 ---------- */
   var UNITS = ['만', '억', '조', '경', '해', '자', '양'];
   /** 12345 → "1.23만". 보유량이 실제보다 많아 보이지 않도록 내림한다. */
+  /*
+   * 숫자 표기: 'kr' 만·억·조(기본), 'sci' 1.23e8 꼴. 설정에서 바꾼다. 화면에 보이는 모양만 달라진다.
+   */
+  var notation = 'kr';
+  function setNotation(mode) { notation = mode === 'sci' ? 'sci' : 'kr'; return notation; }
   function formatNumber(n) {
     if (typeof n !== 'number' || !isFinite(n)) return '0';
     var sign = n < 0 ? '-' : '';
     n = Math.abs(n);
     if (n < 100) return sign + String(Math.floor(n * 10 + 1e-9) / 10);
     if (n < 1e4) return sign + Math.floor(n).toLocaleString('en-US');
+    if (notation === 'sci') return sign + n.toExponential(2).replace('e+', 'e');
     var v = n, k = 0;
     while (v >= 1e4 && k < UNITS.length) { v /= 1e4; k++; }
     if (v >= 1e4) return sign + n.toExponential(2);
@@ -3062,7 +3218,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
   }
 
   return {
-    SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
+    setNotation: setNotation, zoneHistory: zoneHistory, SAVE_VERSION: SAVE_VERSION, DAY_SECONDS: DAY_SECONDS, BATTLE_SECONDS: BATTLE_SECONDS, GROWTH: GROWTH, DEFENSE_GROWTH: DEFENSE_GROWTH,
     MILESTONES: MILESTONES, COUNT_MAX: COUNT_MAX, BASE_DEFENSE: BASE_DEFENSE, HORDE_BASE: HORDE_BASE, HORDE_GROWTH: HORDE_GROWTH,
     BOSS_EVERY: BOSS_EVERY, BOSS_STRENGTH: BOSS_STRENGTH, BOSS_REWARD: BOSS_REWARD, NIGHT_REWARD_SECONDS: NIGHT_REWARD_SECONDS,
     WAVE_BONUS: WAVE_BONUS, BREACH_LOSS: BREACH_LOSS, CLICK_SHARE: CLICK_SHARE,
@@ -3117,7 +3273,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
  * 숫자를 글에 직접 적지 않고 GameCore 의 상수와 정의표에서 읽어 온다. 밸런스를 고쳤을 때
  * 도움말만 옛 숫자로 남는 일을 막기 위해서다(테스트가 이를 검사한다).
  *
- *   Help.sections(core) → [{ id, title, items: [문장, ...] }, ...]
+ *   Help.sections(core) → [{ id, tab(탭에 쓰는 짧은 이름), title, items: [문장, ...] }, ...]
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -3152,30 +3308,30 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
     var next = core.ZONES[ready.length];
 
     return [
-      { id: 'flow', title: '어떤 게임인가요', items: [
+      { id: 'flow', tab: '처음', title: '어떤 게임인가요', items: [
         '1구역에서 시작해 ' + core.ZONES.length + '구역까지 거점을 쌓아 올리는 게임이에요. 다음 구역으로 넘어가도 앞 구역은 남아서 계속 물자를 보내 줘요.',
         '구역마다 하는 일이 달라요. ' + ready.map(function (z) { return z.no + '구역 ' + z.name + '(' + z.lead + ')'; }).join(', ') + ' 순서예요.',
         '방치형이라 꺼 두었다 켜도 그동안의 몫을 받아요. 뭘 해야 할지 모르겠으면 화면의 "다음 할 일"을 따라가면 돼요.',
         '지금은 ' + ready.length + '구역까지 만들어져 있어요.' + (next ? ' ' + next.no + '구역 ' + topic(next.name) + ' 문 앞까지만 갈 수 있고, 다음 버전에서 열려요.' : '') ] },
 
-      { id: 'zone', title: '구역과 목표', items: [
+      { id: 'zone', tab: '구역', title: '구역과 목표', items: [
         '구역 화면의 번호 탭에서 구역을 골라요. 구역 화면은 운영, 개조, 목표로 나뉘어 있어요. "구역 지도"를 누르면 구역마다 얼마를 버는지 한눈에 볼 수 있어요.',
         '구역마다 목표가 셋 있어요. 하나를 달성할 때마다 특전 ' + core.PERK_CHOICES + '장 중 하나를 골라요.',
         '목표 셋을 모두 채우고 물자를 치르면 다음 구역의 문이 열려요. 뒤 구역일수록 문 값이 훨씬 비싸요.',
         '뒤 구역을 열면 밤에 오는 무리도 커져요(구역 하나마다 3배).' ] },
 
-      { id: 'map', title: '1구역: 수색 지도', items: [
+      { id: 'map', tab: '1구역', title: '1구역: 수색 지도', items: [
         '동네 하나는 ' + core.SWEEP_TILES + '칸이에요. 칸을 누르면 그 칸을 뒤져서 물자를 얻어요. "잔해 수색" 단추는 다음 칸을 뒤지는 것과 같아요.',
         '칸마다 나오는 것이 달라요. ' + core.TILE_KINDS.map(function (k) { return k.name + '(수익 ' + k.mult + '배)'; }).join(', ') + '. 뒤져 봐야 알 수 있어요.',
         core.SWEEP_TILES + '칸을 다 뒤지면 직접 수색 ' + core.SWEEP_BONUS_CLICKS + '번치 보너스를 받고 다음 동네로 넘어가요.',
         '시설이 하나라도 있으면 ' + span(core.SWEEP_AUTO_SECONDS) + '마다 한 칸씩 알아서 뒤져요. 가만히 있어도 동네는 넘어가요.' ] },
 
-      { id: 'click', title: '직접 수색', items: [
+      { id: 'click', tab: '수색', title: '직접 수색', items: [
         '"잔해 수색"을 누르면 물자를 바로 얻어요. 한 번의 기본 수익은 초당 생산의 ' + pct(core.CLICK_SHARE) + ' 에 전체 생산 배수를 더한 값이에요.',
         '수색 배수가 두 배가 될 때마다 수익이 기본의 1배씩 늘어요(2배 → 2배, 4배 → 3배, 8배 → 4배).',
         '거점이 비어 있는 판 초반에 첫 물자를 모으기 좋아요. 열심히 눌러도 가만히 둘 때보다 조금 빠른 정도라, 누르지 않아도 뒤처지지 않아요.' ] },
 
-      { id: 'trade', title: '2구역: 거래', items: [
+      { id: 'trade', tab: '2구역', title: '2구역: 거래', items: [
         '좌판이 상품을 만들어요. 상품은 시세를 곱한 값에 팔려요.',
         '시세는 ' + span(core.PRICE_STEP) + '마다 ' + core.PRICE_FLOOR + ' ~ ' + core.PRICE_CEIL + ' 사이에서 바뀌어요. 개조(흥정, 단골)로 범위를 올릴 수 있어요.',
         '상품은 좌판이 ' + span(core.GOODS_CAP_SECONDS) + ' 동안 만드는 양까지만 쌓여요.',
@@ -3184,7 +3340,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
         '연속 호가: 평균 이상의 시세에서 팔리면 한 단계씩 쌓여요(시세 하나에 한 번, 최대 ' + core.STREAK_MAX + '단계). 단계마다 판매 값이 ' + pct(core.STREAK_BONUS) + ' 늘어요. 자동 판매로도 쌓여요. 평균 아래에서 직접 팔 때만 끊겨요.',
         '시세 ' + core.PEAK_PRICE + ' 이상에서 판 것은 "고점 판매"로 세요. 2구역 목표 가운데 하나예요.' ] },
 
-      { id: 'line', title: '3구역: 생산 라인', items: [
+      { id: 'line', tab: '3구역', title: '3구역: 생산 라인', items: [
         '기계 셋(' + core.MACHINES.map(function (m) { return m.name; }).join(' → ') + ')이 차례로 맞물려 돌아요. 만든 완제품은 바로 물자가 돼요.',
         '라인은 가장 느린 기계(병목)의 속도로만 나와요. 빠른 기계를 더 올려도 산출은 늘지 않아요. "병목 올리기"를 누르면 그때 가장 느린 기계가 올라요.',
         '기계마다 레벨당 처리량이 달라요(' + core.MACHINES.map(function (m) { return m.name + ' ' + m.rate; }).join(', ') + '). 처리량이 비슷해지게 맞추면 돼요.',
@@ -3193,7 +3349,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
         '"전력 투입"을 누르면 ' + span(core.SURGE_SECONDS) + ' 동안 라인이 ' + core.SURGE_MULT + '배로 돌아요. ' + span(core.SURGE_COOLDOWN) + ' 뒤에 다시 쓸 수 있어요. 영구 특성 "자동화"를 찍으면 알아서 들어가요.',
         '자리를 비워도 라인은 나갈 때의 상태 그대로 돌아요. 정속으로 맞춰 두고 나가면 그 시간도 정속 가동으로 쳐 줘요.' ] },
 
-      { id: 'rail', title: '4구역: 노선', items: [
+      { id: 'rail', tab: '4구역', title: '4구역: 노선', items: [
         '노선을 복구하고 열차를 사면 운행이 시작돼요. 열차는 달리는 동안 화물을 싣고, 돌아왔을 때 한꺼번에 물자로 바뀌어요.',
         '노선은 넷이에요. ' + core.ROUTES.map(function (r) { return r.name + '(' + span(r.seconds) + ', 화물 ×' + r.mult + ')'; }).join(', ') + '. 멀리 가는 노선일수록 같은 시간에 더 많이 실어요.',
         '열차는 화물 배수가 높은 노선부터 알아서 타요. 노선 한 단계마다 열차 ' + core.ROUTE_SLOTS + '대가 다닐 수 있고, 자리가 없는 열차는 쉬어요.',
@@ -3202,7 +3358,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
         '"청신호"를 누르면 달리는 열차들이 ' + span(core.GREEN_SECONDS) + '만큼 앞서 달려요. ' + span(core.GREEN_COOLDOWN) + ' 뒤에 다시 켤 수 있어요. 영구 특성 "자동화"를 찍으면 알아서 켜져요.',
         '자리를 비운 동안에도 열차는 다녀요. 돌아온 화물은 자리 비움 효율로 받아요.' ] },
 
-      { id: 'lab', title: '5구역: 연구', items: [
+      { id: 'lab', tab: '5구역', title: '5구역: 연구', items: [
         '연구원을 뽑으면 연구 점수가 모여요. 이 구역은 물자를 직접 만들지 않고, 대신 이번 판의 다른 구역들을 강하게 만들어요.',
         '과제는 한 번에 ' + core.OFFER_COUNT + '개가 나와요. 점수를 써서 하나를 끝내면 효과를 얻고, 과제 ' + core.OFFER_COUNT + '개가 모두 새로 바뀌어요.',
         '과제: ' + core.PROJECTS.map(function (p) { return p.name + '(' + p.desc + ')'; }).join(', ') + '.',
@@ -3210,22 +3366,24 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
         '마음에 드는 과제가 없으면 "다른 과제 보기"로 다시 뽑을 수 있어요. 과제 값의 ' + pct(core.REROLL_SHARE) + ' 만큼 점수가 들어요.',
         '자리를 비운 동안에도 점수는 모여요. 철수하면 끝낸 과제의 효과는 사라져요.' ] },
 
-      { id: 'night', title: '밤과 방벽', items: [
+      { id: 'night', tab: '밤', title: '밤과 방벽', items: [
         '하루는 ' + span(core.DAY_SECONDS) + '예요. ' + span(core.DAY_SECONDS - core.BATTLE_SECONDS) + '가 지나면 무리가 도착하고, 남은 ' + span(core.BATTLE_SECONDS) + ' 동안 방벽에서 싸워요.',
         '승패는 그 ' + span(core.BATTLE_SECONDS) + '가 끝날 때의 방어력으로 갈려요. 싸우는 중에도 보강할 수 있어요.',
         '막으면 생산 ' + span(core.NIGHT_REWARD_SECONDS) + '치 물자를 얻어요. 이번 판에서 막아낸 밤 한 번마다 생산도 ' + pct(core.WAVE_BONUS) + ' 씩 늘어나요.',
         '못 막으면 물자의 ' + pct(core.BREACH_LOSS) + ' 를 잃고 농성에 들어가요. 농성 중에는 더 잃지 않지만 얻는 것도 없어요. 한 번 막아내면 풀려요.',
         core.BOSS_EVERY + '번째 밤마다 변이체가 와요. 규모가 ' + core.BOSS_STRENGTH + '배지만, 막으면 전리품도 ' + core.BOSS_REWARD + '배예요.',
-        '무리는 밤마다 커져서 언젠가는 막을 수 없게 돼요. 그때가 철수를 생각할 때예요.' ] },
+        '무리는 밤마다 커져서 언젠가는 막을 수 없게 돼요. 그때가 철수를 생각할 때예요.',
+        '가진 방어 수단 가운데 하나가 밤마다 주역으로 뽑혀 방벽 위에 크게 올라와요. 주역마다 싸우는 모습이 달라요. 많이 산 것일수록 자주 나와요. 보이는 모습만 다르고 승패는 방어력으로 정해져요.'
+      ] },
 
-      { id: 'retreat', title: '철수와 항체 샘플', items: [
+      { id: 'retreat', tab: '철수', title: '철수와 항체 샘플', items: [
         '이번 판에서 물자 ' + fmt(core.RETREAT_MIN) + ' 을 모으면 철수할 수 있어요(상황 > 철수).',
         '철수하면 거점을 전부 버리고 1구역에서 다시 시작해요. 물자, 시설, 방벽, 구역 개조, 연 구역, 특전이 사라져요.',
         '대신 항체 샘플을 얻어요. 이번 판에서 물자를 많이 모았을수록 많이 받아요. 물자를 100배 더 모으면 샘플은 6배쯤이에요.',
         '벽에 막혀 진행이 느려졌을 때 철수하는 게 좋아요. 너무 일찍 하면 샘플이 적고, 너무 늦으면 시간이 아까워요.',
         '읽은 일지와 통계는 그대로 남아요.' ] },
 
-      { id: 'trait', title: '특성과 특전', items: [
+      { id: 'trait', tab: '특성', title: '특성과 특전', items: [
         '영구 특성은 항체 샘플로 찍어요(특성 화면). 철수해도 남아요.',
         '영구 특성: ' + core.TRAITS.map(function (t) { return t.name + '(' + t.desc + ')'; }).join(', ') + '.',
         '"자동화"는 전력 투입과 청신호를 알아서 써 주는 특성이에요. 2레벨부터는 레벨마다 대기 시간이 ' + pct(core.ASSIST_STEP) + ' 씩 줄어요(절반까지).',
@@ -3233,7 +3391,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
         '특전은 이번 판에만 쓰여요. 같은 특전을 또 고르면 레벨이 올라요.',
         '특전: ' + core.PERKS.map(function (p) { return p.name + '(' + p.desc + ')'; }).join(', ') + '.' ] },
 
-      { id: 'pet', title: '일행과 동물 친구', items: [
+      { id: 'pet', tab: '일행', title: '일행과 동물 친구', items: [
         '특성 화면의 "일행"에서 강아지나 고양이를 데려올 수 있어요. 첫 친구는 그냥 와요.',
         '등급이 있어요. ' + core.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%(강아지 방어력 +' + Math.round(r.dog * 100) + '%, 고양이 전체 생산 +' + Math.round(r.cat * 100) + '%)'; }).join(', ') + '.',
         '다시 데려오려면 항체 샘플이 들어요. 값은 지금까지 얻은 항체 샘플 총량의 ' + pct(core.PET_PULL_SHARE) + ' 예요(최소 ' + core.PET_PULL_MIN + '개). 이미 함께 있는 아이가 또 나오면 ' + pct(core.PET_DUP_REFUND) + ' 를 돌려받아요.',
@@ -3241,19 +3399,21 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
         '친구들: ' + core.PET_BREEDS.map(function (b) { return b.name; }).join(', ') + '.',
         '친구와 주인공의 이름은 언제든 바꿀 수 있어요(' + core.PET_NAME_MAX + '글자까지). 철수해도 모두 함께 가요.' ] },
 
-      { id: 'signal', title: '구조 신호', items: [
+      { id: 'signal', tab: '신호', title: '구조 신호', items: [
         '가끔 무전기에 구조 신호가 잡혀요. 보유 물자 아래에 단추가 뜨는데, ' + span(core.SIGNAL_WINDOW) + ' 안에 누르면 응답할 수 있어요.',
         '응답하면 둘 중 하나를 얻어요(반반). 생산 ' + span(core.SIGNAL_SUPPLY_SECONDS) + '치 물자, 또는 ' + span(core.BUFF_SECONDS) + ' 동안 생산 ' + core.BUFF_MULT + '배예요. 놓쳐도 잃는 것은 없어요.' ] },
 
-      { id: 'away', title: '자리 비움', items: [
+      { id: 'away', tab: '자리 비움', title: '자리 비움', items: [
         '게임을 꺼 둔 동안에도 물자가 쌓여요. 최대 ' + span(core.OFFLINE_CAP) + '치를, 평소 생산의 ' + pct(core.OFFLINE_RATE) + ' 효율로 받아요.',
         '2구역은 평균 시세로 판 것으로 쳐요. 3구역 라인은 나갈 때의 상태 그대로 돈 것으로 쳐요. 4구역 열차는 그동안 다녀온 만큼 화물을 내려요.',
         '자리를 비운 동안에도 밤은 지나가요. 막을 수 있는 밤은 막아서 전리품을 얻고, 못 막는 밤부터는 잃는 것 없이 버티기만 해요.' ] },
 
-      { id: 'etc', title: '그 밖에', items: [
+      { id: 'etc', tab: '그 밖에', title: '그 밖에', items: [
         '진행은 10초마다 자동으로 저장돼요. 기록 > 설정에서 저장 코드를 복사해 두면 백업이 돼요.',
         '알파 0.5 까지의 저장은 구조가 달라서 이어지지 않아요.',
-        '사건, 생존자 배치, 원정은 뒤 구역을 만들면서 다시 넣을 예정이에요.' ] }
+        '사건, 생존자 배치, 원정은 뒤 구역을 만들면서 다시 넣을 예정이에요.',
+        '기록 > 설정에서 테마, 효과음, 진동, 숫자 표기(1.23억 / 1.23e8), 새 일지를 바로 띄울지, 화면 흔들림을 바꿀 수 있어요.'
+      ] }
     ];
   }
 
@@ -3589,6 +3749,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
     if (ev === 'delivered') burst(model, model.home - 4, GROUND - 10, '#f0b400', 6, rng);
     stepZombies(model, view, dt, rng);
     stepCombat(model, view, dt, rng);
+    if (view.still) model.shake = 0;      // 설정에서 화면 흔들림을 껐다
     model.flash = Math.max(0, model.flash - dt);
     model.shake = Math.max(0, model.shake - dt);
     for (var i = model.particles.length - 1; i >= 0; i--) {
@@ -4619,15 +4780,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
   var Story = {
     queue: [], timer: null, full: '', shown: 0,
     /** 새 일지를 대기열에 넣는다. 이미 하나가 떠 있으면 닫힌 뒤에 이어서 나온다. */
-    push: function (zoneLabel, text) {
-      Story.queue.push({ zone: zoneLabel, text: text });
+    push: function (zoneLabel, text, title) {
+      Story.queue.push({ zone: zoneLabel, text: text, title: title || '' });
       if ($('story').hidden) Story.next();
     },
     next: function () {
       var item = Story.queue.shift();
       if (!item) { $('story').hidden = true; return; }
       Story.full = item.text; Story.shown = 0;
-      setText($('story-zone'), item.zone);
+      setText($('story-zone'), item.zone); setText($('story-title'), item.title);
       $('story-text').textContent = '';
       $('story').hidden = false;
       sfx('story');
@@ -4636,15 +4797,17 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       if (still) { Story.finish(); return; }
       Story.timer = setInterval(function () {
         Story.shown++;
-        $('story-text').textContent = Story.full.slice(0, Story.shown);
-        if (Story.shown % 3 === 0) sfx('type');
+        var box = $('story-text');
+        box.textContent = Story.full.slice(0, Story.shown);
+        box.scrollTop = box.scrollHeight;                    // 긴 글은 쓰이는 줄을 따라 내려간다
+        if (Story.shown % 4 === 0) sfx('type');
         if (Story.shown >= Story.full.length) Story.finish();
-      }, 34);
+      }, 22);
     },
     finish: function () {
       clearInterval(Story.timer); Story.timer = null;
       Story.shown = Story.full.length;
-      $('story-text').textContent = Story.full;
+      $('story-text').textContent = Story.full; $('story-text').scrollTop = 0;      // 다 나오면 처음부터 읽게 맨 위로
     },
     /** 한 번 누르면 남은 글을 전부 보여 주고, 다 나온 뒤에 누르면 닫는다. */
     advance: function () {
@@ -4720,6 +4883,29 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
   var DEVICE_KEY = 'zone7-device', STAMP_KEY = 'zone7-sync';
   var LIVE_MS = 150000;        // 마지막 저장이 이보다 최근이면 그 기기가 아직 켜져 있다고 본다
   var HANDOFF_WAIT_MS = 4000;  // 넘겨받기 요청 뒤 상대의 응답을 기다리는 시간
+  /*
+   * 설정: 기기에 따로 기억한다(저장 코드에는 들어가지 않는다). 모르는 값은 기본값으로 읽는다.
+   *   vibrate 진동, notation 숫자 표기, storyPop 새 일지를 바로 띄울지, shake 화면 흔들림
+   */
+  var PREF_DEFAULTS = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on' };
+  var PREF_VALUES = { vibrate: ['on', 'off'], notation: ['kr', 'sci'], storyPop: ['on', 'off'], shake: ['on', 'off'] };
+  var prefs = { vibrate: 'on', notation: 'kr', storyPop: 'on', shake: 'on' };
+  function setPref(name, value, keep) {
+    if (!PREF_VALUES[name]) return;
+    prefs[name] = PREF_VALUES[name].indexOf(value) >= 0 ? value : PREF_DEFAULTS[name];
+    if (name === 'notation') C.setNotation(prefs.notation);
+    if (name === 'shake') document.body.setAttribute('data-shake', prefs.shake);
+    if (keep) remember('zone7-pref-' + name, prefs[name]);
+    document.querySelectorAll('[data-pref="' + name + '"]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-value') === prefs[name] ? 'true' : 'false'); });
+  }
+  function wirePrefs() {
+    Object.keys(PREF_DEFAULTS).forEach(function (name) { setPref(name, recall('zone7-pref-' + name), false); });
+    document.querySelectorAll('[data-pref]').forEach(function (b) {
+      b.addEventListener('click', function () { setPref(b.getAttribute('data-pref'), b.getAttribute('data-value'), true); buzz(12); });
+    });
+  }
+  /** 짧은 진동. 설정에서 껐거나 기기가 지원하지 않으면 아무 일도 하지 않는다. */
+  function buzz(ms) { try { if (prefs.vibrate === 'on' && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
   function recall(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function remember(key, value) { try { localStorage.setItem(key, String(value)); } catch (e) { /* 기억만 못 한다 */ } }
   function hasProgress(st) { return !!st && (st.lifetimeEarned > 0 || st.clicks > 0); }
@@ -4951,7 +5137,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       if (seen && seen !== Update.current) {
         var name = PATCH_NOTES.length ? PATCH_NOTES[0].ver : Update.current;
         notice(name + ' 으로 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.');
-        log(name + ' 으로 업데이트됐다.', 'good');
       }
     }
   };
@@ -5111,6 +5296,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
     var tile = rows.tiles[r.tile];
     if (tile) { tile.classList.remove('hit'); void tile.offsetWidth; tile.classList.add('hit'); }
     if (scene) scene.poke();
+    buzz(r.swept ? 30 : 8);
     if (r.swept) {
       toast('동네 하나를 다 뒤졌다 · 물자 +' + fmt(r.bonus));
       var box = $('search'); box.classList.remove('swept'); void box.offsetWidth; box.classList.add('swept');
@@ -5311,7 +5497,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       b.addEventListener('click', function () {
         var r = C.runProject(state, state.offers[slot]);
         if (!r.ok) return;
-        log('연구 과제 완료: ' + r.name + ' (' + r.level + '번째).' + (r.gain ? ' 물자 ' + fmt(r.gain) + ' 확보.' : ''), 'good');
         if (r.gain) popNumber('+' + fmt(r.gain));
         sfx('buy'); Store.save(); render();
       });
@@ -5373,45 +5558,77 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
     var list = [];
     try { if (window.Help) list = window.Help.sections(C); } catch (e) { console.warn('help', e); list = []; }
     if (!list.length) { $('help').appendChild(el('p', 'hint', '도움말을 불러오지 못했다.')); return; }
-    list.forEach(function (sec) {
-      var box = el('div', 'note'), ul = el('ul');
+    // 항목마다 탭 하나. 한 번에 한 항목만 보여서 길게 내리지 않아도 된다
+    var tabs = $('help-tabs'), shown = 0;
+    function show(n) {
+      shown = n;
+      var sec = list[n], box = el('div', 'note'), ul = el('ul');
+      $('help').textContent = '';
       box.appendChild(el('div', 'note-ver help-title', sec.title));
       sec.items.forEach(function (text) { ul.appendChild(el('li', '', text)); });
       box.appendChild(ul);
       $('help').appendChild(box);
+      Array.prototype.forEach.call(tabs.children, function (b, k) { b.setAttribute('aria-pressed', k === n ? 'true' : 'false'); });
+    }
+    list.forEach(function (sec, n) {
+      var btn = el('button', '', sec.tab || sec.title);
+      btn.type = 'button';
+      btn.addEventListener('click', function () { show(n); });
+      tabs.appendChild(btn);
     });
+    show(0);
   }
-  var STAT_CELLS = [['total', '진행 시간'], ['play', '켜 둔 시간'], ['away', '자리 비움으로 받은 시간'], ['days', '시작한 지'], ['run', '이번 판'], ['retreats', '철수'],
-    ['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['runEarned', '이번 판에서 모은 물자'], ['lifetime', '모은 물자(전체)'], ['waves', '이번 판 막아낸 밤'], ['clicks', '직접 수색']];
+  /*
+   * 통계: 맨 위에 큰 숫자 셋(어디까지 갔나, 항체, 진행 시간), 그 아래 '이번 판'과 '전체'를 나눠 보여 준다.
+   *   [id, 이름] 의 id 는 renderStats 가 값을 채우는 자리(rows.stats)다.
+   */
+  var STAT_HERO = [['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['total', '진행 시간']];
+  var STAT_GROUPS = [
+    ['이번 판', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '막아낸 밤']]],
+    ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비움으로 받은 시간'], ['days', '시작한 지']]]
+  ];
   function buildStats() {
-    STAT_CELLS.forEach(function (c) {
-      var box = el('div');
-      box.appendChild(el('dt', '', c[1]));
-      rows.stats[c[0]] = el('dd', 'stat-small', '-');
-      box.appendChild(rows.stats[c[0]]);
-      $('stats-grid').appendChild(box);
-    });
+    var root = $('stats-grid');
+    function cells(list, cls) {
+      var dl = el('dl', 'stats ' + cls);
+      list.forEach(function (c) {
+        var box = el('div');
+        box.appendChild(el('dt', '', c[1]));
+        rows.stats[c[0]] = el('dd', '', '-');
+        box.appendChild(rows.stats[c[0]]);
+        dl.appendChild(box);
+      });
+      return dl;
+    }
+    root.appendChild(cells(STAT_HERO, 'stats-hero'));
+    STAT_GROUPS.forEach(function (g) { root.appendChild(el('h3', 'stats-h', g[0])); root.appendChild(cells(g[1], '')); });
   }
   function renderStats() {
     var st = C.stats(state, Date.now()), d = C.formatDuration, c = rows.stats;
     setText(c.total, d(st.total)); setText(c.play, d(st.play)); setText(c.away, d(st.away));
     setText(c.days, st.days === null ? '기록 없음' : st.days + '일째');
     setText(c.run, d(st.run)); setText(c.retreats, st.retreats + '번');
-    setText(c.best, (st.bestZone + 1) + '구역 ' + C.ZONES[st.bestZone].name);
+    setText(c.best, (st.bestZone + 1) + '구역');
     setText(c.antibody, fmt(st.antibodyTotal) + '개'); setText(c.runEarned, fmt(st.runEarned)); setText(c.lifetime, fmt(st.lifetimeEarned));
     setText(c.waves, st.wavesCleared + '밤'); setText(c.clicks, fmt(st.clicks) + '번');
-    var key = st.runs.map(function (r) { return r.zone + ':' + r.seconds + ':' + r.antibodies; }).join('|');
+    // 지난 구역: 이번 판에 지나온 구역마다 머문 시간(지금 있는 구역은 계속 늘어난다)
+    var key = st.zones.map(function (r) { return r.zone + ':' + (r.seconds === null ? '-' : Math.floor(r.seconds)); }).join('|');
     if (key === statsShown) return;
     statsShown = key;
-    var list = $('stats-runs');
+    var list = $('stats-zones'), longest = 1;
     list.textContent = '';
-    if (!st.runs.length) list.appendChild(el('li', 'hint', '첫 철수를 하면 판마다 어디까지 갔고 얼마나 걸렸는지가 여기에 쌓인다.'));
-    st.runs.forEach(function (r) {
-      var li = el('li');
-      li.appendChild(el('span', '', (r.zone + 1) + '구역까지 · ' + d(r.seconds)));
-      li.appendChild(el('span', 'num', '항체 +' + fmt(r.antibodies)));
+    st.zones.forEach(function (r) { if (r.seconds > longest) longest = r.seconds; });
+    st.zones.forEach(function (r) {
+      var li = el('li', r.here ? 'bar here' : 'bar');
+      fill(li, r.seconds === null ? 0 : r.seconds / longest);      // 머문 시간만큼 막대가 찬다(가장 오래 머문 구역이 가득)
+      li.appendChild(el('span', '', (r.zone + 1) + '구역 ' + r.name + (r.here ? ' · 지금 여기' : '')));
+      li.appendChild(el('span', 'num', r.seconds === null ? '기록 없음' : (r.here ? '' : '머문 시간 ') + d(r.seconds)));
       list.appendChild(li);
     });
+    if (st.runs.length) {
+      var last = st.runs[0], note = el('li', 'hint', '지난 판: ' + (last.zone + 1) + '구역까지 · ' + d(last.seconds) + ' · 항체 +' + fmt(last.antibodies));
+      list.appendChild(note);
+    }
   }
 
   /* ---------- 특전 고르기 ---------- */
@@ -5808,22 +6025,47 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
   }
 
   /** 일지 목록과 '최근 일지' 한 줄. 열린 일지가 바뀔 때만 다시 그린다. */
+  /**
+   * 일지: 구역(장)마다 탭이 하나씩 있고, 고른 장의 글을 편 순서대로 보여 준다.
+   * 아직 열리지 않은 편은 자리만 보이고(몇 편이 남았는지 알 수 있게), 아직 가지 못한 구역의 장은 누를 수 없다.
+   */
+  var journalTab = 0;        // 보고 있는 장(구역 번호). 0 이면 가장 최근에 글이 적힌 장을 고른다
   function renderJournal() {
-    var entries = C.BEATS.filter(function (b) { return state.story[b.id]; }), key = entries.map(function (b) { return b.id; }).join(',');
+    var read = C.BEATS.filter(function (b) { return state.story[b.id]; });
+    var chapters = [], byZone = {};
+    C.BEATS.forEach(function (b) { if (!byZone[b.zone]) { byZone[b.zone] = []; chapters.push(b.zone); } byZone[b.zone].push(b); });
+    // 처음에는 글이 적힌 장 가운데 가장 뒤의 장을 연다(철수 글은 1장에 있으므로 '마지막에 적힌 글'로 고르면 1장이 열린다)
+    if (!journalTab || !byZone[journalTab]) { journalTab = chapters[0]; read.forEach(function (b) { if (b.zone > journalTab) journalTab = b.zone; }); }
+    var key = read.map(function (b) { return b.id; }).join(',') + '|' + journalTab;
     if (key === journalShown) return;
     journalShown = key;
-    var list = $('journal'), latest = entries.length ? entries[entries.length - 1].text : '아직 적힌 것이 없다.';
-    list.textContent = '';
-    if (!entries.length) list.appendChild(el('li', '')).appendChild(el('span', 'j-empty', '아직 적힌 것이 없다.'));
-    entries.forEach(function (b) {
+    var tabs = $('journal-tabs'), list = $('journal'), latest = read.length ? read[read.length - 1] : null;
+    tabs.textContent = ''; list.textContent = '';
+    chapters.forEach(function (zone) {
+      var got = byZone[zone].filter(function (b) { return state.story[b.id]; }).length;
+      var btn = el('button', '', zone + '장 ' + byZone[zone][0].zoneName + ' ' + got + '/' + byZone[zone].length);
+      btn.type = 'button'; btn.disabled = !got; btn.setAttribute('aria-pressed', zone === journalTab ? 'true' : 'false');
+      btn.addEventListener('click', function () { journalTab = zone; renderJournal(); });
+      tabs.appendChild(btn);
+    });
+    byZone[journalTab].forEach(function (b, k) {
       var li = el('li');
-      li.appendChild(el('span', 'j-zone', b.zone + '구역 ' + b.zoneName));
-      li.appendChild(el('span', '', b.text));
+      if (!state.story[b.id]) {
+        li.className = 'locked';
+        li.appendChild(el('span', 'j-no', (k + 1) + '편'));
+        li.appendChild(el('span', 'j-title', '아직 적지 않았어요. 이 구역의 목표를 채우면 이어져요.'));
+      } else {
+        li.appendChild(el('span', 'j-no', b.zone + '장 ' + (k + 1) + '편'));
+        li.appendChild(el('span', 'j-title', b.title));
+        b.text.split('\n\n').forEach(function (para) { li.appendChild(el('p', '', para)); });
+      }
       list.appendChild(li);
     });
-    setText($('journal-count'), entries.length + ' / ' + C.BEATS.length);
-    setText($('story-latest'), latest);
-    setText($('m-story'), latest);
+    setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
+    // 상황 화면의 한 줄: 가장 최근 글의 제목과 첫 문단
+    var line = latest ? '〈' + latest.title + '〉 ' + latest.text.split('\n\n')[0] : '아직 적힌 것이 없어요.';
+    setText($('story-latest'), line);
+    setText($('m-story'), line);
   }
 
   /** 도트 화면에 넘길 값. 장면은 예전 구조의 이름(시설 열 종, 연구, 장비)을 쓰므로 지금 상태를 거기에 맞춰 옮긴다. */
@@ -5835,6 +6077,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker',
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },
       upgrades: { crowbar: state.upgrades.crowbar > 0, backpack: state.upgrades.cart > 0 }, gear: {},
+      still: prefs.shake === 'off',
       pet: (function () { var p = C.petInfo(state); return p ? { kind: p.kind, body: p.breed.body, patch: p.breed.patch } : null; })() };
   }
 
@@ -5844,12 +6087,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       switch (ev.type) {
         case 'defended':
           heldLogged = false;
-          log((ev.boss ? '변이체가 이끈 무리를 막아냈다. ' : ev.wave + '번째 밤을 막아냈다. ') + '물자 ' + fmt(ev.reward) + ' 확보.', 'good');
-          sfx('defended'); if (scene) scene.night(true);
+          // 무전 로그에는 굵직한 일만 남긴다: 변이체를 막은 밤과 10번째마다의 밤
+          if (ev.boss || ev.wave % 10 === 0) log((ev.boss ? '변이체가 이끈 무리를 막아냈다. ' : ev.wave + '번째 밤을 막아냈다. ') + '물자 ' + fmt(ev.reward) + ' 확보.', 'good');
+          sfx('defended'); buzz(20); if (scene) scene.night(true);
           break;
         case 'breached':
           log('방벽이 뚫렸다. 물자 ' + fmt(ev.lost) + ' 을 잃었다. 문을 걸어 잠그고 버틴다.', 'bad');
-          sfx('breached'); flash(); if (scene) scene.night(false);
+          sfx('breached'); buzz([40, 60, 40]); flash(); if (scene) scene.night(false);
           break;
         case 'held':
           if (!heldLogged) { heldLogged = true; log('무리가 문을 두드리다 물러갔다. 방벽을 보강하기 전까지는 버티기만 한다.', 'bad'); }
@@ -5858,10 +6102,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
         case 'arrive':
           if (!ev.siege && ev.defense < ev.strength) { log('무리가 도착했다. ' + C.BATTLE_SECONDS + '초 안에 방벽을 보강하지 않으면 뚫린다.', 'bad'); sfx('dusk'); }
           break;
-        case 'signal': log('무전기에 구조 신호가 잡혔다. ' + C.SIGNAL_WINDOW + '초 안에 응답하면 물자나 생산 ' + C.BUFF_MULT + '배를 얻는다.'); sfx('signal'); break;
-        case 'signal-missed': log('구조 신호가 끊겼다.'); break;
-        case 'sweep': log('수색조가 동네 하나를 다 뒤졌다. 물자 ' + fmt(ev.bonus) + ' 확보.', 'good'); break;
-        case 'buff-end': log('지원 물자가 바닥났다. 생산이 평소대로 돌아왔다.'); break;
         case 'goal':
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
           toast('목표 달성 · ' + ev.text); sfx('buy');
@@ -5869,13 +6109,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
         case 'surge': if (tab === 'z2' && pane === 'play') sfx('defended'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
-          if (ev.long) { log(ev.name + '이 돌아왔다. 화물 ' + fmt(ev.gain) + '.', 'good'); toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
+          if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
           break;
-        case 'sold': if (ev.peak) log('좋은 시세(×' + ev.price.toFixed(2) + ')에 상품이 팔렸다. 물자 ' + fmt(ev.gain) + '.', 'good'); break;
         case 'story':
-          log('일지에 새 기록을 남겼다. ' + ev.text, 'story');
-          Story.push(ev.zone + '구역 ' + ev.zoneName + ' · 생존 일지', ev.text);
+          log('일지에 새 글을 적었다. 〈' + ev.title + '〉', 'story');
+          journalTab = ev.zone;                                 // 일지를 열면 방금 적힌 장이 보인다
+          if (prefs.storyPop !== 'off') Story.push(ev.zone + '구역 ' + ev.zoneName + ' · 생존 일지', ev.text, ev.title);
+          else notice('일지에 새 글이 적혔어요. 기록 > 일지에서 읽을 수 있어요.');
           break;
       }
     });
@@ -5912,6 +6153,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
   }
 
   function flash() {
+    if (prefs.shake === 'off') return;                 // 설정에서 화면 흔들림을 껐다
     var p = $('night');
     p.classList.remove('shake');
     void p.offsetWidth; // 애니메이션을 다시 시작시키기 위한 리플로
@@ -5995,13 +6237,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
     $('signal').addEventListener('click', function () {
       var r = C.answerSignal(state);
       if (!r.ok) return; // 누르는 순간 신호가 끊긴 경우
-      log('신호에 응답했다. ' + (r.kind === 'supplies' ? '보급품을 받았다. 물자 ' + fmt(r.gain) + '.' : r.seconds + '초 동안 생산이 ' + r.mult + '배가 된다.'), 'good');
       sfx('buy'); render();
     });
     $('fortify').addEventListener('click', function () {
       var r = C.fortify(state);
       if (!r.ok) return; // 그사이 물자가 모자라졌거나 이미 충분해진 경우
-      log('방벽을 보강했다. 물자 ' + fmt(r.cost) + ' 을 썼다.');
       sfx('buy'); render();
     });
     $('open-zone').addEventListener('click', function () {
@@ -6032,7 +6272,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       b.addEventListener('click', function () {
         var r = C.adoptPet(state, kind);
         if (!r.ok) return;
-        if (r.dup) { log('이미 함께 있는 ' + r.breed.name + '(이)가 또 따라왔다. 항체 샘플 ' + fmt(r.refund) + ' 을 돌려받았다.'); toast(r.rarity.name + ' · ' + r.breed.name + ' · 이미 함께 있어요'); sfx('buy'); }
+        if (r.dup) { toast(r.rarity.name + ' · ' + r.breed.name + ' · 이미 함께 있어요'); sfx('buy'); }
         else {
           log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + '(이)가 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
           toast((r.rarity.id === 'rare' ? '희귀! ' : '') + r.rarity.name + ' · ' + r.breed.name + ' · 새 친구예요');
@@ -6057,7 +6297,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
     // 3구역: 전력 투입
     $('surge').addEventListener('click', function () {
       if (!C.surge(state).ok) return;
-      log('공단에 전력을 몰아넣었다. ' + C.SURGE_SECONDS + '초 동안 라인이 ' + C.SURGE_MULT + '배로 돈다.', 'good');
       sfx('defended'); render();
     });
     // 3구역: 병목인 기계를 올린다. 수량 모드를 따른다(×1 한 번, ×10 열 번, 최대는 물자가 되는 만큼).
@@ -6070,7 +6309,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
       var r = C.sellGoods(state);
       if (!r.ok) return;
       popNumber('+' + fmt(r.gain));
-      if (r.peak) log('고점(×' + r.price.toFixed(2) + ')에 팔았다. 물자 ' + fmt(r.gain) + '.', 'good');
       if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
       var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
       sfx(r.peak ? 'defended' : 'buy'); render();
@@ -6162,6 +6400,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "0.7.10";
     });
 
     // 저장 코드: 브라우저 저장이 사라져도 옮겨 갈 수 있는 백업 수단.
+    wirePrefs();
     wireFeedback();
     $('export').addEventListener('click', function () {
       var code;

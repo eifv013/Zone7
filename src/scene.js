@@ -325,6 +325,7 @@
     if (ev === 'delivered') burst(model, model.home - 4, GROUND - 10, '#f0b400', 6, rng);
     stepZombies(model, view, dt, rng);
     stepCombat(model, view, dt, rng);
+    if (view.still) model.shake = 0;      // 설정에서 화면 흔들림을 껐다
     model.flash = Math.max(0, model.flash - dt);
     model.shake = Math.max(0, model.shake - dt);
     for (var i = model.particles.length - 1; i >= 0; i--) {
