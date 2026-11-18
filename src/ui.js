@@ -1893,7 +1893,7 @@
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
       $('auto-ev').checked = C.autoEvents(state, aeZone);
-      setText($('auto-ev-text'), ['', '단골 주문 자동', '의뢰·고장·트럭 자동', '표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + (aeZone < state.zone ? ' · 전부 받음' : ' · 절반만 받음'));
+      setText($('auto-ev-text'), ['', '단골 주문 자동', '의뢰·고장·트럭 자동', '표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
     }
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-now').hidden = tab !== 'wall';
