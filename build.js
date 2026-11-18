@@ -34,8 +34,11 @@ try {
     if (bytes.length > 4 * 1024 * 1024) throw new Error(`음원 ${f} 이 4MB 를 넘습니다(${(bytes.length / 1048576).toFixed(1)}MB). 길이를 줄이거나 낮은 음질로 다시 뽑아 주세요.`);
     bgm[name] = `data:${bgmTypes[ext]};base64,${bytes.toString('base64')}`; bgmBytes += bytes.length;
   }
+  // 음원을 만든 사람: assets/bgm/CREDIT.txt 의 첫 줄(설정에 보인다)
+  const creditFile = path.join(bgmDir, 'CREDIT.txt');
+  const bgmCredit = Object.keys(bgm).length && fs.existsSync(creditFile) ? fs.readFileSync(creditFile, 'utf8').split('\n')[0].trim().slice(0, 60) : '';
   if (Object.keys(bgm).length) console.log(`음원 ${Object.keys(bgm).join(', ')} (${(bgmBytes / 1024).toFixed(0)} KB)`);
-  const html = tpl.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)};`)
+  const html = tpl.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)}; window.ZONE7_BGM_CREDIT = ${JSON.stringify(bgmCredit)};`)
     .replace('/*__BOOT__*/', () => read('boot.js'))
     .replace('/*__NOTES__*/', () => read('notes.js'))
     .replace('/*__FEEDBACK__*/', () => read('feedback.js'))

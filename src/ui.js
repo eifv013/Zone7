@@ -3450,6 +3450,7 @@
       var files = 0;
       try { if (window.Sound && window.ZONE7_BGM) files = window.Sound.setTracks(window.ZONE7_BGM); } catch (e) { files = 0; }
       var saved = recall('zone7-bgm');
+      if (files > 0 && window.ZONE7_BGM_CREDIT) { $('bgm-credit-row').hidden = false; setText($('bgm-credit'), String(window.ZONE7_BGM_CREDIT)); }      // 음원을 만든 사람
       var btn = $('bgm-toggle'), bar = $('bgm-volume'), label = $('bgm-volume-num'), on = saved === 'on' || (saved !== 'off' && files > 0);
       function show() { btn.setAttribute('aria-pressed', String(on)); setText(btn, on ? '음악 켬' : '음악 끔'); }
       function vol(v, keep) {

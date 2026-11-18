@@ -24,9 +24,11 @@ fi
 VERSION="$(node -p "require('./package.json').version")"
 [ "$(node -p "require('./dist/pwa/version.json').version")" = "$VERSION" ] || { echo "빌드 버전이 맞지 않는다." >&2; exit 1; }
 
+# 음원 파일(assets/bgm 의 소리 파일)은 저장소에 올리지 않는다: 무료 음원의 조건은 대개 '작품에 넣어 쓰는 것은 되지만 파일만 따로 나눠 주는 것은 안 된다'이다.
+# 게임 파일 안에 끼워 넣은 것만 나간다. 그래서 음원은 이 작업 폴더에만 있고, 새로 받은 저장소에서 빌드하면 음악 없이 만들어진다.
 # .git 만 남기고 비운 뒤 다시 채운다(지운 파일이 저장소에 남지 않게).
 find "$REPO" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-tar -C "$SRC" --exclude=./dist --exclude=./node_modules --exclude='__pycache__' --exclude=./android/.gradle --exclude=./android/app/build -cf - . | tar -C "$REPO" -xf -
+tar -C "$SRC" --exclude=./dist --exclude=./node_modules --exclude='__pycache__' --exclude=./android/.gradle --exclude=./android/app/build --exclude='./assets/bgm/*.ogg' --exclude='./assets/bgm/*.mp3' --exclude='./assets/bgm/*.m4a' --exclude='./assets/bgm/*.wav' -cf - . | tar -C "$REPO" -xf -
 mkdir -p "$REPO/docs" && cp -r "$SRC/dist/pwa/." "$REPO/docs/"
 touch "$REPO/docs/.nojekyll"     # GitHub Pages 가 파일을 가공하지 않고 그대로 내보내게 한다
 
