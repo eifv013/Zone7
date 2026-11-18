@@ -223,7 +223,7 @@ def run_case(browser, name, size, state, mode):
         if page.locator('#help .note').count() != 1: problems.append('도움말은 한 번에 한 항목만 보여야 한다')
         if not page.locator('#help .note li').first.is_visible(): problems.append('도움말 내용이 보이지 않는다')
         tap('[data-rtab-set=stats]')
-        if page.locator('#stats-zones li').count() < 1 or page.locator('#stats-grid dd').count() != 12: problems.append('통계에 지난 구역이 없다')
+        if page.locator('#stats-zones li').count() < 1 or page.locator('#stats-grid dd').count() != 16: problems.append('통계에 지난 구역이 없다')
         tap('[data-rtab-set=save]')
         page.click('[data-pref=notation][data-value=sci]'); page.wait_for_timeout(300)
         big = any(c in text('supplies') for c in '만억조경해e')

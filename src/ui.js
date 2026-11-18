@@ -1934,7 +1934,8 @@
   var STAT_HERO = [['best', '가장 멀리 간 구역'], ['antibody', '얻은 항체 샘플'], ['total', '진행 시간']];
   var STAT_GROUPS = [
     ['이번 회차', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '방어 성공한 밤']]],
-    ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비운 시간'], ['days', '시작한 지']]]
+    ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비운 시간'], ['days', '시작한 지']]],
+    ['이야기의 끝', [['ended', '끝을 본 횟수'], ['bestDanger', '가장 높은 위험 단계'], ['fastest', '가장 빨리 끝낸 회차'], ['rescued', '구조한 생존자']]]      // 1.11.0
   ];
   function buildStats() {
     var root = $('stats-grid');
@@ -1960,6 +1961,9 @@
     setText(c.best, (st.bestZone + 1) + '구역');
     setText(c.antibody, fmt(st.antibodyTotal) + '개'); setText(c.runEarned, fmt(st.runEarned)); setText(c.lifetime, fmt(st.lifetimeEarned));
     setText(c.waves, st.wavesCleared + '밤'); setText(c.clicks, fmt(st.clicks) + '번');
+    var ms = mainState();
+    setText(c.ended, (ms.ended || 0) + '번'); setText(c.bestDanger, (ms.ended || 0) >= 1 ? '위험 ' + (ms.bestDanger || 0) : '-');
+    setText(c.fastest, ms.bests && ms.bests.time > 0 ? d(ms.bests.time) : '-'); setText(c.rescued, fmt(Math.floor(ms.rescued || 0)) + '명 · 생산 +' + Math.round((C.rescueMult(ms) - 1) * 100) + '%');
     // 지난 구역: 이번 회차에 지나온 구역마다 머문 시간(지금 있는 구역은 계속 늘어난다)
     var key = st.zones.map(function (r) { return r.zone + ':' + (r.seconds === null ? '-' : Math.floor(r.seconds)); }).join('|');
     if (key === statsShown) return;
@@ -2164,6 +2168,8 @@
     setText($('day'), ('00' + state.day).slice(-3));
     var label = C.zoneLabel(state);
     setText($('base-no'), label);
+    var dTag = $('danger-tag'), dNow = C.dangerOf(state);      // 위험 단계로 하는 회차는 그림 오른쪽 위에 붉은 딱지로 알린다(제목 줄은 좁아서 잘렸다)
+    dTag.hidden = !(dNow > 0); if (dNow > 0) setText(dTag, '위험 ' + dNow);
     setText($('zone-name'), label);
     var lead = state.retreats ? '철수 ' + state.retreats + '번' : C.ZONES[state.zone].lead;      // 한 줄에 들어가게 둘 중 하나만 적는다
     setText($('zone-trait'), lead);
@@ -2246,6 +2252,15 @@
     setText($('retreat-hint'), can
       ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + (function (t) { return t + (C.hasBatchim(t) ? '을' : '를'); })(fmt(C.nextAntibodyAt(state))) + ' 넘기면 샘플 +' + fmt(gain + 1)
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차 누적 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
+    // 위험 단계(1.11.0): 끝을 본 뒤에 보인다. 다음 회차에 걸 단계를 − / + 로 고른다
+    var dMax = C.dangerMax(state), dRow = $('danger-row');
+    dRow.hidden = !(dMax > 0);
+    if (dMax > 0) {
+      var dn = Math.min(state.dangerNext || 0, dMax);
+      setText($('danger-val'), '위험 ' + dn);
+      $('danger-down').disabled = dn <= 0; $('danger-up').disabled = dn >= dMax;
+      setText($('danger-text'), dn > 0 ? '무리 ×' + C.dangerHorde(dn).toFixed(2) + ' · 문 값 ×' + fmt(C.dangerCost(dn)) + '\n철수 항체 +' + Math.round(dn * C.DANGER_ANTIBODY * 100) + '% · 끝을 보면 뽑기권 +' + dn * C.DANGER_TICKETS : '다음 회차의 위험 단계를 올리면 더 어렵고, 보상이 커요.\n처음 돌파한 단계마다 전체 생산이 ' + Math.round((C.DANGER_PROD - 1) * 100) + '% 늘어요.');
+    }
     setText($('retreat-sub'), can ? '물자를 더 모으면 샘플이 늘어요.'
       : state.pendingPerks.length ? '' : '물자를 다 모으면 철수할 수 있어요.');
     // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
@@ -2627,7 +2642,8 @@
       setText($('tower-mult'), '모든 구역의 생산 ×' + C.towerMult(state).toFixed(2));
       setText($('serum'), stage >= sMax ? '혈청을 완성했다' : '혈청 ' + (stage + 1) + '단계 · 물자 ' + fmt(sCost));
       $('serum').disabled = stage >= sMax || !(sCost <= state.supplies);
-      setText($('serum-note'), '혈청 ' + stage + ' / ' + sMax + '단계');
+      var rNext = C.rescueNext(state);
+      setText($('serum-note'), '혈청 ' + stage + ' / ' + sMax + '단계' + ((state.ended || 0) >= 1 ? '\n구조한 생존자 누적 ' + fmt(Math.floor(state.rescued)) + '명 · 생산 +' + Math.round((C.rescueMult(state) - 1) * 100) + '%' + (rNext ? ' · 다음 ' + fmt(rNext) + '명' : ' · 최대') : ''));
       var aq = qtyFor(C.maxAntennas(state), C.COUNT_MAX - state.antennas), acost = C.antennaCost(state, aq);
       setText(rows.antenna.count, state.antennas + ' / ' + C.COUNT_MAX);
       setMile(rows.antenna, state.antennas, aq, acost <= state.supplies);
@@ -2927,6 +2943,11 @@
         case 'ending':
           pendingEnding = ev;      // 일지 창과 특전 창이 닫힌 뒤에 끝 화면을 띄운다(render 가 본다)
           log('혈청을 완성했다. 7구역에 닿았다.', 'story');
+          log('생존자 ' + fmt(ev.saved) + '명을 구조했다. 지금까지 ' + fmt(Math.floor(ev.rescued)) + '명.' + (ev.tierUp ? ' 거점이 더 북적인다. 전체 생산이 늘었다.' : ''), 'good');
+          if (ev.higher) { log('위험 ' + ev.danger + '단계에서 끝을 봤다. 위험 ' + Math.min(C.DANGER_MAX, ev.danger + 1) + '단계를 고를 수 있다. 전체 생산이 영구히 늘었다.', 'good'); toast('위험 ' + ev.danger + '단계 돌파'); }
+          else if (ev.fastestHere && ev.count > 1) { log('이 단계의 가장 빠른 기록이다. ' + C.formatDuration(ev.runSeconds) + '.', 'good'); toast('새 기록 · ' + C.formatDuration(ev.runSeconds)); }
+          if (ev.count === 1) log('이제 철수할 때 다음 회차의 위험 단계를 고를 수 있다.', 'good');
+          if (ev.dangerTickets) log('위험 단계 보상으로 뽑기권 ' + ev.dangerTickets + '장을 받았다.', 'good');
           break;
         case 'salvage':
           toast('4구역 표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); sfx('signal');
@@ -3137,6 +3158,8 @@
     $('route').addEventListener('click', openMap);
     $('zmap-close').addEventListener('click', function () { $('zmap').hidden = true; });
     $('hub-close').addEventListener('click', function () { $('hub').hidden = true; });
+    $('danger-down').addEventListener('click', function () { if (C.setDangerNext(state, (state.dangerNext || 0) - 1).ok) { sfx('tab'); Store.save(); render(); } });
+    $('danger-up').addEventListener('click', function () { if (C.setDangerNext(state, (state.dangerNext || 0) + 1).ok) { sfx('tab'); Store.save(); render(); } });
     Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (b) { b.addEventListener('click', function () { if (b.disabled) return; setHubTab(b.dataset.hub); if (b.dataset.hub === 'exped') renderStages(); }); });
     $('gacha-pull').addEventListener('click', doPull);
     $('ticket-buy').addEventListener('click', function () { if (C.buyTicket(state).ok) { sfx('buy'); Store.save(); renderShop(); } });

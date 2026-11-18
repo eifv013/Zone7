@@ -3049,3 +3049,34 @@ test('1.10.4 걷는 그림: 두 발이 양옆으로 벌어지지 않는다(다�
   assert.notDeepEqual(S.laraRows({}, 'walk', 0), S.laraRows({}, 'walk', 1), '두 걸음은 서로 다르다');
   ['walker', 'hair'].forEach(k => { const f = S.zombieFrames(k); assert.ok(feet(f[1]) <= feet(f[0]) + 1, k); });
 });
+
+test('1.11.0 위험 단계: 끝을 본 뒤에 고르고, 무리와 문 값이 오르고, 돌파하면 다음 단계와 영구 생산이 열린다', () => {
+  const s = C.createState(0);
+  assert.equal(C.dangerMax(s), 0); assert.equal(C.setDangerNext(s, 1).reason, 'locked'); assert.ok(C.setDangerNext(s, 0).ok);
+  s.ended = 1; assert.equal(C.dangerMax(s), 1); assert.ok(C.setDangerNext(s, 1).ok); assert.equal(C.setDangerNext(s, 2).reason, 'locked'); assert.equal(C.setDangerNext(s, -1).reason, 'unknown');
+  // 철수하면 그 단계로 시작한다
+  s.runEarned = 1e30; const n = C.retreat(s, 0, () => 0.5).state;
+  assert.equal(n.danger, 1); assert.equal(n.dangerNext, 1, '다음에도 같은 단계로 이어진다');
+  const base = C.createState(0);
+  assert.ok(Math.abs(C.nightStrength(n) / C.nightStrength(base) - C.DANGER_HORDE) < 0.2);
+  assert.ok(Math.abs(C.nextZone(n).cost / C.nextZone(base).cost - C.DANGER_COST) < 1e-6);
+  n.zone = 6; base.zone = 6; assert.ok(Math.abs(C.serumCost(n) / C.serumCost(base) - C.DANGER_COST) < 1e-6);
+  n.runEarned = base.runEarned = 1e30; assert.ok(C.antibodiesOnRetreat(n) > C.antibodiesOnRetreat(base), '철수 항체가 는다');
+  // 위험 1에서 끝을 보면: 다음 단계가 열리고, 전체 생산이 영구히 늘고, 뽑기권을 더 받고, 구조한 생존자가 쌓인다
+  const g0 = C.globalMult(n), t0 = n.tickets; n.survivors = 6000; n.runSeconds = 5000;
+  C.goals(n, 6).forEach(g => { n.goalsDone[g.id] = true; });
+  const ev = C.tick(n, 0.1, () => 0.5).find(e => e.type === 'ending');
+  assert.ok(ev && ev.higher && ev.danger === 1); assert.equal(n.bestDanger, 1); assert.equal(C.dangerMax(n), 2);
+  assert.ok(n.tickets >= t0 + 3 + C.DANGER_TICKETS);
+  assert.ok(ev.saved >= 12000, '위험 단계에서는 구조한 수가 배로 쌓인다'); assert.equal(n.rescued, ev.saved); assert.equal(C.rescueTier(n), 1);
+  assert.ok(C.globalMult(n) >= g0 * C.DANGER_PROD * (1 + C.RESCUE_BONUS) * 0.99);
+  assert.ok(n.bests.time > 0 && n.bests.byDanger[1] === n.bests.time); assert.equal(n.endLog.length, 1);
+  // 철수와 저장을 거쳐도 남는다
+  const back = C.deserialize(C.serialize(n), 0);
+  assert.deepEqual([back.bestDanger, back.rescued, back.bests.time, back.endLog.length, back.danger], [1, n.rescued, n.bests.time, 1, 1]);
+  n.runEarned = 1e40; const r2 = C.retreat(n, 0, () => 0.5).state; assert.deepEqual([r2.bestDanger, r2.rescued, r2.danger], [1, n.rescued, 1]);
+  // 단계를 0으로 내리면 평소대로
+  C.setDangerNext(n, 0); assert.equal(C.retreat(n, 0, () => 0.5).state.danger, 0);
+  // 구조 단계는 문턱마다 오르고 상한이 있다
+  const q = C.createState(0); q.rescued = 1e30; assert.equal(C.rescueTier(q), C.RESCUE_TIERS.length); assert.equal(C.rescueNext(q), 0);
+});
