@@ -488,6 +488,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .panes button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 .ach-card.hidden-ach { opacity: .55; }
 #zone-tabs button.avail::after { width: 8px; height: 8px; border-radius: 50%; background: var(--blood); }      /* 구역 탭의 점은 아래 메뉴의 점과 같은 빨간 동그라미 */
+#zone-tabs button.upready::after { content: ''; position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; background: var(--hazard); }
 .panes button.avail::after { content: ''; position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; background: var(--hazard); }
 .zmap-open { margin-right: auto; margin-left: 10px; padding: 3px 9px; background: transparent; color: var(--ink); border: 1px solid var(--ink); font: 600 12px/1.5 var(--font-body); cursor: pointer; }
 /* 1구역 수색 지도: 5×4 칸. 안 뒤진 칸은 어두운 건물, 뒤진 칸은 무엇이 나왔는지 보여 준다. */
@@ -1046,7 +1047,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.5.1</div>
+  <div class="boot-ver">7구역 알파 1.5.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1577,7 +1578,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.5.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.5.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1713,7 +1714,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.2";
 </script>
 <script>
 /*
@@ -1732,6 +1733,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.5.2', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '연속 방어와 변이체의 특전',
+      items: [
+        '연속 방어: 밤을 연달아 막을수록 전리품이 커져요. 한 번 막을 때마다 +10%, 10연속부터 2배예요. 한 번이라도 못 막으면 처음으로 돌아가요.',
+        '변이체(10번째 밤마다)를 막으면 특전 하나를 골라요. 한 회차에 3번까지예요. 물자는 5배에서 2배로 줄였고, 간식 5개는 그대로예요.',
+        '상황 화면의 밤 칸에 "연속 방어 N번 · 전리품 ×배수"가 보여요.',
+        '전리품이 커진 만큼 3~7구역의 문 값과 혈청 값을 올렸어요(3구역 2조, 4구역 1,000경, 5구역 1.5자, 6구역 5,000자, 7구역 500양).',
+        '살 수 있는 개조가 있는 구역은 탭에 점이 찍혀요. 지나온 구역도 마찬가지예요. 건물은 지금 사면 2배 문턱을 넘길 수 있을 때만 점이 찍혀요.'
+      ] },
     { ver: '알파 1.5.1', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '더 자주, 그리고 지나온 구역은 자동으로',
       items: [
         '4·6·7구역의 사건이 더 자주 와요(50~90초마다). 한 번에 받는 양은 30초분이에요. 5구역 밤샘 연구는 15초, 쉬는 시간 1분이에요.',
@@ -2678,7 +2687,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
   var HORDE_GROWTH = 1.13;         // 밤마다 무리가 커지는 배수
   var BOSS_EVERY = 10;             // 이 밤마다 변이체가 온다
   var BOSS_STRENGTH = 2.5;         // 변이체가 이끄는 무리의 규모 배수
-  var BOSS_REWARD = 5;             // 변이체를 막았을 때의 전리품 배수
+  var BOSS_REWARD = 2;             // 변이체를 막았을 때의 전리품 배수(1.5.2: 5 → 2. 대신 특전 하나를 고른다)
   var NIGHT_REWARD_SECONDS = 20;   // 밤을 막으면 생산 이만큼의 초치 물자를 얻는다
   var WAVE_BONUS = 0.02;           // 이번 판에서 막아낸 밤 한 번마다 전체 생산 +2%
   var BREACH_LOSS = 0.15;          // 뚫릴 때 잃는 물자의 비율
@@ -2892,7 +2901,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
           "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
           "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
           "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
-    { no: 3, name: '공단', kind: 'line', cost: 1e12, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
+    { no: 3, name: '공단', kind: 'line', cost: 2e12, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
       story: [
         { title: "멈춘 자리", text: [
           "3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 밖에서 잠근 게 아니다. 안에 있던 사람들이 잠그고, 다른 길로 나간 것이다.",
@@ -2913,7 +2922,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
           "반장은 철망을 잡고 흔들지 않았다. 그냥 서서 강 쪽을 보고 있었다. 내가 이름을 불렀다. 고개가 아주 천천히 돌아왔다. 입이 한 번 움직였다. 소리는 없었지만 나는 그 모양을 안다. {hero}. 그리고 내 노란 우비를 한참 봤다. 나는 그 눈이 나를 알아봤다고 지금도 생각한다.",
           "철망 사이로 반장의 손이 나와 내 왼쪽 소매를 잡았다. 망을 보던 사람들이 소리를 질렀다. 놈들은 산 사람을 잡으면 문다. 그런데 반장은 물지 않았다. 소매에 코를 대고 한참 있다가, 놓았다. 아무도 그 까닭을 묻지 않았고 나도 말하지 않았다.",
           "새벽에 무리가 움직이자 반장도 따라갔다. 선로 쪽으로. 열일곱 명 중에 몇이나 건넜을까. 나는 쪽지 뒷면의 이름 하나에 줄을 그었다. 선로를 따라가면 환승역이다."] }] },
-    { no: 4, name: '환승역', kind: 'rail', cost: 5e18, lead: '끊긴 노선을 잇고 열차를 보낸다',
+    { no: 4, name: '환승역', kind: 'rail', cost: 1e19, lead: '끊긴 노선을 잇고 열차를 보낸다',
       story: [
         { title: "행선지", text: [
           "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
@@ -2935,7 +2944,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
           "아저씨가 그건 신호라고 했다. 누가 거기서 손으로 켰다 껐다 하는 거라고. 녹음이 아니라 사람이라고.",
           "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. {student:이} 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
           "아무도 대답하지 못했다. 나는 방송의 목소리를 한 번 더 떠올렸다. 숨 쉴 틈 없이 말하는 여자. 엄마는 급할 때 그렇게 말한다. 그 생각은 입 밖에 내지 않았다. 다음 급행은 병원 앞까지 간다."] }] },
-    { no: 5, name: '대학 병원', kind: 'lab', cost: 5e23, lead: '남은 연구를 이어 가며 과제를 고른다',
+    { no: 5, name: '대학 병원', kind: 'lab', cost: 1.5e24, lead: '남은 연구를 이어 가며 과제를 고른다',
       story: [
         { title: "감염내과, 7층", text: [
           "5구역. 응급실 문의 쇠사슬을 끊었다. 복도에 비상등이 깜박인다. 안내판의 화살표가 전부 한 곳을 가리킨다. 누가 매직으로 덧그려 놓았다. 감염내과, 7층.",
@@ -2955,7 +2964,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
           "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
-    { no: 6, name: '강변 검문소', kind: 'guard', cost: 1e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
+    { no: 6, name: '강변 검문소', kind: 'guard', cost: 5e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
@@ -2973,7 +2982,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
           "새벽에 건너편에서 쇠 긁는 소리가 났다. 차단기가 올라가는 소리였다. 저쪽 차단기다. 절반쯤 올라가다 멈췄다.",
           "탐조등이 다리 한가운데를 비췄다. 버려진 버스 한 대가 가로로 서 있다. 그 지붕 위에 밧줄 뭉치가 놓여 있었다. 어제는 없던 것이다.",
           "아저씨가 말했다. “저쪽에서도 길을 내고 있는 거야. 우리가 여기서 버티는 걸 보고.” 나는 냉장 상자를 고쳐 멨다. 강은 넓고, 다리는 하나뿐이다."] }] },
-    { no: 7, name: '송신탑', kind: 'tower', cost: 1e30, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
+    { no: 7, name: '송신탑', kind: 'tower', cost: 5e30, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
       story: [
         { title: "밧줄", text: [
           "7구역. 버스 지붕의 밧줄을 잡고 건넜다. 밧줄은 저쪽에서 당겨 주었다. 당긴 손은 작았다. 여럿이었다.",
@@ -3203,7 +3212,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
       // 밤
-      day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false, siegeNights: 0,
+      day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false, siegeNights: 0, defStreak: 0, perkOwed: 0, bossPerks: 0, perkFrom: 'goal',      // defStreak 연속으로 막은 밤, perkOwed 변이체를 막고 아직 못 고른 특전
       // 구조 신호
       signalIn: SIGNAL_FIRST, signalLeft: 0, signalsAnswered: 0, buff: null,
       // 특전(이번 판)
@@ -3353,6 +3362,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
     s.focusLeft = s.zone >= 4 ? clamp(safeNum(raw.focusLeft, 0), 0, FOCUS_SECONDS) : 0; s.focusCool = s.zone >= 4 ? clamp(safeNum(raw.focusCool, 0), 0, FOCUS_COOL) : 0;
     var rp = raw.push && typeof raw.push === 'object' ? raw.push : {};
     PUSHES.forEach(function (d) { var q = rp[d.id] && typeof rp[d.id] === 'object' ? rp[d.id] : {}, openZ = s.zone >= d.zone; s.push[d.id] = { left: openZ ? clamp(safeNum(q.left, 0), 0, PUSH_SECONDS) : 0, cool: openZ ? clamp(safeNum(q.cool, 0), 0, PUSH_COOL) : 0 }; });
+    s.defStreak = clamp(safeCount(raw.defStreak), 0, 1e6); s.perkOwed = clamp(safeCount(raw.perkOwed), 0, PERK_OWED_MAX); s.bossPerks = clamp(safeCount(raw.bossPerks), 0, BOSS_PERKS_MAX); s.perkFrom = raw.perkFrom === 'boss' ? 'boss' : 'goal';
     var gp = raw.goalPick && typeof raw.goalPick === 'object' ? raw.goalPick : {};
     GOALS_ALT.forEach(function (alt, zi) { var p = gp[zi]; if (Array.isArray(p) && alt.some(function (g) { return !!g; })) s.goalPick[zi] = [0, 1, 2].map(function (k) { return p[k] && alt[k] ? 1 : 0; }); });
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
@@ -3453,7 +3463,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
    *   전체 생산 배수 = 1 + TOWER_GAIN × log10(1 + 생존자).  10만 명이면 3.5배.
    *   혈청: 물자를 들여 세 단계로 완성한다(SERUM_COSTS). 마지막 단계를 끝내면 이야기가 끝난다(ended).
    */
-  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [1e30, 4e30, 1.5e31];
+  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [5e30, 2e31, 7.5e31];
   function towerMult(state) { return zoneOpen(state, 6) ? 1 + TOWER_GAIN * Math.log(1 + Math.max(0, state.survivors || 0)) / Math.LN10 : 1; }
   function globalMult(state) {
     return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state) * towerMult(state);
@@ -4734,6 +4744,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
   function goalsComplete(state, index) { return activeGoals(state, index).every(function (g) { return !!state.goalsDone[g.id]; }); }
   /** 새로 채운 목표를 달성 처리하고 특전 선택을 건다. 한 번에 하나씩(고르기 전에는 다음 것을 걸지 않는다). */
   function checkGoals(state, rng, events) {
+    // 변이체를 막고 받을 특전이 밀려 있으면, 고를 것이 없을 때 하나 건다
+    if (state.perkOwed > 0 && !state.pendingPerks.length) { state.perkOwed--; state.pendingPerks = drawPerks(rng, state); state.perkFrom = 'boss'; events.push({ type: 'boss-perk' }); }
     for (var z = 0; z <= state.zone; z++) {
       var list = activeGoals(state, z);
       for (var i = 0; i < list.length; i++) {
@@ -4743,7 +4755,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
         try { v = g.value(state); } catch (e) { v = 0; }
         if (!(v >= g.need)) continue;
         state.goalsDone[g.id] = true;
-        state.pendingPerks = drawPerks(rng, state);
+        state.pendingPerks = drawPerks(rng, state); state.perkFrom = 'goal';
         events.push({ type: 'goal', zone: z, id: g.id, text: g.text });
       }
     }
@@ -4853,9 +4865,19 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
   var SIEGE_FADE = 0.05, SIEGE_FLOOR = 0.5;      // 천천히, 절반까지만: 철수로 내몰리는 압박은 남기되 끝없이 갇히지는 않게
   function siegeFactor(state) { return Math.max(SIEGE_FLOOR, Math.pow(1 - SIEGE_FADE, state.siegeNights || 0)); }
   function nightStrength(state) { return Math.ceil(strengthAt(state, currentWave(state)) * siegeFactor(state)); }
+  /*
+   * 연속 방어(1.5.2): 밤을 연달아 막을수록 전리품이 커진다. 한 번이라도 못 막으면 처음으로 돌아간다.
+   *   배수 = 1 + DEF_STREAK_STEP × 연속으로 막은 밤, DEF_STREAK_MAX 까지. (첫 밤 ×1, 5연속 뒤 ×1.5, 10연속 뒤 ×2)
+   *   방벽을 미리 올려 둘 이유와, 뚫릴 것 같을 때 버틸지 철수할지 고민할 이유를 만든다.
+   * 변이체(BOSS_EVERY 번째 밤): 물자는 BOSS_REWARD 배, 간식 TREAT_BOSS 개, 그리고 특전 하나를 고른다.
+   *   특전은 이번 회차에만 남으므로 철수로 얻는 것(항체)과 겹치지 않는다. 고를 것이 이미 떠 있으면 perkOwed 에 적어 두었다가 다음에 건다.
+   */
+  var BOSS_PERKS_MAX = 3;      // 한 회차에 변이체로 얻는 특전의 수. 끝없이 주면 회차가 통째로 빨라진다(재 보니 엔딩이 13시간에서 5시간이 됐다)
+  var DEF_STREAK_STEP = 0.1, DEF_STREAK_MAX = 2, PERK_OWED_MAX = 2;      // 2구역 연속 호가의 STREAK_MAX 와 다른 값이다(이름을 따로 쓴다)
+  function defStreakMult(state) { return Math.min(DEF_STREAK_MAX, 1 + DEF_STREAK_STEP * Math.max(0, state.defStreak || 0)); }
   function nightReward(state) {
     var w = currentWave(state);
-    return Math.max(25 * w, productionPerSec(state) * NIGHT_REWARD_SECONDS) * mods(state).loot * (isBossWave(w) ? BOSS_REWARD : 1);
+    return Math.max(25 * w, productionPerSec(state) * NIGHT_REWARD_SECONDS) * mods(state).loot * (isBossWave(w) ? BOSS_REWARD : 1) * defStreakMult(state);
   }
   /** 오늘 밤을 막는 데 가장 싼 보강 { cost, picks: [{ id, qty }], enough }. 이미 막을 수 있으면 cost 0. */
   function defensePlan(state) {
@@ -4913,6 +4935,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
       var reward = nightReward(state);
       earn(state, reward);
       state.wavesCleared++;
+      state.defStreak = Math.min(1e6, (state.defStreak || 0) + 1);
+      if (boss && (state.bossPerks || 0) < BOSS_PERKS_MAX) { state.bossPerks = (state.bossPerks || 0) + 1; state.perkOwed = Math.min(PERK_OWED_MAX, (state.perkOwed || 0) + 1); }      // 변이체를 막으면 특전 하나(한 회차에 BOSS_PERKS_MAX 번까지)
       var passer = null;
       if (zoneOpen(state, 5) && defense >= strength * SAFE_NIGHT) { state.safeNights++; passer = passBridge(state, rng); }      // 6구역: 넉넉하게 막은 밤(목표)에는 가끔 누가 다리를 건넌다
       state.siege = false; state.siegeNights = 0;
@@ -4920,6 +4944,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
       state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
       return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat, passer: passer };
     }
+    state.defStreak = 0;      // 못 막았다: 연속 방어가 끊긴다
     if (state.siege) { state.siegeNights = Math.min(99, (state.siegeNights || 0) + 1); return      /* 버틴 밤을 센다: 다음 밤의 무리가 그만큼 흩어진다 */ { type: 'held', wave: w, strength: strength, defense: defense, boss: boss }; }
     var lost = state.supplies * BREACH_LOSS;
     state.supplies -= lost;
@@ -5414,11 +5439,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
     state.awaySeconds += counted; state.runSeconds += counted;
     var clock = state.dayClock + counted, nights = Math.floor(clock / DAY_SECONDS);
     state.dayClock = clock - nights * DAY_SECONDS;
+    var owedBefore = state.perkOwed || 0;      // 자리를 비운 동안 막은 변이체의 특전은 하나만 쳐 준다(밤이 수백 번 지나가도 특전이 쌓이지 않게)
     for (var i = 0; i < nights; i++) {
       if (defensePower(state) < nightStrength(state)) { report.held = true; state.day += nights - i; break; }
       var ev = resolveNight(state);
       report.nights++; report.nightReward += ev.reward; report.treats += ev.treats || 0;
     }
+    state.perkOwed = Math.min(state.perkOwed || 0, owedBefore + 1);
     return report;
   }
 
@@ -5532,7 +5559,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, rebalancePlan: rebalancePlan, rebalanceLine: rebalanceLine, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, rebalancePlan: rebalancePlan, rebalanceLine: rebalanceLine, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,
@@ -5641,7 +5668,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
       { id: 'night', tab: '밤', title: '밤과 방벽', items: [
         '하루의 길이는 ' + span(core.DAY_SECONDS) + ', 그 끝의 ' + span(core.BATTLE_SECONDS) + ' 동안 무리가 와서 방벽에서 싸워요. 싸우는 중에도 보강할 수 있어요.',
         '방어력이 무리 규모보다 크면 방어에 성공해요. 성공하면 물자를 얻고, 실패하면 물자를 조금 잃고 다음에 성공할 때까지 버티기만 해요.',
-        core.BOSS_EVERY + '번째 밤마다 훨씬 큰 변이체가 와요. 방어에 성공하면 전리품도 커요.',
+        core.BOSS_EVERY + '번째 밤마다 훨씬 큰 변이체가 와요. 막으면 간식과 특전 하나를 받아요. 밤을 연달아 막을수록 전리품이 커져요.',
         '가진 방어 수단 가운데 하나가 밤마다 주역으로 뽑혀 방벽 위에 올라와요. 주역마다 싸우는 모습이 달라요.',
         '무리는 밤마다 커져서 언젠가는 막을 수 없게 돼요. 그때가 철수를 생각할 때예요.' ] },
 
@@ -8792,7 +8819,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
     var box = $('perk-list');
     box.textContent = '';
     if (!state.pendingPerks.length) { $('perk').hidden = true; return; }
-    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 회차가 끝날 때까지 남아요.');
+    setText($('perk-lead'), (state.perkFrom === 'boss' ? '변이체를 막아냈어요.' : '구역 목표를 달성했어요.') + ' 하나를 골라 주세요. 이번 회차가 끝날 때까지 남아요.');
     state.pendingPerks.forEach(function (id) {
       var def = null;
       C.PERKS.forEach(function (k) { if (k.id === id) def = k; });
@@ -8883,9 +8910,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
     $('night-boss').hidden = !boss;
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
-    setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
+    setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS + ((state.bossPerks || 0) < C.BOSS_PERKS_MAX ? ' · 특전 하나' : '') : '')
       : sieging ? '방어력이 모자라요. 방벽을 보강해 주세요.' : '방어력이 모자라요. 방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
-    setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
+    setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%' + (state.defStreak > 0 ? '\n연속 방어 ' + state.defStreak + '번 · 전리품 ×' + C.defStreakMult(state).toFixed(2).replace(/0$/, '') : ''));
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -8926,8 +8953,26 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
     return false;
   }
   /** 구역 탭에 점을 찍을 일: 채울 것이 있거나, 지금 구역에서 다음 문을 열 수 있다. */
+  /*
+   * 살 것이 있어서 구역 탭에 점을 찍을 일(1.5.2). 지나온 구역도 부른다: 자동이 대신 해 주는 것은 사건이지 구매가 아니다.
+   *   개조: 그 구역의 개조 가운데 지금 살 수 있는 것이 있다.
+   *   건물: 늘 뭔가는 살 수 있으므로 "살 수 있다"로 부르면 점이 꺼지지 않는다. 지금 사면 2배 문턱을 넘길 수 있을 때만 부른다.
+   */
+  function reach(count, canBuy, list) { var next = C.nextMilestone(count, list); return next !== null && canBuy >= next - count; }
+  function zoneBuyReady(zi) {
+    if (zi > state.zone) return false;
+    if (C.UPGRADES.some(function (u) { return u.zone === zi && C.upgradeCost(state, u.id) <= state.supplies; })) return true;
+    if (zi === 0) return C.BUILDINGS.some(function (b) { return reach(state.buildings[b.id], C.maxBuildings(state, b.id)); });
+    if (zi === 1) return reach(state.stalls, C.maxStalls(state));
+    if (zi === 2) { var lv = C.lineInfo(state).levels; return C.MACHINES.some(function (d) { return reach(lv, C.maxMachines(state, d.id), C.LINE_MILESTONES); }); }
+    if (zi === 3) return reach(state.trains, C.maxTrains(state), C.FLEET_MILESTONES);
+    if (zi === 4) return reach(state.staff, C.maxStaff(state));
+    if (zi === 5) return reach(state.posts, C.maxPosts(state));
+    if (zi === 6) return reach(state.antennas, C.maxAntennas(state));
+    return false;
+  }
   function zoneTodo(zi) {
-    if (fillReady(zi)) return true;
+    if (fillReady(zi) || zoneBuyReady(zi)) return true;
     var nz = C.nextZone(state);
     return zi === state.zone && !!nz && nz.ready && nz.enough;
   }
@@ -8940,7 +8985,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
       if (n >= 0) setText(b, id === tab ? (n + 1) + '구역' : String(n + 1));
       if (n > state.zone) b.setAttribute('data-locked', '1'); else b.removeAttribute('data-locked');
       b.hidden = n > state.zone + 1;      // 아직 먼 구역의 탭은 숨긴다: 초반에 탭이 여섯 개나 보이지 않게
-      b.classList.toggle('avail', n >= 0 && n <= state.zone && id !== tab && zoneTodo(n));      // 그 구역에 지금 할 일이 있으면 점(1.2.4)
+      b.classList.toggle('avail', n >= 0 && n <= state.zone && id !== tab && zoneTodo(n));
+      // 살 수 있는 개조가 있으면 노란 네모(1.5.2). 지나온 구역도 부른다: 자동에 맡긴 구역이라도 개조는 직접 사야 한다
+      var zUp = id !== tab && (n < 0 || n <= state.zone) && C.UPGRADES.some(function (u) { return u.zone === n && C.upgradeCost(state, u.id) <= state.supplies; });
+      b.classList.toggle('upready', zUp && !b.classList.contains('avail'));      // 그 구역에 지금 할 일이 있으면 점(1.2.4)
     });
     var open = zi >= 0 && zi <= state.zone, soon = zi >= 0 && C.ZONES[zi].kind === 'soon';
     setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳'));
@@ -9548,6 +9596,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.1";
           log(ev.id === 'rail' ? '자동 신호가 특별 화물을 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.' : ev.id === 'guard' ? '초소장이 행렬을 통과시켰다. 물자 ' + fmt(ev.gain) + ' 확보.' : '송신 기사가 무전에 응답했다. 생존자 ' + fmt(ev.people) + '명이 왔다.', 'good');
           break;
         case 'zev-gone':
+          break;
+        case 'boss-perk':
+          log('변이체를 막은 몫으로 특전 하나를 고른다.', 'good');
           break;
         case 'jam':
           toast('고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');

@@ -524,7 +524,7 @@ test('이야기: 첫 철수와 공단의 문 앞에서 일지가 열리고, 읽�
   const s = inMarket();
   C.tick(s, 0.1, half);
   C.GOALS[1].forEach(g => { s.goalsDone[g.id] = true; });
-  s.runEarned = 1e12; C.openZone(s);
+  s.runEarned = C.ZONES[2].cost; C.openZone(s);
   assert.ok(C.tick(s, 0.1, half).some(e => e.type === 'story' && e.id === 'z3-0'));
   s.pendingPerks = [];
   s.runEarned = 1e11;
@@ -2569,4 +2569,59 @@ test('3구역 기계 다시 맞추기: 레벨 합계는 그대로, 처리량이 
   for (let n = 3; n < 400; n += 7) { const t = inFactory(); t.machines = { sorter: n, press: 0, assembler: 0 }; const p = C.rebalancePlan(t); assert.equal(p.sorter + p.press + p.assembler, n); assert.ok(p.sorter >= 1 && p.press >= 1 && p.assembler >= 1, 'n=' + n); }
   const few = inFactory(); few.machines = { sorter: 2, press: 0, assembler: 0 }; assert.equal(C.rebalanceLine(few).reason, 'few');
   assert.equal(C.rebalanceLine(inMarket()).reason, 'locked');
+});
+
+test('연속 방어: 연달아 막을수록 전리품이 커지고, 못 막으면 처음으로 돌아간다', () => {
+  const s = fresh(); s.defenses.wire = 60;
+  assert.equal(C.defStreakMult(s), 1);
+  const r0 = C.nightReward(s);
+  assert.equal(C.resolveNight(s).type, 'defended'); assert.equal(s.defStreak, 1); near(C.defStreakMult(s), 1 + C.DEF_STREAK_STEP);
+  s.defStreak = 10; near(C.defStreakMult(s), 2); s.defStreak = 100; assert.equal(C.defStreakMult(s), C.DEF_STREAK_MAX);
+  s.defStreak = 10; const base = C.nightReward(s); s.defStreak = 0; near(base / C.nightReward(s), 2, '10연속 뒤에는 2배');
+  // 못 막으면 끊긴다(뚫린 밤과 버틴 밤 모두)
+  const b = fresh(); b.defStreak = 7; b.day = 400; assert.equal(C.resolveNight(b).type, 'breached'); assert.equal(b.defStreak, 0);
+  b.defStreak = 3; assert.equal(C.resolveNight(b).type, 'held'); assert.equal(b.defStreak, 0);
+  assert.equal(C.sanitizeState({ version: 2, defStreak: -3 }, 0).defStreak, 0);
+  s.runEarned = 1e30; s.pendingPerks = []; assert.equal(C.retreat(s, 1).state.defStreak, 0);
+});
+
+test('변이체를 막으면 특전 하나를 고른다. 고를 것이 이미 떠 있으면 미뤄 두었다가 건다', () => {
+  const s = fresh(); s.defenses.wire = 5000; s.wavesCleared = C.BOSS_EVERY - 1;
+  assert.ok(C.isBossWave(C.currentWave(s)));
+  const ev = C.resolveNight(s); assert.equal(ev.type, 'defended'); assert.ok(ev.boss); assert.equal(s.perkOwed, 1);
+  let got = C.tick(s, 0.1, () => 0.5);
+  assert.ok(got.some((e) => e.type === 'boss-perk')); assert.equal(s.pendingPerks.length, 3); assert.equal(s.perkFrom, 'boss'); assert.equal(s.perkOwed, 0);
+  // 이미 고를 것이 떠 있으면 미룬다
+  s.perkOwed = 1; got = C.tick(s, 0.1, () => 0.5); assert.ok(!got.some((e) => e.type === 'boss-perk')); assert.equal(s.perkOwed, 1);
+  C.choosePerk(s, s.pendingPerks[0]); got = C.tick(s, 0.1, () => 0.5); assert.ok(got.some((e) => e.type === 'boss-perk')); assert.equal(s.perkOwed, 0);
+  // 보통 밤에는 없다. 철수하면 밀린 것도 사라진다
+  const n = fresh(); n.defenses.wire = 60; C.resolveNight(n); assert.equal(n.perkOwed, 0);
+  s.perkOwed = 3; s.pendingPerks = []; s.runEarned = 1e30; assert.equal(C.retreat(s, 1).state.perkOwed, 0);
+  // 한 회차에 변이체로 얻는 특전은 정해진 수까지다
+  const m = fresh(); m.defenses.wire = 1e7; let picks = 0;
+  for (let i = 0; i < C.BOSS_EVERY * 8; i++) { C.resolveNight(m); C.tick(m, 0.1, () => 0.5).forEach((e) => { if (e.type === 'boss-perk') picks++; }); if (m.pendingPerks.length) C.choosePerk(m, m.pendingPerks[0]); }
+  assert.equal(m.bossPerks, C.BOSS_PERKS_MAX); assert.equal(picks, C.BOSS_PERKS_MAX);
+  m.runEarned = 1e30; m.pendingPerks = []; assert.equal(C.retreat(m, 1).state.bossPerks, 0);
+  assert.equal(C.BOSS_REWARD, 2);
+});
+
+test('규칙 파일에 같은 이름이 두 번 선언되지 않는다(나중 것이 앞의 것을 말없이 덮어쓴다)', () => {
+  // 1.5.2 를 만들다가 STREAK_MAX 와 streakMult 를 한 번 더 선언해서 2구역 연속 호가가 조용히 바뀐 적이 있다
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'core.js'), 'utf8');
+  const seen = {}, dup = [];
+  const note = (name) => { if (seen[name]) dup.push(name); seen[name] = true; };
+  src.split('\n').forEach((line) => {
+    let m = /^  function ([A-Za-z_$][\w$]*)\s*\(/.exec(line); if (m) note(m[1]);
+    m = /^  var (.+);/.exec(line);
+    if (m) m[1].replace(/\[[^\]]*\]|\{[^}]*\}|\([^)]*\)|'[^']*'/g, '').split(',').forEach((part) => { const n = /^\s*([A-Z][A-Z0-9_]*)\s*=/.exec(part); if (n) note(n[1]); });
+  });
+  assert.deepEqual(dup, []);
+});
+
+test('자리를 비운 동안 변이체를 여러 번 막아도 특전은 하나만 쳐 준다', () => {
+  const s = fresh(); s.defenses.wire = 1e6; s.wavesCleared = 5;
+  const r = C.applyOffline(s, 4 * 3600);
+  assert.ok(r.nights >= 30, '밤이 많이 지나갔다(' + r.nights + ')'); assert.equal(s.perkOwed, 1);
+  s.perkOwed = 2; C.applyOffline(s, 3600); assert.ok(s.perkOwed <= 2, '밀린 특전은 둘까지');
 });

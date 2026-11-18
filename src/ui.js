@@ -1679,7 +1679,7 @@
     var box = $('perk-list');
     box.textContent = '';
     if (!state.pendingPerks.length) { $('perk').hidden = true; return; }
-    setText($('perk-lead'), '구역 목표를 달성했어요. 하나를 골라 주세요. 이번 회차가 끝날 때까지 남아요.');
+    setText($('perk-lead'), (state.perkFrom === 'boss' ? '변이체를 막아냈어요.' : '구역 목표를 달성했어요.') + ' 하나를 골라 주세요. 이번 회차가 끝날 때까지 남아요.');
     state.pendingPerks.forEach(function (id) {
       var def = null;
       C.PERKS.forEach(function (k) { if (k.id === id) def = k; });
@@ -1770,9 +1770,9 @@
     $('night-boss').hidden = !boss;
     $('night').classList.toggle('boss', boss);
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
-    setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS : '')
+    setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS + ((state.bossPerks || 0) < C.BOSS_PERKS_MAX ? ' · 특전 하나' : '') : '')
       : sieging ? '방어력이 모자라요. 방벽을 보강해 주세요.' : '방어력이 모자라요. 방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
-    setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%');
+    setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%' + (state.defStreak > 0 ? '\n연속 방어 ' + state.defStreak + '번 · 전리품 ×' + C.defStreakMult(state).toFixed(2).replace(/0$/, '') : ''));
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -1813,8 +1813,26 @@
     return false;
   }
   /** 구역 탭에 점을 찍을 일: 채울 것이 있거나, 지금 구역에서 다음 문을 열 수 있다. */
+  /*
+   * 살 것이 있어서 구역 탭에 점을 찍을 일(1.5.2). 지나온 구역도 부른다: 자동이 대신 해 주는 것은 사건이지 구매가 아니다.
+   *   개조: 그 구역의 개조 가운데 지금 살 수 있는 것이 있다.
+   *   건물: 늘 뭔가는 살 수 있으므로 "살 수 있다"로 부르면 점이 꺼지지 않는다. 지금 사면 2배 문턱을 넘길 수 있을 때만 부른다.
+   */
+  function reach(count, canBuy, list) { var next = C.nextMilestone(count, list); return next !== null && canBuy >= next - count; }
+  function zoneBuyReady(zi) {
+    if (zi > state.zone) return false;
+    if (C.UPGRADES.some(function (u) { return u.zone === zi && C.upgradeCost(state, u.id) <= state.supplies; })) return true;
+    if (zi === 0) return C.BUILDINGS.some(function (b) { return reach(state.buildings[b.id], C.maxBuildings(state, b.id)); });
+    if (zi === 1) return reach(state.stalls, C.maxStalls(state));
+    if (zi === 2) { var lv = C.lineInfo(state).levels; return C.MACHINES.some(function (d) { return reach(lv, C.maxMachines(state, d.id), C.LINE_MILESTONES); }); }
+    if (zi === 3) return reach(state.trains, C.maxTrains(state), C.FLEET_MILESTONES);
+    if (zi === 4) return reach(state.staff, C.maxStaff(state));
+    if (zi === 5) return reach(state.posts, C.maxPosts(state));
+    if (zi === 6) return reach(state.antennas, C.maxAntennas(state));
+    return false;
+  }
   function zoneTodo(zi) {
-    if (fillReady(zi)) return true;
+    if (fillReady(zi) || zoneBuyReady(zi)) return true;
     var nz = C.nextZone(state);
     return zi === state.zone && !!nz && nz.ready && nz.enough;
   }
@@ -1827,7 +1845,10 @@
       if (n >= 0) setText(b, id === tab ? (n + 1) + '구역' : String(n + 1));
       if (n > state.zone) b.setAttribute('data-locked', '1'); else b.removeAttribute('data-locked');
       b.hidden = n > state.zone + 1;      // 아직 먼 구역의 탭은 숨긴다: 초반에 탭이 여섯 개나 보이지 않게
-      b.classList.toggle('avail', n >= 0 && n <= state.zone && id !== tab && zoneTodo(n));      // 그 구역에 지금 할 일이 있으면 점(1.2.4)
+      b.classList.toggle('avail', n >= 0 && n <= state.zone && id !== tab && zoneTodo(n));
+      // 살 수 있는 개조가 있으면 노란 네모(1.5.2). 지나온 구역도 부른다: 자동에 맡긴 구역이라도 개조는 직접 사야 한다
+      var zUp = id !== tab && (n < 0 || n <= state.zone) && C.UPGRADES.some(function (u) { return u.zone === n && C.upgradeCost(state, u.id) <= state.supplies; });
+      b.classList.toggle('upready', zUp && !b.classList.contains('avail'));      // 그 구역에 지금 할 일이 있으면 점(1.2.4)
     });
     var open = zi >= 0 && zi <= state.zone, soon = zi >= 0 && C.ZONES[zi].kind === 'soon';
     setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳'));
@@ -2435,6 +2456,9 @@
           log(ev.id === 'rail' ? '자동 신호가 특별 화물을 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.' : ev.id === 'guard' ? '초소장이 행렬을 통과시켰다. 물자 ' + fmt(ev.gain) + ' 확보.' : '송신 기사가 무전에 응답했다. 생존자 ' + fmt(ev.people) + '명이 왔다.', 'good');
           break;
         case 'zev-gone':
+          break;
+        case 'boss-perk':
+          log('변이체를 막은 몫으로 특전 하나를 고른다.', 'good');
           break;
         case 'jam':
           toast('고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
