@@ -16,7 +16,8 @@
   'use strict';
 
   var MAX_GAIN = 0.95;  // 어떤 소리도 이보다 크게 내지 않는다(음량 100 에서도)
-  var VOLUME = 5.2;    /* 0.9.23: 음량 100 에서도 작다는 의견에 따라 두 배로 키웠다. 겹쳐서 터지지 않게 끝에 누름막(compressor)을 둔다 */ var VOLUME_OLD = 2.6;    // 전체 음량 배수(0.8.6: 소리가 작다는 의견에 따라 전체를 키웠다). 소리마다의 g 에 곱한다
+  // 2.5.2: 기본 음량(50)에서 지금의 두 배가 돼야 한다는 말에 따라 한 번 더 두 배로(5.2 → 10.4). 음 하나의 크기는 여전히 MAX_GAIN 에서 잘린다
+  var VOLUME = 10.4;    /* 0.9.23: 음량 100 에서도 작다는 의견에 따라 두 배로 키웠다. 겹쳐서 터지지 않게 끝에 누름막(compressor)을 둔다 */ var VOLUME_OLD = 2.6;    // 전체 음량 배수(0.8.6: 소리가 작다는 의견에 따라 전체를 키웠다). 소리마다의 g 에 곱한다
 
   /*
    * 0.8.5: 소리를 부드럽게 다듬었다. 날카롭게 들리던 네모파·톱니파를 빼고 사인파·세모파만 쓴다.
@@ -174,13 +175,14 @@
              [[0, 75, 2], [2, 76, 6], [8, 79, 8]], [[0, 80, 4], [4, 79, 12]], [[8, 77, 2], [10, 76, 6]], [[0, 69, 16]]] }
   };
   /*
+   * 2.5.2 음악의 기본 음량을 효과음과 같은 50으로 맞추고, 그 50에서의 크기를 전의 두 배로 했다(MUSIC_GAIN 2.4 → 4.8).
    * 2.5.1 날카로운 소리를 다듬었다:
    *   - 음악 전체를 MUSIC_CUT(1500Hz) 아래로 거른다(효과음은 2400Hz). 세모 파형의 쇳소리와 잡음 박자의 '칙' 소리가 여기서 깎인다
    *   - 음이 올라오는 시간을 0.03초 → MUSIC_ATTACK(0.07초)로 늘렸다. 음의 머리가 '딱' 하고 튀지 않는다
    *   - 밤과 변이체 곡의 가락을 한 옥타브 내렸다(880~1046Hz 의 사인파가 귀를 찔렀다). 낮의 가락은 세모에서 사인 파형으로
    *   - 변이체 곡의 부딪히는 화음을 한 옥타브 내리고 줄였다. 잡음 박자는 더 낮고 작게
    */
-  var MUSIC_BARS = 8, MUSIC_STEPS = 16, MUSIC_GAIN = 2.4, MUSIC_VOLUME_DEFAULT = 40, MUSIC_CUT = 1500, MUSIC_ATTACK = 0.07;
+  var MUSIC_BARS = 8, MUSIC_STEPS = 16, MUSIC_GAIN = 4.8, MUSIC_VOLUME_DEFAULT = 50, MUSIC_CUT = 1500, MUSIC_ATTACK = 0.07;
   function musicDef(mood) { return Object.prototype.hasOwnProperty.call(MUSIC, mood) ? MUSIC[mood] : MUSIC.day; }
   /** 한 칸의 길이(초). */
   function musicStepSeconds(mood) { return 60 / musicDef(mood).bpm / 4; }
@@ -255,7 +257,11 @@
       if (!musicBus) {
         musicBus = ctx.createGain(); musicBus.gain.value = musicVolume / MUSIC_VOLUME_DEFAULT;
         var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = MUSIC_CUT;
-        musicBus.connect(soft); soft.connect(ctx.destination);
+        musicBus.connect(soft);
+        // 2.5.2: 음악도 두 배로 키웠으므로(기본 50) 음량 100 에서 겹친 음이 찢어지지 않게 누름막을 거친다. 기기가 지원하지 않으면 그냥 내보낸다
+        var mout = ctx.destination;
+        try { if (ctx.createDynamicsCompressor) { var mc = ctx.createDynamicsCompressor(); mc.threshold.value = -9; mc.knee.value = 12; mc.ratio.value = 6; mc.attack.value = 0.005; mc.release.value = 0.2; mc.connect(ctx.destination); mout = mc; } } catch (e) { mout = ctx.destination; }
+        soft.connect(mout);
       }
       var now = ctx.currentTime;
       if (!(musicNext > now - 0.5)) { musicNext = now + 0.08; musicAt = 0; musicNow = musicMood; }      // 처음이거나 오래 쉬었다: 마디의 처음부터 다시

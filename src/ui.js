@@ -3449,7 +3449,7 @@
       var btn = $('bgm-toggle'), bar = $('bgm-volume'), label = $('bgm-volume-num'), on = recall('zone7-bgm') !== 'off';
       function show() { btn.setAttribute('aria-pressed', String(on)); setText(btn, on ? '음악 켬' : '음악 끔'); }
       function vol(v, keep) {
-        var n = 40;
+        var n = 50;
         try { if (window.Sound) n = window.Sound.setMusicVolume(v); } catch (e) { /* 소리는 없어도 된다 */ }
         bar.value = n; setText(label, String(n));
         if (keep) remember('zone7-bgm-volume', n);
