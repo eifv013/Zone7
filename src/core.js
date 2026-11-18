@@ -468,10 +468,15 @@
     { id: 'harvest', name: '풍작',      desc: '전체 생산 +40%',  key: 'prod',    per: 0.4 },
     { id: 'watch',   name: '불침번',    desc: '방어력 +50%',     key: 'defense', per: 0.5 },
     { id: 'hands',   name: '빠른 손',   desc: '수색 배수 +200%', key: 'click',   per: 2 },
-    { id: 'bargain', name: '입담',      desc: '상품 값 +40%',    key: 'z2',      per: 0.4, zone: 1 },
-    { id: 'foreman', name: '작업 반장', desc: '완제품 값 +40%',  key: 'z3',      per: 0.4, zone: 2 },
-    { id: 'driver',  name: '기관사',    desc: '화물 값 +40%',    key: 'z4',      per: 0.4, zone: 3 },
-    { id: 'aide',    name: '조교',      desc: '연구 속도 +40%',  key: 'lab',     per: 0.4, zone: 4 },
+    // 2.8.3: 한 구역에만 듣는 특전 넷은 더 나오지 않는다(retired). "상품 값"이 어느 구역 얘기인지 알기 어렵고, 그 구역을 지나면 쓸모가 없어졌다.
+    // 이미 고른 사람의 효과는 그 회차가 끝날 때까지 남는다(그래서 정의는 지우지 않는다).
+    { id: 'bargain', name: '입담',      desc: '상품 값 +40%',    key: 'z2',      per: 0.4, zone: 1, retired: true },
+    { id: 'foreman', name: '작업 반장', desc: '완제품 값 +40%',  key: 'z3',      per: 0.4, zone: 2, retired: true },
+    { id: 'driver',  name: '기관사',    desc: '화물 값 +40%',    key: 'z4',      per: 0.4, zone: 3, retired: true },
+    { id: 'aide',    name: '조교',      desc: '연구 속도 +40%',  key: 'lab',     per: 0.4, zone: 4, retired: true },
+    // 대신 어느 구역에서나 듣는 둘: 현재 있는 구역을 따라다니는 생산, 그리고 철수 항체
+    { id: 'local',   name: '현장 일손', desc: '현재 구역 생산 +40%', key: 'here', per: 0.4 },
+    { id: 'sample',  name: '채혈',      desc: '철수 항체 샘플 +10%', key: 'antibody', per: 0.1 },
     { id: 'spoils',  name: '전리품 수거', desc: '밤 전리품 +60%', key: 'loot',    per: 0.6 },
     { id: 'frugal',  name: '알뜰함',    desc: '모든 구매 비용 -6%',     key: 'cost',    per: -0.06 }
   ];
@@ -821,7 +826,7 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
     var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
@@ -835,6 +840,9 @@
     apply(UPGRADES, state.upgrades);
     apply(PERKS, state.perks);
     apply(TRAITS, state.traits);
+    // 특전 '현장 일손'(here): 현재 서 있는 구역의 생산에 곱한다. 구역을 옮기면 따라간다
+    var hereKey = ['z1', 'z2', 'z3', 'z4', 'lab', 'z6', 'z7'][state.zone];
+    if (hereKey && m.here !== 1) m[hereKey] *= m.here;
     // 도전 훈장의 고유 보상(1.7.0): 그 도전을 한 번이라도 성공했으면 붙는다(여러 번 성공해도 한 번만)
     m.autoshare = 0; m.scout = 1;
     m.antibody *= 1 + DANGER_ANTIBODY * dangerOf(state);      // 위험 단계: 철수 항체가 는다
@@ -2533,7 +2541,7 @@
   /** 특전 PERK_CHOICES 장을 겹치지 않게 뽑는다. state 를 주면 아직 열지 않은 구역의 특전은 뺀다. */
   function drawPerks(rng, state) {
     var reach = state && typeof state.zone === 'number' ? state.zone : Infinity;
-    var pool = PERKS.filter(function (p) { return !(p.zone > reach); }).map(function (p) { return p.id; }), out = [];
+    var pool = PERKS.filter(function (p) { return !p.retired && !(p.zone > reach); }).map(function (p) { return p.id; }), out = [];
     rng = typeof rng === 'function' ? rng : Math.random;
     while (out.length < PERK_CHOICES && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length) % pool.length, 1)[0]);
     return out;

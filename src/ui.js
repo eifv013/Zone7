@@ -2386,8 +2386,9 @@
       if (n > state.zone) b.setAttribute('data-locked', '1'); else b.removeAttribute('data-locked');
       b.hidden = n > state.zone + 1;      // 아직 먼 구역의 탭은 숨긴다: 초반에 탭이 여섯 개나 보이지 않게
       b.classList.toggle('avail', n >= 0 && n <= state.zone && id !== tab && zoneTodo(n));
-      // 살 수 있는 개조가 있으면 노란 네모(1.5.2). 지나온 구역도 부른다: 자동에 맡긴 구역이라도 개조는 직접 사야 한다
-      var zUp = id !== tab && (n < 0 || n <= state.zone) && C.UPGRADES.some(function (u) { return u.zone === n && C.upgradeCost(state, u.id) <= state.supplies; });
+      // 살 수 있는 개조가 있으면 노란 네모(1.5.2).
+      // 2.8.3: 지나온 구역은 이 네모도 켜지 않는다. 2.8.0에서 빨간 점만 끄고 이 노란 네모를 남겨, 지나온 구역 탭에 표시가 그대로 보였다
+      var zUp = id !== tab && (n < 0 || n === state.zone) && C.UPGRADES.some(function (u) { return u.zone === n && C.upgradeCost(state, u.id) <= state.supplies; });
       b.classList.toggle('upready', zUp && !b.classList.contains('avail'));      // 그 구역에 지금 할 일이 있으면 점(1.2.4)
     });
     var open = zi >= 0 && zi <= state.zone, soon = zi >= 0 && C.ZONES[zi].kind === 'soon';

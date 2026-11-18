@@ -64,7 +64,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     for (let zi = 1; zi <= s.zone; zi++) if (!marks.some(m => m.enter === zi)) marks.push({ enter: zi, day: day + 1, hours: active / 3600, retreats: s.retreats, pps: C.productionPerSec(s) });
     for (let k = 0; k < taps * dt; k++) C.scavenge(s);
     if (s.clicks < 15) C.scavenge(s);
-    if (s.pendingPerks.length) C.choosePerk(s, (s.zone >= 3 ? ['driver', 'foreman', 'harvest', 'watch'] : s.zone >= 2 ? ['foreman', 'harvest', 'bargain', 'watch'] : ['harvest', 'bargain', 'watch']).find(id => s.pendingPerks.includes(id)) || s.pendingPerks[0]);
+    if (s.pendingPerks.length) C.choosePerk(s, ['local', 'harvest', 'watch'].find(id => s.pendingPerks.includes(id)) || s.pendingPerks[0]);
     if (s.signalLeft > 0) C.answerSignal(s, rng);
     // 5구역: 점수가 되면 과제를 끝낸다. 지금 가장 많이 버는 구역을 키우는 과제 > 혈청 배양 > 나머지 순으로 고른다.
     if (s.zone >= 4 && s.offers.length && s.points >= C.projectCost(s)) {

@@ -182,10 +182,13 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
   .row:not(:disabled):hover, .row:not(:disabled):hover .row-desc, .row:not(:disabled):hover .row-cost { background: var(--hazard); color: var(--on-hazard); }
 }
 .row:not(:disabled):active, .row:not(:disabled):active .row-desc, .row:not(:disabled):active .row-cost { background: var(--hazard); color: var(--on-hazard); }
-/* 살 수 없는 줄(2.8.2): 전에는 이름과 수량까지 흐리게 해서, 어두운 테마에서 줄마다 글씨 색이 제각각으로 보이고 읽기 어려웠다.
-   이제 이름과 수량은 늘 같은 색이고, 값만 흐리다(얼마나 모였는지는 값 아래의 막대가 알려 준다) */
-.row:disabled { cursor: default; }
+/* 살 수 있는 줄과 없는 줄(2.8.3): 둘의 글씨 색이 비슷해서 한눈에 가려지지 않는다는 말이 있었다(2.8.2 는 말을 거꾸로 알아듣고 오히려 같게 만들었다).
+   살 수 있는 줄: 이름과 수량이 가장 밝고, 값이 노란 딱지로 뜬다.  살 수 없는 줄: 이름·수량·값이 모두 흐리다(얼마나 모였는지는 값 아래의 막대). */
+.row:disabled { cursor: default; color: var(--ink-soft); }
+.row:disabled .row-name, .row:disabled .row-count { opacity: .5; }
 .row:disabled .row-cost { color: var(--ink-soft); }
+.row:not(:disabled) .row-cost { padding: 1px 8px; background: var(--hazard); color: var(--on-hazard); border-radius: 3px; }
+.row.row-max .row-name, .row.row-max .row-count { opacity: 1; }
 .row-head, .row-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .row-name { font-weight: 600; font-size: 16px; }
 .row-count { font: 600 20px/1 var(--font-mono); white-space: nowrap; }
@@ -460,7 +463,6 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .row-desc { font-size: 13px; color: var(--ink-soft); }
 .row-foot { font: 500 12.5px/1.4 var(--font-mono); flex-wrap: wrap; }
 .row-cost { font-weight: 600; white-space: pre; margin-left: auto; }
-.row:not(:disabled) .row-cost { color: var(--ink); }
 .row-owned .row-count { font-size: 12px; color: var(--safe); }
 /* 끝까지 올린 줄: 수와 '최대'를 초록으로, 왼쪽에 초록 띠 */
 .row.row-max { box-shadow: inset 4px 0 0 var(--safe); }
@@ -1222,7 +1224,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.8.2</div>
+  <div class="boot-ver">7구역 알파 2.8.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1634,7 +1636,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.8.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.8.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
