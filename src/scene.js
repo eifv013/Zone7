@@ -548,7 +548,8 @@
   };
   /** 무늬: 우비 칸 (x, y) 를 무늬 색으로 칠할지. */
   function laraPattern(pat, x, y) {
-    if (pat === 'stripe') return y % 2 === 0;
+    // 'stripe' 는 이제 체크 밑단이다(2.7.5, 전에는 몸 전체의 가로 줄무늬였는데 보기 좋지 않다는 말이 있었다). 우비의 아래 두 줄만 바둑판으로 칠한다
+    if (pat === 'stripe') return y >= 13 && (x + y) % 2 === 0;
     if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
     if (pat === 'star') return (x === 3 && y === 9) || (x === 9 && y === 10) || (x === 4 && y === 13) || (x === 8 && y === 12);
     if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
