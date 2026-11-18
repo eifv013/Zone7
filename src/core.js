@@ -2711,6 +2711,7 @@
     { id: 'hood-horn',   slot: 'hood', name: '뿔 후드',     rarity: 2, look: 'horn' },
     { id: 'pat-none',    slot: 'pat',  name: '무늬 없음',   rarity: 0, base: true, look: 'none' },
     { id: 'pat-stripe',  slot: 'pat',  name: '체크 밑단',   rarity: 0, look: 'stripe' },      // 2.7.5: 줄무늬가 보기 좋지 않다는 말에 그림을 바꿨다. 이미 가진 사람의 것이 사라지지 않게 id 와 look 의 이름은 그대로 둔다
+    { id: 'pat-zigzag',  slot: 'pat',  name: '지그재그',    rarity: 0, look: 'zigzag' },      // 2.7.7 추가
     { id: 'pat-dot',     slot: 'pat',  name: '물방울',      rarity: 0, look: 'dot' },
     { id: 'pat-camo',    slot: 'pat',  name: '위장 무늬',   rarity: 1, look: 'camo' },
     { id: 'pat-star',    slot: 'pat',  name: '별 무늬',     rarity: 1, look: 'star' },

@@ -702,3 +702,14 @@ test('위험 단계의 풍경: 어느 단계·구역·시각·너비에서도 �
   }
   assert.ok(calls.includes('fillRect'));
 });
+
+test('든 것과 우비의 색이 비슷하면 든 것의 색을 맞바꿔 그린다(빨간 우비의 구급 상자가 보이게)', () => {
+  assert.equal(S.colorNear('#c0392b', '#c0392b'), true); assert.equal(S.colorNear('#c0392b', '#f0b400'), false); assert.equal(S.colorNear('zz', '#fff'), false);
+  const used = (look) => { const cols = new Set(); S.paintLara({ set fillStyle(v) { this.c = v; }, fillRect(x) { if (x >= 10) cols.add(this.c); } }, 0, 0, 1, false, look, 'stand', 0); return cols; };
+  assert.ok(used({ bag: 'medkit', coat: { y: '#f0b400', j: '#f0b400' } }).has('#c0392b'), '노란 우비: 구급 상자는 빨간 몸');
+  const red = used({ bag: 'medkit', coat: { y: '#c0392b', j: '#c0392b' } });
+  assert.ok(red.has('#f1f0e6'), '빨간 우비: 구급 상자의 몸이 흰색으로 바뀐다');
+  // 새 무늬 지그재그는 우비 칸에만 그려진다
+  let n = 0; for (let y = 0; y < S.LARA_H; y++) for (let x = 0; x < S.LARA_W; x++) if (S.laraPattern('zigzag', x, y)) { n++; assert.ok(y === 11 || y === 12); }
+  assert.ok(n >= 10);
+});

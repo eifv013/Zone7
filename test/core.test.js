@@ -2999,7 +2999,7 @@ test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
 
 test('2.0.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발은 없다. 깃발은 도전과 원정의 확정 보상이다', () => {
   const table = C.gachaTable();
-  assert.equal(table.length, 30); assert.ok(!table.some(t => t.slot === 'flag'));
+  assert.equal(table.length, 31); assert.ok(!table.some(t => t.slot === 'flag'));
   ['hood', 'pat', 'bag', 'fx', 'pet'].forEach(slot => assert.ok(table.some(t => t.slot === slot), slot));
   C.COS_SLOTS.forEach(slot => assert.equal(C.COSMETICS.filter(c => c.slot === slot && c.base).length, 1, slot + ': 기본은 하나'));
   const S = require('../src/scene.js');

@@ -550,11 +550,14 @@
   function laraPattern(pat, x, y) {
     // 'stripe' 는 이제 체크 밑단이다(2.7.5, 전에는 몸 전체의 가로 줄무늬였는데 보기 좋지 않다는 말이 있었다). 우비의 아래 두 줄만 바둑판으로 칠한다
     if (pat === 'stripe') return y >= 13 && (x + y) % 2 === 0;
+    if (pat === 'zigzag') return (y === 11 && x % 2 === 0) || (y === 12 && x % 2 === 1);      // 지그재그(2.7.7): 허리에 두 줄이 엇갈린다
     if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
     if (pat === 'star') return (x === 3 && y === 9) || (x === 9 && y === 10) || (x === 4 && y === 13) || (x === 8 && y === 12);
     if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
     return false;
   }
+  /** 두 색이 비슷한가(빨강·초록·파랑의 차이를 더해 120 아래). */
+  function colorNear(a, b) { try { var x = hexToRgb(a), y = hexToRgb(b); return Math.abs(x[0] - y[0]) + Math.abs(x[1] - y[1]) + Math.abs(x[2] - y[2]) < 120; } catch (e) { return false; } }
   function darker(hex, k) { return lerpColor(hex, '#000000', 1 - k); }
   /** 자세(pose 'stand' | 'walk' | 'search')와 걸음(step 0·1)에 맞는 줄들. */
   function laraRows(look, pose, step) {
@@ -569,6 +572,8 @@
     if (!ctx) return false;
     scale = scale || 1; look = look || {};
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
+    // 든 것이 우비와 비슷한 색이면(빨간 우비에 빨간 구급 상자) 묻혀서 보이지 않았다(2.7.7). 그럴 때는 든 것의 몸 색과 밝은 색을 맞바꿔 그린다
+    if (colorNear(bag.c, coat.j)) bag = { c: bag.C, C: bag.c, rows: bag.rows };
     var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
     var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
@@ -1550,7 +1555,7 @@
   }
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
-           lerpColor: lerpColor, skyAt: skyAt, dangerTier: dangerTier, dangerSky: dangerSky, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
+           lerpColor: lerpColor, colorNear: colorNear, skyAt: skyAt, dangerTier: dangerTier, dangerSky: dangerSky, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            paintPet: paintPet, petRows: petRows, PET_H: PET_H,
            drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, paintLara: paintLara, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
