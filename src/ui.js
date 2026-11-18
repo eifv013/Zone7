@@ -2101,7 +2101,7 @@
         c.cell.classList.toggle('slow', d.id === line.bottleneck);
         c.cell.classList.toggle('jam', !!state.jam && state.jam.id === d.id);      // 가장 느린 기계: 이것을 올려야 라인이 빨라진다
         var q = qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - lv), cost = C.machineCost(state, d.id, q);
-        setText(r.count, 'Lv ' + lv);
+        setText(r.count, 'Lv ' + lv + ' / ' + C.COUNT_MAX);      // 다른 시설처럼 최대 레벨을 함께 적는다(끝이 없는 것처럼 보였다)
         // 이 기계가 지금 초당 몇 개를 처리하는지와, 한 레벨에 얼마나 느는지(1.4.0). 전에는 "레벨당 초당 3"뿐이라 무슨 수인지 알기 어려웠다
         setText(r.info, '초당 ' + fmt(lv * C.machineRate(state, d.id)) + '개 처리 · 레벨당 +' + C.machineRate(state, d.id) + (d.id === line.bottleneck ? ' · 현재 병목' : ''));
         // 별: 기계 레벨 합계의 2배 문턱(세 기계가 함께 채운다). 이 기계를 사서 문턱을 넘으면 "지금 2배"가 뜬다
