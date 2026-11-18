@@ -2999,8 +2999,8 @@ test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
 
 test('1.10.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발은 없다. 깃발은 도전과 원정의 확정 보상이다', () => {
   const table = C.gachaTable();
-  assert.equal(table.length, 23); assert.ok(!table.some(t => t.slot === 'flag'));
-  ['hood', 'pat', 'bag', 'fx'].forEach(slot => assert.ok(table.some(t => t.slot === slot), slot));
+  assert.equal(table.length, 30); assert.ok(!table.some(t => t.slot === 'flag'));
+  ['hood', 'pat', 'bag', 'fx', 'pet'].forEach(slot => assert.ok(table.some(t => t.slot === slot), slot));
   C.COS_SLOTS.forEach(slot => assert.equal(C.COSMETICS.filter(c => c.slot === slot && c.base).length, 1, slot + ': 기본은 하나'));
   const S = require('../src/scene.js');
   C.COSMETICS.forEach(c => { if (c.slot === 'hood') assert.ok(S.LARA_HOODS[c.look], c.id); if (c.slot === 'bag') assert.ok(S.LARA_BAGS[c.look], c.id); });
@@ -3009,7 +3009,7 @@ test('1.10.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발�
   // 입기
   const s = C.createState(0); s.cosmetics['hood-cat'] = s.cosmetics['pat-stripe'] = s.cosmetics['bag-teddy'] = s.cosmetics['fx-glow'] = true;
   ['hood-cat', 'pat-stripe', 'bag-teddy', 'fx-glow'].forEach(id => assert.ok(C.wearCosmetic(s, id).ok));
-  assert.deepEqual(C.cosmeticLook(s), { coat: { y: '#f0b400', j: '#f0b400' }, hood: 'cat', pat: 'stripe', bag: 'teddy', fx: 'glow', flag: '#f0b400' });
+  assert.deepEqual(C.cosmeticLook(s), { coat: { y: '#f0b400', j: '#f0b400' }, hood: 'cat', pat: 'stripe', bag: 'teddy', fx: 'glow', pet: 'none', flag: '#f0b400' });
   assert.deepEqual(C.cosmeticLook(C.deserialize(C.serialize(s), 0)), C.cosmeticLook(s));
   // 깃발: 조건을 채우면 받는다
   const f = C.createState(0); assert.deepEqual(C.grantFlags(f), []);
@@ -3027,4 +3027,16 @@ test('1.10.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기�
   assert.ok(C.grantFlags(s).includes('야광 깃발')); assert.ok(C.wearCosmetic(s, 'flag-glow').ok); assert.equal(C.cosmeticLook(s).flag, 'glow');
   const e = C.createState(0); e.ended = 1; assert.ok(C.grantFlags(e).includes('무지개 깃발'));
   assert.ok(!C.gachaTable().some(t => t.slot === 'flag'), '깃발은 뽑기에 없다');
+});
+
+test('1.10.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 개 10×8칸·고양이 9×8칸', () => {
+  const S = require('../src/scene.js');
+  assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 7);
+  ['dog', 'cat', 'zzz'].forEach(k => [0, 1].forEach(w => { const r = S.petRows(k, w); assert.equal(r.length, S.PET_H); r.forEach(row => assert.equal(row.length, k === 'cat' ? 9 : 10)); assert.ok(r.some(row => row[0] === 't'), '꼬리'); }));
+  assert.notDeepEqual(S.petRows('dog', 0), S.petRows('dog', 1), '꼬리가 움직인다');
+  const s = C.createState(0); s.cosmetics['pet-crown'] = true; assert.ok(C.wearCosmetic(s, 'pet-crown').ok); assert.equal(C.cosmeticLook(s).pet, 'crown');
+  // 그리기: 어떤 옷이든 오류 없이 그려지고, 옷을 입히면 칠하는 칸이 달라진다
+  const calls = (outfit) => { const log = []; const ctx = { fillStyle: '', fillRect(x, y, w, h) { log.push([this.fillStyle, x, y, w, h].join()); } }; S.paintPet(ctx, 0, 0, 1, false, { kind: 'dog' }, outfit, 0); return log; };
+  const plain = calls('none');
+  C.COSMETICS.filter(c => c.slot === 'pet' && !c.base).forEach(c => assert.ok(calls(c.look).length > plain.length, c.name));
 });

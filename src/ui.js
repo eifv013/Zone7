@@ -1467,7 +1467,7 @@
    *   뽑기   : 뽑기권 한 장에 외형 하나. 확률은 "확률 보기"에 등급별·품목별로 모두 적는다(코어의 gachaTable 그대로). 전설 보장까지 남은 횟수도 적는다.
    *   옷장   : 가진 것은 눌러서 입는다. 없는 것은 조각이 모이면 눌러서 얻는다.
    */
-  var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', flag: '깃발 · 도전과 원정의 보상' };
+  var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', pet: '친구 옷', flag: '깃발 · 도전과 원정의 보상' };
   function renderShop() {
     if (home) return;
     var shopBtn = document.querySelector('[data-hub="shop"]'); shopBtn.disabled = false; setText(shopBtn, '상점');
@@ -1518,7 +1518,7 @@
       var how = c.reward ? (C.FLAG_REWARDS.filter(function (f) { return f.id === c.id; })[0] || { text: '' }).text : C.RARITIES[c.rarity] + ' · 조각 ' + cost;
       setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity]) : how);
       // 작은 그림: 지금 입은 모습에 이 외형 하나만 바꿔 입힌 라라(깃발은 깃대)
-      var key = JSON.stringify(worn) + c.id;
+      var key = JSON.stringify(worn) + c.id + (c.slot === 'pet' ? JSON.stringify(petLook()) : '');
       if (r.key !== key) { r.key = key; drawThumb(r.cv, c, worn); }
     });
     // 미리 보기: 지금 입은 모습. 아직 없는 외형을 눌렀으면 그것을 입혀서 보여 준다
@@ -1560,10 +1560,13 @@
   }
   function lookWith(worn, c) { var o = {}; for (var k in worn) if (Object.prototype.hasOwnProperty.call(worn, k)) o[k] = worn[k]; if (c) o[c.slot] = c.look; return o; }
   function shade(hex, k) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; function c(v) { return Math.max(0, Math.min(255, Math.round(v * k))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
+  /** 옷장에 그릴 친구: 지금 데리고 있는 친구. 없으면 기본 누렁이(옷이 어떻게 보이는지는 알 수 있게). */
+  function petLook() { var p = C.petInfo(mainState()); return p ? { kind: p.kind, body: p.breed.body, patch: p.breed.patch } : { kind: 'dog', body: '#b8864a', patch: '#e6d2a8' }; }
   function drawThumb(cv, c, worn) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (c.slot === 'flag') { ctx.fillStyle = '#cfcebf'; ctx.fillRect(6, 6, 2, 30); if (window.Scene && window.Scene.drawFlag) window.Scene.drawFlag(ctx, c.look, 8, 6, 3, 0, 0); return; }
+    if (c.slot === 'pet') { if (window.Scene && window.Scene.paintPet) window.Scene.paintPet(ctx, 4, 16, 2, false, petLook(), c.look, 0); return; }      // 친구 옷: 데리고 있는 친구(없으면 누렁이)에게 입혀 보인다
     var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
     if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
     if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 1.2);
@@ -1589,6 +1592,7 @@
     var step = Math.floor(t * 4) % 2, S = window.Scene;
     r('rgba(0,0,0,.25)', 78, G, 30, 2);
     if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t);
+    if (S && S.paintPet) S.paintPet(ctx, 114, G - S.PET_H * 3, 3, false, petLook(), look.pet || 'none', t);      // 친구는 라라 곁에
   }
   function clickCosmetic(c) {
     if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); applyLaraArt(); renderShop(); } return; }

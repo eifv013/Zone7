@@ -603,7 +603,7 @@
       tickets: 0,            // 뽑기권
       shards: 0,             // 중복으로 받은 조각
       cosmetics: {},         // 가진 외형 { id: true } (기본 외형은 적지 않는다)
-      wear: { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', flag: 'flag-yellow' },      // 입은 외형(자리마다 하나)
+      wear: { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' },      // 입은 외형(자리마다 하나)
       gachaPity: 0,          // 전설이 나온 뒤로 뽑은 횟수(보장 계산)
       gachaPulls: 0,         // 지금까지 뽑은 횟수
       stage: null,           // 원정 스테이지로 만든 상태에만 있다 { id, hard, won, lost, seconds }
@@ -703,7 +703,7 @@
     s.stageMarks = {}; STAGES.forEach(function (d) { var m = raw.stageMarks && typeof raw.stageMarks === 'object' ? raw.stageMarks[d.id] : null; if (m && typeof m === 'object' && (m.clear || m.speed || m.hard)) s.stageMarks[d.id] = { clear: !!m.clear, speed: !!m.speed, hard: !!m.hard, best: clamp(safeCount(m.best), 0, 1e6) }; });
     s.tickets = clamp(safeCount(raw.tickets), 0, 1e9); s.shards = clamp(safeCount(raw.shards), 0, 1e9); s.gachaPity = clamp(safeCount(raw.gachaPity), 0, GACHA_PITY - 1); s.gachaPulls = clamp(safeCount(raw.gachaPulls), 0, 1e9);
     s.cosmetics = {}; COSMETICS.forEach(function (c) { if (!c.base && raw.cosmetics && typeof raw.cosmetics === 'object' && raw.cosmetics[c.id]) s.cosmetics[c.id] = true; });
-    s.wear = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', flag: 'flag-yellow' };
+    s.wear = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' };
     COS_SLOTS.forEach(function (slot) { var id = raw.wear && typeof raw.wear === 'object' ? raw.wear[slot] : '', c = typeof id === 'string' ? findById(COSMETICS, id) : null; if (c && c.slot === slot && (c.base || s.cosmetics[c.id])) s.wear[slot] = c.id; });
     grantFlags(s);      // 조건을 이미 채운 깃발(1.10.0 전의 저장)
     s.stage = null;      // 스테이지 판은 저장하지 않는다(저장되는 것은 언제나 본 게임이다)
@@ -2636,6 +2636,15 @@
     { id: 'fx-glow',     slot: 'fx',   name: '야광',        rarity: 2, look: 'glow' },
     { id: 'fx-sparkle',  slot: 'fx',   name: '반짝이 가루', rarity: 2, look: 'sparkle' },
     { id: 'fx-star',     slot: 'fx',   name: '머리 위 별',  rarity: 2, look: 'star' },
+    // 1.10.3: 동물 친구의 옷. 친구는 늘 라라 옆에 붙어 다닌다
+    { id: 'pet-none',    slot: 'pet',  name: '옷 없음',     rarity: 0, base: true, look: 'none' },
+    { id: 'pet-scarf',   slot: 'pet',  name: '빨간 목도리', rarity: 0, look: 'scarf' },
+    { id: 'pet-bell',    slot: 'pet',  name: '방울 목걸이', rarity: 0, look: 'bell' },
+    { id: 'pet-ribbon',  slot: 'pet',  name: '분홍 리본',   rarity: 1, look: 'ribbon' },
+    { id: 'pet-coat',    slot: 'pet',  name: '작은 우비',   rarity: 1, look: 'coat' },
+    { id: 'pet-hat',     slot: 'pet',  name: '고깔모자',    rarity: 1, look: 'hat' },
+    { id: 'pet-cape',    slot: 'pet',  name: '망토',        rarity: 2, look: 'cape' },
+    { id: 'pet-crown',   slot: 'pet',  name: '왕관',        rarity: 2, look: 'crown' },
     // 깃발은 뽑기에서 뺐다(1.10.0: 화면에서 작아서 뽑아도 기쁘지 않았다). 도전·원정의 확정 보상으로 준다(FLAG_REWARDS). 조각으로도 얻을 수 있다
     { id: 'flag-yellow', slot: 'flag', name: '노란 깃발',   rarity: 0, base: true, look: '#f0b400' },
     { id: 'flag-red',    slot: 'flag', name: '빨간 깃발',   rarity: 0, reward: true, look: '#c0392b' },
@@ -2647,7 +2656,7 @@
     { id: 'flag-glow',   slot: 'flag', name: '야광 깃발',   rarity: 2, reward: true, look: 'glow' },        // 밤에 빛난다
     { id: 'flag-rainbow', slot: 'flag', name: '무지개 깃발', rarity: 2, reward: true, look: 'rainbow' }     // 네 줄이 천천히 흐른다
   ];
-  var COS_SLOTS = ['coat', 'hood', 'pat', 'bag', 'fx', 'flag'], COS_BASE = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', flag: 'flag-yellow' };
+  var COS_SLOTS = ['coat', 'hood', 'pat', 'bag', 'fx', 'pet', 'flag'], COS_BASE = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' };
   /* 깃발을 주는 조건(확정 보상): 도전 훈장의 수, 원정 표시의 수, 지역 휘장 */
   var FLAG_REWARDS = [
     { id: 'flag-red',   text: '도전 훈장 1개', has: function (s) { return medalCount(s) >= 1; } },

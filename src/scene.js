@@ -563,6 +563,42 @@
     if (fx === 'sparkle') for (var k = 0; k < 4; k++) { var ph = (t * 1.6 + k * 0.25) % 1; px(k % 2 ? '#ffffff' : '#ffe9a0', 1 - (k % 2), 6 + Math.floor(ph * 11), 1, 1); if (ph < 0.5) px('rgba(255, 233, 160, .5)', 3 - k % 3, 5 + Math.floor(ph * 9), 1, 1); }
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
   }
+  /*
+   * 동물 친구(1.10.3): 개는 가로 10칸, 고양이는 9칸, 둘 다 세로 8칸. 전에는 5×4칸쯤이라 옷을 입혀도 보이지 않았다.
+   *   글자 뜻: o 몸, q 무늬(품종마다 다른 색), e 눈, n 코, t 꼬리(걸음마다 한 칸 오르내린다)
+   *   옷(outfit)은 머리와 몸의 자리(PET_BOX)를 기준으로 얹는다: scarf 목도리, bell 방울, ribbon 리본, coat 우비, hat 고깔모자, cape 망토, crown 왕관
+   */
+  var PET_H = 8;
+  var PET_ROWS = {
+    dog: ['......q..q', '......oooo', '......oeon', '......oooo', '.ooooooo..', '.oqqoooo..', '.oooooo...', '.oo..oo...'],
+    cat: ['......o.o', '......ooo', '......eoe', '......ooo', '.oooooo..', '.oqqooo..', '.oooooo..', '.o....o..']
+  };
+  /* 머리의 왼쪽 위(hx, hy)와 폭(hw), 몸의 왼쪽 위(bx, by)와 폭(bw). 오른쪽을 볼 때의 자리다 */
+  var PET_BOX = { dog: { hx: 6, hy: 1, hw: 4, bx: 1, by: 4, bw: 7 }, cat: { hx: 6, hy: 1, hw: 3, bx: 1, by: 4, bw: 6 } };
+  function petKind(kind) { return kind === 'cat' ? 'cat' : 'dog'; }
+  /** 꼬리를 붙인 줄들. wag 0·1 에 따라 꼬리가 한 칸 오르내린다. */
+  function petRows(kind, wag) {
+    var rows = PET_ROWS[petKind(kind)].slice(), top = kind === 'cat' ? (wag ? 1 : 2) : (wag ? 2 : 3);
+    for (var k = 0; k < 2; k++) rows[top + k] = 't' + rows[top + k].slice(1);
+    return rows;
+  }
+  function paintPet(ctx, x, y, scale, flip, pet, outfit, t) {
+    if (!ctx) return false;
+    scale = scale || 1; pet = pet || {}; t = t || 0;
+    var kind = petKind(pet.kind), wag = Math.floor(t * 6) % 2, rows = petRows(kind, wag), W = rows[0].length, body = pet.body || '#8a5a34', patch = pet.patch || body, b = PET_BOX[kind];
+    var pal = { o: body, q: patch, e: '#17180f', n: '#2b241c', t: body };
+    function px(col, cx, cy, w, h) { w = w || 1; ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? W - cx - w : cx) * scale), Math.round(y + cy * scale), w * scale, (h || 1) * scale); }
+    for (var r = 0; r < rows.length; r++) for (var c = 0; c < W; c++) { var ch = rows[r][c]; if (ch !== '.') px(pal[ch], c, r); }
+    // 옷
+    if (outfit === 'scarf') { px('#c0392b', b.bx + b.bw - 2, b.by, 2, 1); px('#c0392b', b.bx + b.bw - 2, b.by + 1, 1, 2); px('#8f2a20', b.bx + b.bw - 2, b.by + 2, 1, 1); }
+    if (outfit === 'bell') { px('#30343c', b.bx + b.bw - 2, b.by, 2, 1); px('#ffd95a', b.bx + b.bw - 1, b.by + 1, 1, 1); }
+    if (outfit === 'ribbon') { px('#ff7fb0', b.hx, b.hy - 1, 1, 1); px('#ff7fb0', b.hx + 2, b.hy - 1, 1, 1); px('#f1f0e6', b.hx + 1, b.hy - 1, 1, 1); }
+    if (outfit === 'coat') { px('#f0b400', b.bx, b.by, b.bw - 1, 2); px('#b88a00', b.bx, b.by + 2, b.bw - 1, 1); px('#f1f0e6', b.bx + b.bw - 3, b.by + 1, 1, 1); }
+    if (outfit === 'hat') { px('#3f7fb5', b.hx + 1, b.hy - 2, 1, 2); px('#3f7fb5', b.hx, b.hy, 3, 1); px('#f1f0e6', b.hx + 1, b.hy - 3, 1, 1); }
+    if (outfit === 'cape') { px('#8a5fc0', b.bx, b.by, b.bw - 2, 2); px('#6a45a0', b.bx, b.by + 2, b.bw - 3, 1); px('#8a5fc0', b.bx - 1, b.by + wag, 1, 2); px('#ffd95a', b.bx + b.bw - 3, b.by, 1, 1); }
+    if (outfit === 'crown') { px('#ffd95a', b.hx, b.hy - 1, 3, 1); px('#ffd95a', b.hx, b.hy - 2, 1, 1); px('#ffd95a', b.hx + 2, b.hy - 2, 1, 1); px('#e0392b', b.hx + 1, b.hy - 1, 1, 1); if (Math.floor(t * 2) % 2) px('#ffffff', b.hx + 1, b.hy - 3, 1, 1); }
+    return true;
+  }
   /** 옷장의 그림: 그 자리에 서 있는 라라를 그린다(scene 밖에서 쓴다). */
   function drawHero(ctx, x, y, scale, look, step, t) {
     if (!ctx) return false;
@@ -1137,24 +1173,10 @@
     if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 9, GROUND - 6 - Math.floor(t * 6) % 2, 1, 5); }
     var pet = view.pet;
     if (pet) {
-      // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다. 몸 색과 무늬 색은 품종마다 다르다.
-      var f = h.face > 0 ? 1 : -1, moving = h.state === 'out' || h.state === 'back', hop = moving ? Math.floor(t * 8) % 2 : 0, wag = Math.floor(t * 6) % 2;
-      var body = pet.body || '#8a5a34', patch = pet.patch || body, by = GROUND - 4 - hop;
-      if (pet.kind === 'cat') {
-        var cx = Math.round(h.x) - 3 - f * 8;
-        ctx.fillStyle = body; ctx.fillRect(cx, by + 1, 4, 2);                                    // 몸
-        ctx.fillRect(cx + (f > 0 ? 3 : -1), by - 1, 2, 2);                                       // 머리
-        ctx.fillRect(cx + (f > 0 ? 3 : -1), by - 2, 1, 1); ctx.fillRect(cx + (f > 0 ? 4 : 0), by - 2, 1, 1);   // 귀 둘
-        ctx.fillRect(cx, GROUND - 1, 1, 1); ctx.fillRect(cx + 3, GROUND - 1, 1, 1);              // 다리
-        ctx.fillRect(cx + (f > 0 ? -1 : 4), by - 1 - wag, 1, 3);                                 // 세운 꼬리
-        ctx.fillStyle = patch; ctx.fillRect(cx + 1, by + 2, 2, 1); ctx.fillRect(cx + (f > 0 ? -1 : 4), by - 1 - wag, 1, 1);   // 배와 꼬리 끝
-      } else {
-        var dx = Math.round(h.x) - 4 - f * 9;
-        ctx.fillStyle = body; ctx.fillRect(dx, by, 5, 2); ctx.fillRect(dx + (f > 0 ? 4 : -1), by - 2, 2, 2);   // 몸과 머리
-        ctx.fillRect(dx, GROUND - 2, 1, 2); ctx.fillRect(dx + 4, GROUND - 2, 1, 2);                             // 다리
-        ctx.fillRect(dx + (f > 0 ? -1 : 5), by - 1 - wag, 1, 2);                                                // 흔드는 꼬리
-        ctx.fillStyle = patch; ctx.fillRect(dx + 2, by, 2, 1); ctx.fillRect(dx + (f > 0 ? 4 : 0), by - 3, 1, 1); // 등의 무늬와 귀
-      }
+      // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다(1.10.3: 라라에 맞춰 크게 다시 그렸다)
+      var f = h.face > 0 ? 1 : -1, moving = h.state === 'out' || h.state === 'back', hop = moving ? Math.floor(t * 8) % 2 : 0;
+      var pw = petRows(pet.kind, 0)[0].length;
+      paintPet(ctx, f > 0 ? Math.round(h.x) - 10 - pw : Math.round(h.x) + 10, GROUND - PET_H - hop, 1, f < 0, pet, (view.look && view.look.pet) || 'none', t);
     }
     if (u.drone) {
       var qx = Math.round(h.x) + Math.round(Math.sin(t * 1.3) * 6) - 2, qy = GROUND - 24 + Math.round(Math.sin(t * 2.1) * 2);
@@ -1410,6 +1432,7 @@
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
+           paintPet: paintPet, petRows: petRows, PET_H: PET_H,
            drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, paintLara: paintLara, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });
