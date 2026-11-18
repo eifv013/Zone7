@@ -2900,3 +2900,10 @@ test('1.7.2 맨몸 도전 중에는 개조를 세는 목표가 원래 목표로 
   assert.equal(C.activeGoals(s, 0)[0].id, 'z1a2', '개조와 상관없는 바뀐 목표는 그대로');
   C.quitChallenge(s); assert.ok(C.activeGoals(s, 0).some(g => /개조/.test(g.text)), '포기하면 돌아온다');
 });
+
+test('1.7.4: 훈장은 생산 +2%, 손수 도전 중에는 자리 비움 효율이 절반', () => {
+  assert.equal(C.MEDAL_BONUS, 0.02);
+  const a = C.createState(0), b = C.createState(0); b.bestZone = 6; assert.ok(C.startChallenge(b, 'hands').ok);
+  assert.ok(Math.abs(C.offlineRate(b) - C.offlineRate(a) * 0.5) < 1e-9);
+  C.quitChallenge(b); assert.equal(C.offlineRate(b), C.offlineRate(a));
+});

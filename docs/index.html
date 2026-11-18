@@ -1114,7 +1114,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.7.3</div>
+  <div class="boot-ver">7구역 알파 1.7.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1654,7 +1654,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.7.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.7.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1807,7 +1807,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.3";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.4";
 </script>
 <script>
 /*
@@ -1826,6 +1826,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.3";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.7.4', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '도전 보상과 손수 조정',
+      items: [
+        '훈장 하나마다 붙는 전체 생산을 3%에서 2%로 내렸어요.',
+        '"손수" 도전에 조건이 하나 늘었어요. 도전 중에는 자리 비움 효율이 절반이에요.'
+      ] },
     { ver: '알파 1.7.3', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '모험 탭 미리 보기',
       items: [
         '모험 탭이 처음부터 보여요.',
@@ -5402,10 +5407,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.3";
    *   보상     : 처음 성공하면 훈장 하나(전체 생산 +MEDAL_BONUS, 영구)와 간식. 다시 성공하면 간식만.
    * 조건은 규칙 함수 안에서 challengeOn 으로 확인한다: 개조 구매(frugal, hands), 방벽 구매(onewall), 밤(unbroken, horde), 생산(lean), 시간(sprint).
    */
-  var MEDAL_BONUS = 0.03, CHALLENGE_TREATS = 10, CHALLENGE_TREATS_AGAIN = 3, SPRINT_SECONDS = 45 * 60, HORDE_MULT = 3, LEAN_MULT = 0.5;
+  var HANDS_AWAY = 0.5;      // 도전 '손수' 중 자리 비움 효율에 곱하는 값
+  var MEDAL_BONUS = 0.02, CHALLENGE_TREATS = 10, CHALLENGE_TREATS_AGAIN = 3, SPRINT_SECONDS = 45 * 60, HORDE_MULT = 3, LEAN_MULT = 0.5;
   var CHALLENGES = [
     { id: 'frugal',   name: '맨몸',      rule: '개조를 살 수 없어요',            goal: 2, perk: { key: 'cost', mult: 0.95, text: '모든 구매 비용 -5%' } },
-    { id: 'hands',    name: '손수',      rule: '자동 개조를 살 수 없어요',       goal: 3, perk: { key: 'autoshare', add: 0.1, text: '현재 구역 자동 효율 +10%p' } },
+    { id: 'hands',    name: '손수',      rule: '자동 개조 금지 · 자리 비움 효율 절반',      goal: 3, perk: { key: 'autoshare', add: 0.1, text: '현재 구역 자동 효율 +10%p' } },
     { id: 'sprint',   name: '질주',      rule: '45분 안에 닿아야 해요',          goal: 3, perk: { key: 'scout', mult: 0.85, text: '길 정찰 시간 -15%' } },
     { id: 'onewall',  name: '외벽',      rule: '방벽을 한 종류만 살 수 있어요',  goal: 4, perk: { key: 'defense', mult: 1.1, text: '방어력 +10%' } },
     { id: 'unbroken', name: '무결',      rule: '한 번도 뚫리면 안 돼요',         goal: 4, perk: { key: 'loot', mult: 1.2, text: '방어 성공 시 전리품 +20%' } },
@@ -5859,7 +5865,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.3";
   }
 
   /* ---------- 자리 비움 ---------- */
-  function offlineRate(state) { return Math.min(1, OFFLINE_RATE + mods(state).offline); }
+  function offlineRate(state) { return (Math.min(1, OFFLINE_RATE + mods(state).offline)) * (challengeOn(state, 'hands') ? HANDS_AWAY : 1); }      // 도전 '손수': 자리를 비운 동안의 효율이 절반
   /**
    * 게임을 꺼 둔 동안의 진행. 최대 OFFLINE_CAP 초를 offlineRate 효율로 계산한다.
    * 2구역은 평균 시세로 판 것으로 친다. 3구역 라인은 나갈 때의 상태 그대로 돈 것으로 친다. 밤은 막을 수 있는 동안만 막고, 못 막는 밤부터는 잃는 것 없이 버틴다.

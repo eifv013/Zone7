@@ -2554,10 +2554,11 @@
    *   보상     : 처음 성공하면 훈장 하나(전체 생산 +MEDAL_BONUS, 영구)와 간식. 다시 성공하면 간식만.
    * 조건은 규칙 함수 안에서 challengeOn 으로 확인한다: 개조 구매(frugal, hands), 방벽 구매(onewall), 밤(unbroken, horde), 생산(lean), 시간(sprint).
    */
-  var MEDAL_BONUS = 0.03, CHALLENGE_TREATS = 10, CHALLENGE_TREATS_AGAIN = 3, SPRINT_SECONDS = 45 * 60, HORDE_MULT = 3, LEAN_MULT = 0.5;
+  var HANDS_AWAY = 0.5;      // 도전 '손수' 중 자리 비움 효율에 곱하는 값
+  var MEDAL_BONUS = 0.02, CHALLENGE_TREATS = 10, CHALLENGE_TREATS_AGAIN = 3, SPRINT_SECONDS = 45 * 60, HORDE_MULT = 3, LEAN_MULT = 0.5;
   var CHALLENGES = [
     { id: 'frugal',   name: '맨몸',      rule: '개조를 살 수 없어요',            goal: 2, perk: { key: 'cost', mult: 0.95, text: '모든 구매 비용 -5%' } },
-    { id: 'hands',    name: '손수',      rule: '자동 개조를 살 수 없어요',       goal: 3, perk: { key: 'autoshare', add: 0.1, text: '현재 구역 자동 효율 +10%p' } },
+    { id: 'hands',    name: '손수',      rule: '자동 개조 금지 · 자리 비움 효율 절반',      goal: 3, perk: { key: 'autoshare', add: 0.1, text: '현재 구역 자동 효율 +10%p' } },
     { id: 'sprint',   name: '질주',      rule: '45분 안에 닿아야 해요',          goal: 3, perk: { key: 'scout', mult: 0.85, text: '길 정찰 시간 -15%' } },
     { id: 'onewall',  name: '외벽',      rule: '방벽을 한 종류만 살 수 있어요',  goal: 4, perk: { key: 'defense', mult: 1.1, text: '방어력 +10%' } },
     { id: 'unbroken', name: '무결',      rule: '한 번도 뚫리면 안 돼요',         goal: 4, perk: { key: 'loot', mult: 1.2, text: '방어 성공 시 전리품 +20%' } },
@@ -3011,7 +3012,7 @@
   }
 
   /* ---------- 자리 비움 ---------- */
-  function offlineRate(state) { return Math.min(1, OFFLINE_RATE + mods(state).offline); }
+  function offlineRate(state) { return (Math.min(1, OFFLINE_RATE + mods(state).offline)) * (challengeOn(state, 'hands') ? HANDS_AWAY : 1); }      // 도전 '손수': 자리를 비운 동안의 효율이 절반
   /**
    * 게임을 꺼 둔 동안의 진행. 최대 OFFLINE_CAP 초를 offlineRate 효율로 계산한다.
    * 2구역은 평균 시세로 판 것으로 친다. 3구역 라인은 나갈 때의 상태 그대로 돈 것으로 친다. 밤은 막을 수 있는 동안만 막고, 못 막는 밤부터는 잃는 것 없이 버틴다.
