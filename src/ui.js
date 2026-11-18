@@ -881,6 +881,30 @@
    */
   var ZMAP_AT = [[56, 292], [176, 268], [258, 206], [150, 170], [62, 122], [182, 66], [270, 30]];
   var zmapPick = 0;
+  /*
+   * 지도 위의 라라(1.8.2): 지도 그림 위에 얹는 작은 도트 그림. 서 있을 때는 제자리걸음을 하고, 자리를 옮길 때는 길(표지에서 표지로)을 따라 걷는다.
+   *   mapLara(상자, 지도 폭, 지도 높이) → { at(x, y) 바로 그 자리에 세운다, walk([[x, y], …]) 차례로 걸어간다 }
+   *   좌표는 지도 그림(SVG viewBox)의 좌표다. 화면 크기가 바뀌어도 백분율로 놓으므로 그대로 맞는다.
+   */
+  function mapLara(box, vw, vh) {
+    var i = el('i', 'map-lara'), queue = [], cur = null, timer = 0;
+    box.appendChild(i);
+    function put(p) { i.style.left = (p[0] / vw * 100).toFixed(2) + '%'; i.style.top = (p[1] / vh * 100).toFixed(2) + '%'; }
+    function next() {
+      var p = queue.shift();
+      if (!p) { i.classList.remove('walking'); return; }
+      var d = cur ? Math.sqrt(Math.pow(p[0] - cur[0], 2) + Math.pow(p[1] - cur[1], 2)) : 0, ms = Math.max(120, Math.min(900, d * 9));
+      if (cur && p[0] !== cur[0]) i.classList.toggle('left', p[0] < cur[0]);
+      i.style.transitionDuration = ms + 'ms'; i.classList.add('walking');
+      cur = p; put(p);
+      clearTimeout(timer); timer = setTimeout(next, ms);
+    }
+    return {
+      at: function (x, y) { queue = []; clearTimeout(timer); i.style.transitionDuration = '0ms'; cur = [x, y]; put(cur); i.classList.remove('walking'); },
+      walk: function (pts) { if (!cur) { this.at(pts[pts.length - 1][0], pts[pts.length - 1][1]); return; } queue = pts.slice(); clearTimeout(timer); next(); },
+      where: function () { return cur; }
+    };
+  }
   function svgEl(name, attrs, text) {
     var n = document.createElementNS('http://www.w3.org/2000/svg', name);
     for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
@@ -973,8 +997,7 @@
       svg.appendChild(g);
     });
     // 지금 있는 곳: 우비 소년의 노란 표시
-    rows.zmapHere = svgEl('rect', { width: 8, height: 8, 'class': 'zm-here' });
-    svg.appendChild(rows.zmapHere);
+    rows.zmapLara = null; rows.zmapAt = -1;      // 라라는 지도 그림을 붙인 뒤에 얹는다
     $('zmap-map').appendChild(svg);
     $('zmap-go').addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zmapPick; pane = 'play'; goTo('tab'); });
   }
@@ -995,8 +1018,15 @@
       setText(r.rate, zmapRate(zi, rates));
     });
     rows.zmapRoad.forEach(function (seg, k) { seg.setAttribute('class', 'zm-road' + (k < state.zone ? ' zm-road-open' : '')); });
-    var here = ZMAP_AT[Math.min(state.zone, ZMAP_AT.length - 1)];
-    rows.zmapHere.setAttribute('x', here[0] + 12); rows.zmapHere.setAttribute('y', here[1] - 9);
+    // 라라: 지금 있는 구역에 서 있다. 지도를 닫아 둔 사이에 구역을 넘어갔으면, 열었을 때 길을 따라 걸어간다
+    var hz = Math.min(state.zone, ZMAP_AT.length - 1);
+    if (!rows.zmapLara) rows.zmapLara = mapLara($('zmap-map'), 320, 330);
+    if (rows.zmapAt !== hz) {
+      var way = [], from = rows.zmapAt < 0 ? hz : rows.zmapAt, stp = hz > from ? 1 : -1;
+      for (var wz = from; wz !== hz; wz += stp) way.push([ZMAP_AT[wz + stp][0] + 16, ZMAP_AT[wz + stp][1] + 2]);
+      if (rows.zmapAt < 0 || !way.length) rows.zmapLara.at(ZMAP_AT[hz][0] + 16, ZMAP_AT[hz][1] + 2); else rows.zmapLara.walk(way);
+      rows.zmapAt = hz;
+    }
     // 아래 카드: 고른 구역의 설명
     var z = C.ZONES[zmapPick], open = zmapPick <= state.zone, soon = z.kind === 'soon';
     setText($('zmap-name'), z.no + '구역 ' + z.name + (zmapPick === state.zone ? ' · 현재' : ''));
@@ -1335,6 +1365,13 @@
       if (i > 0) rows.stages[d.id].road.setAttribute('class', 'zm-road' + (C.stageMarks(state, C.STAGES[i - 1].id).clear ? ' zm-road-open' : ''));
     });
     var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0], m = C.stageMarks(state, d.id), why = C.stageBlock(state, d.id, false), idx = C.STAGES.indexOf(d);
+    // 라라: 고른 표지에 서 있다. 다른 표지를 고르면 사이의 표지들을 차례로 거쳐 걸어간다
+    if (rows.stageAt !== idx) {
+      var sw = [], sf = rows.stageAt >= 0 ? rows.stageAt : idx, sd = idx > sf ? 1 : -1;
+      for (var si = sf; si !== idx; si += sd) sw.push([STAGE_AT[si + sd][0] + 14, STAGE_AT[si + sd][1] + 2]);
+      if (rows.stageAt < 0 || !sw.length) rows.stageLara.at(STAGE_AT[idx][0] + 14, STAGE_AT[idx][1] + 2); else rows.stageLara.walk(sw);
+      rows.stageAt = idx;
+    }
     setText($('stage-d-no'), d.boss ? '지역 보스' : '스테이지 ' + C.REGIONS[0].no + '-' + (idx + 1));
     setText($('stage-d-name'), d.name);
     setText($('stage-d-sub'), (C.stageRuleTexts(d, false).join(' · ') || '규칙 없음') + '\n목표 ' + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit) + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
@@ -1387,6 +1424,7 @@
       rows.stages[d.id] = { g: g, dots: dots, road: roads[i] };
     });
     $('stage-map').appendChild(svg);
+    rows.stageLara = mapLara($('stage-map'), 320, 250); rows.stageAt = -1;
     $('stage-go').addEventListener('click', function () { var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0]; if (d) askStage(d, false); });
     $('stage-hard').addEventListener('click', function () { var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0]; if (d) askStage(d, true); });
   }
