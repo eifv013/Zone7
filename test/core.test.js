@@ -2435,3 +2435,55 @@ test('회차마다 달라지는 목표: 첫 회차는 원래 목표, 철수하�
   // 다른 후보는 모두 돈과 시간으로 채울 수 있는 것이다(무리와 겨루는 것은 없다)
   C.GOALS_ALT.forEach((list) => list.forEach((g) => { if (g) assert.ok(!/방어력|막기|방어 성공/.test(g.text), g.text); }));
 });
+
+test('4·6·7구역 사건: 그 구역이 벌고 있을 때만 뜨고, 바로 받거나 이번 회차 배수를 쌓는다. 놓쳐도 잃는 것은 없다', () => {
+  const s = inLab(); s.zone = 6; s.trains = 5; s.routes = { loop: 1 }; s.posts = 12; s.antennas = 12; s.supplies = 0;
+  s.zevIn = { rail: 0.5, guard: 0.5, tower: 0.5 }; s.jamIn = 1e6; s.truckIn = 1e6;
+  assert.ok(C.railRate(s) > 0 && C.guardRate(s) > 0 && C.survivorRate(s) > 0);
+  const ev = C.tick(s, 1, () => 0.5).filter((e) => e.type === 'zev');
+  assert.deepEqual(ev.map((e) => e.id).sort(), ['guard', 'rail', 'tower']); assert.ok(s.zev.rail && s.zev.guard && s.zev.tower);
+  // 바로 받는다
+  const want = C.zevReward(s, 'rail', false); near(want, C.railRate(s) * C.ZEV_NOW);
+  const sup = s.supplies, earned = s.railEarned, r = C.answerZoneEvent(s, 'rail', 'now', false);
+  assert.ok(r.ok); near(s.supplies - sup, want); near(s.railEarned - earned, want); assert.equal(s.zev.rail, null); assert.equal(s.zevRun, 1);
+  assert.equal(C.answerZoneEvent(s, 'rail', 'now', false).reason, 'none');
+  // 배수를 쌓는다: 통행 물자가 그만큼 는다. 상한이 있다
+  const g0 = C.guardRate(s), b = C.answerZoneEvent(s, 'guard', 'boost', false);
+  assert.ok(b.ok); near(s.guardBoost, C.ZEV_BOOST); near(C.guardRate(s) / g0, 1 + C.ZEV_BOOST);
+  s.guardBoost = C.ZEV_BOOST_MAX; s.zev.guard = { left: 10 }; assert.equal(C.answerZoneEvent(s, 'guard', 'boost', false).reason, 'max'); assert.ok(s.zev.guard, '못 쌓으면 사건은 남는다');
+  s.railBoost = 0.09; const c0 = C.cargoValue(s); s.railBoost = 0; near(c0 / C.cargoValue(s), 1.09);
+  // 7구역 무전: 사람이 온다(적어도 50명). 고를 것은 하나뿐이다
+  const p0 = s.survivors, t = C.answerZoneEvent(s, 'tower', 'now', false);
+  assert.ok(t.ok && t.people >= C.ZEV_MIN_PEOPLE); assert.equal(s.survivors - p0, t.people);
+  s.zev.tower = { left: 5 }; assert.equal(C.answerZoneEvent(s, 'tower', 'boost', false).reason, 'unknown');
+  // 놓치면 그냥 사라진다
+  s.zev.tower = { left: 1 }; const sv = s.survivors, rate = C.survivorRate(s);
+  assert.ok(C.tick(s, 2, () => 0.99).some((e) => e.type === 'zev-gone' && e.id === 'tower')); assert.equal(s.zev.tower, null);
+  // 자동 신호는 특별 화물을 알아서 받되 절반만
+  const a = inLab(); a.trains = 5; a.routes = { loop: 1 }; a.upgrades.autosig = 1; a.zev.rail = { left: C.ZEV_WAIT }; a.zevIn.rail = 1e6; a.jamIn = 1e6; a.truckIn = 1e6;
+  let got = null; for (let i = 0; i < 6 && !got; i++) got = C.tick(a, 1, () => 0.99).find((e) => e.type === 'zev-auto') || null;
+  assert.ok(got && got.auto && got.gain > 0);
+  // 벌지 않는 구역에는 뜨지 않는다. 열지 않은 구역의 값은 저장에서 버린다
+  const e = inLab(); e.zevIn.rail = 0; assert.ok(!C.tick(e, 1, () => 0.5).some((x) => x.type === 'zev'));
+  const bad = C.sanitizeState({ version: 2, zone: 1, zev: { rail: { left: 9 }, guard: 'x' }, railBoost: 9, guardBoost: 9, zevRun: -1 }, 0);
+  assert.equal(bad.zev.rail, null); assert.equal(bad.zev.guard, null); assert.equal(bad.railBoost, 0); assert.equal(bad.guardBoost, 0); assert.equal(bad.zevRun, 0);
+  // 철수하면 배수는 사라지고, 자리를 비우면 떠 있던 사건은 정리된다
+  s.runEarned = 1e40; s.pendingPerks = []; const back = C.retreat(s, 1).state; assert.equal(back.guardBoost, 0); assert.equal(back.railBoost, 0);
+  const o = inLab(); o.zev.rail = { left: 20 }; C.applyOffline(o, 600); assert.equal(o.zev.rail, null);
+});
+
+test('5구역 밤샘 연구: 잠깐 연구가 빨라지고 쉬는 시간이 있다', () => {
+  const s = inLab(); s.staff = 10;
+  const rate = C.researchRate(s); assert.ok(rate > 0);
+  const r = C.focusLab(s); assert.ok(r.ok); assert.equal(s.focusLeft, C.FOCUS_SECONDS); assert.equal(s.focusCool, C.FOCUS_COOL);
+  near(C.researchNow(s), rate * C.FOCUS_MULT); assert.equal(C.focusLab(s).reason, 'cooldown');
+  const p0 = s.points; C.tick(s, 1, () => 0.99); near(s.points - p0, rate * C.FOCUS_MULT);
+  // 긴 시간을 한 번에 흘려도 남은 밤샘 시간까지만 배로 친다
+  const p1 = s.points; C.tick(s, 60, () => 0.99); near(s.points - p1, C.researchRate(s) * (60 + (C.FOCUS_MULT - 1) * (C.FOCUS_SECONDS - 1)));
+  assert.equal(s.focusLeft, 0); near(C.researchNow(s), C.researchRate(s));
+  for (let i = 0; i < 70; i++) C.tick(s, 1, () => 0.99);
+  assert.equal(s.focusCool, 0); assert.ok(C.focusLab(s).ok);
+  const none = inLab(); assert.equal(C.focusLab(none).reason, 'stopped');
+  const closed = inStation(); assert.equal(C.focusLab(closed).reason, 'locked');
+  assert.equal(C.sanitizeState({ version: 2, zone: 2, focusLeft: 10, focusCool: 50 }, 0).focusLeft, 0);
+});

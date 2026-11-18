@@ -1580,6 +1580,46 @@
       log('트럭에 실어 보냈다. 물자 ' + fmt(res.gain) + ' 확보.', 'good'); sfx('train'); buzz(25); Store.save(); render();
     });
   }
+  /** 4·6·7구역의 사건 칸과 5구역의 밤샘 연구. */
+  var ZEV_TEXT = {
+    rail:  { lead: '급한 화물을 실어 달라는 무전이 왔어요.', now: '바로 받는다', boost: '단골 화주로 삼는다', what: '화물 값', done: '특별 화물을 실어 보냈다.', kept: '단골 화주가 생겼다.' },
+    guard: { lead: '사람들이 다리 앞에 줄을 섰어요.', now: '통과시킨다', boost: '쉬어 가게 한다', what: '통행 물자', done: '행렬을 통과시켰다.', kept: '행렬이 초소 옆에서 쉬어 갔다. 소문이 난다.' },
+    tower: { lead: '어딘가에서 무전이 들어왔어요.', now: '응답한다', boost: '', what: '', done: '무전에 응답했다.', kept: '' }
+  };
+  function wireZoneEvents() {
+    C.ZONE_EVENTS.forEach(function (def) {
+      def.choices.forEach(function (choice) {
+        $('zev-' + def.id + '-' + choice).addEventListener('click', function () {
+          var r = C.answerZoneEvent(state, def.id, choice, false), t = ZEV_TEXT[def.id];
+          if (!r.ok) return;
+          if (choice === 'boost') log(t.kept + ' ' + t.what + ' +' + Math.round(r.boost * 100) + '%.', 'good');
+          else if (r.people) log(t.done + ' 생존자 ' + fmt(r.people) + '명이 왔다.', 'good');
+          else log(t.done + ' 물자 ' + fmt(r.gain) + ' 확보.', 'good');
+          sfx(choice === 'boost' ? 'perk' : 'route'); buzz(25); Store.save(); render();
+        });
+      });
+    });
+    $('lab-focus').addEventListener('click', function () {
+      var r = C.focusLab(state);
+      if (!r.ok) return;
+      log('밤샘 연구를 시작했다. ' + r.seconds + '초 동안 연구가 ' + C.FOCUS_MULT + '배로 빨라진다.', 'good'); sfx('staff'); buzz(25); Store.save(); render();
+    });
+  }
+  /** 사건 칸 하나를 그린다. */
+  function renderZoneEvent(id) {
+    var ev = state.zev && state.zev[id], box = $('zev-' + id), t = ZEV_TEXT[id];
+    box.hidden = !ev;
+    if (!ev) return;
+    setText($('zev-' + id + '-left'), clock(ev.left));
+    var reward = C.zevReward(state, id, false);
+    setText($('zev-' + id + '-text'), t.lead);
+    setText($('zev-' + id + '-now'), t.now + ' · ' + (id === 'tower' ? '생존자 +' + fmt(reward) + '명' : '물자 +' + fmt(reward)));
+    if (t.boost) {
+      var cur = id === 'rail' ? state.railBoost : state.guardBoost, full = cur >= C.ZEV_BOOST_MAX - 1e-9, bb = $('zev-' + id + '-boost');
+      bb.disabled = full;
+      setText(bb, full ? t.what + ' +' + Math.round(cur * 100) + '% · 최대' : t.boost + ' · ' + t.what + ' +' + Math.round(C.ZEV_BOOST * 100) + '% (현재 +' + Math.round(cur * 100) + '%)');
+    }
+  }
   function wireContract() {
     $('contract-fill').addEventListener('click', function () {
       var r = C.fillContract(state);
@@ -1669,7 +1709,7 @@
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
     var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.soon && state.gate);
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
-    var canFill = fillReady(1) || fillReady(2) || fillReady(3);      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
+    var canFill = fillReady(1) || fillReady(2) || fillReady(3) || fillReady(5) || fillReady(6);      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
     $('pet-feed').classList.toggle('ready', canFeed);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
@@ -1735,7 +1775,9 @@
   function fillReady(zi) {
     if (zi === 1) return !!state.order && state.goods >= state.order.need;
     if (zi === 2) return (!!state.contract && state.contract.have >= state.contract.need) || !!state.jam || !!state.truck;      // 납품, 고장, 출하 트럭
-    if (zi === 3) return !!state.salvage && state.salvage.have >= state.salvage.need;
+    if (zi === 3) return (!!state.salvage && state.salvage.have >= state.salvage.need) || !!(state.zev && state.zev.rail);
+    if (zi === 5) return !!(state.zev && state.zev.guard);
+    if (zi === 6) return !!(state.zev && state.zev.tower);
     return false;
   }
   /** 구역 탭에 점을 찍을 일: 채울 것이 있거나, 지금 구역에서 다음 문을 열 수 있다. */
@@ -1992,6 +2034,7 @@
       setText(tb, isFinite(tc) ? '병목 올리기 · ' + names[line.bottleneck] + ' · 물자 ' + fmt(tc) + (qtyMode === 1 ? '' : qtyMode === 'max' ? ' · 되는 만큼' : ' · ' + qtyMode + '번') : '기계가 모두 최대다');
     }
     if (tab === 'z3' && open) {
+      renderZoneEvent('rail');
       // 표류 화물: 발견됐을 때만 칸이 보인다. 발견된 뒤로 열차가 싣고 온 화물 값이 차고, 다 차면 끌어올 수 있다
       var sv = state.salvage, sb2 = $('salvage');
       sb2.hidden = !sv;
@@ -2034,6 +2077,7 @@
       rows.train.btn.disabled = !(tcost <= state.supplies);
     }
     if (tab === 'z6' && open) {
+      renderZoneEvent('tower');
       // 7구역: 모인 생존자와 전체 배수, 혈청, 안테나
       var sRate = C.survivorRate(state), stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state);
       setText($('tower-people'), fmt(Math.floor(state.survivors)) + '명');
@@ -2050,6 +2094,7 @@
       rows.antenna.btn.disabled = !(acost <= state.supplies);
     }
     if (tab === 'z5' && open) {
+      renderZoneEvent('guard');
       // 6구역: 다리 안전도(방어력 ÷ 무리)와 초소
       var safety = C.bridgeSafety(state), safeMax = C.SAFETY_MAX + m.margin, gRate = C.guardRate(state);
       setText($('guard-safety'), '×' + safety.toFixed(2));
@@ -2064,7 +2109,7 @@
       rows.post.btn.disabled = !(pcost <= state.supplies);
     }
     if (tab === 'z4' && open) {
-      var pc = C.projectCost(state), rc = C.rerollCost(state), rate = C.researchRate(state);
+      var pc = C.projectCost(state), rc = C.rerollCost(state), rate = C.researchNow(state);
       setText($('lab-points'), fmt(state.points));
       setText($('lab-rate'), rate > 0 ? '초당 +' + fmt(rate) + (state.points < pc ? ' · 다음 과제까지 ' + clock((pc - state.points) / rate) : ' · 과제를 고를 수 있어요') : '연구원을 뽑으면 점수가 모여요');
       rows.offers.forEach(function (o, i) {
@@ -2078,6 +2123,12 @@
         setText(o.cost, '점수 ' + fmt(pc));
         o.btn.disabled = !(pc <= state.points);
       });
+      // 밤샘 연구: 전력 투입·청신호와 같은 틀(누르면 잠깐 빨라지고, 쉬는 시간이 있다)
+      var fb = $('lab-focus'), fOn = state.focusLeft > 0;
+      fb.disabled = fOn || state.focusCool > 0 || !(C.researchRate(state) > 0);
+      fb.className = 'surge' + (fOn ? ' on' : '');
+      setText(fb, fOn ? '밤샘 연구 중 ' + Math.ceil(state.focusLeft) + '초' : state.focusCool > 0 ? '다음 밤샘 ' + clock(state.focusCool) : '밤샘 연구 ×' + C.FOCUS_MULT);
+      fill(fb, fOn ? state.focusLeft / C.FOCUS_SECONDS : state.focusCool > 0 ? 1 - state.focusCool / C.FOCUS_COOL : 0);
       var rr = $('lab-reroll');
       rr.disabled = !(rc <= state.points) || !state.offers.length;
       setText(rr, '다른 과제 보기 · 점수 ' + fmt(rc));
@@ -2332,6 +2383,14 @@
           break;
         case 'mastered':
           toast(ev.all ? '세 품목을 모두 익혔다' : ev.name + ' 숙련'); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 손에 익었다.' + (ev.all ? ' 세 품목을 모두 익혀 라인이 더 빨리 돈다.' : ''), 'good'); sfx('goal');
+          break;
+        case 'zev':
+          toast(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 왔어요'); log(ZEV_TEXT[ev.id].lead.replace('왔어요.', '왔다.').replace('섰어요.', '섰다.').replace('들어왔어요.', '들어왔다.'), ''); sfx('signal');
+          break;
+        case 'zev-auto':
+          log('자동 신호가 특별 화물을 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
+          break;
+        case 'zev-gone':
           break;
         case 'jam':
           toast('고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
@@ -2691,7 +2750,7 @@
     wireMultiTouch();
     wirePerkReroll();
     wireOrder();
-    wireContract(); wireLineExtras();
+    wireContract(); wireLineExtras(); wireZoneEvents();
     wireSalvage();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
