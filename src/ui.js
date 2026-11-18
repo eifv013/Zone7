@@ -1516,7 +1516,12 @@
     // 미리 보기: 지금 입은 모습. 아직 없는 외형을 눌렀으면 그것을 입혀서 보여 준다
     var pc = lookPick ? C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0] : null, worn = C.cosmeticLook(state);
     if (pc && C.ownsCosmetic(state, pc.id)) { pc = null; lookPick = ''; }
-    drawLook($('look-pic'), pc && pc.slot === 'coat' ? pc.look : worn.coat, pc && pc.slot === 'flag' ? pc.look : worn.flag, 6, true);
+    lookNow = { coat: pc && pc.slot === 'coat' ? pc.look : worn.coat, flag: pc && pc.slot === 'flag' ? pc.look : worn.flag };
+    drawLookScene($('look-pic'), lookNow.coat, lookNow.flag, lookFrame);
+    if (!lookTimer) lookTimer = setInterval(function () {      // 미리 보기의 라라는 제자리걸음을 하고 깃발은 펄럭인다(상점을 보고 있을 때만 그린다)
+      if ($('hub').hidden || hubTab !== 'shop' || !lookNow) return;
+      lookFrame = (lookFrame + 1) % 4; drawLookScene($('look-pic'), lookNow.coat, lookNow.flag, lookFrame);
+    }, 260);
     var wornCoat = C.COSMETICS.filter(function (x) { return x.id === state.wear.coat; })[0], wornFlag = C.COSMETICS.filter(function (x) { return x.id === state.wear.flag; })[0];
     setText($('look-name'), pc ? '미리 보기 · ' + pc.name : wornCoat.name + ' · ' + wornFlag.name);
     $('look-act').hidden = !pc;
@@ -1526,7 +1531,39 @@
    * 외형 그림(1.9.1): 캔버스에 라라(우비 색)와 깃발(깃발 색)을 그린다. 색 조각 대신 실제 모습을 보여 준다.
    *   coat 만 주면 라라만, flag 만 주면 깃대만, both 면 둘을 나란히(미리 보기).
    */
-  var lookPick = '';
+  var lookPick = '', lookNow = null, lookFrame = 0, lookTimer = 0;
+  /*
+   * 옷장의 큰 미리 보기(1.9.2): 거점 앞에 선 라라를 한 장면으로 그린다. 입었을 때 게임에서 어떻게 보이는지가 한눈에 들어오게.
+   *   라라는 옷장 전용의 큰 그림(가로 16칸, 세로 20칸)이다: 모자, 얼굴, 옷깃, 가방끈, 단추, 장화까지 보인다.
+   *   글자 뜻: y 모자, Y 모자 그늘, j 우비, J 우비 그늘(색은 우비 색에서 어둡게 뽑는다), s 살, e 눈, m 입, h 머리카락, k 가방끈, w 옷깃·단추, p 바지, b 장화
+   */
+  var BIG_LARA = ['......yyyyy.....', '....yyyyyyyy....', '...yyyyyyyyyy...', '...yyhhhhhyyY...', '..yyhssssshyY...', '..yyssessesyY...', '..yysssssssyY...', '...yyssmssyyY...',
+                  '....jjwwwjjJ....', '...kjjjjjjjjJ...', '..jkjjjwjjjjJj..', '..jjkjjjjjjjJj..', '..sjjkjjwjjjJs..', '...jjjjjjjjjJ...', '...jjjjjjjjjJ...', '...JJJJJJJJJJ...'];
+  var BIG_LEGS = [['....ppp..ppp....', '....ppp..ppp....', '....bbb..bbb....', '...bbbb..bbbb...'], ['....ppp..ppp....', '....ppp..bbb....', '....bbb.bbbb....', '...bbbb.........']];
+  function shade(hex, k) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; function c(v) { return Math.max(0, Math.min(255, Math.round(v * k))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
+  function drawLookScene(cv, coat, flag, frame) {
+    var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
+    var W = cv.width, H = cv.height, G = H - 5;      // G: 땅의 높이
+    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+    // 하늘과 먼 건물
+    r('#a9c4c2', 0, 0, W, 14); r('#c4cfb8', 0, 14, W, 10); r('#d8d0a8', 0, 24, W, G - 24);
+    [[58, 12, 9], [70, 7, 7], [80, 15, 10], [93, 10, 8]].forEach(function (b) { r('#8fa5a2', b[0], G - 30 + b[1], b[2], 30 - b[1]); r('#7d9491', b[0] + 1, G - 28 + b[1], 2, 2); });
+    // 땅과 길
+    r('#6f6a55', 0, G, W, H - G); r('#5d5947', 0, G, W, 1); for (var d = 4; d < W; d += 12) r('#8f8a70', d, G + 3, 5, 1);
+    // 거점: 콘크리트 본관, 창, 옥상 난간, 깃대와 깃발
+    r('#8f8a78', 4, G - 22, 32, 22); r('#7a7566', 4, G - 22, 32, 2); r('#6b6759', 34, G - 22, 2, 22);
+    for (var wx = 0; wx < 3; wx++) { r(wx === 1 ? '#ffe9a0' : '#3f4a50', 8 + wx * 9, G - 17, 5, 5); r('#3f4a50', 8 + wx * 9, G - 9, 5, 4); }
+    r('#4a4035', 17, G - 7, 6, 7); for (var rl = 0; rl < 8; rl++) r('#3c3a34', 4 + rl * 4, G - 25, 1, 3); r('#3c3a34', 4, G - 25, 32, 1);
+    r('#cfcebf', 9, G - 38, 1, 16);
+    var wave = frame % 2; r(flag, 10, G - 38 + wave, 7, 4); r(shade(flag, 0.7), 10, G - 35 + wave, 7, 1); r(flag, 17, G - 37 - wave + 1, 1, 3);
+    // 모래주머니
+    r('#a39a78', 86, G - 4, 7, 4); r('#8f8767', 93, G - 4, 7, 4); r('#a39a78', 90, G - 8, 7, 4);
+    // 라라: 제자리걸음(다리 두 장 + 한 칸 들썩임)
+    var step = frame % 2, rows = BIG_LARA.concat(BIG_LEGS[step]), lx = 50, ly = G - rows.length + (step ? -1 : 0);
+    var pal = { y: coat.y, Y: shade(coat.y, 0.72), j: coat.j, J: shade(coat.j, 0.72), s: '#e2b48c', e: '#2b241c', m: '#c98a6a', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', p: '#30343c', b: '#17180f' };
+    r('rgba(0,0,0,.25)', lx + 3, G, 10, 1);
+    for (var yy = 0; yy < rows.length; yy++) for (var xx = 0; xx < 16; xx++) { var ch = rows[yy][xx]; if (ch !== '.') r(pal[ch], lx + xx, ly + yy, 1, 1); }
+  }
   function drawLook(cv, coat, flag, k, both) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
