@@ -1093,7 +1093,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.6.1</div>
+  <div class="boot-ver">7구역 알파 1.6.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1628,7 +1628,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.6.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.6.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1764,7 +1764,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.2";
 </script>
 <script>
 /*
@@ -1783,6 +1783,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.6.2', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '길 정찰과 구역 알림',
+      items: [
+        '구역마다 "길 정찰" 시간이 생겼어요. 이 시간이 지나야 다음 구역의 문이 열려요.',
+        '정찰은 1구역 5분부터 7구역 23분까지 조금씩 길어져요. 자리를 비운 시간도 세요.',
+        '알림에 어느 구역의 일인지 적었어요.'
+      ] },
     { ver: '알파 1.6.1', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '기계 다시 맞추기와 의뢰 자동',
       items: [
         '3구역에서 싼 기계만 사고 다시 맞추기를 반복하면 레벨이 싸게 오르던 것을 막았어요.',
@@ -4958,7 +4964,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
     }
     checkExtGoals(state, events);
     // 7구역의 목표를 모두 채우면 이야기가 끝난다. 한 회차에 한 번만 센다(endedRun). 끝낸 횟수(ended)는 철수해도 남는다
-    if (state.zone >= ZONES.length - 1 && !state.endedRun && goalsComplete(state, ZONES.length - 1)) {
+    if (state.zone >= ZONES.length - 1 && !state.endedRun && goalsComplete(state, ZONES.length - 1) && !(scoutLeft(state) > 0)) {
       state.endedRun = true;
       state.ended = (state.ended || 0) + 1;
       if (!state.endedAt) state.endedAt = Date.now();
@@ -4972,11 +4978,27 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
    *   이제는 사고 싶은 것을 사면서 가도 문이 열린다. 철수 화면의 "이번 회차 누적"과 같은 숫자다.
    *   have: 이번 회차 누적 물자, enough: 문 값에 닿았는가.
    */
+  /*
+   * 길 정찰(1.6.2): 구역마다 최소한 머물러야 하는 시간.
+   *   구역에 들어선 때부터 SCOUT_MINUTES[구역] 분이 지나야 다음 구역의 문을 열 수 있다(7구역은 이야기의 끝).
+   *   넣은 까닭: 특성과 업적을 다 채우면 한 회차가 1시간도 안 걸렸다. 문 값은 배수가 커지면 금방 채워지지만 시간은 줄지 않는다.
+   *   뒤 구역일수록 조금씩 길다. 자리를 비운 시간도 센다(runSeconds 가 그렇다). 새로 시작한 사람은 원래 이보다 오래 머문다.
+   */
+  var SCOUT_MINUTES = [5, 7, 9, 12, 15, 19, 23];
+  function scoutNeed(zone) { return (SCOUT_MINUTES[zone] || 0) * 60; }
+  /** 지금 구역에 들어선 때(이번 회차가 시작되고 몇 초째였는지). */
+  function zoneEntered(state) {
+    if (!(state.zone > 0)) return 0;
+    for (var i = (state.zoneLog || []).length - 1; i >= 0; i--) if (state.zoneLog[i] && state.zoneLog[i].zone === state.zone) return Math.max(0, Number(state.zoneLog[i].seconds) || 0);
+    return 0;      // 기록이 없는 옛 저장: 회차 처음부터 있었던 것으로 본다
+  }
+  /** 지금 구역의 정찰이 끝나기까지 남은 초. 끝났으면 0. */
+  function scoutLeft(state) { return Math.max(0, Math.ceil(scoutNeed(state.zone) - ((state.runSeconds || 0) - zoneEntered(state)))); }
   function nextZone(state) {
     var i = state.zone + 1;
     if (i >= ZONES.length) return null;
     var cost = Math.ceil(ZONES[i].cost * mods(state).cost), have = Math.max(0, state.runEarned || 0);
-    return { index: i, zone: ZONES[i], cost: cost, have: have, enough: have >= cost, ready: goalsComplete(state, state.zone), soon: ZONES[i].kind === 'soon' };
+    return { index: i, zone: ZONES[i], cost: cost, have: have, enough: have >= cost, wait: scoutLeft(state), ready: goalsComplete(state, state.zone), soon: ZONES[i].kind === 'soon' };
   }
   /**
    * 다음 구역의 문을 연다. 앞 구역은 그대로 남아 계속 번다.
@@ -4988,6 +5010,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
     if (!n.ready) return fail('goals');
     if (n.soon && state.gate) return fail('soon');
     if (!n.enough) return fail('supplies');      // 누적이 모자라다. 물자는 내지 않는다
+    if (n.wait > 0) return fail('scout');         // 길 정찰이 아직 끝나지 않았다
     if (n.soon) { state.gate = true; state.bestZone = Math.max(state.bestZone, n.index); return { ok: true, soon: true, index: n.index, zone: n.zone }; }
     state.zone = n.index;
     state.zoneLog.push({ zone: n.index, seconds: state.runSeconds, day: state.day });      // 통계의 '지난 구역'
@@ -5789,7 +5812,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, rebalancePlan: rebalancePlan, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, rebalancePlan: rebalancePlan, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,
@@ -8582,7 +8605,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
         if (!r.ok) return;
         if (r.gain) popNumber('+' + fmt(r.gain));
         if (r.record) {      // 병원 서류를 찾았다
-          toast((r.record.first ? '새 서류 · ' : '서류 · ') + r.record.name);
+          toast((r.record.first ? '5구역 새 서류 · ' : '5구역 서류 · ') + r.record.name);
           log('과제를 끝내다 ' + r.record.name + (C.hasBatchim(r.record.name) ? '을' : '를') + ' 찾았다.' + (r.record.first ? ' 도감에 적었다.' : ''), 'good');
           sfx(r.record.first ? 'goal' : 'staff');
         }
@@ -9176,7 +9199,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
     var feedCost = state.pet ? C.petFeedCost(state) : Infinity;
     var canFeed = isFinite(feedCost) && feedCost <= state.treats;
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
-    var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.soon && state.gate);
+    var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.wait > 0) && !(nz.soon && state.gate);
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
     var canFill = fillReady(1) || fillReady(2) || fillReady(3) || fillReady(5) || fillReady(6);      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
@@ -9279,7 +9302,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
   function zoneTodo(zi) {
     if (fillReady(zi) || zoneBuyReady(zi)) return true;
     var nz = C.nextZone(state);
-    return zi === state.zone && !!nz && nz.ready && nz.enough;
+    return zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.wait > 0);
   }
   function renderZone(m) {
     var zi = tab === 'wall' ? -1 : Number(tab.slice(1));
@@ -9331,7 +9354,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
     // 강화나 목표에 볼 것이 생기면 전환 단추에 점을 찍는다
     if (zoneTab) {
       var upReady = C.UPGRADES.some(function (u) { return u.zone === zi && C.upgradeCost(state, u.id) <= state.supplies; });
-      var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.soon && state.gate);
+      var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.wait > 0) && !(nz.soon && state.gate);
       $('zone-panes').children[0].classList.toggle('avail', fillReady(zi) && pane !== 'play');      // 운영: 채울 수 있는 주문·의뢰·화물이 있다
       $('zone-panes').children[1].classList.toggle('avail', upReady && pane !== 'up');
       $('zone-panes').children[2].classList.toggle('avail', goalReady && pane !== 'goal');
@@ -9360,14 +9383,23 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
         r.bar.style.width = (g.done ? 100 : Math.min(100, g.value / g.need * 100)).toFixed(1) + '%';
       });
       var n = C.nextZone(state), ob = $('open-zone'), showOpen = !!n && (zi === state.zone || zi === n.index) && !(n.soon && state.gate);
-      ob.hidden = !showOpen;
+      // 7구역: 다음 문은 없지만 정찰(송신 준비) 시간이 남았으면 같은 자리에 알려 준다(1.6.2)
+      var lastWait = !n && zi === state.zone && !state.endedRun ? C.scoutLeft(state) : 0;
+      ob.hidden = !showOpen && !(lastWait > 0);
+      if (!showOpen && lastWait > 0) {
+        ob.disabled = true;
+        if (!ob.firstChild) { ob.appendChild(el('span', 'oz-main')); ob.appendChild(el('span', 'oz-sub num')); var ozl = el('span', 'oz-bar'); ozl.appendChild(el('i')); ob.appendChild(ozl); }
+        setText(ob.children[0], '송신을 준비하고 있어요'); setText(ob.children[1], '남은 시간 ' + clock(lastWait));
+        ob.children[2].firstChild.style.width = (100 - lastWait / C.scoutNeed(state.zone) * 100).toFixed(1) + '%';
+      }
       if (showOpen) {
-        ob.disabled = !n.ready || !n.enough;
+        ob.disabled = !n.ready || !n.enough || n.wait > 0;
         // 두 줄로 나눠 적는다: 윗줄은 할 일, 아랫줄은 모은 물자 / 필요한 물자(막대와 함께)
         if (!ob.firstChild) { ob.appendChild(el('span', 'oz-main')); ob.appendChild(el('span', 'oz-sub num')); var ozb = el('span', 'oz-bar'); ozb.appendChild(el('i')); ob.appendChild(ozb); }
         setText(ob.children[0], n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다' : (state.zone + 1) + '구역 목표를 모두 채우면 ' + n.zone.no + '구역이 열려요');
         // 문 값은 이번 회차 누적 물자로 잰다(1.4.0). 가진 물자는 줄지 않는다
-        setText(ob.children[1], '이번 회차 누적 ' + fmt(Math.min(n.have, n.cost)) + ' / ' + fmt(n.cost));
+        setText(ob.children[1], '이번 회차 누적 ' + fmt(Math.min(n.have, n.cost)) + ' / ' + fmt(n.cost) + (n.wait > 0 ? ' · 길 정찰 ' + clock(n.wait) : ''));
+        if (n.ready && n.enough && n.wait > 0) setText(ob.children[0], n.zone.no + '구역 가는 길을 정찰하고 있어요');
         ob.children[2].firstChild.style.width = (n.cost > 0 ? Math.min(100, n.have / n.cost * 100) : 100).toFixed(1) + '%';
       }
       var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 지금은 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 지금은 문 앞까지 갈 수 있어요.')
@@ -9855,7 +9887,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
           // 무전 로그에는 굵직한 일만 남긴다: 변이체를 막은 밤과 10번째마다의 밤
           if (ev.boss || ev.wave % 10 === 0) log((ev.boss ? '변이체가 이끈 무리를 막아냈다. ' : ev.wave + '번째 밤을 막아냈다. ') + '물자 ' + fmt(ev.reward) + ' 확보.', 'good');
           if (ev.passer) {      // 6구역: 넉넉하게 막은 밤에 누가 다리를 건넜다
-            toast((ev.passer.first ? '새 통행인 · ' : '통행인 · ') + ev.passer.name);
+            toast((ev.passer.first ? '6구역 새 통행인 · ' : '6구역 통행인 · ') + ev.passer.name);
             log(ev.passer.name + (C.hasBatchim(ev.passer.name) ? '이' : '가') + ' 다리를 건넜다.' + (ev.passer.first ? ' 도감에 적었다.' : ''), 'good');
           }
           if (ev.edgeFull) { toast('선제 공격을 할 수 있어요'); log('방어 여유가 가득 찼다. 선제 공격을 할 수 있다.', 'good'); }
@@ -9884,7 +9916,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
         case 'surge': if (tab === 'z2' && pane === 'play') sfx('surge'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
-          if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
+          if (ev.long) { toast('4구역 ' + ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
           break;
         case 'ending':
@@ -9892,19 +9924,19 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
           log('혈청을 완성했다. 7구역에 닿았다.', 'story');
           break;
         case 'salvage':
-          toast('표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); sfx('signal');
+          toast('4구역 표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); sfx('signal');
           break;
         case 'salvage-gone':
           log('표류 화물을 놓쳤다.', '');
           break;
         case 'contract':
-          toast('납품 의뢰 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' ' + (ev.itemName || '완제품') + ' ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          toast('3구역 납품 의뢰 · ' + ev.name + ' · ' + (ev.itemName || '완제품')); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' ' + (ev.itemName || '완제품') + ' ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
           break;
         case 'contract-gone':
           log('거래처가 기다리다 돌아갔다.', '');
           break;
         case 'order':
-          toast('단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          toast('2구역 단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
           break;
         case 'order-filled':      // 흥정꾼·자동 제어반·자동 신호가 알아서 넘긴 것(1.3.1)
         case 'contract-filled':
@@ -9916,7 +9948,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
           toast(ev.all ? '세 품목을 모두 익혔다' : ev.name + ' 숙련'); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 손에 익었다.' + (ev.all ? ' 세 품목을 모두 익혀 라인이 더 빨리 돈다.' : ''), 'good'); sfx('goal');
           break;
         case 'zev':
-          toast(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 왔어요'); log(ZEV_TEXT[ev.id].lead.replace('왔어요.', '왔다.').replace('섰어요.', '섰다.').replace('들어왔어요.', '들어왔다.'), ''); sfx('signal');
+          toast(({ rail: '4구역 ', guard: '6구역 ', tower: '7구역 ' }[ev.id] || '') + ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 왔어요'); log(ZEV_TEXT[ev.id].lead.replace('왔어요.', '왔다.').replace('섰어요.', '섰다.').replace('들어왔어요.', '들어왔다.'), ''); sfx('signal');
           break;
         case 'zev-auto':
           log(ev.id === 'rail' ? '자동 신호가 특별 화물을 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.' : ev.id === 'guard' ? '초소장이 행렬을 통과시켰다. 물자 ' + fmt(ev.gain) + ' 확보.' : '송신 기사가 무전에 응답했다. 생존자 ' + fmt(ev.people) + '명이 왔다.', 'good');
@@ -9927,13 +9959,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.1";
           log('변이체를 막은 몫으로 특전 하나를 고른다.', 'good');
           break;
         case 'jam':
-          toast('고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
+          toast('3구역 고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
           break;
         case 'jam-fixed':
           log(ev.auto ? '자동 제어반이 기계를 다시 돌렸다.' : '기계가 저절로 다시 돈다.', '');
           break;
         case 'truck':
-          toast('출하 트럭이 왔어요'); log('출하 트럭이 왔다. 출하장에 ' + Math.floor(ev.seconds) + '초분이 쌓여 있다.', ''); sfx('signal');
+          toast('3구역 출하 트럭이 왔어요'); log('출하 트럭이 왔다. 출하장에 ' + Math.floor(ev.seconds) + '초분이 쌓여 있다.', ''); sfx('signal');
           break;
         case 'truck-loaded':
           log('자동 제어반이 트럭에 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.', 'good');

@@ -14,7 +14,7 @@ function inMarket() {
   const s = fresh();
   C.GOALS[0].forEach(g => { s.goalsDone[g.id] = true; });
   s.runEarned = C.ZONES[1].cost;      // 1.4.0: 문은 이번 회차 누적 물자로 열린다(가진 물자를 내지 않는다)
-  assert.ok(C.openZone(s).ok);
+  s.runSeconds += 1e5; assert.ok(C.openZone(s).ok);
   s.runEarned = 0;
   return s;
 }
@@ -206,7 +206,7 @@ test('다음 구역: 목표를 다 채우고 이번 회차 누적 물자가 문 
   s.supplies = 5; s.runEarned = C.ZONES[1].cost;
   assert.equal(C.nextZone(s).enough, true); assert.equal(C.nextZone(s).have, C.ZONES[1].cost);
   const before = C.searchRate(s);
-  const r = C.openZone(s);
+  s.runSeconds += 1e5; const r = C.openZone(s);
   assert.ok(r.ok && !r.soon);
   assert.equal(s.zone, 1);
   assert.equal(s.supplies, 5, '문을 열어도 물자는 줄지 않는다');
@@ -219,11 +219,11 @@ test('다음 구역: 7구역까지 차례로 열리고, 그 뒤로는 다음 구
   C.GOALS[4].forEach(g => { s.goalsDone[g.id] = true; });
   s.runEarned = C.nextZone(s).cost;
   assert.equal(C.nextZone(s).soon, false);
-  assert.ok(C.openZone(s).ok); assert.equal(s.zone, 5);
+  s.runSeconds += 1e5; assert.ok(C.openZone(s).ok); assert.equal(s.zone, 5);
   C.GOALS[5].forEach(g => { s.goalsDone[g.id] = true; });
   s.runEarned = C.nextZone(s).cost;
   assert.equal(C.nextZone(s).soon, false);
-  assert.ok(C.openZone(s).ok); assert.equal(s.zone, 6); assert.equal(s.gate, false);
+  s.runSeconds += 1e5; assert.ok(C.openZone(s).ok); assert.equal(s.zone, 6); assert.equal(s.gate, false);
   assert.equal(C.nextZone(s), null, '7구역이 마지막이다');
   s.runEarned = 1e60;
   assert.equal(C.openZone(s).ok, false);
@@ -513,7 +513,7 @@ test('이야기: 구역에 들어설 때, 목표 둘, 목표 셋에 일지가 �
   assert.deepEqual(story(s), ['z1-1']);
   s.goalsDone.z1c = true;
   assert.deepEqual(story(s), ['z1-2']);
-  s.runEarned = C.ZONES[1].cost; assert.ok(C.openZone(s).ok);
+  s.runSeconds += 1e5; s.runEarned = C.ZONES[1].cost; assert.ok(C.openZone(s).ok);
   const ev = C.tick(s, 0.1, half).filter(e => e.type === 'story');
   assert.equal(ev[0].id, 'z2-0');
   assert.equal(ev[0].zoneName, '재래시장');
@@ -524,7 +524,7 @@ test('이야기: 첫 철수와 공단의 문 앞에서 일지가 열리고, 읽�
   const s = inMarket();
   C.tick(s, 0.1, half);
   C.GOALS[1].forEach(g => { s.goalsDone[g.id] = true; });
-  s.runEarned = C.ZONES[2].cost; C.openZone(s);
+  s.runSeconds += 1e5; s.runEarned = C.ZONES[2].cost; C.openZone(s);
   assert.ok(C.tick(s, 0.1, half).some(e => e.type === 'story' && e.id === 'z3-0'));
   s.pendingPerks = [];
   s.runEarned = 1e11;
@@ -2780,4 +2780,30 @@ test('1.6.1: 자동에 맡기면 의뢰가 바라는 품목으로 알아서 바�
   const ev2 = []; C.stepContracts(a, 1, 5, () => 0.5, ev2); assert.equal(ev2.length, 0, '이미 맞췄으면 다시 바꾸지 않는다');
   const m = mk(false); C.stepContracts(m, 1, 5, () => 0.5, []); assert.equal(m.recipe, 'bolt');
   const off = mk(true); C.setAutoEvents(off, 2, false); C.stepContracts(off, 1, 5, () => 0.5, []); assert.equal(off.recipe, 'bolt', '구역 자동을 껐으면 바꾸지 않는다');
+});
+
+test('1.6.2 길 정찰: 구역마다 정해진 시간이 지나야 다음 문이 열리고, 뒤 구역일수록 조금씩 길다', () => {
+  for (let i = 1; i < C.SCOUT_MINUTES.length; i++) assert.ok(C.SCOUT_MINUTES[i] > C.SCOUT_MINUTES[i - 1] && C.SCOUT_MINUTES[i] <= C.SCOUT_MINUTES[i - 1] * 1.5);
+  assert.equal(C.SCOUT_MINUTES.length, C.ZONES.length);
+  const s = C.createState(0);
+  C.goals(s, 0).forEach(g => { s.goalsDone[g.id] = true; }); s.runEarned = C.ZONES[1].cost;
+  assert.equal(C.scoutLeft(s), C.scoutNeed(0));
+  assert.equal(C.openZone(s).reason, 'scout', '목표와 물자를 다 채워도 정찰이 끝나야 한다');
+  s.runSeconds = C.scoutNeed(0) - 1; assert.equal(C.nextZone(s).wait, 1);
+  s.runSeconds = C.scoutNeed(0); assert.equal(C.scoutLeft(s), 0); assert.ok(C.openZone(s).ok);
+  assert.equal(C.zoneEntered(s), C.scoutNeed(0)); assert.equal(C.scoutLeft(s), C.scoutNeed(1), '새 구역에 들어서면 다시 센다');
+  // 특성을 다 채워도 시간은 줄지 않는다
+  C.TRAITS.forEach(t => { s.traits[t.id] = t.max; }); assert.equal(C.scoutLeft(s), C.scoutNeed(1));
+  // 자리를 비운 시간도 센다
+  const before = C.scoutLeft(s); C.applyOffline(s, 600); assert.ok(C.scoutLeft(s) < before);
+  // 기록이 없는 옛 저장은 회차 처음부터 있었던 것으로 본다
+  const old = C.createState(0); old.zone = 3; old.zoneLog = []; old.runSeconds = 5000; assert.equal(C.scoutLeft(old), 0);
+});
+
+test('1.6.2 길 정찰: 7구역의 끝도 정찰 시간이 지나야 온다', () => {
+  const s = C.createState(0); s.zone = 6; s.zoneLog = [{ zone: 6, seconds: 100, day: 1 }]; s.runSeconds = 100;
+  C.goals(s, 6).forEach(g => { s.goalsDone[g.id] = true; });
+  assert.ok(!C.tick(s, 0.1, () => 0.5).some(e => e.type === 'ending'));
+  s.runSeconds = 100 + C.scoutNeed(6);
+  assert.ok(C.tick(s, 0.1, () => 0.5).some(e => e.type === 'ending'));
 });

@@ -1181,7 +1181,7 @@
         if (!r.ok) return;
         if (r.gain) popNumber('+' + fmt(r.gain));
         if (r.record) {      // 병원 서류를 찾았다
-          toast((r.record.first ? '새 서류 · ' : '서류 · ') + r.record.name);
+          toast((r.record.first ? '5구역 새 서류 · ' : '5구역 서류 · ') + r.record.name);
           log('과제를 끝내다 ' + r.record.name + (C.hasBatchim(r.record.name) ? '을' : '를') + ' 찾았다.' + (r.record.first ? ' 도감에 적었다.' : ''), 'good');
           sfx(r.record.first ? 'goal' : 'staff');
         }
@@ -1775,7 +1775,7 @@
     var feedCost = state.pet ? C.petFeedCost(state) : Infinity;
     var canFeed = isFinite(feedCost) && feedCost <= state.treats;
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
-    var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.soon && state.gate);
+    var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.wait > 0) && !(nz.soon && state.gate);
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
     var canFill = fillReady(1) || fillReady(2) || fillReady(3) || fillReady(5) || fillReady(6);      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
@@ -1878,7 +1878,7 @@
   function zoneTodo(zi) {
     if (fillReady(zi) || zoneBuyReady(zi)) return true;
     var nz = C.nextZone(state);
-    return zi === state.zone && !!nz && nz.ready && nz.enough;
+    return zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.wait > 0);
   }
   function renderZone(m) {
     var zi = tab === 'wall' ? -1 : Number(tab.slice(1));
@@ -1930,7 +1930,7 @@
     // 강화나 목표에 볼 것이 생기면 전환 단추에 점을 찍는다
     if (zoneTab) {
       var upReady = C.UPGRADES.some(function (u) { return u.zone === zi && C.upgradeCost(state, u.id) <= state.supplies; });
-      var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.soon && state.gate);
+      var nz = C.nextZone(state), goalReady = zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.wait > 0) && !(nz.soon && state.gate);
       $('zone-panes').children[0].classList.toggle('avail', fillReady(zi) && pane !== 'play');      // 운영: 채울 수 있는 주문·의뢰·화물이 있다
       $('zone-panes').children[1].classList.toggle('avail', upReady && pane !== 'up');
       $('zone-panes').children[2].classList.toggle('avail', goalReady && pane !== 'goal');
@@ -1959,14 +1959,23 @@
         r.bar.style.width = (g.done ? 100 : Math.min(100, g.value / g.need * 100)).toFixed(1) + '%';
       });
       var n = C.nextZone(state), ob = $('open-zone'), showOpen = !!n && (zi === state.zone || zi === n.index) && !(n.soon && state.gate);
-      ob.hidden = !showOpen;
+      // 7구역: 다음 문은 없지만 정찰(송신 준비) 시간이 남았으면 같은 자리에 알려 준다(1.6.2)
+      var lastWait = !n && zi === state.zone && !state.endedRun ? C.scoutLeft(state) : 0;
+      ob.hidden = !showOpen && !(lastWait > 0);
+      if (!showOpen && lastWait > 0) {
+        ob.disabled = true;
+        if (!ob.firstChild) { ob.appendChild(el('span', 'oz-main')); ob.appendChild(el('span', 'oz-sub num')); var ozl = el('span', 'oz-bar'); ozl.appendChild(el('i')); ob.appendChild(ozl); }
+        setText(ob.children[0], '송신을 준비하고 있어요'); setText(ob.children[1], '남은 시간 ' + clock(lastWait));
+        ob.children[2].firstChild.style.width = (100 - lastWait / C.scoutNeed(state.zone) * 100).toFixed(1) + '%';
+      }
       if (showOpen) {
-        ob.disabled = !n.ready || !n.enough;
+        ob.disabled = !n.ready || !n.enough || n.wait > 0;
         // 두 줄로 나눠 적는다: 윗줄은 할 일, 아랫줄은 모은 물자 / 필요한 물자(막대와 함께)
         if (!ob.firstChild) { ob.appendChild(el('span', 'oz-main')); ob.appendChild(el('span', 'oz-sub num')); var ozb = el('span', 'oz-bar'); ozb.appendChild(el('i')); ob.appendChild(ozb); }
         setText(ob.children[0], n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다' : (state.zone + 1) + '구역 목표를 모두 채우면 ' + n.zone.no + '구역이 열려요');
         // 문 값은 이번 회차 누적 물자로 잰다(1.4.0). 가진 물자는 줄지 않는다
-        setText(ob.children[1], '이번 회차 누적 ' + fmt(Math.min(n.have, n.cost)) + ' / ' + fmt(n.cost));
+        setText(ob.children[1], '이번 회차 누적 ' + fmt(Math.min(n.have, n.cost)) + ' / ' + fmt(n.cost) + (n.wait > 0 ? ' · 길 정찰 ' + clock(n.wait) : ''));
+        if (n.ready && n.enough && n.wait > 0) setText(ob.children[0], n.zone.no + '구역 가는 길을 정찰하고 있어요');
         ob.children[2].firstChild.style.width = (n.cost > 0 ? Math.min(100, n.have / n.cost * 100) : 100).toFixed(1) + '%';
       }
       var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 지금은 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 지금은 문 앞까지 갈 수 있어요.')
@@ -2454,7 +2463,7 @@
           // 무전 로그에는 굵직한 일만 남긴다: 변이체를 막은 밤과 10번째마다의 밤
           if (ev.boss || ev.wave % 10 === 0) log((ev.boss ? '변이체가 이끈 무리를 막아냈다. ' : ev.wave + '번째 밤을 막아냈다. ') + '물자 ' + fmt(ev.reward) + ' 확보.', 'good');
           if (ev.passer) {      // 6구역: 넉넉하게 막은 밤에 누가 다리를 건넜다
-            toast((ev.passer.first ? '새 통행인 · ' : '통행인 · ') + ev.passer.name);
+            toast((ev.passer.first ? '6구역 새 통행인 · ' : '6구역 통행인 · ') + ev.passer.name);
             log(ev.passer.name + (C.hasBatchim(ev.passer.name) ? '이' : '가') + ' 다리를 건넜다.' + (ev.passer.first ? ' 도감에 적었다.' : ''), 'good');
           }
           if (ev.edgeFull) { toast('선제 공격을 할 수 있어요'); log('방어 여유가 가득 찼다. 선제 공격을 할 수 있다.', 'good'); }
@@ -2483,7 +2492,7 @@
         case 'surge': if (tab === 'z2' && pane === 'play') sfx('surge'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
-          if (ev.long) { toast(ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
+          if (ev.long) { toast('4구역 ' + ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
           break;
         case 'ending':
@@ -2491,19 +2500,19 @@
           log('혈청을 완성했다. 7구역에 닿았다.', 'story');
           break;
         case 'salvage':
-          toast('표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); sfx('signal');
+          toast('4구역 표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); sfx('signal');
           break;
         case 'salvage-gone':
           log('표류 화물을 놓쳤다.', '');
           break;
         case 'contract':
-          toast('납품 의뢰 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' ' + (ev.itemName || '완제품') + ' ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          toast('3구역 납품 의뢰 · ' + ev.name + ' · ' + (ev.itemName || '완제품')); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' ' + (ev.itemName || '완제품') + ' ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
           break;
         case 'contract-gone':
           log('거래처가 기다리다 돌아갔다.', '');
           break;
         case 'order':
-          toast('단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          toast('2구역 단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
           break;
         case 'order-filled':      // 흥정꾼·자동 제어반·자동 신호가 알아서 넘긴 것(1.3.1)
         case 'contract-filled':
@@ -2515,7 +2524,7 @@
           toast(ev.all ? '세 품목을 모두 익혔다' : ev.name + ' 숙련'); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 손에 익었다.' + (ev.all ? ' 세 품목을 모두 익혀 라인이 더 빨리 돈다.' : ''), 'good'); sfx('goal');
           break;
         case 'zev':
-          toast(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 왔어요'); log(ZEV_TEXT[ev.id].lead.replace('왔어요.', '왔다.').replace('섰어요.', '섰다.').replace('들어왔어요.', '들어왔다.'), ''); sfx('signal');
+          toast(({ rail: '4구역 ', guard: '6구역 ', tower: '7구역 ' }[ev.id] || '') + ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 왔어요'); log(ZEV_TEXT[ev.id].lead.replace('왔어요.', '왔다.').replace('섰어요.', '섰다.').replace('들어왔어요.', '들어왔다.'), ''); sfx('signal');
           break;
         case 'zev-auto':
           log(ev.id === 'rail' ? '자동 신호가 특별 화물을 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.' : ev.id === 'guard' ? '초소장이 행렬을 통과시켰다. 물자 ' + fmt(ev.gain) + ' 확보.' : '송신 기사가 무전에 응답했다. 생존자 ' + fmt(ev.people) + '명이 왔다.', 'good');
@@ -2526,13 +2535,13 @@
           log('변이체를 막은 몫으로 특전 하나를 고른다.', 'good');
           break;
         case 'jam':
-          toast('고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
+          toast('3구역 고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
           break;
         case 'jam-fixed':
           log(ev.auto ? '자동 제어반이 기계를 다시 돌렸다.' : '기계가 저절로 다시 돈다.', '');
           break;
         case 'truck':
-          toast('출하 트럭이 왔어요'); log('출하 트럭이 왔다. 출하장에 ' + Math.floor(ev.seconds) + '초분이 쌓여 있다.', ''); sfx('signal');
+          toast('3구역 출하 트럭이 왔어요'); log('출하 트럭이 왔다. 출하장에 ' + Math.floor(ev.seconds) + '초분이 쌓여 있다.', ''); sfx('signal');
           break;
         case 'truck-loaded':
           log('자동 제어반이 트럭에 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.', 'good');

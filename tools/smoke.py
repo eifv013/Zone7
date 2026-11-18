@@ -64,7 +64,7 @@ def guard(**over):
 
 def tower(**over):
     """7구역(송신탑)까지 연 판: 안테나는 없고 물자는 넉넉하다."""
-    s = guard(zone=6, supplies=5e45, runEarned=5e45, posts=40)
+    s = guard(zone=6, supplies=5e45, runEarned=5e45, posts=40, runSeconds=1e5)      # runSeconds: 길 정찰(1.6.2)이 이미 끝난 판
     s["goalsDone"].update({"z6a": True, "z6b": True, "z6c": True})
     s["story"].update({"z6-1": True, "z6-2": True, "z7-0": True})
     s.update(over)
