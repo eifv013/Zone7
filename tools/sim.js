@@ -34,28 +34,30 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (s.zone >= 4 && s.offers.length && s.points >= C.projectCost(s)) {
       const share = { soil: C.searchRate(s), ledger: C.tradeRate(s), process: C.lineRate(s), transit: C.railRate(s) }, per = C.productionPerSec(s) || 1;
       // 구역 목표(혈청 배양 3번)가 남아 있으면 그것부터 고른다: 사람도 목표를 보고 고른다
-      const worth = id => id === 'serum' && s.research.serum < 3 ? 9 : id in share ? 1 + share[id] / per : id === 'serum' ? 1.3 : id === 'drill' ? (C.defensePower(s) < C.nightStrength(s) ? 1.4 : 1.05) : id === 'refine' ? 1.1 : 1.02;
+      const wantDrill = C.goals(s, 4).some(g => g.id === 'z5c2' && !g.done), wantSerum = C.goals(s, 4).some(g => g.id === 'z5c' && !g.done);
+      const worth = id => (id === 'serum' && wantSerum) || (id === 'drill' && wantDrill) ? 9 : id in share ? 1 + share[id] / per : id === 'serum' ? 1.3 : id === 'drill' ? (C.defensePower(s) < C.nightStrength(s) ? 1.4 : 1.05) : id === 'refine' ? 1.1 : 1.02;
       C.runProject(s, s.offers.slice().sort((a, b) => worth(b) - worth(a))[0], rng);
     }
     C.fortify(s);
-    // 목표를 보고 사는 것(사람도 목표 줄을 보고 산다): 수가 목표인 것은 살 수 있으면 목표까지 먼저 산다
-    const goalBuy = (zi, id, have, buy) => { const g = C.GOALS[zi].find(x => x.id === id); for (let k = 0; g && s.zone >= zi && !s.goalsDone[id] && have() < g.need && k < 5 && buy().ok; k++); };
-    goalBuy(3, 'z4a', () => s.trains, () => C.buyTrain(s, 1)); goalBuy(4, 'z5a', () => s.staff, () => C.buyStaff(s, 1));
-    goalBuy(5, 'z6a', () => s.posts, () => C.buyPost(s, 1));
-    goalBuy(5, 'z6b', () => C.UPGRADES.filter(u => u.zone === 5).reduce((n, u) => n + (s.upgrades[u.id] || 0), 0), () => { const u = C.UPGRADES.filter(x => x.zone === 5 && isFinite(C.upgradeCost(s, x.id))).sort((x, y) => C.upgradeCost(s, x.id) - C.upgradeCost(s, y.id))[0]; return u ? C.buyUpgrade(s, u.id) : { ok: false }; }); goalBuy(6, 'z7a', () => s.antennas, () => C.buyAntenna(s, 1));
-    // 6구역 목표(무리의 2배 방어력으로 밤 15번): 목표가 남아 있으면 가진 물자의 30%까지 써서 방어력을 2배 위로 올려 둔다
-    if (s.zone === 5 && !s.goalsDone.z6b) {
-      let budget = s.supplies * 0.3;
-      for (let k = 0; k < 400 && C.defensePower(s) < C.nightStrength(s) * C.SAFE_NIGHT * 1.05; k++) {
-        let best = null, bv = 0; for (const d of C.DEFENSES) { const c = C.defenseCost(s, d.id, 1); if (d.power / c > bv) { bv = d.power / c; best = { id: d.id, c }; } }
-        if (!best || best.c > budget) break;
-        budget -= best.c; C.buyDefense(s, best.id, 1);
-      }
-    }
+    // 목표를 보고 사는 것(사람도 목표 줄을 보고 산다): 이번 회차에 뽑힌 목표(C.goals)마다, 살 수 있으면 목표 쪽으로 먼저 산다
+    const cheapestUp = (zone) => { const u = C.UPGRADES.filter(x => x.zone === zone && isFinite(C.upgradeCost(s, x.id))).sort((x, y) => C.upgradeCost(s, x.id) - C.upgradeCost(s, y.id))[0]; return u ? C.buyUpgrade(s, u.id) : { ok: false }; };
+    const cheapestDef = () => { const d = C.DEFENSES.slice().sort((x, y) => C.defenseCost(s, x.id, 1) - C.defenseCost(s, y.id, 1))[0]; return C.buyDefense(s, d.id, 1); };
+    const cheapestRoute = () => { const r = C.ROUTES.filter(x => isFinite(C.routeCost(s, x.id))).sort((x, y) => C.routeCost(s, x.id) - C.routeCost(s, y.id))[0]; return r ? C.buyRoute(s, r.id) : { ok: false }; };
+    const cheapestHand = () => { const h = C.HANDS.slice().sort((x, y) => C.handCost(s, x.id, 1) - C.handCost(s, y.id, 1))[0]; return C.buyHand(s, h.id, 1); };
+    const toward = {
+      z1a: () => C.buyBuilding(s, 'scouts', 1), z1a2: () => C.buyBuilding(s, 'garden', 1), z1b2: cheapestDef, z1c2: () => cheapestUp(0),
+      z2a: () => C.buyStall(s, 1), z2a2: cheapestHand, z2c2: () => cheapestUp(1),
+      z3a: () => C.tuneLine(s, 1), z3a2: () => cheapestUp(2), z3b: () => (C.recipeOf(s).id === 'bolt' && !C.lineInfo(s).steady ? C.tuneLine(s, 1) : { ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
+      z4a: () => C.buyTrain(s, 1), z4a2: cheapestRoute, z4c2: () => cheapestUp(3),
+      z5a: () => C.buyStaff(s, 1), z5a2: () => cheapestUp(4),
+      z6a: () => C.buyPost(s, 1), z6a2: cheapestDef, z6b: () => cheapestUp(5), z6b2: () => C.buyUpgrade(s, 'booth'),
+      z7a: () => C.buyAntenna(s, 1)
+    };
+    for (let zi = 0; zi <= s.zone; zi++) for (const g of C.goals(s, zi)) { const act = toward[g.id]; for (let k = 0; act && !g.done && k < 5 && C.goals(s, zi).find(x => x.id === g.id).value < g.need && act().ok; k++); }
+    // 3구역: 의뢰가 다른 품목을 찾으면 그 품목으로 바꾼다(의뢰가 없으면 볼트로 돌아온다)
+    if (s.zone >= 2) { const want = s.contract && s.contract.item ? s.contract.item : 'bolt'; if (C.recipeOf(s).id !== want && !(s.retool > 0)) C.setRecipe(s, want); }
     const n = C.nextZone(s);
-    if (n && n.ready && !(n.soon && s.gate) && C.openZone(s).ok && s.gate && !marks.some(m => m.gate)) marks.push({ gate: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
-    // 회수가 가장 빠른 것부터 산다: 시설, 좌판, 구역 강화
-    // 살 것을 고르는 일은 3초에 한 번만 한다(매초 하면 계산이 너무 느리다. 결과는 거의 같다)
+    if (n && n.ready && n.enough) C.openZone(s);
     // 7구역의 마지막 목표가 혈청뿐이고 3시간 안에 모을 수 있으면, 다른 것을 사지 않고 모은다(사람도 그렇게 한다)
     const saving = s.zone >= 6 && !s.goalsDone.z7c && s.goalsDone.z7a && (C.serumCost(s) - s.supplies) < C.incomePerSec(s) * 3 * 3600;
     if (saving && C.serumCost(s) <= s.supplies) C.buySerum(s);
@@ -88,13 +90,13 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const isStuck = cheapest - s.supplies > C.productionPerSec(s) * stuck;
     const nz = C.nextZone(s), wall = nz && nz.ready && (nz.cost - nz.have) > C.incomePerSec(s) * 6 * 3600;      // 문 값의 벽: 목표는 다 채웠는데 문 값이 한참 멀다
     const endWall = !nz && s.zone >= 6 && !s.endedRun && isFinite(C.serumCost(s)) && (C.serumCost(s) - s.supplies) > C.incomePerSec(s) * 6 * 3600;
-    if (C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', goals: Object.keys(s.goalsDone).length }); s = C.retreat(s, 0).state; spendTraits(); }
+    if (C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', goals: C.goals(s, s.zone).filter(g => !g.done).map(g => g.id + ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need)).join(' ') }); s = C.retreat(s, 0, rng).state; spendTraits(); }
   };
   const gap = Math.max(0, 16 * 3600 / sessions - minutes * 60);
   while (day < days && !marks.some(m => m.end)) {
     for (let i = 0; i < sessions && !marks.some(m => m.end); i++) { for (let t = 0; t < minutes * 60 && !marks.some(m => m.end); t += dt) step(); C.applyOffline(s, i === sessions - 1 ? gap + 8 * 3600 : gap); }
     day++;
-    if (process.env.LIVE && day % 5 === 0) console.log(`  .. ${day}일 ${(active / 3600).toFixed(0)}h ${s.zone + 1}구역 물자 ${C.formatNumber(s.supplies)} 초당 ${C.formatNumber(C.productionPerSec(s))} 철수 ${s.retreats} 항체 ${s.antibodyTotal} 목표 ${Object.keys(s.goalsDone).filter(k => k[1] == s.zone + 1).join(',')} 방어 ${C.formatNumber(C.defensePower(s))}/${C.formatNumber(C.nightStrength(s))} 넉넉한밤 ${s.safeNights} 생존자 ${C.formatNumber(s.survivors)} 혈청 ${s.serumStage} 직원 ${s.staff} 초소 ${s.posts} 안테나 ${s.antennas}`);
+    if (process.env.LIVE && day % 5 === 0) console.log(`  .. ${day}일 ${(active / 3600).toFixed(0)}h ${s.zone + 1}구역 물자 ${C.formatNumber(s.supplies)} 초당 ${C.formatNumber(C.productionPerSec(s))} 철수 ${s.retreats} 항체 ${s.antibodyTotal} 목표 ${C.goals(s, s.zone).map(g => g.id + (g.done ? '✓' : ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need))).join(' ')} 품목 ${s.recipe} 의뢰 ${s.contract ? s.contract.item + ' ' + Math.floor(s.contract.have) + '/' + s.contract.need : '-'} 방어 ${C.formatNumber(C.defensePower(s))}/${C.formatNumber(C.nightStrength(s))} 넉넉한밤 ${s.safeNights} 생존자 ${C.formatNumber(s.survivors)} 혈청 ${s.serumStage} 직원 ${s.staff} 초소 ${s.posts} 안테나 ${s.antennas}`);
   }
   return { marks, day, state: s, hours: active / 3600 };
 }

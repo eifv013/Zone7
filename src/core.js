@@ -315,7 +315,7 @@
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
           "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
-    { no: 6, name: '강변 검문소', kind: 'guard', cost: 3e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
+    { no: 6, name: '강변 검문소', kind: 'guard', cost: 1e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
@@ -333,7 +333,7 @@
           "새벽에 건너편에서 쇠 긁는 소리가 났다. 차단기가 올라가는 소리였다. 저쪽 차단기다. 절반쯤 올라가다 멈췄다.",
           "탐조등이 다리 한가운데를 비췄다. 버려진 버스 한 대가 가로로 서 있다. 그 지붕 위에 밧줄 뭉치가 놓여 있었다. 어제는 없던 것이다.",
           "아저씨가 말했다. “저쪽에서도 길을 내고 있는 거야. 우리가 여기서 버티는 걸 보고.” 나는 냉장 상자를 고쳐 멨다. 강은 넓고, 다리는 하나뿐이다."] }] },
-    { no: 7, name: '송신탑', kind: 'tower', cost: 5e30, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
+    { no: 7, name: '송신탑', kind: 'tower', cost: 1e30, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
       story: [
         { title: "밧줄", text: [
           "7구역. 버스 지붕의 밧줄을 잡고 건넜다. 밧줄은 저쪽에서 당겨 주었다. 당긴 손은 작았다. 여럿이었다.",
@@ -548,7 +548,7 @@
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
       machines: {}, lineEarned: 0, steadySeconds: 0,
-      recipe: 'bolt', retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
+      recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
@@ -563,6 +563,7 @@
       // 구조 신호
       signalIn: SIGNAL_FIRST, signalLeft: 0, signalsAnswered: 0, buff: null,
       // 특전(이번 판)
+      goalPick: {},      // 이번 회차의 목표 고르기(구역 index → 자리별 0|1). 비어 있으면 원래 목표 셋
       perks: {}, pendingPerks: [], goalsDone: {}, rerollsUsed: 0,      // rerollsUsed: 이번 판에 특전을 다시 뽑은 횟수(철수하면 0)
       // 영구
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
@@ -658,13 +659,15 @@
     }
     s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
     s.recipe = findById(RECIPES, raw.recipe) ? raw.recipe : 'bolt';
+    var rm = raw.mastery && typeof raw.mastery === 'object' ? raw.mastery : {};
+    RECIPES.forEach(function (r) { var v = clamp(safeNum(rm[r.id], 0), 0, 1); if (v > 0 && r.id !== 'bolt') s.mastery[r.id] = v; });
     s.retool = clamp(safeNum(raw.retool, 0), 0, RETOOL_SECONDS); s.tuneLeft = clamp(safeNum(raw.tuneLeft, 0), 0, TUNE_SECONDS);
     s.jamIn = clamp(safeNum(raw.jamIn, 90), 0, JAM_GAP_MAX); s.truckIn = clamp(safeNum(raw.truckIn, 100), 0, TRUCK_GAP_MAX);
     s.jam = raw.jam && typeof raw.jam === 'object' && findById(MACHINES, raw.jam.id) ? { id: raw.jam.id, left: clamp(safeNum(raw.jam.left, 0), 0, JAM_SELF_FIX) } : null;
     s.truck = raw.truck && typeof raw.truck === 'object' ? { left: clamp(safeNum(raw.truck.left, 0), 0, TRUCK_WAIT) } : null;
     s.stockSec = clamp(safeNum(raw.stockSec, 0), 0, TRUCK_STOCK_MAX);
     s.repairsRun = clamp(safeCount(raw.repairsRun), 0, 1e9); s.trucksRun = clamp(safeCount(raw.trucksRun), 0, 1e9);
-    if (s.zone < 2) { s.jam = null; s.truck = null; s.recipe = 'bolt'; s.retool = 0; s.tuneLeft = 0; s.stockSec = 0; }
+    if (s.zone < 2) { s.jam = null; s.truck = null; s.recipe = 'bolt'; s.mastery = {}; s.retool = 0; s.tuneLeft = 0; s.stockSec = 0; }
     s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
     s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
     s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
@@ -694,7 +697,9 @@
     s.rerollsUsed = clamp(safeCount(raw.rerollsUsed), 0, 99);
     s.pendingPerks = (Array.isArray(raw.pendingPerks) ? raw.pendingPerks : []).filter(function (id) { return !!findById(PERKS, id); }).slice(0, PERK_CHOICES);
     var gd = raw.goalsDone && typeof raw.goalsDone === 'object' ? raw.goalsDone : {};
-    GOALS.forEach(function (list) { list.forEach(function (g) { if (gd[g.id]) s.goalsDone[g.id] = true; }); });
+    GOALS.concat(GOALS_ALT).forEach(function (list) { list.forEach(function (g) { if (g && gd[g.id]) s.goalsDone[g.id] = true; }); });
+    var gp = raw.goalPick && typeof raw.goalPick === 'object' ? raw.goalPick : {};
+    GOALS_ALT.forEach(function (alt, zi) { var p = gp[zi]; if (Array.isArray(p) && alt.some(function (g) { return !!g; })) s.goalPick[zi] = [0, 1, 2].map(function (k) { return p[k] && alt[k] ? 1 : 0; }); });
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
@@ -793,7 +798,7 @@
    *   전체 생산 배수 = 1 + TOWER_GAIN × log10(1 + 생존자).  10만 명이면 3.5배.
    *   혈청: 물자를 들여 세 단계로 완성한다(SERUM_COSTS). 마지막 단계를 끝내면 이야기가 끝난다(ended).
    */
-  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [5e30, 1e31, 3e31];
+  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [1e30, 4e30, 1.5e31];
   function towerMult(state) { return zoneOpen(state, 6) ? 1 + TOWER_GAIN * Math.log(1 + Math.max(0, state.survivors || 0)) / Math.LN10 : 1; }
   function globalMult(state) {
     return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state) * towerMult(state);
@@ -1090,9 +1095,12 @@
   /*
    * 3구역에서 할 일 셋(1.5.0). 전에는 병목을 올리고 기다리는 것뿐이었다.
    *
-   * ① 품목(RECIPES): 품목마다 기계가 한 레벨에 처리하는 양이 다르다. 볼트는 조립이, 철판은 선별이, 톱니는 가공이 느리다.
-   *    기계를 한 품목에 맞춰 키우면 정속 가동이 되지만 다른 품목으로 바꾸면 병목이 심해지고, 고르게 키우면 무엇이든 만들지만 정속 가동이 안 된다.
-   *    품목을 바꾸면 RETOOL_SECONDS 동안 라인이 선다. 납품 의뢰는 품목을 정해서 오고, 그 품목을 만드는 동안에만 찬다.
+   * ① 품목과 숙련(RECIPES): 볼트·철판·톱니 가운데 무엇을 만들지 고른다. 품목마다 숙련도(0~1)가 있고, 만드는 동안 MASTERY_SECONDS 에 걸쳐 찬다.
+   *    숙련이 낮은 품목은 라인이 느리다: 배수 = MASTERY_MIN + (1 - MASTERY_MIN) × 숙련. 볼트는 처음부터 다 익혀 있다(전과 같은 속도).
+   *    세 품목을 모두 익히면 라인이 MASTERY_ALL 배가 된다. 품목을 바꾸면 RETOOL_SECONDS 동안 라인이 선다.
+   *    납품 의뢰는 품목을 정해서 오고, 그 품목을 만드는 동안에만 찬다.
+   *    (1.4.1 에서는 품목마다 기계의 처리량이 달랐다. 그러면 다른 품목을 만들며 기계를 올린 사람은 어느 품목에서도 정속 가동을 못 맞추게 되고,
+   *     기계 값이 레벨마다 불어나서 되돌리기도 어려웠다. 기계는 건드리지 않고 숙련으로 바꿨다.)
    * ② 고장과 정비: JAM_GAP 마다 기계 하나가 멈칫거려 라인이 JAM_SLOW 배로 느려진다. "고친다"를 누르면 바로 풀리고 TUNE_SECONDS 동안 라인이 TUNE_MULT 배로 돈다.
    *    내버려 두면 JAM_SELF_FIX 초 뒤에 저절로 풀린다(보너스 없음). 자동 제어반이 있으면 JAM_AUTO_FIX 초 만에 알아서 풀지만 보너스는 없다: 손으로 고치는 쪽이 낫다.
    * ③ 출하 트럭: 라인이 도는 동안 출하장에 완제품이 쌓인다(TRUCK_STOCK_MAX 초분까지). TRUCK_GAP 마다 트럭이 와서 TRUCK_WAIT 초 기다린다.
@@ -1101,15 +1109,19 @@
    * 평균 수입(lineRate)은 이 셋을 넣지 않는다: 자리 비움과 화면의 "초당"은 전과 같다. 고장·정비·트럭은 접속해 있을 때만 일어난다.
    */
   var RECIPES = [
-    { id: 'bolt',  name: '볼트', rates: { sorter: 3, press: 2, assembler: 1 }, slow: '조립' },
-    { id: 'plate', name: '철판', rates: { sorter: 1, press: 3, assembler: 2 }, slow: '선별' },
-    { id: 'gear',  name: '톱니', rates: { sorter: 2, press: 1, assembler: 3 }, slow: '가공' }
+    { id: 'bolt',  name: '볼트' },
+    { id: 'plate', name: '철판' },
+    { id: 'gear',  name: '톱니' }
   ];
-  var RETOOL_SECONDS = 6;
+  var RETOOL_SECONDS = 6, MASTERY_MIN = 0.5, MASTERY_SECONDS = 180, MASTERY_ALL = 1.1;
+  function mastery(state, id) { var m = state.mastery && state.mastery[id]; return id === 'bolt' ? 1 : Math.max(0, Math.min(1, m || 0)); }
+  function masteredAll(state) { return RECIPES.every(function (r) { return mastery(state, r.id) >= 1; }); }
+  /** 그 품목을 만들 때의 라인 배수(숙련). */
+  function recipeFactor(state, id) { return (MASTERY_MIN + (1 - MASTERY_MIN) * mastery(state, id)) * (masteredAll(state) ? MASTERY_ALL : 1); }
   var JAM_GAP_MIN = 70, JAM_GAP_MAX = 130, JAM_SLOW = 0.5, JAM_SELF_FIX = 30, JAM_AUTO_FIX = 5, TUNE_SECONDS = 15, TUNE_MULT = 2;
   var TRUCK_GAP_MIN = 80, TRUCK_GAP_MAX = 130, TRUCK_WAIT = 20, TRUCK_STOCK_MAX = 120, TRUCK_SHARE = 0.3, TRUCK_AUTO = 0.5;
   function recipeOf(state) { return findById(RECIPES, state.recipe) || RECIPES[0]; }
-  function machineRate(state, id) { return recipeOf(state).rates[id] || 0; }
+  function machineRate(state, id) { var d = findById(MACHINES, id); return d ? d.rate : 0; }
   /** 품목을 바꾼다. 바꾸는 동안(RETOOL_SECONDS) 라인이 선다. */
   function setRecipe(state, id) {
     if (!zoneOpen(state, 2)) return fail('locked');
@@ -1121,7 +1133,7 @@
   /** 지금 이 순간 라인에 걸린 배수: 품목을 바꾸는 중이면 0, 고장이면 느려지고, 정비 직후면 빨라진다. */
   function lineFactor(state) {
     if (state.retool > 0) return 0;
-    return (state.jam ? JAM_SLOW : 1) * (state.tuneLeft > 0 ? TUNE_MULT : 1);
+    return recipeFactor(state, recipeOf(state).id) * (state.jam ? JAM_SLOW : 1) * (state.tuneLeft > 0 ? TUNE_MULT : 1);
   }
   /** 멈칫거리는 기계를 고친다. 바로 풀리고, 잠깐 라인이 더 빨리 돈다. */
   function repairJam(state) {
@@ -1163,7 +1175,12 @@
       }
     }
     // 출하장과 트럭
-    if (!(state.retool > 0)) state.stockSec = Math.min(TRUCK_STOCK_MAX, (state.stockSec || 0) + dt);
+    if (!(state.retool > 0)) {
+      state.stockSec = Math.min(TRUCK_STOCK_MAX, (state.stockSec || 0) + dt);
+      // 숙련: 만드는 동안 그 품목이 손에 익는다
+      var rid = recipeOf(state).id;
+      if (rid !== 'bolt' && mastery(state, rid) < 1) { var was = masteredAll(state); state.mastery[rid] = Math.min(1, mastery(state, rid) + dt / MASTERY_SECONDS); if (state.mastery[rid] >= 1) events.push({ type: 'mastered', id: rid, name: recipeOf(state).name, all: !was && masteredAll(state) }); }
+    }
     if (state.truck) {
       state.truck.left -= dt;
       if (auto && state.truck.left <= TRUCK_WAIT - 3) { var lt = loadTruck(state, true); lt.type = 'truck-loaded'; events.push(lt); }
@@ -1262,9 +1279,7 @@
     // 품목: 절반은 지금 만드는 것, 절반은 다른 둘 중 하나. 필요한 양은 그 품목으로 돌렸을 때의 속도로 잡는다(바꾸면 채울 수 있게)
     var others = RECIPES.filter(function (r) { return r.id !== recipeOf(state).id; });
     var item = rng() < CONTRACT_SAME ? recipeOf(state).id : others[Math.floor(rng() * others.length) % others.length].id;
-    var probe = Object.create(state); probe.recipe = item;
-    var flowThen = productFlow(probe) > 0 ? productFlow(probe) : productFlow(state);
-    var need = Math.max(5, Math.ceil(flowThen * CONTRACT_NEED_SECONDS));
+    var need = Math.max(5, Math.ceil(productFlow(state) * recipeFactor(state, item) * CONTRACT_NEED_SECONDS));      // 지금의 숙련으로 50초쯤 만들 양
     state.contract = { who: who.id, item: item, need: need, have: 0, left: CONTRACT_SECONDS };
     state.contractIn = (CONTRACT_GAP_MIN + rng() * (CONTRACT_GAP_MAX - CONTRACT_GAP_MIN)) * mods(state).contractgap;
     events.push({ type: 'contract', who: who.id, name: who.name, need: need, item: item, itemName: findById(RECIPES, item).name });
@@ -1855,20 +1870,71 @@
     if (state.sweepClock > SWEEP_AUTO_SECONDS) state.sweepClock = 0;      // 아주 긴 dt: 남은 시간은 버린다(자리 비움은 따로 계산한다)
   }
 
+  /*
+   * 회차마다 달라지는 목표(1.4.2). 구역의 목표 셋은 자리(첫째·둘째·셋째)마다 후보가 둘씩 있다: GOALS 의 원래 것과 GOALS_ALT 의 다른 것.
+   *   첫 회차는 원래 것 셋이다(처음 하는 사람이 보는 길은 그대로다). 철수할 때마다 자리별로 다시 뽑고, 바로 앞 회차와 셋이 모두 같지는 않게 한다.
+   *   자리마다 후보가 다르므로 한 회차 안에서 같은 목표가 겹치는 일은 없다.
+   *   다른 후보는 "돈과 시간으로 반드시 채울 수 있는 것"만 넣었다(무리와의 경주에 묶인 것은 넣지 않는다). null 인 자리는 바뀌지 않는다.
+   *   7구역은 바꾸지 않는다: 마지막 장의 목표는 이야기의 끝과 묶여 있다.
+   *   state.goalPick = { 구역 index: [0|1, 0|1, 0|1] }. 없으면 원래 것.
+   */
+  function defenseCount(s) { var n = 0; DEFENSES.forEach(function (d) { n += s.defenses[d.id] || 0; }); return n; }
+  function routeLevels(s) { var n = 0; ROUTES.forEach(function (r) { n += s.routes[r.id] || 0; }); return n; }
+  var GOALS_ALT = [
+    [ { id: 'z1a2', text: '옥상 텃밭 40곳', need: 40, value: function (s) { return s.buildings.garden; } },
+      { id: 'z1b2', text: '방어 수단 합계 50개', need: 50, value: function (s) { return defenseCount(s); } },
+      { id: 'z1c2', text: '1구역 개조를 모두 합쳐 12번', need: 12, value: function (s) { return zoneUpgrades(s, 0); } } ],
+    [ { id: 'z2a2', text: '시장 일손 합계 12명', need: 12, value: function (s) { return (s.hands.porter || 0) + (s.hands.crier || 0); } },
+      { id: 'z2b2', text: '단골 주문 3번 채우기', need: 3, value: function (s) { return s.ordersRun; } },
+      { id: 'z2c2', text: '2구역 개조를 모두 합쳐 15번', need: 15, value: function (s) { return zoneUpgrades(s, 1); } } ],
+    [ { id: 'z3a2', text: '3구역 개조를 모두 합쳐 12번', need: 12, value: function (s) { return zoneUpgrades(s, 2); } },
+      { id: 'z3b2', text: '출하 트럭 4번 싣기', need: 4, value: function (s) { return s.trucksRun; } },
+      { id: 'z3c2', text: '납품 의뢰 3번 채우기', need: 3, value: function (s) { return s.contractsRun; } } ],
+    [ { id: 'z4a2', text: '노선 단계 합계 10', need: 10, value: function (s) { return routeLevels(s); } },
+      { id: 'z4b2', text: '표류 화물 2번 끌어오기', need: 2, value: function (s) { return s.salvagesRun; } },
+      { id: 'z4c2', text: '4구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 3); } } ],
+    [ { id: 'z5a2', text: '5구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 4); } },
+      { id: 'z5b2', text: '병원 서류 3장 찾기', need: 3, value: function (s) { return s.recordsRun; } },
+      { id: 'z5c2', text: '방어 교범 2번 끝내기', need: 2, value: function (s) { return s.research.drill; } } ],
+    [ { id: 'z6a2', text: '방어 수단 합계 200개', need: 200, value: function (s) { return defenseCount(s); } },
+      { id: 'z6b2', text: '검문대 7단계', need: 7, value: function (s) { return s.upgrades.booth || 0; } },
+      null ],
+    [ null, null, null ]
+  ];
+  /** 이번 회차에 그 구역에서 채울 목표 셋(정의). */
+  function activeGoals(state, index) {
+    var base = GOALS[index] || [], alt = GOALS_ALT[index] || [], pick = (state.goalPick && state.goalPick[index]) || [];
+    return base.map(function (g, k) { return pick[k] && alt[k] ? alt[k] : g; });
+  }
+  /** 다음 회차의 목표를 뽑는다. 바로 앞 회차(prev)와 셋이 모두 같은 구역이 없게 한다. */
+  function rollGoalPick(prev, rng) {
+    rng = typeof rng === 'function' ? rng : Math.random;
+    var out = {};
+    GOALS_ALT.forEach(function (alt, zi) {
+      var slots = []; alt.forEach(function (g, k) { if (g) slots.push(k); });
+      if (!slots.length) return;
+      var before = (prev && prev[zi]) || [0, 0, 0], now = [0, 0, 0];
+      slots.forEach(function (k) { now[k] = rng() < 0.5 ? 1 : 0; });
+      if (now.join() === [before[0] ? 1 : 0, before[1] ? 1 : 0, before[2] ? 1 : 0].join()) { var flip = slots[Math.floor(rng() * slots.length) % slots.length]; now[flip] = now[flip] ? 0 : 1; }
+      out[zi] = now;
+    });
+    return out;
+  }
+
   /* ---------- 구역 목표와 다음 구역 ---------- */
   /** 구역 index 의 목표 진행 [{ id, text, value, need, done }]. 아직 없는 구역은 빈 배열. */
   function goals(state, index) {
-    return (GOALS[index] || []).map(function (g) {
+    return activeGoals(state, index).map(function (g) {
       var v = 0;
       try { v = safeNum(g.value(state), 0); } catch (e) { v = 0; }
       return { id: g.id, text: g.text, value: Math.min(v, g.need), need: g.need, unit: g.unit || null, done: !!state.goalsDone[g.id] };
     });
   }
-  function goalsComplete(state, index) { return (GOALS[index] || []).every(function (g) { return !!state.goalsDone[g.id]; }); }
+  function goalsComplete(state, index) { return activeGoals(state, index).every(function (g) { return !!state.goalsDone[g.id]; }); }
   /** 새로 채운 목표를 달성 처리하고 특전 선택을 건다. 한 번에 하나씩(고르기 전에는 다음 것을 걸지 않는다). */
   function checkGoals(state, rng, events) {
     for (var z = 0; z <= state.zone; z++) {
-      var list = GOALS[z] || [];
+      var list = activeGoals(state, z);
       for (var i = 0; i < list.length; i++) {
         var g = list[i];
         if (state.goalsDone[g.id] || state.pendingPerks.length) continue;
@@ -2142,9 +2208,10 @@
    *   사라지는 것 : 물자, 시설, 방벽, 구역 강화, 좌판과 상품, 기계, 열차와 노선, 연구원과 끝낸 과제, 연 구역, 특전, 막아낸 밤, 달성한 목표
    *   남는 것     : 항체 샘플과 영구 특성, 읽은 일지, 통계
    */
-  function retreat(state, now) {
+  function retreat(state, now, rng) {
     if (!canRetreat(state)) return fail('not-ready');
     var gained = antibodiesOnRetreat(state), next = createState(now);
+    next.goalPick = rollGoalPick(state.goalPick, rng);      // 다음 회차의 목표는 이번과 다르게
     next.antibodies = state.antibodies + gained;
     next.antibodyTotal = state.antibodyTotal + gained;
     TRAITS.forEach(function (t) { next.traits[t.id] = state.traits[t.id]; });
@@ -2265,7 +2332,7 @@
       BEATS.push({ id: (z.kind === 'soon' ? 'gate-' + z.no : 'z' + z.no + '-' + k), zone: z.no, zoneName: z.name, title: ep.title, part: k + 1, text: text, when: function (s) {
         if (ZONES[zi].kind === 'soon') return s.gate && s.zone === zi - 1;          // 아직 없는 구역: 문 앞에 닿았을 때
         if (s.zone < zi) return false;
-        var done = (GOALS[zi] || []).filter(function (g) { return !!s.goalsDone[g.id]; }).length;
+        var done = activeGoals(s, zi).filter(function (g) { return !!s.goalsDone[g.id]; }).length;
         return k === 0 || (k === 1 && done >= 2) || (k === 2 && done >= 3);
       } });
     });
@@ -2656,9 +2723,9 @@
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE, peakPrice: peakPrice,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
-    ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, BEATS: BEATS,
+    ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,

@@ -1561,7 +1561,7 @@
     rows.recipes = {};
     C.RECIPES.forEach(function (r) {
       var b = el('button'); b.type = 'button';
-      b.appendChild(document.createTextNode(r.name)); b.appendChild(el('small', '', r.slow + '이 느림'));
+      b.appendChild(document.createTextNode(r.name)); var sm = el('small', '', ''); b.appendChild(sm); b.__small = sm;
       b.addEventListener('click', function () {
         var res = C.setRecipe(state, r.id);
         if (!res.ok) return;
@@ -1939,6 +1939,7 @@
       C.RECIPES.forEach(function (r) {
         var rb = rows.recipes[r.id];
         rb.classList.toggle('on', r.id === C.recipeOf(state).id);
+        setText(rb.__small, '숙련 ' + Math.floor(C.mastery(state, r.id) * 100) + '%');
         rb.classList.toggle('want', !!ct && ct.item === r.id && r.id !== C.recipeOf(state).id);
         rb.setAttribute('aria-pressed', r.id === C.recipeOf(state).id ? 'true' : 'false');
       });
@@ -1976,7 +1977,7 @@
       setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '%');
       ld.className = 'num' + (line.steady ? ' steady' : '');
       setText($('line-note'), state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
-        ? (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
+        ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
         : '기계 셋이 모두 있어야 라인이 돌아요');
       drawBelt(line);
       var sg = $('surge'), sOn = state.surgeLeft > 0;
@@ -2329,6 +2330,9 @@
           if (ev.first) { toast('새로 적었다 · ' + ev.name); log(ev.name + '. 도감에 적었다.', 'good'); }
           else log(ev.name + (ev.type === 'order-filled' ? '에게 흥정꾼이 상품을 팔았다.' : ev.type === 'contract-filled' ? '에 알아서 납품했다.' : (C.hasBatchim(ev.name) ? '을' : '를') + ' 알아서 거뒀다.') + ' 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
           break;
+        case 'mastered':
+          toast(ev.all ? '세 품목을 모두 익혔다' : ev.name + ' 숙련'); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 손에 익었다.' + (ev.all ? ' 세 품목을 모두 익혀 라인이 더 빨리 돈다.' : ''), 'good'); sfx('goal');
+          break;
         case 'jam':
           toast('고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
           break;
@@ -2596,6 +2600,7 @@
       state = r.state;
       tab = 'z0'; perkShown = '';
       log('거점을 버리고 철수했다. 항체 샘플 ' + fmt(r.gained) + '개를 챙겼다. 다시 1구역이다.', 'good');
+      log('이번 회차는 구역 목표가 달라졌다.', '');      // 1.4.2: 철수할 때마다 목표를 다시 뽑는다
       notice('항체 샘플 ' + fmt(r.gained) + '개를 얻었어요. 특성 화면에서 영구 특성을 찍어 보세요.');
       sfx('relocate'); Store.save(); Cloud.flush(); render();
     }

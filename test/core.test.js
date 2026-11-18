@@ -2313,22 +2313,28 @@ test('흥정꾼의 고점 판매: 켜면 고점 아래에서는 팔지 않고 �
   assert.equal(C.sanitizeState({ version: 2, sellPeak: 'yes' }, 0).sellPeak, false); assert.equal(C.createState(0).sellPeak, false);
 });
 
-test('3구역 품목: 품목마다 느린 기계가 다르고, 바꾸는 동안 라인이 선다', () => {
-  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 };
-  assert.equal(C.recipeOf(s).id, 'bolt');
-  let l = C.lineInfo(s); assert.deepEqual(l.caps, { sorter: 30, press: 30, assembler: 30 }); assert.ok(l.steady);
+test('3구역 품목과 숙련: 덜 익힌 품목은 느리고, 만드는 동안 익는다. 기계의 처리량은 품목과 상관없다', () => {
+  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 1e6; s.truckIn = 1e6; s.contractIn = 1e6;
+  assert.equal(C.recipeOf(s).id, 'bolt'); assert.equal(C.mastery(s, 'bolt'), 1); assert.equal(C.lineFactor(s), 1, '볼트는 전과 같은 속도');
+  const caps = JSON.stringify(C.lineInfo(s).caps);
   assert.equal(C.setRecipe(s, 'bolt').reason, 'same'); assert.equal(C.setRecipe(s, 'nope').reason, 'unknown');
   const r = C.setRecipe(s, 'plate'); assert.ok(r.ok); assert.equal(s.retool, C.RETOOL_SECONDS);
-  l = C.lineInfo(s); assert.deepEqual(l.caps, { sorter: 10, press: 45, assembler: 60 }); assert.equal(l.bottleneck, 'sorter'); assert.ok(!l.steady);
+  assert.equal(JSON.stringify(C.lineInfo(s).caps), caps, '품목을 바꿔도 기계의 처리량과 병목은 그대로다'); assert.ok(C.lineInfo(s).steady, '정속 가동도 그대로다');
   assert.equal(C.lineFactor(s), 0); assert.equal(C.lineNow(s), 0);
   const before = s.lineEarned; C.tick(s, 1, () => 0.99); assert.equal(s.lineEarned, before, '바꾸는 동안은 벌지 못한다');
-  for (let i = 0; i < 8; i++) C.tick(s, 1, () => 0.99);
+  for (let i = 0; i < 6; i++) C.tick(s, 1, () => 0.99);
   assert.equal(s.retool, 0); assert.ok(s.lineEarned > before);
-  // 세 품목 모두 세 기계의 처리량 합이 같다(어느 품목이 그냥 더 좋지는 않다)
-  C.RECIPES.forEach((x) => assert.equal(x.rates.sorter + x.rates.press + x.rates.assembler, 6, x.id));
+  assert.ok(C.mastery(s, 'plate') > 0 && C.mastery(s, 'plate') < 0.1);
+  near(C.recipeFactor(s, 'gear'), C.MASTERY_MIN);
+  // 다 익히면 볼트와 같은 속도, 셋을 다 익히면 조금 더 빠르다
+  let ev = []; for (let i = 0; i < C.MASTERY_SECONDS + 5; i++) ev = ev.concat(C.tick(s, 1, () => 0.99));
+  assert.equal(C.mastery(s, 'plate'), 1); assert.ok(ev.some((e) => e.type === 'mastered' && e.id === 'plate' && !e.all)); near(C.recipeFactor(s, 'plate'), 1);
+  C.setRecipe(s, 'gear'); ev = []; for (let i = 0; i < C.MASTERY_SECONDS + 12; i++) ev = ev.concat(C.tick(s, 1, () => 0.99));
+  assert.ok(C.masteredAll(s)); assert.ok(ev.some((e) => e.type === 'mastered' && e.all)); near(C.recipeFactor(s, 'bolt'), C.MASTERY_ALL);
   const closed = inMarket(); assert.equal(C.setRecipe(closed, 'plate').reason, 'locked');
-  assert.equal(C.sanitizeState({ version: 2, zone: 2, recipe: 'xx' }, 0).recipe, 'bolt');
-  s.runEarned = 1e30; assert.equal(C.retreat(s, 1).state.recipe, 'bolt');
+  const bad = C.sanitizeState({ version: 2, zone: 2, recipe: 'xx', mastery: { plate: 9, gear: -1, bolt: 0.2, nope: 1 } }, 0);
+  assert.equal(bad.recipe, 'bolt'); assert.equal(bad.mastery.plate, 1); assert.equal(bad.mastery.gear, undefined); assert.equal(C.mastery(bad, 'bolt'), 1);
+  s.runEarned = 1e30; s.pendingPerks = []; const back = C.retreat(s, 1).state; assert.equal(back.recipe, 'bolt'); assert.deepEqual(back.mastery, {});
 });
 
 test('3구역 고장과 정비: 고장이면 느려지고, 고치면 잠깐 빨라진다. 내버려 두면 저절로 풀린다', () => {
@@ -2378,18 +2384,54 @@ test('3구역 출하 트럭: 도는 동안 쌓이고, 실으면 쌓인 만큼 �
   C.applyOffline(o, 600); assert.equal(o.jam, null); assert.equal(o.truck, null); assert.equal(o.tuneLeft, 0); assert.equal(o.retool, 0);
 });
 
-test('3구역 납품 의뢰는 품목을 정해서 온다: 그 품목을 만드는 동안에만 차고, 필요한 양은 그 품목의 속도로 잡는다', () => {
+test('3구역 납품 의뢰는 품목을 정해서 온다: 그 품목을 만드는 동안에만 차고, 필요한 양은 그 품목의 숙련에 맞춘다', () => {
   const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 1e6; s.truckIn = 1e6; s.contractIn = 0;
   // rng 0.9 → 다른 품목
   const seq = [0.1, 0.9, 0.1, 0.5]; let k = 0;
   const ev = []; C.stepContracts(s, 1, 0, () => seq[k++ % seq.length], ev);
   assert.ok(s.contract && s.contract.item && s.contract.item !== 'bolt', '다른 품목의 의뢰');
   assert.equal(ev[0].item, s.contract.item); assert.ok(ev[0].itemName);
-  const probe = Object.create(s); probe.recipe = s.contract.item;
-  assert.equal(s.contract.need, Math.max(5, Math.ceil(C.productFlow(probe) * 50)));
+  assert.equal(s.contract.need, Math.max(5, Math.ceil(C.productFlow(s) * C.MASTERY_MIN * 50)), '덜 익힌 품목은 그 속도에 맞는 양만 찾는다');
   C.stepContracts(s, 1, 100, () => 0.5, []); assert.equal(s.contract.have, 0, '다른 품목을 만드는 동안은 차지 않는다');
   s.recipe = s.contract.item; C.stepContracts(s, 1, 3, () => 0.5, []); assert.equal(s.contract.have, 3);
   // 품목이 없는 옛 저장의 의뢰는 무엇을 만들어도 찬다
   const old = C.sanitizeState(Object.assign(JSON.parse(JSON.stringify(s)), { contract: { who: C.CLIENTS[0].id, need: 10, have: 0, left: 60 } }), 0);
   assert.equal(old.contract.item, ''); C.stepContracts(old, 1, 4, () => 0.5, []); assert.equal(old.contract.have, 4);
+});
+
+test('회차마다 달라지는 목표: 첫 회차는 원래 목표, 철수하면 자리별로 다시 뽑고 앞 회차와 셋이 모두 같지는 않다', () => {
+  const s = fresh();
+  assert.deepEqual(C.goals(s, 0).map((g) => g.id), ['z1a', 'z1b', 'z1c'], '첫 회차는 원래 목표');
+  // 뽑기: 자리마다 0 또는 1, 앞 회차와 같은 구역은 없다. 후보가 없는 자리(6구역 셋째)와 7구역은 바뀌지 않는다
+  let seed = 3; const rng = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  let prev = {};
+  for (let i = 0; i < 200; i++) {
+    const now = C.rollGoalPick(prev, rng);
+    for (let zi = 0; zi <= 5; zi++) {
+      assert.equal(now[zi].length, 3); now[zi].forEach((v) => assert.ok(v === 0 || v === 1));
+      assert.notEqual(now[zi].join(), (prev[zi] || [0, 0, 0]).join(), '앞 회차와 같다(구역 ' + (zi + 1) + ')');
+    }
+    assert.equal(now[5][2], 0); assert.equal(now[6], undefined);
+    prev = now;
+  }
+  // 뽑힌 목표가 화면과 달성 판정에 쓰인다. 한 회차 안에서 겹치지 않는다
+  s.goalPick = { 0: [1, 0, 1] };
+  assert.deepEqual(C.goals(s, 0).map((g) => g.id), ['z1a2', 'z1b', 'z1c2']);
+  for (let zi = 0; zi < 7; zi++) for (let m = 0; m < 8; m++) {
+    const t = fresh(); t.goalPick = { [zi]: [m & 1, (m >> 1) & 1, (m >> 2) & 1] };
+    const ids = C.goals(t, zi).map((g) => g.id); assert.equal(new Set(ids).size, 3); assert.equal(new Set(C.goals(t, zi).map((g) => g.text)).size, 3);
+  }
+  s.goalsDone.z1a = s.goalsDone.z1c = true; assert.equal(C.goalsComplete(s, 0), false, '원래 목표를 채운 것으로는 안 된다');
+  s.buildings.garden = 40; s.supplies = 1e9; s.buildings.scouts = 200; s.upgrades.maps = 12;
+  for (let i = 0; i < 8; i++) { C.tick(s, 1, () => 0.5); if (s.pendingPerks.length) C.choosePerk(s, s.pendingPerks[0]); }
+  assert.ok(s.goalsDone.z1a2 && s.goalsDone.z1b && s.goalsDone.z1c2); assert.ok(C.goalsComplete(s, 0));
+  // 철수하면 새로 뽑히고, 저장을 거쳐도 남는다. 이상한 값은 버린다
+  s.runEarned = 1e30; s.pendingPerks = [];
+  const next = C.retreat(s, 1, rng).state;
+  assert.notEqual(next.goalPick[0].join(), '1,0,1'); assert.deepEqual(next.goalsDone, {});
+  const round = C.sanitizeState(JSON.parse(JSON.stringify(next)), 0); assert.deepEqual(round.goalPick, next.goalPick);
+  const bad = C.sanitizeState({ version: 2, goalPick: { 0: [5, 'x', null], 5: [1, 1, 1], 6: [1, 1, 1], 9: [1] } }, 0);
+  assert.deepEqual(bad.goalPick[0], [1, 1, 0]); assert.deepEqual(bad.goalPick[5], [1, 1, 0]); assert.equal(bad.goalPick[6], undefined); assert.equal(bad.goalPick[9], undefined);
+  // 다른 후보는 모두 돈과 시간으로 채울 수 있는 것이다(무리와 겨루는 것은 없다)
+  C.GOALS_ALT.forEach((list) => list.forEach((g) => { if (g) assert.ok(!/방어력|막기|방어 성공/.test(g.text), g.text); }));
 });
