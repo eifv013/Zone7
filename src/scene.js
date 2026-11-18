@@ -522,8 +522,10 @@
    *   - 가방끈을 없애고 상자는 손에 든다(손은 살색). 장화는 예전처럼 붉은색, 살색은 예전의 밝은 색
    */
   var LARA_BODY = ['..............', '..............', '..............',
-    '.....yyyyyy...', '....yyyyyyyy..', '...yyyssssyyY.', '...yysessesyY.', '...yyssssssyY.', '....yssmmssY..',
-    '....yyyyyyyY..', '....jjjJjjjJ..', '....jjjJjjjJ..', '....sjjJjjjJs.', '....jjjJjjjJ..', '....JJJJJJJJ..'];
+    '.....yyyyyy...', '....yyyyyyyy..', '...yyhhhhhhyY.', '...yysessesyY.', '...yyssssssyY.', '....yssmmssY..',
+    '.....yyyyyyY..', '....jjjjjjjjJ.', '....jJjjjjjJj.', '....jJjjjjjJj.', '....sJjjjjjJs.', '.....JJJJJJJ..'];
+  // (팔을 그리면서 가운데 지퍼 선은 뺐다: 세로 선이 셋이 되어 몸통이 창살처럼 보였다)
+  // 2.7.3: 앞머리(h, 아이콘처럼 갈색)를 다시 넣고 팔을 그렸다. 팔은 몸통 양옆의 한 칸이고, 어두운 선(J)이 팔과 몸통을 가른다. 손(s)은 팔 끝에 있다
   // 다리(2.0.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
   var LARA_STAND = ['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'];
   var LARA_LEGS = [['.....pp.pp....', '.....pp.bbb...', '....bbb.......'], ['.....pp.pp....', '....bbb.pp....', '........bbb...']];
@@ -545,7 +547,7 @@
   function laraPattern(pat, x, y) {
     if (pat === 'stripe') return y % 2 === 0;
     if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
-    if (pat === 'star') return (x === 5 && y === 10) || (x === 9 && y === 11) || (x === 6 && y === 13) || (x === 10 && y === 13);
+    if (pat === 'star') return (x === 6 && y === 10) || (x === 9 && y === 11) || (x === 7 && y === 13) || (x === 10 && y === 12);
     if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
     return false;
   }
@@ -564,7 +566,7 @@
     scale = scale || 1; look = look || {};
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
     var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
-    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#c0392b', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C };
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#c0392b', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
