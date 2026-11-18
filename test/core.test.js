@@ -2556,17 +2556,18 @@ test('지나온 구역의 자동은 온전히 받고, 지금 있는 구역의 �
   for (let i = 0; i < 20; i++) { past.contract = null; past.contractIn = 0; C.stepContracts(past, 1, 0, () => 0.9, []); assert.equal(past.contract.item, 'bolt'); }
 });
 
-test('3구역 기계 다시 맞추기: 레벨 합계는 그대로, 처리량이 같아지게 다시 나눈다. 정속 가동일 때는 쓸 수 없다', () => {
+test('3구역 기계 다시 맞추기: 쓴 물자만큼 처리량이 같아지게 다시 나눈다. 정속 가동일 때는 쓸 수 없다', () => {
   const s = inFactory(); s.machines = { sorter: 87, press: 80, assembler: 95 };      // 실제로 받은 화면의 상태: 가동률 36%
   assert.ok(C.lineInfo(s).load < 0.4 && !C.lineInfo(s).steady);
-  const total = 87 + 80 + 95, tier = C.lineInfo(s).milestone;
+  const spent = C.machineSpent(s);
   const r = C.rebalanceLine(s); assert.ok(r.ok);
-  assert.equal(s.machines.sorter + s.machines.press + s.machines.assembler, total, '레벨 합계는 그대로');
-  assert.equal(C.lineInfo(s).milestone, tier, '2배 문턱은 그대로'); assert.ok(C.lineInfo(s).steady); assert.ok(C.lineInfo(s).load > 0.95);
+  assert.ok(C.machineSpent(s) <= spent, '쓴 물자보다 비싼 구성이 되지 않는다');
+  assert.ok(C.machineSpent(s) > spent * 0.5, '쓴 물자를 거의 다 살린다');
+  assert.ok(C.lineInfo(s).steady); assert.ok(C.lineInfo(s).load > 0.95);
   assert.equal(s.retool, C.REBALANCE_SECONDS); assert.equal(C.lineNow(s), 0, '맞추는 동안은 선다');
   assert.equal(C.rebalanceLine(s).reason, 'steady');
   // 어떤 합계에서도 합이 보존되고 음수가 없다
-  for (let n = 3; n < 400; n += 7) { const t = inFactory(); t.machines = { sorter: n, press: 0, assembler: 0 }; const p = C.rebalancePlan(t); assert.equal(p.sorter + p.press + p.assembler, n); assert.ok(p.sorter >= 1 && p.press >= 1 && p.assembler >= 1, 'n=' + n); }
+  for (let n = 3; n < 400; n += 7) { const t = inFactory(); t.machines = { sorter: n, press: 0, assembler: 0 }; const p = C.splitLevels(n); assert.equal(p.sorter + p.press + p.assembler, n); assert.ok(C.machineSpent(t, C.rebalancePlan(t)) <= Math.max(C.machineSpent(t), C.machineSpent(t, C.splitLevels(3)))); assert.ok(p.sorter >= 1 && p.press >= 1 && p.assembler >= 1, 'n=' + n); }
   const few = inFactory(); few.machines = { sorter: 2, press: 0, assembler: 0 }; assert.equal(C.rebalanceLine(few).reason, 'few');
   assert.equal(C.rebalanceLine(inMarket()).reason, 'locked');
 });
@@ -2756,4 +2757,27 @@ test('1.5.9: 구역 문 값은 뒤로 갈수록 커지고, 혈청 값은 7구역
   for (let i = 1; i < C.ZONES.length; i++) assert.ok(C.ZONES[i].cost > C.ZONES[i - 1].cost);
   assert.ok(C.SERUM_COSTS[0] > C.ZONES[6].cost);
   for (let i = 1; i < C.SERUM_COSTS.length; i++) assert.ok(C.SERUM_COSTS[i] > C.SERUM_COSTS[i - 1]);
+});
+
+test('1.6.1: 싼 선별기만 사고 다시 맞추기를 되풀이해도 이득이 없다', () => {
+  const s = inFactory(); s.machines = { sorter: 20, press: 30, assembler: 60 };
+  const start = C.machineSpent(s); let paid = 0, rounds = 0;
+  for (let i = 0; i < 30; i++) {
+    for (let k = 0; k < 40; k++) { const c = C.machineCost(s, 'sorter', 1); if (!isFinite(c)) break; paid += c; s.machines.sorter++; }
+    s.retool = 0;
+    if (!C.rebalanceLine(s).ok) break;
+    rounds++;
+    assert.ok(C.machineSpent(s) <= (start + paid) * (1 + 1e-9), i + '번째: 기계 값어치가 낸 물자를 넘지 않는다');
+  }
+  assert.ok(paid > 0 && rounds > 0);
+});
+
+test('1.6.1: 자동에 맡기면 의뢰가 바라는 품목으로 알아서 바꾼다. 자동이 아니면 그대로 둔다', () => {
+  const mk = (auto) => { const s = inFactory(); s.machines = { sorter: 20, press: 30, assembler: 60 }; s.recipe = 'bolt'; s.retool = 0; s.upgrades.autoline = auto ? 1 : 0; s.contract = { who: C.CLIENTS[0].id, item: 'gear', need: 1e9, have: 0, left: 60 }; return s; };
+  const a = mk(true); assert.ok(C.autoEvents(a, 2));
+  const ev = []; C.stepContracts(a, 1, 5, () => 0.5, ev);
+  assert.equal(a.recipe, 'gear'); assert.ok(a.retool > 0); assert.ok(ev.some(e => e.type === 'auto-recipe'));
+  const ev2 = []; C.stepContracts(a, 1, 5, () => 0.5, ev2); assert.equal(ev2.length, 0, '이미 맞췄으면 다시 바꾸지 않는다');
+  const m = mk(false); C.stepContracts(m, 1, 5, () => 0.5, []); assert.equal(m.recipe, 'bolt');
+  const off = mk(true); C.setAutoEvents(off, 2, false); C.stepContracts(off, 1, 5, () => 0.5, []); assert.equal(off.recipe, 'bolt', '구역 자동을 껐으면 바꾸지 않는다');
 });

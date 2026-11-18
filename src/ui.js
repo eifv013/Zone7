@@ -1601,7 +1601,7 @@
       log('기계를 고쳤다. ' + res.seconds + '초 동안 라인이 ' + C.TUNE_MULT + '배로 돈다.', 'good'); sfx('upgrade'); buzz(25); Store.save(); render();
     });
     $('rebalance').addEventListener('click', function () {
-      confirmBox('기계 다시 맞추기', '기계 레벨의 합계는 그대로 두고, 세 기계의 처리량이 같아지도록 레벨을 다시 나눠요. 물자는 들지 않고, ' + C.REBALANCE_SECONDS + '초 동안 라인이 서요.', '그만둔다', '다시 맞춘다', function () {
+      confirmBox('기계 다시 맞추기', '기계에 쓴 물자만큼, 세 기계의 처리량이 같아지도록 레벨을 다시 나눠요. 싼 기계만 올렸다면 레벨 합계가 줄어요. ' + C.REBALANCE_SECONDS + '초 동안 라인이 서요.', '그만둔다', '다시 맞춘다', function () {
         var res = C.rebalanceLine(state);
         if (!res.ok) return;
         log('기계를 다시 맞췄다. ' + res.seconds + '초 동안 라인이 선다.', 'good'); sfx('machine'); buzz(25); Store.save(); render();
