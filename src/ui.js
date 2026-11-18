@@ -1756,6 +1756,7 @@
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
     var canFill = fillReady(1) || fillReady(2) || fillReady(3) || fillReady(5) || fillReady(6);      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
+    $('mnav-base').classList.toggle('dot', C.strikeReady(state) || C.counterReady(state));      // 상황: 선제 공격이나 반격을 쓸 수 있다
     $('pet-feed').classList.toggle('ready', canFeed);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
     var guideText = goalLines(guideNow.text);
@@ -2433,6 +2434,7 @@
             toast((ev.passer.first ? '새 통행인 · ' : '통행인 · ') + ev.passer.name);
             log(ev.passer.name + (C.hasBatchim(ev.passer.name) ? '이' : '가') + ' 다리를 건넜다.' + (ev.passer.first ? ' 도감에 적었다.' : ''), 'good');
           }
+          if (ev.edgeFull) { toast('선제 공격을 쓸 수 있어요'); log('방어 여유가 가득 찼다. 선제 공격을 나갈 수 있다.', 'good'); }
           sfx('defended'); buzz(20); if (scene) scene.night(true);
           break;
         case 'breached':
@@ -2441,6 +2443,7 @@
           break;
         case 'held':
           if (!heldLogged) { heldLogged = true; log('무리가 문을 두드리다 물러갔다. 방벽을 보강하기 전까지는 버티기만 한다.', 'bad'); }
+          if (ev.counterReady) { toast('반격할 수 있어요'); log('버틴 만큼 되갚을 때다. 반격할 수 있다.', 'good'); }
           if (scene) scene.night('held');
           break;
         case 'arrive':

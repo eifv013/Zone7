@@ -2366,7 +2366,9 @@
       earn(state, reward);
       state.wavesCleared++;
       state.defStreak = Math.min(1e6, (state.defStreak || 0) + 1);
-      state.edge = Math.min(1, (state.edge || 0) + Math.max(0, Math.min(1, defense / Math.max(1, strength) - 1)) * EDGE_GAIN);      // 넉넉하게 막은 만큼 여유 게이지가 찬다
+      var edgeWas = state.edge || 0;
+      state.edge = Math.min(1, (state.edge || 0) + Math.max(0, Math.min(1, defense / Math.max(1, strength) - 1)) * EDGE_GAIN);
+      var edgeFull = edgeWas < 1 && state.edge >= 1;      // 넉넉하게 막은 만큼 여유 게이지가 찬다
       state.counterAt = 0;
       if (boss && (state.bossPerks || 0) < BOSS_PERKS_MAX) { state.bossPerks = (state.bossPerks || 0) + 1; state.perkOwed = Math.min(PERK_OWED_MAX, (state.perkOwed || 0) + 1); }      // 변이체를 막으면 특전 하나(한 회차에 BOSS_PERKS_MAX 번까지)
       var passer = null;
@@ -2374,10 +2376,10 @@
       state.siege = false; state.siegeNights = 0;
       var treat = boss ? TREAT_BOSS : TREAT_NIGHT;
       state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
-      return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat, passer: passer };
+      return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat, passer: passer, edgeFull: edgeFull };
     }
     state.defStreak = 0;      // 못 막았다: 연속 방어가 끊긴다
-    if (state.siege) { state.siegeNights = Math.min(99, (state.siegeNights || 0) + 1); return      /* 버틴 밤을 센다: 다음 밤의 무리가 그만큼 흩어진다 */ { type: 'held', wave: w, strength: strength, defense: defense, boss: boss }; }
+    if (state.siege) { state.siegeNights = Math.min(99, (state.siegeNights || 0) + 1); return      /* 버틴 밤을 센다: 다음 밤의 무리가 그만큼 흩어진다 */ { type: 'held', wave: w, strength: strength, defense: defense, boss: boss, counterReady: state.siegeNights - (state.counterAt || 0) === COUNTER_NIGHTS }; }
     var lost = state.supplies * BREACH_LOSS;
     state.supplies -= lost;
     state.breaches++;
@@ -2888,6 +2890,10 @@
     if (state.pendingPerks.length) return g('perk', '특전을 하나 골라 주세요.');
     if (state.clicks === 0 && state.supplies < 15) return g('click', '"잔해 수색"을 눌러 첫 물자를 모아 보세요.');
     if (!totalBuildings(state)) return g('scouts', '구역 > 1구역에서 잔해 수색조를 꾸려 보세요. 그때부터는 가만히 있어도 물자가 들어와요.', 'zone');
+    // 선제 공격·반격을 쓸 수 있는데 오늘 밤을 못 막거나 변이체가 오는 밤이면 먼저 알려 준다(1.5.6)
+    var tight = defensePower(state) < nightStrength(state) || isBossWave(currentWave(state));
+    if (counterReady(state)) return g('counter', '반격할 수 있어요. 아래 오늘 밤 칸에서 누르면 오늘 밤 무리가 절반이 돼요.');
+    if (strikeReady(state) && tight) return g('strike', '선제 공격을 쓸 수 있어요. 아래 오늘 밤 칸에서 누르면 오늘 밤 무리가 절반이 돼요.');
     if (!state.siege && defensePower(state) < nightStrength(state)) return g('defend', '방어력이 모자라요. 방벽을 보강해 주세요.', 'wall');
     if (state.antibodies > 0 && TRAITS.some(function (t) { return traitCost(state, t.id) <= state.antibodies; })) return g('trait', '쓸 수 있는 항체 샘플이 있어요. 특성을 찍어 보세요.', 'trait');
     var open = goals(state, state.zone).filter(function (x) { return !x.done; })[0];

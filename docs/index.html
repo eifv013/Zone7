@@ -1054,7 +1054,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.5.5</div>
+  <div class="boot-ver">7구역 알파 1.5.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1588,7 +1588,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.5.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.5.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1724,7 +1724,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.5";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.6";
 </script>
 <script>
 /*
@@ -1743,6 +1743,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.5";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.5.6', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '선제 공격을 알려 줘요',
+      items: [
+        '선제 공격이나 반격을 쓸 수 있게 되면 알림이 뜨고 무전에 적혀요. 아래 메뉴의 상황에 점이 찍혀요.',
+        '오늘 밤을 못 막을 것 같거나 변이체가 오는 밤이면 "다음 할 일"이 선제 공격을 안내해요. 반격은 쓸 수 있으면 언제나 안내해요.'
+      ] },
     { ver: '알파 1.5.5', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '연장 목표',
       items: [
         '목표를 채운 자리에 더 큰 목표가 이어서 떠요(좌판 50곳 → 75곳 → 100곳). 목표 화면에 "◆ 연장 1"처럼 보여요.',
@@ -5044,7 +5049,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.5";
       earn(state, reward);
       state.wavesCleared++;
       state.defStreak = Math.min(1e6, (state.defStreak || 0) + 1);
-      state.edge = Math.min(1, (state.edge || 0) + Math.max(0, Math.min(1, defense / Math.max(1, strength) - 1)) * EDGE_GAIN);      // 넉넉하게 막은 만큼 여유 게이지가 찬다
+      var edgeWas = state.edge || 0;
+      state.edge = Math.min(1, (state.edge || 0) + Math.max(0, Math.min(1, defense / Math.max(1, strength) - 1)) * EDGE_GAIN);
+      var edgeFull = edgeWas < 1 && state.edge >= 1;      // 넉넉하게 막은 만큼 여유 게이지가 찬다
       state.counterAt = 0;
       if (boss && (state.bossPerks || 0) < BOSS_PERKS_MAX) { state.bossPerks = (state.bossPerks || 0) + 1; state.perkOwed = Math.min(PERK_OWED_MAX, (state.perkOwed || 0) + 1); }      // 변이체를 막으면 특전 하나(한 회차에 BOSS_PERKS_MAX 번까지)
       var passer = null;
@@ -5052,10 +5059,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.5";
       state.siege = false; state.siegeNights = 0;
       var treat = boss ? TREAT_BOSS : TREAT_NIGHT;
       state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
-      return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat, passer: passer };
+      return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat, passer: passer, edgeFull: edgeFull };
     }
     state.defStreak = 0;      // 못 막았다: 연속 방어가 끊긴다
-    if (state.siege) { state.siegeNights = Math.min(99, (state.siegeNights || 0) + 1); return      /* 버틴 밤을 센다: 다음 밤의 무리가 그만큼 흩어진다 */ { type: 'held', wave: w, strength: strength, defense: defense, boss: boss }; }
+    if (state.siege) { state.siegeNights = Math.min(99, (state.siegeNights || 0) + 1); return      /* 버틴 밤을 센다: 다음 밤의 무리가 그만큼 흩어진다 */ { type: 'held', wave: w, strength: strength, defense: defense, boss: boss, counterReady: state.siegeNights - (state.counterAt || 0) === COUNTER_NIGHTS }; }
     var lost = state.supplies * BREACH_LOSS;
     state.supplies -= lost;
     state.breaches++;
@@ -5566,6 +5573,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.5";
     if (state.pendingPerks.length) return g('perk', '특전을 하나 골라 주세요.');
     if (state.clicks === 0 && state.supplies < 15) return g('click', '"잔해 수색"을 눌러 첫 물자를 모아 보세요.');
     if (!totalBuildings(state)) return g('scouts', '구역 > 1구역에서 잔해 수색조를 꾸려 보세요. 그때부터는 가만히 있어도 물자가 들어와요.', 'zone');
+    // 선제 공격·반격을 쓸 수 있는데 오늘 밤을 못 막거나 변이체가 오는 밤이면 먼저 알려 준다(1.5.6)
+    var tight = defensePower(state) < nightStrength(state) || isBossWave(currentWave(state));
+    if (counterReady(state)) return g('counter', '반격할 수 있어요. 아래 오늘 밤 칸에서 누르면 오늘 밤 무리가 절반이 돼요.');
+    if (strikeReady(state) && tight) return g('strike', '선제 공격을 쓸 수 있어요. 아래 오늘 밤 칸에서 누르면 오늘 밤 무리가 절반이 돼요.');
     if (!state.siege && defensePower(state) < nightStrength(state)) return g('defend', '방어력이 모자라요. 방벽을 보강해 주세요.', 'wall');
     if (state.antibodies > 0 && TRAITS.some(function (t) { return traitCost(state, t.id) <= state.antibodies; })) return g('trait', '쓸 수 있는 항체 샘플이 있어요. 특성을 찍어 보세요.', 'trait');
     var open = goals(state, state.zone).filter(function (x) { return !x.done; })[0];
@@ -9006,6 +9017,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.5";
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
     var canFill = fillReady(1) || fillReady(2) || fillReady(3) || fillReady(5) || fillReady(6);      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
+    $('mnav-base').classList.toggle('dot', C.strikeReady(state) || C.counterReady(state));      // 상황: 선제 공격이나 반격을 쓸 수 있다
     $('pet-feed').classList.toggle('ready', canFeed);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
     var guideText = goalLines(guideNow.text);
@@ -9683,6 +9695,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.5";
             toast((ev.passer.first ? '새 통행인 · ' : '통행인 · ') + ev.passer.name);
             log(ev.passer.name + (C.hasBatchim(ev.passer.name) ? '이' : '가') + ' 다리를 건넜다.' + (ev.passer.first ? ' 도감에 적었다.' : ''), 'good');
           }
+          if (ev.edgeFull) { toast('선제 공격을 쓸 수 있어요'); log('방어 여유가 가득 찼다. 선제 공격을 나갈 수 있다.', 'good'); }
           sfx('defended'); buzz(20); if (scene) scene.night(true);
           break;
         case 'breached':
@@ -9691,6 +9704,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.5";
           break;
         case 'held':
           if (!heldLogged) { heldLogged = true; log('무리가 문을 두드리다 물러갔다. 방벽을 보강하기 전까지는 버티기만 한다.', 'bad'); }
+          if (ev.counterReady) { toast('반격할 수 있어요'); log('버틴 만큼 되갚을 때다. 반격할 수 있다.', 'good'); }
           if (scene) scene.night('held');
           break;
         case 'arrive':

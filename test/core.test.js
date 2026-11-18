@@ -2712,3 +2712,16 @@ test('연장 목표: 채운 목표 자리에 더 큰 목표가 이어서 뜨고,
   // 모든 목표의 글이 수를 바꿔 적을 수 있는 모양이다(괄호로 덧붙이는 일이 없다)
   C.GOALS.slice(0, 6).concat(C.GOALS_ALT.slice(0, 6)).forEach((list) => list.forEach((g) => { if (g) { const t = C.extText(g, C.extNeed(g, 1)); assert.ok(!/\($/.test(t) && !t.endsWith(')'), g.text + ' → ' + t); assert.notEqual(t, g.text, g.text); } }));
 });
+
+test('선제 공격·반격을 쓸 수 있게 된 순간을 알리고, 급한 밤에는 다음 할 일로 안내한다', () => {
+  const s = fresh(); s.defenses.wire = 5000; s.clicks = 20; s.buildings.scouts = 5;
+  const evs = [C.resolveNight(s), C.resolveNight(s), C.resolveNight(s)];
+  assert.deepEqual(evs.map((e) => !!e.edgeFull), [false, false, true], '가득 찬 그 밤에만 알린다');
+  assert.ok(!C.resolveNight(s).edgeFull);
+  assert.notEqual(C.guide(s).id, 'strike', '넉넉히 막을 수 있는 보통 밤에는 권하지 않는다');
+  s.wavesCleared = C.BOSS_EVERY - 1; assert.equal(C.guide(s).id, 'strike', '변이체가 오는 밤에는 권한다');
+  const b = fresh(); b.clicks = 20; b.buildings.scouts = 5; b.wavesCleared = 200; C.resolveNight(b);
+  const held = []; for (let i = 0; i < C.COUNTER_NIGHTS + 1; i++) held.push(C.resolveNight(b));
+  assert.deepEqual(held.map((e) => !!e.counterReady), [false, false, true, false]);
+  assert.equal(C.guide(b).id, 'counter');
+});
