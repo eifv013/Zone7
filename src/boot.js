@@ -100,7 +100,16 @@
       var bar = doc.getElementById('boot-bar'), text = doc.getElementById('boot-text'), tip = doc.getElementById('boot-tip');
       // 제목 글꼴이 도착했는지 본다(2.6.5). 도착했을 때만 제목의 숫자 7을 키운다(.seven). 확인하지 못하는 브라우저에서는 그대로 둔다.
       try {
-        var fontOk = function () { try { if (doc.fonts && doc.fonts.check && doc.fonts.check('40px "Black Han Sans"', '7구역')) doc.body.classList.add('font-display-ok'); } catch (e) { /* 그대로 둔다 */ } };
+        // doc.fonts.check 는 그 글꼴이 아예 없을 때도 참을 돌려준다(받을 것이 없다는 뜻). 그래서 글자의 너비를 직접 재서 비교한다:
+        // 제목 글꼴을 앞에 둔 너비가 기본 글꼴만 쓴 너비와 다르면 제목 글꼴이 실제로 쓰이고 있는 것이다.
+        var fontOk = function () {
+          try {
+            var g = doc.createElement('canvas').getContext('2d');
+            g.font = '40px monospace'; var w0 = g.measureText('7구역').width;
+            g.font = '40px "Black Han Sans", monospace'; var w1 = g.measureText('7구역').width;
+            if (Math.abs(w1 - w0) > 0.5) doc.body.classList.add('font-display-ok');
+          } catch (e) { /* 그대로 둔다 */ }
+        };
         if (doc.fonts && doc.fonts.load) doc.fonts.load('40px "Black Han Sans"', '7구역').then(fontOk, function () {});
         if (doc.fonts && doc.fonts.ready && doc.fonts.ready.then) doc.fonts.ready.then(fontOk, function () {});
       } catch (e) { /* 글꼴은 없어도 된다 */ }
