@@ -1325,26 +1325,70 @@
     var all = C.stageMarkCount(state);
     setText($('stage-count'), open ? '표시 ' + all.have + ' / ' + all.all + ' · 지역 휘장 ' + C.badgeCount(state) + ' / ' + C.REGIONS.length : '');
     setText($('stage-hint'), open ? '따로 도는 짧은 판이에요. 특성과 업적 없이 빈 거점에서 시작해요.\n하는 동안 본 게임은 자리 비움처럼 계속 벌어요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
-    if (!rows.stages) {
-      rows.stages = {};
-      C.STAGES.forEach(function (d, i) {
-        var box = el('div', 'stage'), head = el('div', 'stage-head'), no = el('span', 'stage-no', d.boss ? '보스' : C.REGIONS[0].no + '-' + (i + 1)), name = el('b', '', d.name), sub = el('div', 'stage-sub'), marks = el('div', 'stage-marks'), acts = el('div', 'stage-acts');
-        var go = el('button', '', '출발'), hard = el('button', 'stage-hard', '하드');
-        go.type = hard.type = 'button';
-        go.addEventListener('click', function () { askStage(d, false); }); hard.addEventListener('click', function () { askStage(d, true); });
-        head.appendChild(no); head.appendChild(name); acts.appendChild(go); acts.appendChild(hard);
-        box.appendChild(head); box.appendChild(sub); box.appendChild(marks); box.appendChild(acts);
-        rows.stages[d.id] = { box: box, sub: sub, marks: marks, go: go, hard: hard };
-        $('stage-list').appendChild(box);
-      });
-    }
-    C.STAGES.forEach(function (d) {
+    if (!rows.stages) buildStageMap();
+    // 고른 스테이지가 없으면: 아직 클리어하지 않은 것 가운데 맨 앞
+    if (!stagePick || !rows.stages[stagePick]) { stagePick = C.STAGES[0].id; C.STAGES.some(function (d) { if (!C.stageMarks(state, d.id).clear) { stagePick = d.id; return true; } return false; }); }
+    C.STAGES.forEach(function (d, i) {
       var r = rows.stages[d.id], m = C.stageMarks(state, d.id), why = C.stageBlock(state, d.id, false);
-      r.box.classList.toggle('locked', !!why); r.box.classList.toggle('won', m.clear);
-      setText(r.sub, (C.stageRuleTexts(d, false).join(' · ') || '규칙 없음') + '\n목표 ' + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit) + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : ''));
-      setText(r.marks, ['clear', 'speed', 'hard'].map(function (k) { return (m[k] ? '● ' : '○ ') + MARK_NAME[k] + (k === 'speed' ? ' ' + clock(d.speed) : k === 'hard' ? ' +' + C.STAGE_RULES[d.hard] : ''); }).join('   ') + (m.best ? '\n최고 기록 ' + clock(m.best) : ''));
-      r.go.disabled = !!why; r.hard.disabled = !!C.stageBlock(state, d.id, true);
+      r.g.setAttribute('class', 'zm-node st-node' + (why ? ' locked' : '') + (m.clear ? ' won' : '') + (d.id === stagePick ? ' pick' : '') + (!why && !m.clear ? ' next' : ''));
+      ['clear', 'speed', 'hard'].forEach(function (k, n) { r.dots[n].setAttribute('class', 'st-dot' + (m[k] ? ' on' : '')); });
+      if (i > 0) rows.stages[d.id].road.setAttribute('class', 'zm-road' + (C.stageMarks(state, C.STAGES[i - 1].id).clear ? ' zm-road-open' : ''));
     });
+    var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0], m = C.stageMarks(state, d.id), why = C.stageBlock(state, d.id, false), idx = C.STAGES.indexOf(d);
+    setText($('stage-d-no'), d.boss ? '지역 보스' : '스테이지 ' + C.REGIONS[0].no + '-' + (idx + 1));
+    setText($('stage-d-name'), d.name);
+    setText($('stage-d-sub'), (C.stageRuleTexts(d, false).join(' · ') || '규칙 없음') + '\n목표 ' + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit) + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
+    setText($('stage-d-marks'), ['clear', 'speed', 'hard'].map(function (k) { return (m[k] ? '● ' : '○ ') + MARK_NAME[k] + (k === 'speed' ? ' ' + clock(d.speed) : k === 'hard' ? ' +' + C.STAGE_RULES[d.hard] : ''); }).join('\n') + (m.best ? '\n최고 기록 ' + clock(m.best) : '') + (d.boss ? '\n보상 · 지역 휘장 · 방어 성공 시 전리품 +10%' : ''));
+    $('stage-go').disabled = !!why; $('stage-hard').disabled = !!C.stageBlock(state, d.id, true);
+  }
+  /*
+   * 원정 지도(1.8.1): 지역 I 하류 마을. 구역 지도와 같은 도트 그림으로, 길을 따라 스테이지 표지가 놓이고 끝에 선착장(보스)이 있다.
+   *   표지를 누르면 아래 칸에 그 스테이지의 규칙·목표·표시가 뜬다. 표지 아래 점 셋은 얻은 표시(클리어·스피드·하드).
+   */
+  var stagePick = '', STAGE_AT = [[46, 214], [118, 188], [70, 142], [150, 118], [104, 66], [214, 52]];
+  function buildStageMap() {
+    var svg = svgEl('svg', { viewBox: '0 0 320 250', 'class': 'zmap-svg', role: 'group', 'aria-label': '원정 지도' });
+    function add(name, attrs, text) { var n = svgEl(name, attrs, text); svg.appendChild(n); return n; }
+    function px(x, y, w, h, cls) { add('rect', { x: x, y: y, width: w, height: h, 'class': cls }); }
+    var RIVER = 'M250 -10 L262 40 L246 90 L268 140 L280 200 L270 260';
+    function riverX(y) { var pts = [[250, -10], [262, 40], [246, 90], [268, 140], [280, 200], [270, 260]]; for (var k = 1; k < pts.length; k++) if (y <= pts[k][1]) { var a = pts[k - 1], b = pts[k]; return a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]); } return 270; }
+    px(0, 0, 320, 250, 'zm-land');
+    var seed = 23; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (var gp = 0; gp < 70; gp++) px(Math.floor(rnd() * 316), Math.floor(rnd() * 246), 3 + Math.floor(rnd() * 6), 2, gp % 3 ? 'zm-grass' : 'zm-dirt');
+    add('path', { d: RIVER, 'class': 'zm-bank' }); add('path', { d: RIVER, 'class': 'zm-river' });
+    add('path', { d: RIVER, 'class': 'zm-river-glint' }); add('path', { d: RIVER, 'class': 'zm-river-glint zm-glint2' });
+    // 나무와 무너진 집: 강과 표지 자리를 피해서 흩뿌린다
+    function clear(x, y) { if (Math.abs(x - riverX(y)) < 26) return false; return !STAGE_AT.some(function (p) { return Math.abs(p[0] - x) < 24 && Math.abs(p[1] - y) < 26; }); }
+    for (var t = 0; t < 46; t++) {
+      var tx = 8 + Math.floor(rnd() * 300), ty = 12 + Math.floor(rnd() * 228);
+      if (!clear(tx, ty)) continue;
+      if (t % 4 === 0) { px(tx - 5, ty - 6, 10, 6, 'zm-ruin'); px(tx - 3, ty - 4, 2, 2, 'zm-win'); px(tx + 1, ty - 4, 2, 2, 'zm-win'); }
+      else { px(tx - 1, ty - 2, 2, 3, 'zm-trunk'); px(tx - 3, ty - 7, 6, 5, t % 2 ? 'zm-tree' : 'zm-tree2'); px(tx - 2, ty - 9, 4, 2, 'zm-leaf'); }
+    }
+    // 선착장: 강으로 뻗은 널빤지와 작은 배
+    for (var pl = 0; pl < 6; pl++) px(222 + pl * 5, 50, 4, 5, pl % 2 ? 'zm-plank' : 'zm-plank2');
+    px(254, 60, 14, 4, 'zm-plank2'); px(257, 56, 8, 4, 'zm-car'); px(260, 48, 1, 8, 'zm-ink');
+    add('text', { x: 10, y: 14, 'class': 'zm-compass' }, '지역 I · 하류 마을');
+    rows.stages = {};
+    // 길 먼저(표지 아래에 깔리게), 그다음 표지
+    var roads = C.STAGES.map(function (d, i) { return i ? add('line', { x1: STAGE_AT[i - 1][0], y1: STAGE_AT[i - 1][1], x2: STAGE_AT[i][0], y2: STAGE_AT[i][1], 'class': 'zm-road' }) : null; });
+    C.STAGES.forEach(function (d, i) {
+      var x = STAGE_AT[i][0], y = STAGE_AT[i][1], g = svgEl('g', { 'class': 'zm-node st-node', tabindex: '0', role: 'button', 'aria-label': d.name });
+      function r(dx, dy, w, h, cls) { var n = svgEl('rect', { x: x + dx, y: y + dy, width: w, height: h, 'class': cls }); g.appendChild(n); return n; }
+      r(-24, -24, 48, 52, 'zm-hit');
+      if (d.boss) { r(-11, -11, 22, 22, 'st-pad boss'); r(-6, -7, 12, 9, 'st-skull'); r(-4, -4, 3, 3, 'zm-win'); r(1, -4, 3, 3, 'zm-win'); r(-4, 2, 8, 3, 'st-skull'); r(-2, 2, 1, 3, 'zm-win'); r(1, 2, 1, 3, 'zm-win'); }
+      else { r(-9, -9, 18, 18, 'st-pad'); g.appendChild(svgEl('text', { x: x, y: y + 4, 'text-anchor': 'middle', 'class': 'st-num' }, String(i + 1))); }
+      var dots = [0, 1, 2].map(function (n) { return r(-8 + n * 6, d.boss ? 14 : 12, 4, 4, 'st-dot'); });
+      g.appendChild(svgEl('text', { x: x, y: y + (d.boss ? 30 : 28), 'text-anchor': 'middle', 'class': 'zm-name' }, d.name));
+      function pick() { stagePick = d.id; sfx('tab'); renderStages(); }
+      g.addEventListener('click', pick);
+      g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      svg.appendChild(g);
+      rows.stages[d.id] = { g: g, dots: dots, road: roads[i] };
+    });
+    $('stage-map').appendChild(svg);
+    $('stage-go').addEventListener('click', function () { var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0]; if (d) askStage(d, false); });
+    $('stage-hard').addEventListener('click', function () { var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0]; if (d) askStage(d, true); });
   }
   function askStage(d, hard) {
     if (home || C.stageBlock(state, d.id, hard)) return;

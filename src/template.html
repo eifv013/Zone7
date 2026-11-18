@@ -271,6 +271,15 @@ body { word-break: keep-all; }
 .story-card .stage-acts button { align-self: auto; padding: 8px; }
 .story-card .stage-acts .stage-hard { background: transparent; color: #e6e5db; border-color: #e6e5db; }
 .story-card .stage-acts button:disabled { opacity: .4; cursor: default; }
+.st-pad { fill: #33342a; stroke: #6d6d60; stroke-width: 2; } .st-pad.boss { stroke-width: 2.5; }
+.st-num { font: 700 11px/1 var(--font-mono); fill: #cfcebf; }
+.st-skull { fill: #cfcebf; }
+.st-dot { fill: #1b1c14; stroke: #6d6d60; stroke-width: 1; } .st-dot.on { fill: #f0b400; stroke: #f0b400; }
+.st-node.won .st-pad { fill: #f0b400; stroke: #17180f; } .st-node.won .st-num { fill: #17180f; } .st-node.won .st-skull { fill: #17180f; }
+.st-node.next .st-pad { stroke: #f0b400; animation: st-pulse 1.2s steps(2, start) infinite; }
+.st-node.locked { opacity: .55; }
+@keyframes st-pulse { 50% { stroke: #fff3c4; } }
+@media (prefers-reduced-motion: reduce) { .st-node.next .st-pad { animation: none; } }
 #stage-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 15; padding: 8px 12px 6px; background: #17180f; color: #e6e5db; border-bottom: 3px solid #f0b400; }
 #stage-bar[hidden] { display: none; }
 .stage-bar-row { display: flex; align-items: center; gap: 10px; }
@@ -1112,7 +1121,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.8.0</div>
+  <div class="boot-ver">7구역 알파 1.8.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1518,7 +1527,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.8.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.8.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1582,8 +1591,13 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="hub-pane" id="stage-panel" hidden>
       <div class="hub-line num" id="stage-count"></div>
       <div class="hub-line" id="stage-hint"></div>
-      <div class="label">지역 I · 하류 마을</div>
-      <div id="stage-list"></div>
+      <div class="zmap-map" id="stage-map"></div>
+      <div class="stage" id="stage-detail">
+        <div class="stage-head"><span class="stage-no" id="stage-d-no"></span><b id="stage-d-name"></b></div>
+        <div class="stage-sub" id="stage-d-sub"></div>
+        <div class="stage-marks" id="stage-d-marks"></div>
+        <div class="stage-acts"><button type="button" id="stage-go">출발</button><button type="button" class="stage-hard" id="stage-hard">하드</button></div>
+      </div>
     </div>
     <div class="hub-pane" id="chal-panel">
       <div class="hub-line num" id="chal-count"></div>
