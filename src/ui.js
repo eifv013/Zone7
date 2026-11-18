@@ -37,6 +37,7 @@
   var guideNow = null; // 지금 '다음 할 일' 칸에 보이는 안내(바로 가기 단추가 읽는다)
   var frameErrorShown = false;
   var paused = false;        // 다른 기기가 진행 중이라 이 기기가 멈춰 있는지(Cloud 가 관리한다)
+  var fxShow = null;         // 화면 효과를 띄우는 함수(wire 가 채운다). 큰 일이 있을 때마다 쓴다: 구역 이동, 철수, 도전 시작·성공·실패
   var MOVE_FX = ['tape', 'shutter', 'stamp', 'blinds'], lastFx = '';      // 구역 이동·철수 효과의 종류와 바로 앞에 쓴 것
   /** 효과 하나를 고른다. 바로 앞의 것(prev)은 빼고 고른다. */
   function pickMoveFx(prev, rng) {
@@ -1259,6 +1260,54 @@
   function secs(v) { return (Math.round(v * 10) / 10).toFixed(1).replace('.0', '') + '초'; }
   function qtyFor(max, room) { return Math.max(1, Math.min(Math.max(1, room), qtyMode === 'max' ? Math.max(1, max) : qtyMode)); }
   /** 구매 결과를 받아 소리를 내고 화면을 고친다. sound 는 무엇을 샀는지에 따라 다른 소리(없으면 시설을 살 때의 buy). */
+  /*
+   * 도전 칸(1.7.0): 목표 구역에 닿아 본 도전이 하나라도 있으면 보인다.
+   *   줄을 누르면 켜고(확인 창), 진행 중인 줄을 누르면 포기한다(확인 창). 켤 수 없는 까닭은 줄 아래에 적는다.
+   */
+  var CHAL_WHY = { locked: '', used: '이번 회차에는 더 켤 수 없어요', late: '2구역 문을 열기 전에만 켤 수 있어요', broken: '이미 조건을 어겼어요. 다음 회차에 켜요' };
+  function renderChallenges() {
+    var panel = $('chal-panel'); if (!panel) return;
+    var any = C.CHALLENGES.some(function (d) { return C.challengeOpen(state, d.id); }) || !!state.challenge;
+    panel.hidden = !any;
+    if (!any) return;
+    if (!rows.chal) {
+      rows.chal = {};
+      C.CHALLENGES.forEach(function (d) {
+        var b = el('button', 'chal'), side = el('span', 'chal-side'), name = el('b', '', d.name), sub = el('span', 'chal-sub');
+        b.type = 'button'; b.appendChild(side); b.appendChild(name); b.appendChild(sub);
+        b.addEventListener('click', function () { clickChallenge(d); });
+        rows.chal[d.id] = { btn: b, side: side, sub: sub };
+        $('chal-list').appendChild(b);
+      });
+    }
+    var act = C.activeChallenge(state), n = C.medalCount(state);
+    setText($('chal-count'), '훈장 ' + n + ' / ' + C.CHALLENGES.length + ' · 생산 +' + Math.round(n * C.MEDAL_BONUS * 100) + '%');
+    setText($('chal-hint'), act ? '진행 중 · ' + act.name + ' · ' + act.rule + (act.id === 'sprint' ? ' · 남은 시간 ' + clock(Math.max(0, C.SPRINT_SECONDS - state.runSeconds)) : '')
+      : '조건을 하나 걸고 목표 구역까지 가요. 처음 성공하면 훈장과 영구 보상을 받아요.' + (state.challengeStreak > 0 ? '\n연속 성공 ' + state.challengeStreak + '번 · 간식 +' + C.streakTreats(state) + ' (최대 +' + C.STREAK_TREATS_MAX + ')' : ''));
+    C.CHALLENGES.forEach(function (d) {
+      var r = rows.chal[d.id], open = C.challengeOpen(state, d.id), on = !!act && act.id === d.id, why = on ? '' : C.challengeBlock(state, d.id), won = state.medals[d.id] > 0;
+      var mine = state.challenge && state.challenge.id === d.id ? (state.challenge.done ? '이번 회차 성공' : state.challenge.failed ? '이번 회차 실패' : '') : '';
+      r.btn.classList.toggle('on', on); r.btn.classList.toggle('won', won);
+      r.btn.disabled = !on && !!why;
+      setText(r.side, on ? '진행 중' : won ? '훈장 ×' + state.medals[d.id] : open ? '' : '잠김');
+      setText(r.sub, !open ? C.challengeGoalText(d).replace(' 도착', '에 닿으면 열려요').replace('이야기의 끝', '이야기를 끝내면 열려요')
+        : d.rule + ' · 목표 ' + C.challengeGoalText(d) + '\n' + (won ? '받은 보상 · ' : '보상 · ') + d.perk.text + (on ? ' · 누르면 포기' : mine ? ' · ' + mine : why && CHAL_WHY[why] ? '\n' + CHAL_WHY[why] : ''));
+    });
+  }
+  function clickChallenge(d) {
+    if (C.activeChallenge(state) && state.challenge.id === d.id) {
+      confirmBox('도전 포기', '〈' + d.name + '〉 도전을 포기해요. 조건이 풀리고 회차는 그대로 이어져요. 이번 회차에는 다시 켤 수 없고, 연속 성공이 끊겨요.', '계속한다', '포기한다', function () {
+        var q = C.quitChallenge(state);
+        if (q.ok) { log('도전 〈' + q.name + '〉을 포기했다.', ''); Store.save(); render(); }
+      });
+      return;
+    }
+    if (C.challengeBlock(state, d.id)) return;
+    confirmBox('도전 〈' + d.name + '〉', d.rule + '. 목표는 ' + C.challengeGoalText(d) + '이에요. 보상은 ' + d.perk.text + '예요. 한 회차에 도전은 한 번만 켤 수 있어요.', '그만둔다', '도전한다', function () {
+      var s = C.startChallenge(state, d.id);
+      if (s.ok) { log('도전 〈' + d.name + '〉을 시작했다. ' + d.rule.replace('없어요', '없다').replace('해요', '한다').replace('돼요', '된다').replace('와요', '온다').replace('이에요', '이다').replace('가요', '간다') + '.', 'good'); sfx('relocate'); if (fxShow) fxShow('도전', d.name + ' · ' + C.challengeGoalText(d), 1, -1, -1); Store.save(); render(); }
+    });
+  }
   function buy(result, sound) { if (result && result.ok) { sfx(sound || 'buy'); render(); } }
   /*
    * 패치노트: 버전마다 한 줄(버전, 날짜, 제목)만 보이고, 누르면 내용이 펼쳐진다.
@@ -2378,6 +2427,7 @@
       r.btn.classList.toggle('row-owned', lv >= t.max);
     });
     $('trait-reset').disabled = C.traitsSpent(state) === 0;
+    renderChallenges();
     var owned = C.PERKS.filter(function (p) { return state.perks[p.id] > 0; }), total = 0;
     owned.forEach(function (p) { total += state.perks[p.id]; });
     setText($('perk-count'), total + '장');
@@ -2480,6 +2530,16 @@
           break;
         case 'arrive':
           if (!ev.siege && ev.defense < ev.strength) { log('무리가 도착했다. ' + C.BATTLE_SECONDS + '초 안에 방벽을 보강하지 않으면 뚫린다.', 'bad'); sfx('dusk'); }
+          break;
+        case 'challenge-done':
+          log('도전 〈' + ev.name + '〉 성공. ' + (ev.first ? '훈장을 받았다. ' + (C.CHALLENGES.filter(function (d) { return d.id === ev.id; })[0] || { perk: { text: '' } }).perk.text + '. ' : '') + '간식 ' + ev.treats + '개.', 'good');
+          toast('도전 성공 · ' + ev.name + (ev.first ? ' · 훈장' : '') + ' · 간식 +' + ev.treats); sfx('goal');
+          if (fxShow) fxShow('도전 성공', ev.name + (ev.first ? ' · 훈장' : ''), 1, -1, -1);
+          break;
+        case 'challenge-failed':
+          log('도전 〈' + ev.name + '〉 실패. ' + (ev.why === 'time' ? '시간이 다 됐다.' : '조건을 지키지 못했다.') + ' 회차는 그대로 이어진다.', 'bad');
+          toast('도전 실패 · ' + ev.name); sfx('breached');
+          if (fxShow) fxShow('도전 실패', ev.name, -1, -1, -1);
           break;
         case 'goal-ext':
           log((ev.zone + 1) + '구역 연장 목표 달성: ' + ev.text + '. 물자 ' + fmt(ev.gain) + ', 간식 ' + ev.treats + '개.', 'good');
@@ -2810,13 +2870,14 @@
         box.hidden = false; void box.offsetWidth; box.classList.add('go');
         clearTimeout(moveFx.timer);
         moveFx.timer = setTimeout(function () { box.hidden = true; box.classList.remove('go'); }, 2300);
-        if (scene && scene.travel) scene.travel(from, dir);
+        if (from >= 0 && scene && scene.travel) scene.travel(from, dir);      // from 이 음수면 글자 효과만(도전 시작·성공·실패처럼 자리를 옮기지 않는 일)
         // 위쪽 구역 번호 칸: 새로 선 구역이 노랗게 차오른다
-        var li = $('route').children[to];
+        var li = to >= 0 ? $('route').children[to] : null;
         if (li) { li.classList.remove('arrive'); void li.offsetWidth; li.classList.add('arrive'); }
         buzz(dir < 0 ? [30, 40, 30] : 30);
       } catch (e) { console.warn('moveFx', e); }
     }
+    fxShow = moveFx;      // 사건 처리(wire 밖)에서도 같은 효과를 쓸 수 있게 내어 둔다
     function doRetreat() {
       var wasZone = state.zone, r = C.retreat(state, Date.now());
       if (!r.ok) return;

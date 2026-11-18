@@ -600,6 +600,7 @@
       challenge: null,       // 이번 회차의 도전 { id, failed, done }. 없으면 null
       nextChallenge: '',     // 다음 회차에 걸 도전(철수하면 쓰이고 지워진다)
       medals: {},            // 도전마다 성공한 횟수. 철수해도 남는다
+      challengeStreak: 0,    // 도전을 연달아 성공한 횟수(실패·포기하면 0). 철수해도 남는다
       lastSeen: safeNum(now, 0)
     };
     BUILDINGS.forEach(function (b) { s.buildings[b.id] = 0; });
@@ -690,6 +691,7 @@
     s.serumStage = s.zone >= 6 ? clamp(safeCount(raw.serumStage), 0, SERUM_COSTS.length) : 0;
     s.endedRun = !!raw.endedRun && s.zone >= 6;
     s.medals = {}; CHALLENGES.forEach(function (d) { var n = raw.medals && typeof raw.medals === 'object' ? clamp(safeCount(raw.medals[d.id]), 0, 1e6) : 0; if (n > 0) s.medals[d.id] = n; });
+    s.challengeStreak = clamp(safeCount(raw.challengeStreak), 0, 1e6);
     s.nextChallenge = typeof raw.nextChallenge === 'string' && findById(CHALLENGES, raw.nextChallenge) ? raw.nextChallenge : '';
     s.challenge = raw.challenge && typeof raw.challenge === 'object' && findById(CHALLENGES, raw.challenge.id) ? { id: raw.challenge.id, failed: !!raw.challenge.failed, done: !!raw.challenge.done } : null;
     s.ended = clamp(safeCount(raw.ended), 0, 1e6); s.endedAt = Math.max(0, safeNum(raw.endedAt, 0));
@@ -808,6 +810,9 @@
     apply(UPGRADES, state.upgrades);
     apply(PERKS, state.perks);
     apply(TRAITS, state.traits);
+    // 도전 훈장의 고유 보상(1.7.0): 그 도전을 한 번이라도 성공했으면 붙는다(여러 번 성공해도 한 번만)
+    m.autoshare = 0; m.scout = 1;
+    if (state.medals) CHALLENGES.forEach(function (d) { if (state.medals[d.id] > 0 && d.perk) { if (d.perk.add) m[d.perk.key] += d.perk.add; else m[d.perk.key] *= d.perk.mult; } });
     var pe = petEffect(state); if (pe) m[pe.key] *= 1 + pe.bonus;      // 동물 친구
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
@@ -1371,7 +1376,7 @@
    * 자동이 대신 해 줄 때 받는 몫(1.5.1). 지금 있는 구역에서는 절반(손으로 하는 쪽이 낫다), 이미 지나온 구역에서는 전부.
    * 다음 구역으로 넘어가면 앞 구역은 자동에 맡기고 새 구역에 손을 쓰라는 뜻이다.
    */
-  function autoShare(state, zone) { return state.zone > zone ? 1 : AUTO_SHARE; }
+  function autoShare(state, zone) { return state.zone > zone ? 1 : Math.min(1, AUTO_SHARE + mods(state).autoshare); }
   var AUTO_SHARE = 0.5;
   function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && mods(state)[AUTO_KEYS[zone]] > 0; }
   /**
@@ -2217,7 +2222,7 @@
       }
     }
     checkExtGoals(state, events);
-    if (state.challenge && state.challenge.failed && !state.challenge.told) { state.challenge.told = true; var cdef = findById(CHALLENGES, state.challenge.id); if (cdef && !events.some(function (e) { return e.type === 'challenge-failed'; })) events.push({ type: 'challenge-failed', id: cdef.id, name: cdef.name, why: 'rule' }); }
+    if (state.challenge && state.challenge.failed && !state.challenge.told) { state.challenge.told = true; var cdef = findById(CHALLENGES, state.challenge.id); if (cdef && !events.some(function (e) { return e.type === 'challenge-failed'; })) events.push({ type: 'challenge-failed', id: cdef.id, name: cdef.name, why: 'rule' }); state.challengeStreak = 0; }
     // 7구역의 목표를 모두 채우면 이야기가 끝난다. 한 회차에 한 번만 센다(endedRun). 끝낸 횟수(ended)는 철수해도 남는다
     if (state.zone >= ZONES.length - 1 && !state.endedRun && goalsComplete(state, ZONES.length - 1) && !(scoutLeft(state) > 0)) {
       state.endedRun = true;
@@ -2225,6 +2230,7 @@
       if (!state.endedAt) state.endedAt = Date.now();
       events.push({ type: 'ending', count: state.ended, day: state.day, retreats: state.retreats, seconds: state.playSeconds });
     }
+    checkChallenge(state, events);      // 도전: 목표에 닿았는지, 시간을 넘겼는지
   }
   /** 다음 구역의 상태 { index, zone, cost, ready(목표를 다 채웠는가), soon(아직 없는 구역인가) }. 마지막 구역이면 null. */
   /*
@@ -2248,7 +2254,7 @@
     return 0;      // 기록이 없는 옛 저장: 회차 처음부터 있었던 것으로 본다
   }
   /** 지금 구역의 정찰이 끝나기까지 남은 초. 끝났으면 0. */
-  function scoutLeft(state) { return Math.max(0, Math.ceil(scoutNeed(state.zone) - ((state.runSeconds || 0) - zoneEntered(state)))); }
+  function scoutLeft(state) { return Math.max(0, Math.ceil(scoutNeed(state.zone) * mods(state).scout - ((state.runSeconds || 0) - zoneEntered(state)))); }
   function nextZone(state) {
     var i = state.zone + 1;
     if (i >= ZONES.length) return null;
@@ -2548,14 +2554,14 @@
    */
   var MEDAL_BONUS = 0.03, CHALLENGE_TREATS = 10, CHALLENGE_TREATS_AGAIN = 3, SPRINT_SECONDS = 45 * 60, HORDE_MULT = 3, LEAN_MULT = 0.5;
   var CHALLENGES = [
-    { id: 'frugal',   name: '맨몸',      rule: '개조를 살 수 없어요',            goal: 2 },
-    { id: 'hands',    name: '손수',      rule: '자동 개조를 살 수 없어요',       goal: 3 },
-    { id: 'sprint',   name: '질주',      rule: '45분 안에 닿아야 해요',          goal: 3 },
-    { id: 'onewall',  name: '외벽',      rule: '방벽을 한 종류만 살 수 있어요',  goal: 4 },
-    { id: 'unbroken', name: '무결',      rule: '한 번도 뚫리면 안 돼요',         goal: 4 },
-    { id: 'horde',    name: '거센 무리', rule: '무리가 3배로 와요',              goal: 5 },
-    { id: 'lean',     name: '반쪽 보급', rule: '전체 생산이 절반이에요',         goal: 6 },
-    { id: 'oneshot',  name: '단숨에',    rule: '철수 없이 끝까지 가요',          goal: 'end' }
+    { id: 'frugal',   name: '맨몸',      rule: '개조를 살 수 없어요',            goal: 2, perk: { key: 'cost', mult: 0.95, text: '모든 구매 비용 -5%' } },
+    { id: 'hands',    name: '손수',      rule: '자동 개조를 살 수 없어요',       goal: 3, perk: { key: 'autoshare', add: 0.1, text: '현재 구역 자동 효율 +10%p' } },
+    { id: 'sprint',   name: '질주',      rule: '45분 안에 닿아야 해요',          goal: 3, perk: { key: 'scout', mult: 0.85, text: '길 정찰 시간 -15%' } },
+    { id: 'onewall',  name: '외벽',      rule: '방벽을 한 종류만 살 수 있어요',  goal: 4, perk: { key: 'defense', mult: 1.1, text: '방어력 +10%' } },
+    { id: 'unbroken', name: '무결',      rule: '한 번도 뚫리면 안 돼요',         goal: 4, perk: { key: 'loot', mult: 1.2, text: '방어 성공 시 전리품 +20%' } },
+    { id: 'horde',    name: '거센 무리', rule: '무리가 3배로 와요',              goal: 5, perk: { key: 'defcost', mult: 0.9, text: '방벽 비용 -10%' } },
+    { id: 'lean',     name: '반쪽 보급', rule: '전체 생산이 절반이에요',         goal: 6, perk: { key: 'prod', mult: 1.1, text: '전체 생산 +10%' } },
+    { id: 'oneshot',  name: '단숨에',    rule: '철수 없이 끝까지 가요',          goal: 'end', perk: { key: 'antibody', mult: 1.1, text: '철수 항체 샘플 +10%' } }
   ];
   /** 도전의 목표를 글로: '4구역 도착' / '이야기의 끝'. */
   function challengeGoalText(def) { return def.goal === 'end' ? '이야기의 끝' : ZONES[def.goal].no + '구역 도착'; }
@@ -2578,10 +2584,45 @@
     state.nextChallenge = id;
     return { ok: true, id: id };
   }
+  /*
+   * 회차 도중에 도전을 켠다(1.7.0). 아무 때나 켤 수 있으면 목표 문 앞에서 켜고 훈장을 그냥 받으므로:
+   *   - 2구역 문을 열기 전(1구역)에만 켤 수 있다.
+   *   - 한 회차에 한 번만. 성공했든 실패했든 포기했든 그 회차에는 다시 켤 수 없다.
+   *   - 그 도전이 막는 것을 이미 했으면 켤 수 없다(개조를 사 놓고 '맨몸'을 켜는 식).
+   * 돌려주는 실패 이유: unknown, locked(목표 구역에 닿아 본 적 없음), used(이번 회차에 이미 썼음), late(2구역을 열었음), broken(이미 조건을 어겼음)
+   */
+  function challengeBlock(state, id) {
+    var def = findById(CHALLENGES, id);
+    if (!def) return 'unknown';
+    if (!challengeOpen(state, id)) return 'locked';
+    if (state.challenge) return 'used';
+    if (state.zone > 0) return 'late';
+    var ups = 0, autos = 0, walls = 0;
+    UPGRADES.forEach(function (u) { var n = state.upgrades[u.id] || 0; ups += n; if (AUTO_KEYS.indexOf(u.key) >= 0) autos += n; });
+    DEFENSES.forEach(function (d) { if (state.defenses[d.id] > 0) walls++; });
+    if ((id === 'frugal' && ups > 0) || (id === 'hands' && autos > 0) || (id === 'onewall' && walls > 1) || (id === 'unbroken' && state.breaches > 0) || (id === 'sprint' && state.runSeconds > SPRINT_SECONDS)) return 'broken';
+    return '';
+  }
+  function startChallenge(state, id) {
+    var why = challengeBlock(state, id);
+    if (why) return fail(why);
+    state.challenge = { id: id, failed: false, done: false };
+    return { ok: true, id: id };
+  }
+  /** 도전을 포기한다. 조건이 풀리고 회차는 그대로 이어진다. 연속 성공은 끊긴다. */
+  function quitChallenge(state) {
+    var def = activeChallenge(state);
+    if (!def) return fail('none');
+    state.challenge.failed = true; state.challenge.told = true; state.challengeStreak = 0;
+    return { ok: true, id: def.id, name: def.name };
+  }
+  /** 연속 성공에 따라 더 받는 간식: 한 번마다 +STREAK_TREATS, STREAK_TREATS_MAX 까지. */
+  var STREAK_TREATS = 2, STREAK_TREATS_MAX = 10;
+  function streakTreats(state) { return Math.min(STREAK_TREATS_MAX, (state.challengeStreak || 0) * STREAK_TREATS); }
   function failChallenge(state, events, why) {
     var def = activeChallenge(state);
     if (!def) return;
-    state.challenge.failed = true;
+    state.challenge.failed = true; state.challenge.told = true; state.challengeStreak = 0;
     if (events) events.push({ type: 'challenge-failed', id: def.id, name: def.name, why: why });
   }
   /** 시간마다 부른다: 시간 제한을 넘겼는지, 목표에 닿았는지 본다. */
@@ -2590,7 +2631,8 @@
     if (!def) return;
     var reached = def.goal === 'end' ? !!state.endedRun : state.zone >= def.goal;
     if (!reached) { if (def.id === 'sprint' && state.runSeconds > SPRINT_SECONDS) failChallenge(state, events, 'time'); return; }
-    var first = !(state.medals[def.id] > 0), treats = first ? CHALLENGE_TREATS : CHALLENGE_TREATS_AGAIN;
+    var first = !(state.medals[def.id] > 0), treats = (first ? CHALLENGE_TREATS : CHALLENGE_TREATS_AGAIN) + streakTreats(state);      // 연속으로 성공할수록 간식을 더 받는다
+    state.challengeStreak = Math.min(1e6, (state.challengeStreak || 0) + 1);
     state.challenge.done = true;
     state.medals[def.id] = Math.min(1e6, (state.medals[def.id] || 0) + 1);
     state.treats = Math.min(1e9, state.treats + treats);
@@ -2601,6 +2643,7 @@
     var gained = antibodiesOnRetreat(state), next = createState(now);
     next.goalPick = rollGoalPick(state.goalPick, rng);      // 다음 회차의 목표는 이번과 다르게
     next.medals = state.medals || {};      // 훈장은 남는다
+    next.challengeStreak = activeChallenge(state) ? 0 : (state.challengeStreak || 0);      // 도전을 달고 철수하면 포기한 것으로 친다
     next.bestZone = Math.max(state.bestZone, state.zone);
     if (state.nextChallenge && challengeOpen(next, state.nextChallenge)) next.challenge = { id: state.nextChallenge, failed: false, done: false };      // 골라 둔 도전으로 시작한다(한 번만)
     next.antibodies = state.antibodies + gained;
@@ -3130,7 +3173,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, CHALLENGES: CHALLENGES, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,

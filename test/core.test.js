@@ -2849,3 +2849,45 @@ test('1.6.5 도전(규칙만, 화면은 아직 없음): 고르기, 조건, 성�
   const q = C.createState(0); q.challenge = { id: 'sprint', failed: false, done: false }; q.runSeconds = C.SPRINT_SECONDS + 1;
   const ev2 = []; C.checkChallenge(q, ev2); assert.equal(ev2[0].type, 'challenge-failed'); assert.equal(C.activeChallenge(q), null);
 });
+
+test('1.7.0 도전 켜고 끄기: 1구역에서만, 한 회차에 한 번, 이미 어긴 조건은 못 켠다. 포기하면 연속 성공이 끊긴다', () => {
+  const mk = () => { const s = C.createState(0); s.bestZone = 6; s.ended = 1; return s; };
+  let s = mk();
+  assert.equal(C.challengeBlock(s, 'frugal'), ''); assert.ok(C.startChallenge(s, 'frugal').ok);
+  assert.equal(C.startChallenge(s, 'hands').reason, 'used');
+  const q = C.quitChallenge(s); assert.ok(q.ok); assert.equal(C.activeChallenge(s), null);
+  assert.equal(C.startChallenge(s, 'hands').reason, 'used', '포기한 회차에는 다시 켤 수 없다');
+  assert.equal(C.quitChallenge(s).reason, 'none');
+  s = mk(); s.zone = 1; assert.equal(C.startChallenge(s, 'lean').reason, 'late');
+  s = mk(); s.upgrades[C.UPGRADES[0].id] = 1; assert.equal(C.startChallenge(s, 'frugal').reason, 'broken'); assert.ok(C.startChallenge(s, 'lean').ok);
+  s = mk(); s.defenses.wire = 1; s.defenses.tower = 1; assert.equal(C.startChallenge(s, 'onewall').reason, 'broken');
+  s = mk(); s.breaches = 1; assert.equal(C.startChallenge(s, 'unbroken').reason, 'broken');
+  s = mk(); s.bestZone = 0; s.ended = 0; assert.equal(C.startChallenge(s, 'frugal').reason, 'locked');
+  // 연속 성공: 성공할 때마다 간식이 늘고, 포기·실패·도전 중 철수면 0
+  s = mk(); s.challengeStreak = 2; C.startChallenge(s, 'frugal'); s.zone = 2;
+  const ev = []; C.tick(s, 0.1, () => 0.5).forEach(e => ev.push(e));
+  const done = ev.find(e => e.type === 'challenge-done'); assert.ok(done, '시간이 흐르면 성공을 알아챈다'); assert.equal(s.challengeStreak, 3);
+  assert.ok(done.treats >= 4, '연속 2번 뒤의 성공은 간식을 더 받는다');
+  s = mk(); s.challengeStreak = 3; C.startChallenge(s, 'lean'); s.runEarned = 1e30;
+  assert.equal(C.retreat(s, 0, () => 0.5).state.challengeStreak, 0, '도전을 달고 철수하면 끊긴다');
+  s = mk(); s.challengeStreak = 3; s.runEarned = 1e30; assert.equal(C.retreat(s, 0, () => 0.5).state.challengeStreak, 3, '도전 없이 철수하면 남는다');
+  // 무결: 뚫리면 실패 알림이 한 번 나오고 연속이 끊긴다
+  s = mk(); s.challengeStreak = 1; C.startChallenge(s, 'unbroken'); s.challenge.failed = true;
+  const fe = C.tick(s, 0.1, () => 0.5).filter(e => e.type === 'challenge-failed'); assert.equal(fe.length, 1); assert.equal(s.challengeStreak, 0);
+  assert.equal(C.tick(s, 0.1, () => 0.5).filter(e => e.type === 'challenge-failed').length, 0);
+});
+
+test('1.7.0 도전의 고유 보상: 훈장이 있으면 붙고, 여러 번 성공해도 한 번만 붙는다', () => {
+  C.CHALLENGES.forEach(d => assert.ok(d.perk && d.perk.text && d.perk.key, d.id));
+  const base = C.createState(0), has = (id, n) => { const s = C.createState(0); s.medals[id] = n || 1; return s; };
+  assert.ok(Math.abs(C.buildingCost(has('frugal'), C.BUILDINGS[0].id, 50) / C.buildingCost(base, C.BUILDINGS[0].id, 50) - 0.95) < 0.01);
+  assert.equal(C.autoShare(base, 0), 0.5); assert.equal(C.autoShare(has('hands'), 0), 0.6);
+  assert.equal(C.scoutLeft(has('sprint')), Math.ceil(C.scoutNeed(0) * 0.85));
+  const d0 = C.defensePower(Object.assign(base, { defenses: Object.assign({}, base.defenses, { rail: 10 }) }));
+  const w = has('onewall'); w.defenses.rail = 10; assert.ok(Math.abs(C.defensePower(w) / d0 - 1.1) < 0.01);
+  const b2 = C.createState(0); assert.ok(Math.abs(C.nightReward(has('unbroken')) / C.nightReward(b2) - 1.2 * (1 + C.MEDAL_BONUS)) < 0.05 || C.nightReward(has('unbroken')) >= C.nightReward(b2) * 1.2 - 1e-9);
+  assert.ok(C.defenseCost(has('horde'), 'rail', 1) < C.defenseCost(b2, 'rail', 1));
+  assert.ok(Math.abs(C.globalMult(has('lean')) / C.globalMult(b2) - 1.1 * (1 + C.MEDAL_BONUS)) < 1e-9);
+  assert.ok(Math.abs(C.globalMult(has('lean', 5)) - C.globalMult(has('lean', 1))) < 1e-9, '다섯 번 성공해도 보상은 한 번');
+  const r0 = C.createState(0), r1 = has('oneshot'); r0.runEarned = r1.runEarned = 1e30; assert.ok(C.antibodiesOnRetreat(r1) > C.antibodiesOnRetreat(r0));
+});
