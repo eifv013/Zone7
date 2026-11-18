@@ -42,6 +42,8 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       C.runProject(s, s.offers.slice().sort((a, b) => worth(b) - worth(a))[0], rng);
     }
     C.fortify(s);
+    // 선제 공격은 지금 방어력으로 못 막을 밤에 쓰고, 반격은 되는 대로 쓴다
+    if (C.strikeReady(s) && C.defensePower(s) < C.nightStrength(s)) C.strike(s); if (C.counterReady(s)) C.counterAttack(s);
     // 목표를 보고 사는 것(사람도 목표 줄을 보고 산다): 이번 회차에 뽑힌 목표(C.goals)마다, 살 수 있으면 목표 쪽으로 먼저 산다
     const cheapestUp = (zone) => { const u = C.UPGRADES.filter(x => x.zone === zone && isFinite(C.upgradeCost(s, x.id))).sort((x, y) => C.upgradeCost(s, x.id) - C.upgradeCost(s, y.id))[0]; return u ? C.buyUpgrade(s, u.id) : { ok: false }; };
     const cheapestDef = () => { const d = C.DEFENSES.slice().sort((x, y) => C.defenseCost(s, x.id, 1) - C.defenseCost(s, y.id, 1))[0]; return C.buyDefense(s, d.id, 1); };

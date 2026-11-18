@@ -2625,3 +2625,58 @@ test('자리를 비운 동안 변이체를 여러 번 막아도 특전은 하나
   assert.ok(r.nights >= 30, '밤이 많이 지나갔다(' + r.nights + ')'); assert.equal(s.perkOwed, 1);
   s.perkOwed = 2; C.applyOffline(s, 3600); assert.ok(s.perkOwed <= 2, '밀린 특전은 둘까지');
 });
+
+test('선제 공격: 넉넉하게 막을수록 여유 게이지가 차고, 가득 차면 다음 밤 한 번의 무리를 절반으로 줄인다', () => {
+  const s = fresh(); s.defenses.wire = 5000;
+  assert.equal(s.edge, 0); assert.equal(C.strikeReady(s), false); assert.equal(C.strike(s).reason, 'not-ready');
+  C.resolveNight(s); near(s.edge, C.EDGE_GAIN, '무리의 2배를 넘게 막으면 한 번에 가장 많이 찬다');
+  // 겨우 막으면 거의 안 찬다
+  const t = fresh(); t.defenses.wire = 1; while (C.defensePower(t) < C.nightStrength(t)) t.defenses.wire++;
+  const ratio = C.defensePower(t) / C.nightStrength(t); C.resolveNight(t); near(t.edge, Math.min(1, ratio - 1) * C.EDGE_GAIN);
+  C.resolveNight(s); C.resolveNight(s); assert.equal(s.edge, 1); assert.ok(C.strikeReady(s));
+  const before = C.nightStrength(s), r = C.strike(s);
+  assert.ok(r.ok); assert.equal(s.edge, 0); assert.ok(C.easeOn(s)); assert.equal(C.nightStrength(s), Math.ceil(before * C.NIGHT_EASE));
+  assert.equal(C.strike(s).reason, 'set', '한 밤에 한 번만');
+  const w = C.currentWave(s); C.resolveNight(s);
+  assert.equal(C.easeOn(s), false, '밤이 지나면 원래대로'); assert.equal(C.nightStrength(s), Math.ceil(C.strengthAt(s, w + 1)));
+  const bad = C.sanitizeState({ version: 2, edge: 9, nightEase: 0.01, counterAt: -2 }, 0);
+  assert.equal(bad.edge, 1); assert.equal(bad.nightEase, 1); assert.equal(bad.counterAt, 0);
+  s.runEarned = 1e30; s.pendingPerks = []; const back = C.retreat(s, 1).state; assert.equal(back.edge, 0); assert.equal(back.nightEase, 1);
+});
+
+test('반격: 못 막고 버틴 밤이 세 번 쌓이면 쓸 수 있고, 쓰고 나면 다시 그만큼 버텨야 한다', () => {
+  const s = fresh(); s.wavesCleared = 200;      // 절반으로 줄여도 도저히 못 막는 밤
+  assert.equal(C.resolveNight(s).type, 'breached'); assert.equal(C.counterReady(s), false);
+  for (let i = 0; i < C.COUNTER_NIGHTS; i++) assert.equal(C.resolveNight(s).type, 'held');
+  assert.ok(C.counterReady(s));
+  const before = C.nightStrength(s), r = C.counterAttack(s);
+  assert.ok(r.ok); assert.equal(C.nightStrength(s), Math.ceil(before * C.NIGHT_EASE)); assert.equal(C.counterReady(s), false);
+  C.resolveNight(s); assert.equal(C.easeOn(s), false); assert.equal(C.counterReady(s), false, '쓴 직후에는 다시 못 쓴다');
+  for (let i = 0; i < C.COUNTER_NIGHTS - 1; i++) C.resolveNight(s);
+  assert.ok(C.counterReady(s), '다시 세 번 버티면 쓸 수 있다');
+  // 막아내면 처음부터
+  const d = fresh(); d.siege = true; d.siegeNights = 5; d.counterAt = 3; d.defenses.wire = 5000; C.resolveNight(d); assert.equal(d.counterAt, 0); assert.equal(C.counterReady(d), false);
+  // 선제 공격을 걸어 둔 밤에는 반격을 겹쳐 쓸 수 없다
+  const b = fresh(); b.siege = true; b.siegeNights = 5; b.nightEase = C.NIGHT_EASE; assert.equal(C.counterAttack(b).reason, 'set');
+});
+
+test('구역마다 주문·사건 자동을 끌 수 있다: 꺼 두면 자동 개조가 있어도 손으로 해야 한다', () => {
+  const mk = () => { const s = inLab(); s.zone = 6; s.staff = 10; s.posts = 12; s.antennas = 12; ['autoline', 'autosig', 'autolab', 'autoguard', 'autotower', 'broker'].forEach((id) => { s.upgrades[id] = 1; }); s.jamIn = 1e6; s.truckIn = 1e6; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 }; s.contractIn = 1e6; s.orderIn = 1e6; return s; };
+  const on = mk(); assert.ok(C.autoEvents(on, 5));
+  on.zev.guard = { left: C.ZEV_WAIT }; let got = []; for (let i = 0; i < 5; i++) got = got.concat(C.tick(on, 1, () => 0.99));
+  assert.ok(got.some((e) => e.type === 'zev-auto' && e.id === 'guard')); assert.ok(got.some((e) => e.type === 'auto-push' && e.id === 'guard'));
+  const off = mk(); assert.ok(C.setAutoEvents(off, 5, false).ok); assert.equal(C.autoEvents(off, 5), false); assert.ok(C.autoOn(off, 5), '개조는 그대로 있다');
+  off.zev.guard = { left: C.ZEV_WAIT }; got = []; for (let i = 0; i < 5; i++) got = got.concat(C.tick(off, 1, () => 0.99));
+  assert.ok(!got.some((e) => e.type === 'zev-auto' && e.id === 'guard')); assert.ok(!got.some((e) => e.type === 'auto-push' && e.id === 'guard')); assert.ok(off.zev.guard, '사건은 손을 기다린다');
+  assert.ok(got.some((e) => e.type === 'auto-push' && e.id === 'tower'), '다른 구역의 자동은 그대로 돈다');
+  // 3구역: 꺼 두면 고장과 트럭도 손을 기다린다. 전력 투입 같은 늘 도는 자동은 그대로다
+  const l = mk(); l.machines = { sorter: 10, press: 15, assembler: 30 }; C.setAutoEvents(l, 2, false); l.jam = { id: 'press', left: C.JAM_SELF_FIX }; l.truck = { left: C.TRUCK_WAIT }; l.stockSec = 30;
+  got = []; for (let i = 0; i < 8; i++) got = got.concat(C.tick(l, 1, () => 0.99));
+  assert.ok(l.jam && l.truck); assert.ok(got.some((e) => e.type === 'surge'), '전력 투입은 알아서 들어간다');
+  // 다시 켜고, 저장과 철수를 거쳐도 설정이 남는다
+  assert.ok(C.setAutoEvents(off, 5, true).ok); assert.ok(C.autoEvents(off, 5));
+  C.setAutoEvents(off, 3, false); const round = C.sanitizeState(JSON.parse(JSON.stringify(off)), 0); assert.deepEqual(round.autoOff, { 3: true });
+  off.runEarned = 1e40; off.pendingPerks = []; assert.deepEqual(C.retreat(off, 1).state.autoOff, { 3: true });
+  assert.equal(C.setAutoEvents(off, 0, false).reason, 'unknown'); assert.equal(C.setAutoEvents(off, 9, false).reason, 'unknown');
+  assert.deepEqual(C.sanitizeState({ version: 2, autoOff: { 2: 'yes', 4: true, 99: true } }, 0).autoOff, { 4: true });
+});

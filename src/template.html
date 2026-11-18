@@ -436,6 +436,13 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 #rebalance[hidden] { display: none; }
 #wall-now { margin: 0 0 8px; font-size: 14px; }
 #wall-now.bad { color: var(--blood); }
+#auto-ev-row { margin: 0 0 8px; }
+#auto-ev-row[hidden] { display: none; }
+/* 밤 칸의 방어 여유 게이지와 선제 공격·반격 단추 */
+.edge { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; margin-top: 6px; }
+.night-acts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.night-acts .surge { width: 100%; margin-top: 8px; }
+.night-acts .surge[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .line-cell.jam { animation: none; } }
 .line-cell.slow .line-name::after { content: ' · 병목'; color: var(--blood); }
 .line-name { font: 600 12px/1.4 var(--font-body); white-space: nowrap; overflow: hidden; }
@@ -1020,7 +1027,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.5.2</div>
+  <div class="boot-ver">7구역 알파 1.5.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1145,6 +1152,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       </div>
       <p class="hint" id="night-hint"></p>
       <p class="hint" id="night-sub"></p>
+      <div class="edge" id="edge-row"><span class="label" id="edge-label">방어 여유</span><div class="track"><i id="edge-bar"></i></div></div>
+      <div class="night-acts"><button type="button" class="surge" id="strike" hidden>선제 공격</button><button type="button" class="surge" id="counter" hidden>반격</button></div>
       <button type="button" class="fortify" id="fortify" hidden></button>
     </section>
     <section class="panel" aria-labelledby="h-retreat">
@@ -1170,6 +1179,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       </div>
       <div class="tabbar even" id="zone-tabs" role="group" aria-label="구역 고르기"></div>
       <p class="hint tab-hint" id="tab-hint"></p>
+      <label class="check" for="auto-ev" id="auto-ev-row" hidden><input type="checkbox" id="auto-ev"> <span id="auto-ev-text">주문과 사건을 자동에 맡긴다</span></label>
       <div class="panes" id="zone-panes" role="group" aria-label="구역 화면 고르기">
         <button type="button" data-pane="play" aria-pressed="true">운영</button>
         <button type="button" data-pane="up" aria-pressed="false">개조</button>
@@ -1416,7 +1426,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.5.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.5.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

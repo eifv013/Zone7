@@ -1589,6 +1589,20 @@
         log('기계를 다시 맞췄다. ' + res.seconds + '초 동안 라인이 선다.', 'good'); sfx('machine'); buzz(25); Store.save(); render();
       });
     });
+    // 구역마다 주문·사건 자동을 켜고 끈다(그 구역의 자동 개조가 있을 때만 보인다)
+    $('auto-ev').addEventListener('change', function () {
+      var zi = /^z\d$/.test(tab) ? Number(tab.slice(1)) : -1;
+      if (!C.setAutoEvents(state, zi, $('auto-ev').checked).ok) return;
+      sfx('click'); Store.save(); render();
+    });
+    $('strike').addEventListener('click', function () {
+      if (!C.strike(state).ok) return;
+      log('선제 공격을 나간다. 오늘 밤 무리는 절반이다.', 'good'); sfx('defense'); buzz(30); Store.save(); render();
+    });
+    $('counter').addEventListener('click', function () {
+      if (!C.counterAttack(state).ok) return;
+      log('버틴 만큼 되갚는다. 오늘 밤 무리는 절반이다.', 'good'); sfx('defense'); buzz(30); Store.save(); render();
+    });
     $('truck-load').addEventListener('click', function () {
       var res = C.loadTruck(state, false);
       if (!res.ok) return;
@@ -1772,7 +1786,13 @@
     // 두 줄로 나눠 적는다: 윗줄은 오늘 밤의 결과, 아랫줄은 지금까지 막아낸 밤과 그 보너스
     setText($('night-hint'), safe ? '방어 성공 시 물자 +' + fmt(C.nightReward(state)) + (boss ? ' · 간식 +' + C.TREAT_BOSS + ((state.bossPerks || 0) < C.BOSS_PERKS_MAX ? ' · 특전 하나' : '') : '')
       : sieging ? '방어력이 모자라요. 방벽을 보강해 주세요.' : '방어력이 모자라요. 방어 실패 시 물자의 ' + Math.round(C.BREACH_LOSS * 100) + '%를 잃어요.');
-    setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%' + (state.defStreak > 0 ? '\n연속 방어 ' + state.defStreak + '번 · 전리품 ×' + C.defStreakMult(state).toFixed(2).replace(/0$/, '') : ''));
+    setText($('night-sub'), '방어 성공한 밤 ' + state.wavesCleared + '번 · 생산 +' + Math.round(state.wavesCleared * C.WAVE_BONUS * 100) + '%' + (state.defStreak > 0 ? '\n연속 방어 ' + state.defStreak + '번 · 전리품 ×' + C.defStreakMult(state).toFixed(1) + ' (최대 ×' + C.DEF_STREAK_MAX.toFixed(1) + ')' : ''));
+    // 방어 여유 게이지, 선제 공격, 반격(1.5.3)
+    var eased = C.easeOn(state);
+    $('edge-bar').style.width = Math.round((state.edge || 0) * 100) + '%';
+    setText($('edge-label'), eased ? '오늘 밤 무리 절반' : '방어 여유 ' + Math.floor((state.edge || 0) * 100) + '%');
+    $('strike').hidden = !C.strikeReady(state); $('counter').hidden = !C.counterReady(state);
+    setText($('strike'), '선제 공격 · 오늘 밤 무리 절반'); setText($('counter'), '반격 · 오늘 밤 무리 절반');
     var fb = $('fortify');
     fb.hidden = safe;
     if (plan) { fb.disabled = plan.cost > state.supplies; setText(fb, '필요한 만큼 보강 · 물자 ' + fmt(plan.cost)); }
@@ -1804,7 +1824,7 @@
   /** 구역 화면: 고른 탭에 따라 목표, 거래 칸, 목록을 바꿔 보여 준다. */
   /** 그 구역에서 지금 채울 수 있는 것이 있는가: 2구역 단골 주문, 3구역 납품 의뢰, 4구역 표류 화물. */
   function fillReady(zi) {
-    if (zi < state.zone && C.autoOn(state, zi)) return false;      // 지나온 구역을 자동에 맡겼으면 점으로 부르지 않는다(1.5.1)
+    if (zi < state.zone && C.autoEvents(state, zi)) return false;      // 지나온 구역을 자동에 맡겼으면 점으로 부르지 않는다(1.5.1)
     if (zi === 1) return !!state.order && state.goods >= state.order.need;
     if (zi === 2) return (!!state.contract && state.contract.have >= state.contract.need) || !!state.jam || !!state.truck;      // 납품, 고장, 출하 트럭
     if (zi === 3) return (!!state.salvage && state.salvage.have >= state.salvage.need) || !!(state.zev && state.zev.rail);
@@ -1869,6 +1889,12 @@
     $('guard').hidden = !(tab === 'z5' && open);
     $('rows-z6').hidden = !(tab === 'z6' && open);
     $('tower').hidden = !(tab === 'z6' && open);
+    var aeZone = /^z\d$/.test(tab) ? Number(tab.slice(1)) : -1, aeShow = aeZone >= 1 && aeZone <= state.zone && C.autoOn(state, aeZone);
+    $('auto-ev-row').hidden = !aeShow;
+    if (aeShow) {
+      $('auto-ev').checked = C.autoEvents(state, aeZone);
+      setText($('auto-ev-text'), ['', '단골 주문 자동', '의뢰·고장·트럭 자동', '표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + (aeZone < state.zone ? ' · 전부 받음' : ' · 절반만 받음'));
+    }
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-now').hidden = tab !== 'wall';
     $('wall-extra').hidden = tab !== 'wall';
