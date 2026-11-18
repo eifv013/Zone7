@@ -259,7 +259,7 @@ def run_case(browser, name, size, state, mode):
             if not tap('#tune'): problems.append('병목 올리기를 누를 수 없다'); break
         levels = [text('row-%s' % m) for m in ['sorter', 'press', 'assembler']]
         if not ('Lv 2' in levels[0] and 'Lv 3' in levels[1] and 'Lv 6' in levels[2]): problems.append('병목 올리기 11번 뒤 레벨이 2·3·6 이 아니다: ' + ' | '.join(levels))
-        if text('line-load') != '가동률 100%': problems.append('맞물렸는데 가동률이 100%가 아니다: ' + text('line-load'))
+        if not text('line-load').startswith('가동률 100%'): problems.append('맞물렸는데 가동률이 100%가 아니다: ' + text('line-load'))
         # 품목 바꾸기 → 고장 고치기 → 트럭 싣기(1.4.1). 고장과 트럭은 저장에 심어 둔 것이 떠 있다
         if page.locator('#recipes button').count() != 3: problems.append('품목 단추가 셋이 아니다')
         if not page.locator('#jam-fix').is_visible(): problems.append('고장이 났는데 고치는 단추가 없다')
@@ -279,7 +279,7 @@ def run_case(browser, name, size, state, mode):
         if '정속 가동' not in text('line-note') or '초당 물자' not in text('line-note'): problems.append('정속 가동 표시가 없다: ' + text('line-note'))
         if not tap('#row-sorter'): problems.append('선별기를 살 수 없다')
         if page.locator('.line-cell.slow').count() != 1: problems.append('병목 표시가 정확히 하나가 아니다')
-        if text('line-load') == '가동률 100%': problems.append('선별기만 올렸는데 가동률이 그대로다')
+        if text('line-load').startswith('가동률 100%'): problems.append('선별기만 올렸는데 가동률이 그대로다')
         tap('[data-qty="max"]'); tap('#tune'); tap('[data-qty="1"]')
         tap('#row-lube'); tap('#row-belt')
         if not fits(): problems.append('한 화면에 들어오지 않는다(3구역)')

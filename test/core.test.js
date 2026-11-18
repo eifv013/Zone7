@@ -138,7 +138,7 @@ test('직접 수색: 수색 배수가 두 배가 될 때마다 실제 배수가 
 /* ================= 구역 강화와 보너스 ================= */
 
 test('구역 강화: 레벨마다 값이 오르고 효과가 쌓이며, 최대 레벨에서 멈춘다', () => {
-  const s = fresh(); s.supplies = 1e30; s.buildings.scouts = 10;
+  const s = fresh(); s.supplies = 1e30; s.buildings.scouts = 10; s.retreats = 10;      // 경험이 찬 사람(숙련 상한이 풀린 상태)의 값으로 본다
   const base = C.productionPerSec(s);
   assert.equal(C.upgradeCost(s, 'maps'), 400);
   assert.ok(C.buyUpgrade(s, 'maps').ok);
@@ -2216,7 +2216,7 @@ test('쌓인 효과 글: 더하는 것은 레벨만큼, 깎는 것은 곱으로 
   assert.equal(C.effectNow({ desc: '상품 값 +25%' }, 3), '상품 값 +75%');
   assert.equal(C.effectNow({ desc: '시세의 바닥 +0.1' }, 3), '시세의 바닥 +0.3');
   assert.equal(C.effectNow({ desc: '은닉처가 나올 확률 +3%p' }, 4), '은닉처가 나올 확률 +12%p');
-  assert.equal(C.effectNow({ desc: '모든 값 -4%' }, 2), '모든 값 -7.8%');      // 1 - 0.96² = 7.84%
+  assert.equal(C.effectNow({ desc: '모든 구매 비용 -4%' }, 2), '모든 구매 비용 -7.8%');      // 1 - 0.96² = 7.84%
   assert.equal(C.effectNow({ desc: '정속 가동으로 치는 가동률 -3%p' }, 2), '정속 가동으로 치는 가동률 -6%p');
   assert.equal(C.effectNow({ desc: '청신호가 알아서 켜진다' }, 1), '');
   assert.equal(C.effectNow({ desc: '상품 값 +25%' }, 0), ''); assert.equal(C.effectNow(null, 3), ''); assert.equal(C.effectNow({}, 3), '');
@@ -2479,11 +2479,94 @@ test('5구역 밤샘 연구: 잠깐 연구가 빨라지고 쉬는 시간이 있�
   near(C.researchNow(s), rate * C.FOCUS_MULT); assert.equal(C.focusLab(s).reason, 'cooldown');
   const p0 = s.points; C.tick(s, 1, () => 0.99); near(s.points - p0, rate * C.FOCUS_MULT);
   // 긴 시간을 한 번에 흘려도 남은 밤샘 시간까지만 배로 친다
-  const p1 = s.points; C.tick(s, 60, () => 0.99); near(s.points - p1, C.researchRate(s) * (60 + (C.FOCUS_MULT - 1) * (C.FOCUS_SECONDS - 1)));
+  const p1 = s.points; C.tick(s, 40, () => 0.99); near(s.points - p1, C.researchRate(s) * (40 + (C.FOCUS_MULT - 1) * (C.FOCUS_SECONDS - 1)));
   assert.equal(s.focusLeft, 0); near(C.researchNow(s), C.researchRate(s));
-  for (let i = 0; i < 70; i++) C.tick(s, 1, () => 0.99);
+  for (let i = 0; i < C.FOCUS_COOL; i++) C.tick(s, 1, () => 0.99);
   assert.equal(s.focusCool, 0); assert.ok(C.focusLab(s).ok);
   const none = inLab(); assert.equal(C.focusLab(none).reason, 'stopped');
   const closed = inStation(); assert.equal(C.focusLab(closed).reason, 'locked');
   assert.equal(C.sanitizeState({ version: 2, zone: 2, focusLeft: 10, focusCool: 50 }, 0).focusLeft, 0);
+});
+
+test('6구역 순찰과 7구역 직접 방송: 누르면 잠깐 그 구역이 배로 돌고, 쉬는 시간이 있다', () => {
+  const s = inLab(); s.zone = 6; s.posts = 12; s.antennas = 12; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 }; s.jamIn = 1e6; s.truckIn = 1e6;
+  const g = C.guardRate(s), v = C.survivorRate(s);
+  let e0 = s.guardEarned, p0 = s.survivors; C.tick(s, 1, () => 0.99);
+  near(s.survivors - p0, v); const base = (s.guardEarned - e0) / C.guardRate(s);      // 통행 물자는 다리 안전도에 따라 달라지므로 비율로 본다
+  assert.ok(C.pushZone(s, 'guard').ok); assert.ok(C.pushZone(s, 'tower').ok); assert.equal(C.pushZone(s, 'guard').reason, 'cooldown');
+  e0 = s.guardEarned; p0 = s.survivors; C.tick(s, 1, () => 0.99);
+  const ratio = (s.guardEarned - e0) / C.guardRate(s) / base; assert.ok(ratio > C.PUSH_MULT * 0.9 && ratio < C.PUSH_MULT * 1.1, '순찰 중에는 배로(' + ratio.toFixed(2) + ')'); near(s.survivors - p0, v * C.PUSH_MULT);
+  // 긴 시간을 한 번에 흘려도 남은 시간까지만 배로 친다
+  p0 = s.survivors; C.tick(s, 30, () => 0.99); near(s.survivors - p0, v * (30 + (C.PUSH_MULT - 1) * (C.PUSH_SECONDS - 1)));
+  assert.equal(s.push.tower.left, 0);
+  for (let i = 0; i < C.PUSH_COOL; i++) C.tick(s, 1, () => 0.99);
+  assert.equal(s.push.guard.cool, 0); assert.ok(C.pushZone(s, 'guard').ok);
+  const closed = inLab(); assert.equal(C.pushZone(closed, 'guard').reason, 'locked'); assert.equal(C.pushZone(closed, 'nope').reason, 'unknown');
+  const empty = inLab(); empty.zone = 6; assert.equal(C.pushZone(empty, 'tower').reason, 'stopped');
+  const bad = C.sanitizeState({ version: 2, zone: 2, push: { guard: { left: 9, cool: 999 }, tower: 'x' } }, 0);
+  assert.deepEqual(bad.push, { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } });
+});
+
+test('5·6·7구역의 자동 개조: 단추는 알아서 누르고, 사건은 알아서 받되 절반만 받는다', () => {
+  const s = inLab(); s.zone = 6; s.staff = 10; s.posts = 12; s.antennas = 12; s.supplies = 1e60; s.jamIn = 1e6; s.truckIn = 1e6; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 };
+  assert.equal(C.autoOn(s, 4), false); assert.equal(C.autoOn(s, 5), false); assert.equal(C.autoOn(s, 6), false);
+  C.tick(s, 1, () => 0.99); assert.equal(s.focusLeft, 0); assert.equal(s.push.guard.left, 0, '개조가 없으면 알아서 누르지 않는다');
+  ['autolab', 'autoguard', 'autotower'].forEach((id) => assert.ok(C.buyUpgrade(s, id).ok, id));
+  assert.ok(C.autoOn(s, 4) && C.autoOn(s, 5) && C.autoOn(s, 6));
+  const ev = C.tick(s, 1, () => 0.99).filter((e) => e.type === 'auto-push').map((e) => e.id).sort();
+  assert.deepEqual(ev, ['guard', 'lab', 'tower']); assert.ok(s.focusLeft > 0 && s.push.guard.left > 0 && s.push.tower.left > 0);
+  // 사건: 3초 뒤에 알아서 받고, 절반만 받는다
+  s.zev.guard = { left: C.ZEV_WAIT }; s.zev.tower = { left: C.ZEV_WAIT };
+  const full = C.zevReward(s, 'guard', false), auto5 = C.zevReward(s, 'guard', true), auto6 = C.zevReward(s, 'tower', true);
+  near(auto5, full, '지나온 6구역은 자동이 온전히 받는다'); assert.ok(auto6 <= C.zevReward(s, 'tower', false), '지금 있는 7구역은 절반');
+  let got = []; for (let i = 0; i < 5; i++) got = got.concat(C.tick(s, 1, () => 0.99).filter((e) => e.type === 'zev-auto'));
+  assert.deepEqual(got.map((e) => e.id).sort(), ['guard', 'tower']); assert.ok(got.every((e) => e.auto));
+  assert.ok(got.find((e) => e.id === 'tower').people >= C.ZEV_MIN_PEOPLE);
+  // 자동은 그 구역의 개조 화면에 있고, 한 번만 산다
+  ['autolab', 'autoguard', 'autotower'].forEach((id, k) => { const u = C.UPGRADES.find((x) => x.id === id); assert.equal(u.zone, 4 + k); assert.equal(u.max, 1); });
+});
+
+test('개조의 숙련 상한: 철수와 특성이 적으면 상한 위로는 값이 크게 뛰고, 경험이 쌓이면 풀린다', () => {
+  const s = fresh(); s.supplies = 1e80;
+  const def = C.UPGRADES.find((u) => u.id === 'crowbar');      // 최대 12
+  assert.equal(C.experience(s), 0); assert.equal(C.upgradeSoftCap(s, 'crowbar'), 6);
+  for (let i = 0; i < 6; i++) { near(C.upgradeCost(s, 'crowbar'), Math.ceil(def.baseCost * Math.pow(def.growth, i))); assert.ok(C.buyUpgrade(s, 'crowbar').ok); }
+  near(C.upgradeCost(s, 'crowbar'), Math.ceil(def.baseCost * Math.pow(def.growth, 6) * C.CAP_OVER), '상한을 넘긴 첫 레벨');
+  assert.ok(C.buyUpgrade(s, 'crowbar').ok, '막지는 않는다');
+  near(C.upgradeCost(s, 'crowbar'), Math.ceil(def.baseCost * Math.pow(def.growth, 7) * C.CAP_OVER * C.CAP_OVER));
+  // 철수와 특성이 경험이 된다
+  s.retreats = 4; assert.equal(C.upgradeSoftCap(s, 'crowbar'), Math.ceil(12 * 0.7));
+  s.traits.immune = 10; assert.equal(C.experience(s), 6); assert.equal(C.upgradeSoftCap(s, 'crowbar'), Math.ceil(12 * 0.8));
+  s.retreats = 10; assert.equal(C.upgradeSoftCap(s, 'crowbar'), 12);
+  near(C.upgradeCost(s, 'crowbar'), Math.ceil(def.baseCost * Math.pow(def.growth, 7)), '경험이 차면 원래 값');
+  // 한 번만 사는 개조는 그대로다
+  assert.equal(C.upgradeSoftCap(fresh(), 'autoline'), 1); assert.equal(C.upgradeSoftCap(fresh(), 'nope'), 0);
+  C.UPGRADES.forEach((u) => { const cap = C.upgradeSoftCap(fresh(), u.id); assert.ok(cap >= 1 && cap <= u.max, u.id); });
+});
+
+test('지나온 구역의 자동은 온전히 받고, 지금 있는 구역의 자동은 절반만 받는다', () => {
+  const here = inFactory(); here.machines = { sorter: 10, press: 15, assembler: 30 }; here.stockSec = 60;
+  near(C.truckReward(here, true), C.truckReward(here, false) * C.AUTO_SHARE); assert.equal(C.autoShare(here, 2), C.AUTO_SHARE);
+  const past = inStation(); past.machines = { sorter: 10, press: 15, assembler: 30 }; past.stockSec = 60;
+  near(C.truckReward(past, true), C.truckReward(past, false)); assert.equal(C.autoShare(past, 2), 1);
+  // 지나온 3구역: 자동 제어반이 고장을 고치면 정비 효과까지 난다. 의뢰는 지금 만드는 품목으로만 온다
+  past.upgrades.autoline = 1; past.jam = { id: 'press', left: C.JAM_SELF_FIX }; past.jamIn = 1e6; past.truckIn = 1e6; past.contractIn = 1e6;
+  for (let i = 0; i < C.JAM_AUTO_FIX + 1; i++) C.tick(past, 1, () => 0.99);
+  assert.equal(past.jam, null); assert.ok(past.tuneLeft > 0);
+  for (let i = 0; i < 20; i++) { past.contract = null; past.contractIn = 0; C.stepContracts(past, 1, 0, () => 0.9, []); assert.equal(past.contract.item, 'bolt'); }
+});
+
+test('3구역 기계 다시 맞추기: 레벨 합계는 그대로, 처리량이 같아지게 다시 나눈다. 정속 가동일 때는 쓸 수 없다', () => {
+  const s = inFactory(); s.machines = { sorter: 87, press: 80, assembler: 95 };      // 실제로 받은 화면의 상태: 가동률 36%
+  assert.ok(C.lineInfo(s).load < 0.4 && !C.lineInfo(s).steady);
+  const total = 87 + 80 + 95, tier = C.lineInfo(s).milestone;
+  const r = C.rebalanceLine(s); assert.ok(r.ok);
+  assert.equal(s.machines.sorter + s.machines.press + s.machines.assembler, total, '레벨 합계는 그대로');
+  assert.equal(C.lineInfo(s).milestone, tier, '2배 문턱은 그대로'); assert.ok(C.lineInfo(s).steady); assert.ok(C.lineInfo(s).load > 0.95);
+  assert.equal(s.retool, C.REBALANCE_SECONDS); assert.equal(C.lineNow(s), 0, '맞추는 동안은 선다');
+  assert.equal(C.rebalanceLine(s).reason, 'steady');
+  // 어떤 합계에서도 합이 보존되고 음수가 없다
+  for (let n = 3; n < 400; n += 7) { const t = inFactory(); t.machines = { sorter: n, press: 0, assembler: 0 }; const p = C.rebalancePlan(t); assert.equal(p.sorter + p.press + p.assembler, n); assert.ok(p.sorter >= 1 && p.press >= 1 && p.assembler >= 1, 'n=' + n); }
+  const few = inFactory(); few.machines = { sorter: 2, press: 0, assembler: 0 }; assert.equal(C.rebalanceLine(few).reason, 'few');
+  assert.equal(C.rebalanceLine(inMarket()).reason, 'locked');
 });

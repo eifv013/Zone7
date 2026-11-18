@@ -453,7 +453,11 @@
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
     { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 1.5e13, growth: 1, max: 1 },
-    { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 }
+    { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
+    // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
+    { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
+    { id: 'autoguard', zone: 5, name: '초소장',     desc: '순찰을 알아서 돌고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
+    { id: 'autotower', zone: 6, name: '송신 기사',  desc: '직접 방송을 알아서 하고, 무전에 알아서 응답한다(절반)', key: 'autotower', per: 1, baseCost: 5e31, growth: 1, max: 1 }
   ];
   /*
    * 특전: 구역의 목표를 달성할 때마다 셋 중 하나를 고른다. 이번 판에만 유효하고 철수하면 사라진다.
@@ -468,7 +472,7 @@
     { id: 'driver',  name: '기관사',    desc: '화물 값 +40%',    key: 'z4',      per: 0.4, zone: 3 },
     { id: 'aide',    name: '조교',      desc: '연구 속도 +40%',  key: 'lab',     per: 0.4, zone: 4 },
     { id: 'spoils',  name: '전리품 수거', desc: '밤 전리품 +60%', key: 'loot',    per: 0.6 },
-    { id: 'frugal',  name: '알뜰함',    desc: '모든 값 -6%',     key: 'cost',    per: -0.06 }
+    { id: 'frugal',  name: '알뜰함',    desc: '모든 구매 비용 -6%',     key: 'cost',    per: -0.06 }
   ];
   /*
    * 영구 특성: 항체 샘플로 찍는다. 철수해도 남고, 되돌리면 쓴 샘플을 모두 돌려받는다.
@@ -478,7 +482,7 @@
     { id: 'immune',  name: '면역',      desc: '전체 생산 +25%',            key: 'prod',    per: 0.25, baseCost: 1, growth: 1.5,  max: 40 },
     { id: 'quick',   name: '숙련된 손', desc: '수색 배수 +100%',           key: 'click',   per: 1,    baseCost: 1, growth: 1.8,  max: 15 },
     { id: 'bulwark', name: '보루',      desc: '방어력 +40%',               key: 'defense', per: 0.4,  baseCost: 1, growth: 1.4,  max: 40 },
-    { id: 'thrift',  name: '절약',      desc: '모든 값 -4%',               key: 'cost',    per: -0.04, baseCost: 2, growth: 1.7, max: 12 },
+    { id: 'thrift',  name: '절약',      desc: '모든 구매 비용 -4%',               key: 'cost',    per: -0.04, baseCost: 2, growth: 1.7, max: 12 },
     { id: 'pioneer', name: '선발대',    desc: '철수 뒤 시작 물자 10배(레벨 1: 1,000)', key: 'start', per: 1, baseCost: 2, growth: 2, max: 8 },
     { id: 'dealer',  name: '장사 수완', desc: '상품 값 +30%',              key: 'z2',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'engineer', name: '기술자',   desc: '완제품 값 +30%',            key: 'z3',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
@@ -563,7 +567,7 @@
       // 구조 신호
       signalIn: SIGNAL_FIRST, signalLeft: 0, signalsAnswered: 0, buff: null,
       // 특전(이번 판)
-      zev: { rail: null, guard: null, tower: null }, zevIn: { rail: 100, guard: 100, tower: 100 }, railBoost: 0, guardBoost: 0, zevRun: 0, focusLeft: 0, focusCool: 0,      // 4·6·7구역 사건과 5구역 밤샘 연구
+      zev: { rail: null, guard: null, tower: null }, zevIn: { rail: 60, guard: 60, tower: 60 }, railBoost: 0, guardBoost: 0, zevRun: 0, focusLeft: 0, focusCool: 0, push: { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } },      // 4·6·7구역 사건과 5구역 밤샘 연구
       goalPick: {},      // 이번 회차의 목표 고르기(구역 index → 자리별 0|1). 비어 있으면 원래 목표 셋
       perks: {}, pendingPerks: [], goalsDone: {}, rerollsUsed: 0,      // rerollsUsed: 이번 판에 특전을 다시 뽑은 횟수(철수하면 0)
       // 영구
@@ -662,7 +666,7 @@
     s.recipe = findById(RECIPES, raw.recipe) ? raw.recipe : 'bolt';
     var rm = raw.mastery && typeof raw.mastery === 'object' ? raw.mastery : {};
     RECIPES.forEach(function (r) { var v = clamp(safeNum(rm[r.id], 0), 0, 1); if (v > 0 && r.id !== 'bolt') s.mastery[r.id] = v; });
-    s.retool = clamp(safeNum(raw.retool, 0), 0, RETOOL_SECONDS); s.tuneLeft = clamp(safeNum(raw.tuneLeft, 0), 0, TUNE_SECONDS);
+    s.retool = clamp(safeNum(raw.retool, 0), 0, REBALANCE_SECONDS); s.tuneLeft = clamp(safeNum(raw.tuneLeft, 0), 0, TUNE_SECONDS);
     s.jamIn = clamp(safeNum(raw.jamIn, 90), 0, JAM_GAP_MAX); s.truckIn = clamp(safeNum(raw.truckIn, 100), 0, TRUCK_GAP_MAX);
     s.jam = raw.jam && typeof raw.jam === 'object' && findById(MACHINES, raw.jam.id) ? { id: raw.jam.id, left: clamp(safeNum(raw.jam.left, 0), 0, JAM_SELF_FIX) } : null;
     s.truck = raw.truck && typeof raw.truck === 'object' ? { left: clamp(safeNum(raw.truck.left, 0), 0, TRUCK_WAIT) } : null;
@@ -702,11 +706,13 @@
     var rz = raw.zev && typeof raw.zev === 'object' ? raw.zev : {}, rzi = raw.zevIn && typeof raw.zevIn === 'object' ? raw.zevIn : {};
     ZONE_EVENTS.forEach(function (d) {
       s.zev[d.id] = s.zone >= d.zone && rz[d.id] && typeof rz[d.id] === 'object' && safeNum(rz[d.id].left, 0) > 0 ? { left: clamp(safeNum(rz[d.id].left, 0), 0, ZEV_WAIT) } : null;
-      s.zevIn[d.id] = clamp(safeNum(rzi[d.id], 100), 0, ZEV_GAP_MAX);
+      s.zevIn[d.id] = clamp(safeNum(rzi[d.id], 60), 0, ZEV_GAP_MAX);
     });
     s.railBoost = s.zone >= 3 ? clamp(safeNum(raw.railBoost, 0), 0, ZEV_BOOST_MAX) : 0; s.guardBoost = s.zone >= 5 ? clamp(safeNum(raw.guardBoost, 0), 0, ZEV_BOOST_MAX) : 0;
     s.zevRun = clamp(safeCount(raw.zevRun), 0, 1e9);
     s.focusLeft = s.zone >= 4 ? clamp(safeNum(raw.focusLeft, 0), 0, FOCUS_SECONDS) : 0; s.focusCool = s.zone >= 4 ? clamp(safeNum(raw.focusCool, 0), 0, FOCUS_COOL) : 0;
+    var rp = raw.push && typeof raw.push === 'object' ? raw.push : {};
+    PUSHES.forEach(function (d) { var q = rp[d.id] && typeof rp[d.id] === 'object' ? rp[d.id] : {}, openZ = s.zone >= d.zone; s.push[d.id] = { left: openZ ? clamp(safeNum(q.left, 0), 0, PUSH_SECONDS) : 0, cool: openZ ? clamp(safeNum(q.cool, 0), 0, PUSH_COOL) : 0 }; });
     var gp = raw.goalPick && typeof raw.goalPick === 'object' ? raw.goalPick : {};
     GOALS_ALT.forEach(function (alt, zi) { var p = gp[zi]; if (Array.isArray(p) && alt.some(function (g) { return !!g; })) s.goalPick[zi] = [0, 1, 2].map(function (k) { return p[k] && alt[k] ? 1 : 0; }); });
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
@@ -773,8 +779,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -1152,7 +1158,7 @@
     return { ok: true, id: id, seconds: TUNE_SECONDS };
   }
   /** 트럭에 실으면 받을 물자. */
-  function truckReward(state, auto) { return lineRate(state) * Math.max(0, state.stockSec || 0) * TRUCK_SHARE * (auto ? TRUCK_AUTO : 1); }
+  function truckReward(state, auto) { return lineRate(state) * Math.max(0, state.stockSec || 0) * TRUCK_SHARE * (auto ? autoShare(state, 2) : 1); }
   /** 출하장에 쌓인 것을 트럭에 싣는다. */
   function loadTruck(state, auto) {
     if (!state.truck) return fail('none');
@@ -1172,7 +1178,10 @@
     // 고장
     if (state.jam) {
       state.jam.left -= dt;
-      if (auto && state.jam.left <= JAM_SELF_FIX - JAM_AUTO_FIX) { events.push({ type: 'jam-fixed', id: state.jam.id, auto: true }); state.jam = null; }
+      if (auto && state.jam.left <= JAM_SELF_FIX - JAM_AUTO_FIX) {
+        events.push({ type: 'jam-fixed', id: state.jam.id, auto: true });
+        if (state.zone > 2) repairJam(state); else state.jam = null;      // 지나온 구역이면 자동 제어반이 손으로 고친 것처럼 정비 효과까지 낸다
+      }
       else if (state.jam.left <= 0) { events.push({ type: 'jam-fixed', id: state.jam.id, auto: false }); state.jam = null; }
     } else {
       state.jamIn -= dt;
@@ -1287,7 +1296,8 @@
     var who = CLIENTS[Math.floor(rng() * CLIENTS.length) % CLIENTS.length];
     // 품목: 절반은 지금 만드는 것, 절반은 다른 둘 중 하나. 필요한 양은 그 품목으로 돌렸을 때의 속도로 잡는다(바꾸면 채울 수 있게)
     var others = RECIPES.filter(function (r) { return r.id !== recipeOf(state).id; });
-    var item = rng() < CONTRACT_SAME ? recipeOf(state).id : others[Math.floor(rng() * others.length) % others.length].id;
+    var item = rng() < CONTRACT_SAME || (state.zone > 2 && autoOn(state, 2)) ? recipeOf(state).id :      // 지나온 구역을 자동에 맡겼으면 지금 만드는 품목으로만 온다
+       others[Math.floor(rng() * others.length) % others.length].id;
     var need = Math.max(5, Math.ceil(productFlow(state) * recipeFactor(state, item) * CONTRACT_NEED_SECONDS));      // 지금의 숙련으로 50초쯤 만들 양
     state.contract = { who: who.id, item: item, need: need, have: 0, left: CONTRACT_SECONDS };
     state.contractIn = (CONTRACT_GAP_MIN + rng() * (CONTRACT_GAP_MAX - CONTRACT_GAP_MIN)) * mods(state).contractgap;
@@ -1338,7 +1348,13 @@
    * 구역의 자동: 그 구역의 개조(AUTO_KEYS)를 사야 켜진다. 영구 특성 '자동화'는 켜 주지 않고 대기 시간만 줄인다.
    *   0 수색조의 자동 수색, 1 자동 판매, 2 전력 투입, 3 청신호. 그 밖의 구역은 늘 false.
    */
-  var AUTO_KEYS = ['patrol', 'broker', 'autoline', 'autosig'];
+  var AUTO_KEYS = ['patrol', 'broker', 'autoline', 'autosig', 'autolab', 'autoguard', 'autotower'];      // 구역 index 순서. 5·6·7구역의 자동은 1.5.1 에서 생겼다
+  /**
+   * 자동이 대신 해 줄 때 받는 몫(1.5.1). 지금 있는 구역에서는 절반(손으로 하는 쪽이 낫다), 이미 지나온 구역에서는 전부.
+   * 다음 구역으로 넘어가면 앞 구역은 자동에 맡기고 새 구역에 손을 쓰라는 뜻이다.
+   */
+  function autoShare(state, zone) { return state.zone > zone ? 1 : AUTO_SHARE; }
+  var AUTO_SHARE = 0.5;
   function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && mods(state)[AUTO_KEYS[zone]] > 0; }
   /** 수색조가 한 칸을 뒤지는 데 걸리는 시간(초). 순찰조 레벨마다 0.4초씩 줄어든다(1.4초까지). */
   function sweepInterval(state) { return Math.max(1.4, SWEEP_AUTO_SECONDS - 0.4 * Math.max(0, mods(state).patrol - 1)); }
@@ -1359,6 +1375,27 @@
   }
   /** 지금 이 순간 라인이 초당 버는 물자(전력 투입 포함). 화면 표시용이다. 평균 수입 계산에는 lineRate 를 쓴다. */
   function lineNow(state) { return lineRate(state) * (state.surgeLeft > 0 ? SURGE_MULT : 1) * lineFactor(state); }
+  /*
+   * 기계 다시 맞추기(1.5.1): 기계 하나만 잔뜩 올려 버리면 가동률이 무너지고, 기계 값은 레벨마다 불어나서 나머지를 따라 올리기가 사실상 불가능했다.
+   *   레벨 합계는 그대로 두고 세 기계에 다시 나눈다: 레벨당 처리량이 3·2·1 이므로 2 : 3 : 6 으로 나누면 처리량이 같아진다(가동률 100%).
+   *   합계가 그대로라 2배 문턱(별)은 변하지 않는다. 값은 받지 않고, 대신 REBALANCE_SECONDS 동안 라인이 선다. 가동률이 정속 기준 아래일 때만 쓸 수 있다.
+   */
+  var REBALANCE_SECONDS = 30;
+  function rebalancePlan(state) {
+    var total = machineLevels(state), w = { sorter: 2, press: 3, assembler: 6 }, out = {}, used = 0;
+    MACHINES.forEach(function (d) { out[d.id] = Math.max(total >= 3 ? 1 : 0, Math.floor(total * w[d.id] / 11)); used += out[d.id]; });
+    // 나머지는 그때그때 가장 느린 기계에 하나씩 준다
+    for (var left = total - used; left > 0; left--) { var lo = null, lv = Infinity; MACHINES.forEach(function (d) { var c = d.rate * out[d.id]; if (c < lv) { lv = c; lo = d.id; } }); out[lo]++; }
+    return out;
+  }
+  function rebalanceLine(state) {
+    if (!zoneOpen(state, 2)) return fail('locked');
+    var l = lineInfo(state);
+    if (machineLevels(state) < 3) return fail('few');
+    if (l.steady) return fail('steady');
+    state.machines = rebalancePlan(state); state.retool = Math.max(state.retool || 0, REBALANCE_SECONDS);
+    return { ok: true, machines: state.machines, seconds: REBALANCE_SECONDS };
+  }
   /** 병목을 한 단계 올리는 값(단추에 보일 값). */
   function tuneCost(state) { return zoneOpen(state, 2) ? machineCost(state, lineInfo(state).bottleneck, 1) : Infinity; }
 
@@ -1733,10 +1770,25 @@
   }
 
   /* ---------- 구역 강화 ---------- */
+  /*
+   * 개조의 숙련 상한(1.5.1): 철수와 영구 특성이 적으면 개조를 끝까지 올리기 어렵다. 철수를 해야 할 이유가 하나 더 생긴다.
+   *   경험 = 철수 횟수 + (영구 특성 레벨 합계 ÷ 5, 버림).
+   *   숙련 상한 = 최대 레벨 × (CAP_BASE + CAP_PER × 경험), 올림. 경험 10 이면 전부 풀린다. 한 번만 사는 개조(자동 등)는 그대로다.
+   *   상한을 넘겨서도 살 수는 있다(막아 버리지는 않는다). 다만 넘긴 레벨마다 값이 CAP_OVER 배씩 더 붙는다.
+   */
+  var CAP_BASE = 0.5, CAP_PER = 0.05, CAP_OVER = 20;
+  function experience(state) { var lv = 0; TRAITS.forEach(function (t) { lv += state.traits[t.id] || 0; }); return (state.retreats || 0) + Math.floor(lv / 5); }
+  function upgradeSoftCap(state, id) {
+    var def = findById(UPGRADES, id);
+    if (!def) return 0;
+    if (def.max <= 1) return def.max;
+    return Math.min(def.max, Math.ceil(def.max * Math.min(1, CAP_BASE + CAP_PER * experience(state))));
+  }
   function upgradeCost(state, id) {
     var def = findById(UPGRADES, id);
     if (!def || !zoneOpen(state, def.zone) || state.upgrades[id] >= def.max) return Infinity;
-    return Math.ceil(def.baseCost * Math.pow(def.growth, state.upgrades[id]) * mods(state).cost);
+    var over = Math.max(0, state.upgrades[id] + 1 - upgradeSoftCap(state, id));
+    return Math.ceil(def.baseCost * Math.pow(def.growth, state.upgrades[id]) * mods(state).cost * Math.pow(CAP_OVER, over));
   }
   function buyUpgrade(state, id) {
     var def = findById(UPGRADES, id);
@@ -1951,12 +2003,35 @@
     { id: 'guard', zone: 5, name: '행렬',      choices: ['now', 'boost'] },
     { id: 'tower', zone: 6, name: '무전',      choices: ['now'] }
   ];
-  var ZEV_GAP_MIN = 90, ZEV_GAP_MAX = 150, ZEV_WAIT = 30, ZEV_NOW = 45, ZEV_BOOST = 0.03, ZEV_BOOST_MAX = 0.3, ZEV_AUTO = 0.5, ZEV_MIN_PEOPLE = 50;
-  var FOCUS_SECONDS = 20, FOCUS_MULT = 2, FOCUS_COOL = 120;
+  // 1.5.1: 사건 사이가 너무 길다는 말에 간격을 절반 가까이 줄였다(90~150초 → 50~90초). 자주 오는 만큼 한 번에 받는 양은 줄였다(45초분 → 30초분)
+  var ZEV_GAP_MIN = 50, ZEV_GAP_MAX = 90, ZEV_WAIT = 30, ZEV_NOW = 30, ZEV_BOOST = 0.03, ZEV_BOOST_MAX = 0.3, ZEV_AUTO = 0.5, ZEV_MIN_PEOPLE = 50;
+  var FOCUS_SECONDS = 15, FOCUS_MULT = 2, FOCUS_COOL = 60;      // 1.5.1: 20초/2분 → 15초/1분
+  /*
+   * 6구역 순찰, 7구역 직접 방송(1.5.1): 5구역 밤샘 연구와 같은 틀의 단추다. 누르면 PUSH_SECONDS 동안 그 구역이 PUSH_MULT 배, 그 뒤 PUSH_COOL 초 쉰다.
+   *   state.push = { guard: { left, cool }, tower: { left, cool } }
+   */
+  var PUSH_SECONDS = 15, PUSH_MULT = 2, PUSH_COOL = 60;
+  var PUSHES = [ { id: 'guard', zone: 5, name: '순찰' }, { id: 'tower', zone: 6, name: '직접 방송' } ];
+  function pushZone(state, id) {
+    var def = findById(PUSHES, id);
+    if (!def) return fail('unknown');
+    if (!zoneOpen(state, def.zone)) return fail('locked');
+    var p = state.push[id];
+    if (p.cool > 0) return fail('cooldown');
+    if (!(zevFlow(state, id) > 0)) return fail('stopped');
+    p.left = PUSH_SECONDS; p.cool = PUSH_COOL;
+    return { ok: true, id: id, seconds: PUSH_SECONDS };
+  }
+  /** dt 초 가운데 그 단추의 효과가 살아 있는 시간만큼 더해 줄 배수(1 이상). 시간도 함께 흘린다. */
+  function pushFactor(state, id, dt) {
+    var p = state.push[id], on = Math.min(dt, Math.max(0, p.left));
+    p.left = Math.max(0, p.left - dt); p.cool = Math.max(0, p.cool - dt);
+    return dt > 0 ? 1 + (PUSH_MULT - 1) * on / dt : 1;
+  }
   function zevFlow(state, id) { return id === 'rail' ? railRate(state) : id === 'guard' ? guardRate(state) : id === 'tower' ? survivorRate(state) : 0; }
   /** 그 사건을 '바로 받는다'로 처리하면 받는 양(물자, 7구역은 사람 수). */
   function zevReward(state, id, auto) {
-    var v = zevFlow(state, id) * ZEV_NOW * (auto ? ZEV_AUTO : 1);
+    var zdef = findById(ZONE_EVENTS, id), v = zevFlow(state, id) * ZEV_NOW * (auto && zdef ? autoShare(state, zdef.zone) : 1);
     return id === 'tower' ? Math.max(ZEV_MIN_PEOPLE, Math.floor(v)) : v;
   }
   /** 떠 있는 구역 사건에 답한다. choice: 'now' | 'boost'. */
@@ -1985,7 +2060,7 @@
       var ev = state.zev[def.id];
       if (ev) {
         ev.left -= dt;
-        if (def.id === 'rail' && autoOn(state, 3) && ev.left <= ZEV_WAIT - 3) { var r = answerZoneEvent(state, 'rail', 'now', true); if (r.ok) { r.type = 'zev-auto'; events.push(r); } }
+        if (autoOn(state, def.zone) && ev.left <= ZEV_WAIT - 3) { var r = answerZoneEvent(state, def.id, 'now', true); if (r.ok) { r.type = 'zev-auto'; events.push(r); } }
         else if (ev.left <= 0) { state.zev[def.id] = null; events.push({ type: 'zev-gone', id: def.id }); }
         return;
       }
@@ -2611,9 +2686,12 @@
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
     stepContracts(state, dt, line > 0 ? line / productValue(state) : 0, rng, events);
     stepLineEvents(state, dt, rng, events);
-    stepZoneEvents(state, dt, rng, events);      // 3구역 납품 의뢰: 이번 틱에 만든 완제품 수를 넘긴다
-    if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * dt);      // 7구역: 방송을 듣고 생존자가 모인다
-    var guard = guardRate(state) * dt;      // 6구역 통행 물자
+    stepZoneEvents(state, dt, rng, events);
+    // 자동 개조: 밤샘 연구, 순찰, 직접 방송을 준비되는 대로 알아서 누른다
+    if (autoOn(state, 4) && !(state.focusCool > 0) && focusLab(state).ok) events.push({ type: 'auto-push', id: 'lab' });
+    PUSHES.forEach(function (d) { if (autoOn(state, d.zone) && !(state.push[d.id].cool > 0) && pushZone(state, d.id).ok) events.push({ type: 'auto-push', id: d.id }); });      // 3구역 납품 의뢰: 이번 틱에 만든 완제품 수를 넘긴다
+    if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * dt * pushFactor(state, 'tower', dt));      // 7구역: 방송을 듣고 생존자가 모인다(직접 방송 중이면 더 빨리)
+    var guard = guardRate(state) * dt * pushFactor(state, 'guard', dt);      // 6구역 통행 물자(순찰 중이면 더 많이)
     if (guard > 0) { earn(state, guard); state.guardEarned += guard; }
     if (state.surgeLeft > 0 || state.surgeCool > 0) {
       var wasOn = state.surgeLeft > 0;
@@ -2670,7 +2748,8 @@
     state.signalLeft = 0;
     state.greenCool = Math.max(0, state.greenCool - elapsed);
     state.surgeLeft = 0; state.surgeCool = Math.max(0, state.surgeCool - elapsed);
-    if (elapsed >= 60) { state.jam = null; state.truck = null; state.tuneLeft = 0; state.retool = 0; state.zev = { rail: null, guard: null, tower: null }; state.focusLeft = 0; }
+    if (elapsed >= 60) { state.jam = null; state.truck = null; state.tuneLeft = 0; state.retool = 0; state.zev = { rail: null, guard: null, tower: null }; state.focusLeft = 0; PUSHES.forEach(function (d) { state.push[d.id].left = 0; }); }
+    PUSHES.forEach(function (d) { state.push[d.id].cool = Math.max(0, state.push[d.id].cool - elapsed); });
     state.focusCool = Math.max(0, (state.focusCool || 0) - elapsed);      // 고장·트럭·정비는 접속해 있을 때만의 일이다(잠깐 새로 고친 정도로는 지우지 않는다)      // 전력 투입은 자리를 비우면 끝난 것으로 친다
     var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
     report.gain = (searchRate(state) + sweepRate(state)) * counted * rate + trade + line;      // 순찰조는 자리를 비운 동안에도 돈다
@@ -2813,7 +2892,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, focusLab: focusLab, researchNow: researchNow, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, rebalancePlan: rebalancePlan, rebalanceLine: rebalanceLine, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,

@@ -226,7 +226,11 @@ body { word-break: keep-all; }
 #search-bar { margin-bottom: 8px; }      /* 자동 수색 막대와 동네 칸 사이 */
 .row-mile[hidden] { display: none; }      /* 2배가 없는 줄(짐꾼, 호객꾼 등)에서는 딱지를 숨긴다. inline-flex 가 hidden 을 덮어써서 빈 테두리가 보였다 */
 /* 누름 표시: 터치에서는 직접 켠 .pressed 만 쓴다(:active 는 들쭉날쭉했다) */
-.row.pressed, .row.pressed .row-desc, .row.pressed .row-cost { background: var(--hazard); color: var(--on-hazard); }
+.row.pressed { background: var(--hazard); }
+/* 줄 안의 글이 모두 같은 색으로 바뀌어야 한다: 전에는 설명과 값만 바뀌어서, 어두운 화면에서는 이름·수·현재값이 노란 바탕 위에 밝은 글씨로 남았다 */
+.row.pressed, .row.pressed * { color: var(--on-hazard) !important; }
+.row.pressed .row-desc, .row.pressed .row-cost { background: transparent; }
+.row.pressed .row-mile { border-color: var(--on-hazard); background: transparent; }
 @media (hover: none) { .row:not(:disabled):active:not(.pressed), .row:not(:disabled):active:not(.pressed) .row-desc, .row:not(:disabled):active:not(.pressed) .row-cost { background: transparent; color: inherit; } }
 /* 물자가 모자란 줄을 눌렀을 때: 값이 붉게 흔들린다 */
 .row.nope .row-cost { color: var(--blood); animation: nope .3s ease-in-out; }
@@ -426,8 +430,12 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .zev-acts .order-fill { margin-top: 4px; }
 .zev-acts .order-fill.alt { background: transparent; color: var(--ink); border: 2px solid var(--hazard); }
 .zev-acts .order-fill.alt:disabled { border: 1px dashed var(--ink-soft); color: var(--ink-soft); }
-#lab-focus { width: 100%; margin-top: 8px; }
+#lab-focus, #push-guard, #push-tower { width: 100%; margin-top: 8px; }
 #stock-note { margin-bottom: 8px; }
+#rebalance { width: 100%; margin: 0 0 8px; }
+#rebalance[hidden] { display: none; }
+#wall-now { margin: 0 0 8px; font-size: 14px; }
+#wall-now.bad { color: var(--blood); }
 @media (prefers-reduced-motion: reduce) { .line-cell.jam { animation: none; } }
 .line-cell.slow .line-name::after { content: ' · 병목'; color: var(--blood); }
 .line-name { font: 600 12px/1.4 var(--font-body); white-space: nowrap; overflow: hidden; }
@@ -1011,7 +1019,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.5.0</div>
+  <div class="boot-ver">7구역 알파 1.5.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1201,6 +1209,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="recipes" id="recipes" role="group" aria-label="만들 품목"></div>
         <div class="line-stat"><span class="num" id="line-load">가동률 0%</span><span class="label" id="line-note"></span></div>
         <button type="button" class="jam-fix" id="jam-fix" hidden></button>
+        <button type="button" class="lab-reroll" id="rebalance" hidden></button>
         <div class="label" id="line-mile"></div>
         <div class="order" id="contract" hidden>
           <div class="order-head"><span class="label">납품 의뢰</span><span class="num" id="contract-left"></span></div>
@@ -1256,6 +1265,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="lab-top"><div><div class="label">다리 안전도</div><div class="trade-price num" id="guard-safety">×1.00</div></div><div class="label" id="guard-rate"></div></div>
         <div class="track"><i id="guard-bar"></i></div>
         <div class="label" id="guard-note"></div>
+        <button type="button" class="surge" id="push-guard">순찰</button>
         <div class="order zev" id="zev-guard" hidden>
           <div class="order-head"><span class="label">행렬</span><span class="num" id="zev-guard-left"></span></div>
           <p id="zev-guard-text"></p>
@@ -1266,6 +1276,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="trade tower" id="tower" hidden>
         <div class="lab-top"><div><div class="label">모인 생존자</div><div class="trade-price num" id="tower-people">0</div></div><div class="label" id="tower-rate"></div></div>
         <div class="label" id="tower-mult"></div>
+        <button type="button" class="surge" id="push-tower">직접 방송</button>
         <div class="order zev" id="zev-tower" hidden>
           <div class="order-head"><span class="label">무전</span><span class="num" id="zev-tower-left"></span></div>
           <p id="zev-tower-text"></p>
@@ -1283,6 +1294,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="rows" id="ups-z4" hidden></div>
       <div class="rows" id="ups-z5" hidden></div>
       <div class="rows" id="ups-z6" hidden></div>
+      <div class="label" id="wall-now" hidden></div>
       <div class="rows" id="rows-wall" hidden></div>
       <div id="wall-extra" hidden>
         <div class="label wall-label">자동 구입</div>
@@ -1403,7 +1415,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.5.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.5.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

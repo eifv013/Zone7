@@ -276,13 +276,21 @@
       document.addEventListener('click', function (e) {
         if (e.isTrusted && synth.btn && Date.now() - synth.at < 100 &&      /* 같은 손가락에서 곧바로 뒤따라온 것만 버린다. 창이 길면(전에는 0.45초) 조금 느리게 이어 누른 것까지 버려졌다 */ synth.btn.contains(e.target)) { e.stopImmediatePropagation(); e.preventDefault(); }
       }, true);
+      /*
+       * 누름 표시(노란 채움, 1.5.1): 실제로 눌린 순간(click)에만 켠다.
+       *   전에는 손이 닿는 순간(touchstart)에 켰다. 그래서 화면을 밀어 올리려고 줄에 손을 대기만 해도 노랗게 번쩍였고, 정작 눌린 것과 번쩍임이 따로 놀았다.
+       *   click 은 손으로 누른 것과 대신 눌러 준 것(여러 손가락, 빠른 두 번) 모두에서 한 번씩 난다.
+       */
+      document.addEventListener('click', function (e) {
+        var pr = e.target && e.target.closest ? e.target.closest('button.row') : null;
+        if (!pr || pr.disabled) return;
+        pr.classList.remove('pressed'); void pr.offsetWidth; pr.classList.add('pressed');
+        clearTimeout(pr.__pressT); pr.__pressT = setTimeout(function () { pr.classList.remove('pressed'); }, 180);
+      }, true);
       document.addEventListener('touchstart', function (e) {
         if (e.touches.length > 1) multi = true;
         for (var i = 0; i < e.changedTouches.length; i++) {
           var t = e.changedTouches[i]; starts[t.identifier] = { x: t.clientX, y: t.clientY, at: Date.now(), target: t.target };
-          // 누름 표시(노란 채움)를 직접 켠다: 브라우저의 :active 는 빠르게 누르거나 두 손가락으로 누를 때 빠지곤 했다
-          var pr = t.target && t.target.closest ? t.target.closest('button.row:not(:disabled)') : null;
-          if (pr) { pr.classList.add('pressed'); (function (b) { setTimeout(function () { b.classList.remove('pressed'); }, 160); })(pr); }
         }
       }, { passive: true });
       document.addEventListener('touchend', function (e) {
@@ -1574,6 +1582,13 @@
       if (!res.ok) return;
       log('기계를 고쳤다. ' + res.seconds + '초 동안 라인이 ' + C.TUNE_MULT + '배로 돈다.', 'good'); sfx('upgrade'); buzz(25); Store.save(); render();
     });
+    $('rebalance').addEventListener('click', function () {
+      confirmBox('기계 다시 맞추기', '기계 레벨의 합계는 그대로 두고, 세 기계의 처리량이 같아지도록 레벨을 다시 나눠요. 물자는 들지 않고, ' + C.REBALANCE_SECONDS + '초 동안 라인이 서요.', '그만둔다', '다시 맞춘다', function () {
+        var res = C.rebalanceLine(state);
+        if (!res.ok) return;
+        log('기계를 다시 맞췄다. ' + res.seconds + '초 동안 라인이 선다.', 'good'); sfx('machine'); buzz(25); Store.save(); render();
+      });
+    });
     $('truck-load').addEventListener('click', function () {
       var res = C.loadTruck(state, false);
       if (!res.ok) return;
@@ -1599,11 +1614,27 @@
         });
       });
     });
+    C.PUSHES.forEach(function (def) {
+      $('push-' + def.id).addEventListener('click', function () {
+        var r = C.pushZone(state, def.id);
+        if (!r.ok) return;
+        log(def.id === 'guard' ? '초소를 한 바퀴 돈다. ' + r.seconds + '초 동안 통행 물자가 ' + C.PUSH_MULT + '배다.' : '마이크를 잡았다. ' + r.seconds + '초 동안 생존자가 ' + C.PUSH_MULT + '배로 모인다.', 'good');
+        sfx('signal'); buzz(25); Store.save(); render();
+      });
+    });
     $('lab-focus').addEventListener('click', function () {
       var r = C.focusLab(state);
       if (!r.ok) return;
       log('밤샘 연구를 시작했다. ' + r.seconds + '초 동안 연구가 ' + C.FOCUS_MULT + '배로 빨라진다.', 'good'); sfx('staff'); buzz(25); Store.save(); render();
     });
+  }
+  /** 순찰·직접 방송 단추를 그린다(밤샘 연구와 같은 모양). */
+  function renderPush(id, label) {
+    var p = state.push[id], b = $('push-' + id), on = p.left > 0;
+    b.disabled = on || p.cool > 0 || !(C.zevReward(state, id, false) > 0);
+    b.className = 'surge' + (on ? ' on' : '');
+    setText(b, on ? label + ' 중 ' + Math.ceil(p.left) + '초' : p.cool > 0 ? '다음 ' + label + ' ' + clock(p.cool) : label + ' ×' + C.PUSH_MULT);
+    fill(b, on ? p.left / C.PUSH_SECONDS : p.cool > 0 ? 1 - p.cool / C.PUSH_COOL : 0);
   }
   /** 사건 칸 하나를 그린다. */
   function renderZoneEvent(id) {
@@ -1773,6 +1804,7 @@
   /** 구역 화면: 고른 탭에 따라 목표, 거래 칸, 목록을 바꿔 보여 준다. */
   /** 그 구역에서 지금 채울 수 있는 것이 있는가: 2구역 단골 주문, 3구역 납품 의뢰, 4구역 표류 화물. */
   function fillReady(zi) {
+    if (zi < state.zone && C.autoOn(state, zi)) return false;      // 지나온 구역을 자동에 맡겼으면 점으로 부르지 않는다(1.5.1)
     if (zi === 1) return !!state.order && state.goods >= state.order.need;
     if (zi === 2) return (!!state.contract && state.contract.have >= state.contract.need) || !!state.jam || !!state.truck;      // 납품, 고장, 출하 트럭
     if (zi === 3) return (!!state.salvage && state.salvage.have >= state.salvage.need) || !!(state.zev && state.zev.rail);
@@ -1817,6 +1849,7 @@
     $('rows-z6').hidden = !(tab === 'z6' && open);
     $('tower').hidden = !(tab === 'z6' && open);
     $('rows-wall').hidden = tab !== 'wall';
+    $('wall-now').hidden = tab !== 'wall';
     $('wall-extra').hidden = tab !== 'wall';
     $('trade').hidden = !(tab === 'z1' && open);
     $('line').hidden = !(tab === 'z2' && open);
@@ -1985,6 +2018,10 @@
         rb.classList.toggle('want', !!ct && ct.item === r.id && r.id !== C.recipeOf(state).id);
         rb.setAttribute('aria-pressed', r.id === C.recipeOf(state).id ? 'true' : 'false');
       });
+      // 기계 다시 맞추기: 가동률이 정속 기준 아래로 무너졌을 때만 보인다
+      var rbLine = C.lineInfo(state), rb = $('rebalance');
+      rb.hidden = !(rbLine.flow > 0 && !rbLine.steady) || state.retool > 0;
+      if (!rb.hidden) { var rp = C.rebalancePlan(state); setText(rb, '기계 다시 맞추기 · Lv ' + rp.sorter + ' / ' + rp.press + ' / ' + rp.assembler + '로'); }
       // 고장: 고치면 잠깐 라인이 빨라진다
       var jf = $('jam-fix'), jamName = '';
       C.MACHINES.forEach(function (d) { if (state.jam && state.jam.id === d.id) jamName = d.name; });
@@ -2016,7 +2053,7 @@
         r.btn.disabled = !(cost <= state.supplies);
       });
       var ld = $('line-load');
-      setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '%');
+      setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '% · 정속 ' + Math.round(line.steadyAt * 100) + '% 이상');
       ld.className = 'num' + (line.steady ? ' steady' : '');
       setText($('line-note'), state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
         ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
@@ -2077,7 +2114,7 @@
       rows.train.btn.disabled = !(tcost <= state.supplies);
     }
     if (tab === 'z6' && open) {
-      renderZoneEvent('tower');
+      renderZoneEvent('tower'); renderPush('tower', '직접 방송');
       // 7구역: 모인 생존자와 전체 배수, 혈청, 안테나
       var sRate = C.survivorRate(state), stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state);
       setText($('tower-people'), fmt(Math.floor(state.survivors)) + '명');
@@ -2094,7 +2131,7 @@
       rows.antenna.btn.disabled = !(acost <= state.supplies);
     }
     if (tab === 'z5' && open) {
-      renderZoneEvent('guard');
+      renderZoneEvent('guard'); renderPush('guard', '순찰');
       // 6구역: 다리 안전도(방어력 ÷ 무리)와 초소
       var safety = C.bridgeSafety(state), safeMax = C.SAFETY_MAX + m.margin, gRate = C.guardRate(state);
       setText($('guard-safety'), '×' + safety.toFixed(2));
@@ -2143,6 +2180,10 @@
       rows.staff.btn.disabled = !(scost <= state.supplies);
     }
     if (tab === 'wall') {
+      // 방벽을 사는 자리에서 바로 견줘 볼 수 있게: 지금 방어력과 오늘 밤 무리(1.5.1)
+      var wDef = C.defensePower(state), wStr = C.nightStrength(state);
+      setText($('wall-now'), '방어력 ' + fmt(wDef) + ' · 오늘 밤 무리 ' + fmt(wStr) + ' · ' + (wDef >= wStr ? '방어 가능' : '모자람 ' + fmt(wStr - wDef)));
+      $('wall-now').classList.toggle('bad', wDef < wStr);
       C.DEFENSES.forEach(function (d) {
         var r = rows.defenses[d.id], q = qtyFor(C.maxDefenses(state, d.id), 1e6), cost = C.defenseCost(state, d.id, q);
         setText(r.count, String(state.defenses[d.id]));
@@ -2160,6 +2201,7 @@
     C.UPGRADES.forEach(function (u) {
       if ((u.zone < 0 ? 'wall' : 'z' + u.zone) !== tab) return;
       var r = rows.upgrades[u.id], lv = state.upgrades[u.id], cost = C.upgradeCost(state, u.id);
+      var softCap = C.upgradeSoftCap(state, u.id);
       setText(r.count, 'Lv ' + lv + ' / ' + u.max);
       // 순찰조: 지금 몇 초마다 뒤지는지와 사고 난 뒤의 초를 함께 보여 준다
       var infoText = '';
@@ -2174,7 +2216,9 @@
         infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '현재 ' + bNow + '마다 판매' : '현재 ' + bNow + ' → ' + bNext;
       }
       if (u.id === 'repair') infoText = !lv ? '사면 5초마다 하나' : '현재 ' + secs(C.repairInterval(state)) + '마다 하나';
-      if (!infoText && lv > 0 && C.effectNow(u, lv)) infoText = '현재 ' + C.effectNow(u, lv);      // 지금까지 쌓인 효과(1.3.0). 설명 줄은 레벨당 오르는 양이다
+      if (!infoText && lv > 0 && C.effectNow(u, lv)) infoText = '현재 ' + C.effectNow(u, lv);
+      // 숙련 상한: 철수와 특성이 적으면 그 위로는 값이 크게 뛴다
+      if (softCap < u.max && lv >= softCap && lv < u.max) infoText = (infoText ? infoText + ' · ' : '') + '숙련 상한 Lv ' + softCap + ' · 넘기면 값이 ' + C.CAP_OVER + '배씩';      // 지금까지 쌓인 효과(1.3.0). 설명 줄은 레벨당 오르는 양이다
       setText(r.info, infoText);
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');
       r.btn.disabled = !(cost <= state.supplies);
@@ -2388,7 +2432,7 @@
           toast(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 왔어요'); log(ZEV_TEXT[ev.id].lead.replace('왔어요.', '왔다.').replace('섰어요.', '섰다.').replace('들어왔어요.', '들어왔다.'), ''); sfx('signal');
           break;
         case 'zev-auto':
-          log('자동 신호가 특별 화물을 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
+          log(ev.id === 'rail' ? '자동 신호가 특별 화물을 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.' : ev.id === 'guard' ? '초소장이 행렬을 통과시켰다. 물자 ' + fmt(ev.gain) + ' 확보.' : '송신 기사가 무전에 응답했다. 생존자 ' + fmt(ev.people) + '명이 왔다.', 'good');
           break;
         case 'zev-gone':
           break;
