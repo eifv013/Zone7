@@ -260,7 +260,7 @@
         musicBus.connect(soft);
         // 2.5.2: 음악도 두 배로 키웠으므로(기본 50) 음량 100 에서 겹친 음이 찢어지지 않게 누름막을 거친다. 기기가 지원하지 않으면 그냥 내보낸다
         var mout = ctx.destination;
-        try { if (ctx.createDynamicsCompressor) { var mc = ctx.createDynamicsCompressor(); mc.threshold.value = -9; mc.knee.value = 12; mc.ratio.value = 6; mc.attack.value = 0.005; mc.release.value = 0.2; mc.connect(ctx.destination); mout = mc; } } catch (e) { mout = ctx.destination; }
+        try { if (ctx.createDynamicsCompressor) { var mc = ctx.createDynamicsCompressor(); mc.threshold.value = -14; mc.knee.value = 10; mc.ratio.value = 12;      /* 2.5.3: 음량 100 에서 최대 1.04 로 넘쳐서 더 세게 누른다(재 보니 0.87~0.91) */ mc.attack.value = 0.005; mc.release.value = 0.2; mc.connect(ctx.destination); mout = mc; } } catch (e) { mout = ctx.destination; }
         soft.connect(mout);
       }
       var now = ctx.currentTime;
