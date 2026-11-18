@@ -14,6 +14,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 2.6.4', date: '2026-11-19', at: '2026-11-19 03:59:59', title: '음악을 한 곡으로',
+      items: [
+        '배경 음악을 한 곡으로 통일했어요. 낮에도 밤에도 같은 곡이 끊김 없이 이어져요.',
+        'Echoes_of_Lumen의 곡이에요(Pixabay).'
+      ] },
     { ver: '알파 2.6.3', date: '2026-11-19', at: '2026-11-19 03:59:59', title: '변이체의 음악',
       items: [
         '변이체가 온 밤과 위험 11단계부터 나오는 곡이 따로 생겼어요.',
