@@ -527,7 +527,7 @@
    *   우비 양옆 안쪽의 손, 붉은 장화. 상자는 예전처럼 오른쪽 아래에서 우비 앞에 겹쳐 든다.
    */
   var LARA_BODY = ['..............', '..............',
-    '....yyyyyy....', '...yyyyyyyy...', '..yyyssssyyy..', '..yysesseyyy..', '..yyssssssyy..', '...yssmmssy...',
+    '....yyyyyy....', '...yyyyyyyy...', '..yyyssssyyy..', '..yysessesyy..', '..yyssssssyy..',      /* 눈 줄(2.7.6): 오른쪽 눈 바로 옆이 후드 색이라 눈이 후드에 붙어 보였다. 살색 한 칸을 넣어 좌우를 맞췄다 */ '...yssmmssy...',
     '..jjjjjjjjjj..', '.jjjjjJjjjjjj.', '.jjjjjJjjjjjj.', '.jsjjjJjjjjs..', '.jjjjjJjjjj...', '..jjjjjjjj....', '..jjjjjjjj....'];
   var LARA_STAND = ['....pp.pp.....', '....pp.pp.....', '...bbb.bbb....'];
   // 걸음: 한 발씩 번갈아 든다(두 발이 양옆으로 벌어지지 않게)
