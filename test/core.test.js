@@ -3017,3 +3017,14 @@ test('1.10.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발�
   f.stageMarks['s1-b'] = { clear: true, speed: false, hard: false, best: 1 }; assert.deepEqual(C.grantFlags(f), ['검은 깃발']);
   assert.ok(C.wearCosmetic(f, 'flag-black').ok);
 });
+
+test('1.10.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기의 끝에서 받고, 그림은 줄마다 색이 다르다', () => {
+  const S = require('../src/scene.js');
+  assert.equal(new Set(S.flagRows('rainbow', 0)).size, 4); assert.notDeepEqual(S.flagRows('rainbow', 0), S.flagRows('rainbow', 1));
+  assert.equal(S.flagRows('#c0392b', 0)[0], '#c0392b'); assert.equal(S.flagRows('zzz', 0)[0], '#f0b400', '모르는 값은 기본 색');
+  const s = C.createState(0);
+  ['s1-1', 's1-2', 's1-3', 's1-4'].forEach(id => { s.stageMarks[id] = { clear: true, speed: true, hard: true, best: 1 }; });
+  assert.ok(C.grantFlags(s).includes('야광 깃발')); assert.ok(C.wearCosmetic(s, 'flag-glow').ok); assert.equal(C.cosmeticLook(s).flag, 'glow');
+  const e = C.createState(0); e.ended = 1; assert.ok(C.grantFlags(e).includes('무지개 깃발'));
+  assert.ok(!C.gachaTable().some(t => t.slot === 'flag'), '깃발은 뽑기에 없다');
+});

@@ -1546,14 +1546,14 @@
   function drawThumb(cv, c, worn) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
-    if (c.slot === 'flag') { ctx.fillStyle = '#cfcebf'; ctx.fillRect(8, 6, 2, 30); ctx.fillStyle = c.look; ctx.fillRect(10, 6, 14, 10); ctx.fillStyle = shade(c.look, 0.7); ctx.fillRect(10, 14, 14, 2); return; }
+    if (c.slot === 'flag') { ctx.fillStyle = '#cfcebf'; ctx.fillRect(6, 6, 2, 30); if (window.Scene && window.Scene.drawFlag) window.Scene.drawFlag(ctx, c.look, 8, 6, 3, 0, 0); return; }
     var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
     if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
     if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 1.2);
   }
   function drawLookScene(cv, look, frame) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
-    var W = cv.width, H = cv.height, G = H - 6, flag = look.flag || '#f0b400', t = frame * 0.13;
+    var W = cv.width, H = cv.height, G = H - 6, flag = look.flag || '#f0b400', t = frame * 0.13, S0 = window.Scene;
     function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
     // 하늘과 먼 건물
     r('#a9c4c2', 0, 0, W, 20); r('#c4cfb8', 0, 20, W, 16); r('#d8d0a8', 0, 36, W, G - 36);
@@ -1565,7 +1565,7 @@
     for (var wx = 0; wx < 3; wx++) { r(wx === 1 ? '#ffe9a0' : '#3f4a50', 12 + wx * 13, G - 27, 8, 7); r('#3f4a50', 12 + wx * 13, G - 15, 8, 6); }
     r('#4a4035', 26, G - 11, 9, 11); for (var rl = 0; rl < 9; rl++) r('#3c3a34', 6 + rl * 6, G - 38, 1, 4); r('#3c3a34', 6, G - 38, 48, 1);
     r('#cfcebf', 14, G - 58, 2, 24);
-    var wave = Math.floor(t * 3) % 2; r(flag, 16, G - 58 + wave, 11, 6); r(shade(flag, 0.7), 16, G - 53 + wave, 11, 1); r(flag, 27, G - 57 + (1 - wave), 2, 4);
+    if (S0 && S0.drawFlag) S0.drawFlag(ctx, flag, 16, G - 58, 3, 0, t);
     // 모래주머니
     r('#a39a78', 130, G - 6, 11, 6); r('#8f8767', 141, G - 6, 11, 6); r('#a39a78', 136, G - 12, 11, 6);
     // 라라: 3배 크기로, 제자리걸음

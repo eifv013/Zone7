@@ -570,6 +570,30 @@
     paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0);
     return true;
   }
+  /*
+   * 거점의 깃발(1.10.1): 가로 5칸, 세로 4칸(전에는 4×3). 줄마다 색을 줄 수 있다.
+   *   flag = '#rrggbb' 한 색 · 'rainbow' 네 줄 무지개(천천히 흐른다) · 'glow' 야광(밤에는 어두워지지 않고 둘레가 빛난다)
+   *   dark 는 밤의 어두운 정도(0~1). 보통 깃발은 밤에 어두워진다.
+   */
+  var FLAG_RAINBOW = ['#e0392b', '#f0b400', '#4f9a4a', '#3f7fb5'];
+  function flagRows(flag, t) {
+    if (flag === 'rainbow') { var o = Math.floor((t || 0) * 1.5) % 4; return [0, 1, 2, 3].map(function (i) { return FLAG_RAINBOW[(i + o) % 4]; }); }
+    if (flag === 'glow') return ['#d8ff7a', '#c6ff4a', '#c6ff4a', '#9fe01f'];
+    var col = typeof flag === 'string' && flag.charAt(0) === '#' ? flag : '#f0b400';
+    return [col, col, col, lerpColor(col, '#17180f', 0.25)];
+  }
+  function drawFlag(ctx, flag, x, y, scale, dark, t) {
+    if (!ctx) return false;
+    scale = scale || 1; dark = dark || 0;
+    var rows = flagRows(flag, t), special = flag === 'glow', wave = Math.floor((t || 0) * 3) % 2;
+    if (special && dark > 0.3) { ctx.fillStyle = 'rgba(198, 255, 74, ' + (0.18 + 0.12 * Math.sin((t || 0) * 3)).toFixed(2) + ')'; ctx.fillRect(x - scale, y - scale, 7 * scale, 6 * scale); }
+    rows.forEach(function (col, i) {
+      ctx.fillStyle = special ? col : lerpColor(col, '#17180f', dark * (flag === 'rainbow' ? 0.25 : 0.45));
+      ctx.fillRect(x, y + i * scale, 4 * scale, scale);
+      ctx.fillRect(x + 4 * scale, y + (i + (wave ? 0 : 0)) * scale + (i === 0 && wave ? scale : 0), scale, i === 3 && wave ? 0 : scale);      // 끝 한 칸이 펄럭인다
+    });
+    return true;
+  }
   /** 같은 구역이면 언제나 같은 배경이 나오도록 하는 작은 난수기. */
   function seeded(seed) {
     var s = (seed * 9301 + 49297) % 233280;
@@ -1033,7 +1057,7 @@
       px(roof, BASE_X - 2, rt - 2, W5 + 5, 2);                                                                                                     // 평지붕
       for (i = 0; i <= W5; i += stage >= 4 ? 3 : 4) px(frame, BASE_X + i, rt - (stage >= 4 ? 5 : 4), stage >= 4 ? 2 : 1, stage >= 4 ? 3 : 2);      // 난간 / 총안
       if (stage === 3) px(frame, BASE_X, rt - 4, W5 + 1, 1);
-      px('#17180f', BASE_X + 2, rt - 9, 1, 7); px(c(view.flag || '#f0b400', lerpColor(view.flag || '#f0b400', '#17180f', 0.45)), BASE_X + 3, rt - 9, 4, 3);                                           // 깃발
+      px('#17180f', BASE_X + 2, rt - 10, 1, 8); drawFlag(ctx, view.flag, BASE_X + 3, rt - 10, 1, sky.dark, model.time);                                           // 깃발
       px(c('#3f6f8f', '#162836'), BASE_X + rw * 3 + 2, rt - 7, 6, 5); px('#17180f', BASE_X + rw * 3 + 3, rt - 2, 1, 1); px('#17180f', BASE_X + rw * 3 + 6, rt - 2, 1, 1); // 옥상 물탱크
     }
     if (stage >= 4) { px('#30343c', right - 5, rt - 8, 4, 3); if (night) for (i = 0; i < 9; i++) { px('rgba(240,220,150,' + (0.10 - i * 0.01).toFixed(2) + ')', right - 1 + i * 2, rt - 8 + i, 2, 3 + Math.floor(i / 2)); } } // 탐조등
@@ -1386,6 +1410,6 @@
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
-           drawHero: drawHero, paintLara: paintLara, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
+           drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, paintLara: paintLara, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });

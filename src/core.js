@@ -2246,7 +2246,7 @@
       state.endedRun = true;
       state.ended = (state.ended || 0) + 1;
       if (!state.endedAt) state.endedAt = Date.now();
-      addTickets(state, 3);
+      addTickets(state, 3); grantFlags(state);
       events.push({ type: 'ending', count: state.ended, day: state.day, retreats: state.retreats, seconds: state.playSeconds });
     }
     checkChallenge(state, events);      // 도전: 목표에 닿았는지, 시간을 넘겼는지
@@ -2643,7 +2643,9 @@
     { id: 'flag-green',  slot: 'flag', name: '초록 깃발',   rarity: 0, reward: true, look: '#4f9a4a' },
     { id: 'flag-white',  slot: 'flag', name: '하얀 깃발',   rarity: 1, reward: true, look: '#e6e5db' },
     { id: 'flag-black',  slot: 'flag', name: '검은 깃발',   rarity: 1, reward: true, look: '#2b2d33' },
-    { id: 'flag-pink',   slot: 'flag', name: '분홍 깃발',   rarity: 2, reward: true, look: '#ff7fb0' }
+    { id: 'flag-pink',   slot: 'flag', name: '분홍 깃발',   rarity: 2, reward: true, look: '#ff7fb0' },
+    { id: 'flag-glow',   slot: 'flag', name: '야광 깃발',   rarity: 2, reward: true, look: 'glow' },        // 밤에 빛난다
+    { id: 'flag-rainbow', slot: 'flag', name: '무지개 깃발', rarity: 2, reward: true, look: 'rainbow' }     // 네 줄이 천천히 흐른다
   ];
   var COS_SLOTS = ['coat', 'hood', 'pat', 'bag', 'fx', 'flag'], COS_BASE = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', flag: 'flag-yellow' };
   /* 깃발을 주는 조건(확정 보상): 도전 훈장의 수, 원정 표시의 수, 지역 휘장 */
@@ -2653,7 +2655,9 @@
     { id: 'flag-green', text: '원정 표시 6개', has: function (s) { return stageMarkCount(s).have >= 6; } },
     { id: 'flag-white', text: '도전 훈장 6개', has: function (s) { return medalCount(s) >= 6; } },
     { id: 'flag-black', text: '지역 휘장 1개', has: function (s) { return badgeCount(s) >= 1; } },
-    { id: 'flag-pink',  text: '도전 훈장 8개', has: function (s) { return medalCount(s) >= 8; } }
+    { id: 'flag-pink',  text: '도전 훈장 8개', has: function (s) { return medalCount(s) >= 8; } },
+    { id: 'flag-glow',  text: '원정 표시 12개', has: function (s) { return stageMarkCount(s).have >= 12; } },
+    { id: 'flag-rainbow', text: '이야기의 끝 보기', has: function (s) { return (s.ended || 0) >= 1; } }
   ];
   /** 조건을 채운 깃발을 준다. 새로 받은 것의 이름들을 돌려준다. */
   function grantFlags(state) {
