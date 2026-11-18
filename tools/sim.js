@@ -22,6 +22,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const evs = C.tick(s, dt, rng);
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
+    if (s.jam) C.repairJam(s); if (s.truck) C.loadTruck(s, false);      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
     if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s);
     if (s.zone >= 6 && C.serumCost(s) <= s.supplies * 0.5) C.buySerum(s);      // 7구역: 혈청은 가진 물자의 절반으로 살 수 있을 때 산다
     for (let zi = 1; zi <= s.zone; zi++) if (!marks.some(m => m.enter === zi)) marks.push({ enter: zi, day: day + 1, hours: active / 3600, retreats: s.retreats, pps: C.productionPerSec(s) });

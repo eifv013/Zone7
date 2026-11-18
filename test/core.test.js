@@ -2312,3 +2312,84 @@ test('흥정꾼의 고점 판매: 켜면 고점 아래에서는 팔지 않고 �
   const d = mk(); d.price = r.floor; C.setSellPeak(d, true); d.goods = C.goodsCap(d); assert.ok(C.tick(d, 0.1, () => 0.5).some((e) => e.type === 'sold'), '창고가 차면 판다');
   assert.equal(C.sanitizeState({ version: 2, sellPeak: 'yes' }, 0).sellPeak, false); assert.equal(C.createState(0).sellPeak, false);
 });
+
+test('3구역 품목: 품목마다 느린 기계가 다르고, 바꾸는 동안 라인이 선다', () => {
+  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 };
+  assert.equal(C.recipeOf(s).id, 'bolt');
+  let l = C.lineInfo(s); assert.deepEqual(l.caps, { sorter: 30, press: 30, assembler: 30 }); assert.ok(l.steady);
+  assert.equal(C.setRecipe(s, 'bolt').reason, 'same'); assert.equal(C.setRecipe(s, 'nope').reason, 'unknown');
+  const r = C.setRecipe(s, 'plate'); assert.ok(r.ok); assert.equal(s.retool, C.RETOOL_SECONDS);
+  l = C.lineInfo(s); assert.deepEqual(l.caps, { sorter: 10, press: 45, assembler: 60 }); assert.equal(l.bottleneck, 'sorter'); assert.ok(!l.steady);
+  assert.equal(C.lineFactor(s), 0); assert.equal(C.lineNow(s), 0);
+  const before = s.lineEarned; C.tick(s, 1, () => 0.99); assert.equal(s.lineEarned, before, '바꾸는 동안은 벌지 못한다');
+  for (let i = 0; i < 8; i++) C.tick(s, 1, () => 0.99);
+  assert.equal(s.retool, 0); assert.ok(s.lineEarned > before);
+  // 세 품목 모두 세 기계의 처리량 합이 같다(어느 품목이 그냥 더 좋지는 않다)
+  C.RECIPES.forEach((x) => assert.equal(x.rates.sorter + x.rates.press + x.rates.assembler, 6, x.id));
+  const closed = inMarket(); assert.equal(C.setRecipe(closed, 'plate').reason, 'locked');
+  assert.equal(C.sanitizeState({ version: 2, zone: 2, recipe: 'xx' }, 0).recipe, 'bolt');
+  s.runEarned = 1e30; assert.equal(C.retreat(s, 1).state.recipe, 'bolt');
+});
+
+test('3구역 고장과 정비: 고장이면 느려지고, 고치면 잠깐 빨라진다. 내버려 두면 저절로 풀린다', () => {
+  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 0.5; s.truckIn = 1e6;
+  let ev = C.tick(s, 1, () => 0.5);
+  assert.ok(ev.some((e) => e.type === 'jam')); assert.ok(s.jam); assert.equal(C.lineFactor(s), C.JAM_SLOW);
+  const r = C.repairJam(s); assert.ok(r.ok); assert.equal(s.jam, null); assert.equal(C.lineFactor(s), C.TUNE_MULT); assert.equal(s.repairsRun, 1);
+  assert.equal(C.repairJam(s).reason, 'none');
+  for (let i = 0; i < C.TUNE_SECONDS + 1; i++) C.tick(s, 1, () => 0.99);
+  assert.equal(C.lineFactor(s), 1, '정비 효과는 끝난다');
+  // 내버려 두면 저절로
+  s.jam = { id: 'press', left: 2 }; ev = []; for (let i = 0; i < 3; i++) ev = ev.concat(C.tick(s, 1, () => 0.99));
+  assert.equal(s.jam, null); assert.ok(ev.some((e) => e.type === 'jam-fixed' && !e.auto)); assert.equal(C.lineFactor(s), 1, '보너스는 없다');
+  // 자동 제어반은 빨리 풀지만 보너스는 없다
+  const a = inFactory(); a.machines = { sorter: 10, press: 15, assembler: 30 }; a.upgrades.autoline = 1; a.truckIn = 1e6; a.jam = { id: 'press', left: C.JAM_SELF_FIX }; a.jamIn = 1e6;
+  let ev2 = []; for (let i = 0; i < C.JAM_AUTO_FIX + 1; i++) ev2 = ev2.concat(C.tick(a, 1, () => 0.99));
+  assert.equal(a.jam, null); assert.ok(ev2.some((e) => e.type === 'jam-fixed' && e.auto)); assert.equal(a.tuneLeft, 0);
+  // 고장은 정속 가동을 깨지 않는다(기계 처리량은 그대로다)
+  const b = inFactory(); b.machines = { sorter: 10, press: 15, assembler: 30 }; b.jam = { id: 'sorter', left: 20 };
+  assert.ok(C.lineInfo(b).steady);
+  // 라인이 없으면 고장도 없다
+  const e = inFactory(); e.jamIn = 0; assert.ok(!C.tick(e, 1, () => 0.5).some((x) => x.type === 'jam'));
+});
+
+test('3구역 출하 트럭: 도는 동안 쌓이고, 실으면 쌓인 만큼 더 받는다. 놓쳐도 쌓인 것은 남는다', () => {
+  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 1e6; s.truckIn = 30;
+  for (let i = 0; i < 29; i++) C.tick(s, 1, () => 0.99);
+  near(s.stockSec, 29); assert.equal(s.truck, null);
+  const ev = C.tick(s, 1, () => 0.5).concat(C.tick(s, 1, () => 0.5));
+  assert.ok(ev.some((e) => e.type === 'truck')); assert.ok(s.truck);
+  const expect = C.lineRate(s) * s.stockSec * C.TRUCK_SHARE; near(C.truckReward(s, false), expect);
+  const sup = s.supplies, r = C.loadTruck(s, false);
+  assert.ok(r.ok); near(s.supplies - sup, expect); assert.equal(s.stockSec, 0); assert.equal(s.truck, null); assert.equal(s.trucksRun, 1);
+  assert.equal(C.loadTruck(s, false).reason, 'none');
+  // 쌓이는 양에는 상한이 있다
+  s.truckIn = 1e6; for (let i = 0; i < 40; i++) C.tick(s, 5, () => 0.99);
+  assert.equal(s.stockSec, C.TRUCK_STOCK_MAX);
+  // 놓치면 트럭만 간다
+  s.truck = { left: 1 }; const gone = C.tick(s, 2, () => 0.99);
+  assert.ok(gone.some((e) => e.type === 'truck-gone')); assert.equal(s.stockSec, C.TRUCK_STOCK_MAX);
+  // 자동 제어반은 알아서 싣되 절반만 받는다
+  const a = inFactory(); a.machines = { sorter: 10, press: 15, assembler: 30 }; a.upgrades.autoline = 1; a.jamIn = 1e6; a.truckIn = 1e6; a.stockSec = 60; a.truck = { left: C.TRUCK_WAIT };
+  let got = null; for (let i = 0; i < 6 && !got; i++) got = C.tick(a, 1, () => 0.99).find((e) => e.type === 'truck-loaded') || null;
+  assert.ok(got && got.auto); assert.ok(got.gain > 0); assert.equal(a.truck, null);
+  // 자리를 비우면 고장과 트럭은 정리된다
+  const o = inFactory(); o.machines = { sorter: 10, press: 15, assembler: 30 }; o.jam = { id: 'press', left: 10 }; o.truck = { left: 10 }; o.tuneLeft = 5; o.retool = 3;
+  C.applyOffline(o, 600); assert.equal(o.jam, null); assert.equal(o.truck, null); assert.equal(o.tuneLeft, 0); assert.equal(o.retool, 0);
+});
+
+test('3구역 납품 의뢰는 품목을 정해서 온다: 그 품목을 만드는 동안에만 차고, 필요한 양은 그 품목의 속도로 잡는다', () => {
+  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 1e6; s.truckIn = 1e6; s.contractIn = 0;
+  // rng 0.9 → 다른 품목
+  const seq = [0.1, 0.9, 0.1, 0.5]; let k = 0;
+  const ev = []; C.stepContracts(s, 1, 0, () => seq[k++ % seq.length], ev);
+  assert.ok(s.contract && s.contract.item && s.contract.item !== 'bolt', '다른 품목의 의뢰');
+  assert.equal(ev[0].item, s.contract.item); assert.ok(ev[0].itemName);
+  const probe = Object.create(s); probe.recipe = s.contract.item;
+  assert.equal(s.contract.need, Math.max(5, Math.ceil(C.productFlow(probe) * 50)));
+  C.stepContracts(s, 1, 100, () => 0.5, []); assert.equal(s.contract.have, 0, '다른 품목을 만드는 동안은 차지 않는다');
+  s.recipe = s.contract.item; C.stepContracts(s, 1, 3, () => 0.5, []); assert.equal(s.contract.have, 3);
+  // 품목이 없는 옛 저장의 의뢰는 무엇을 만들어도 찬다
+  const old = C.sanitizeState(Object.assign(JSON.parse(JSON.stringify(s)), { contract: { who: C.CLIENTS[0].id, need: 10, have: 0, left: 60 } }), 0);
+  assert.equal(old.contract.item, ''); C.stepContracts(old, 1, 4, () => 0.5, []); assert.equal(old.contract.have, 4);
+});

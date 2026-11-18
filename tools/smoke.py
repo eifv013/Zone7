@@ -74,8 +74,8 @@ CASES = [
     ('폰 · 2구역, 못 막는 밤', (390, 760), market(), 'full'),
     ('PC · 2구역, 막는 밤', (1280, 900), market(defenses={"wire": 60, "tower": 40, "turret": 30, "flame": 10}, autoSell=True), 'full'),
     ('폰 · 새 게임', (390, 760), None, 'new'),
-    ('폰 · 3구역 생산 라인', (390, 760), factory(), 'line'),
-    ('PC · 3구역 생산 라인', (1280, 900), factory(), 'line'),
+    ('폰 · 3구역 생산 라인', (390, 760), factory(jam={'id': 'press', 'left': 30}, jamIn=900, truck={'left': 20}, truckIn=900, stockSec=60), 'line'),
+    ('PC · 3구역 생산 라인', (1280, 900), factory(jam={'id': 'press', 'left': 30}, jamIn=900, truck={'left': 20}, truckIn=900, stockSec=60), 'line'),
     ('폰 · 4구역 노선', (390, 760), station(), 'rail'),
     ('PC · 4구역 노선', (1280, 900), station(), 'rail'),
     ('폰 · 5구역 연구', (390, 760), lab(), 'lab'),
@@ -260,6 +260,18 @@ def run_case(browser, name, size, state, mode):
         levels = [text('row-%s' % m) for m in ['sorter', 'press', 'assembler']]
         if not ('Lv 2' in levels[0] and 'Lv 3' in levels[1] and 'Lv 6' in levels[2]): problems.append('병목 올리기 11번 뒤 레벨이 2·3·6 이 아니다: ' + ' | '.join(levels))
         if text('line-load') != '가동률 100%': problems.append('맞물렸는데 가동률이 100%가 아니다: ' + text('line-load'))
+        # 품목 바꾸기 → 고장 고치기 → 트럭 싣기(1.4.1). 고장과 트럭은 저장에 심어 둔 것이 떠 있다
+        if page.locator('#recipes button').count() != 3: problems.append('품목 단추가 셋이 아니다')
+        if not page.locator('#jam-fix').is_visible(): problems.append('고장이 났는데 고치는 단추가 없다')
+        tap('#jam-fix'); page.wait_for_timeout(150)
+        if page.locator('#jam-fix').is_visible() or '정비 직후' not in text('line-note'): problems.append('고쳤는데 정비 효과가 안 보인다: ' + text('line-note'))
+        if not page.locator('#truck').is_visible(): problems.append('트럭이 왔는데 칸이 없다')
+        sup0 = text('supplies'); tap('#truck-load'); page.wait_for_timeout(150)
+        if page.locator('#truck').is_visible(): problems.append('실었는데 트럭 칸이 남아 있다')
+        close_story(); tap('#recipes button:nth-child(2)'); page.wait_for_timeout(150)
+        if '바꾸는 중' not in text('line-note'): problems.append('품목을 바꿨는데 안내가 없다: ' + text('line-note'))
+        if 'on' not in (page.locator('#recipes button').nth(1).get_attribute('class') or ''): problems.append('고른 품목이 표시되지 않는다')
+        tap('#recipes button:nth-child(1)'); page.wait_for_timeout(7000)      # 볼트로 되돌리고, 품목 바꾸는 시간이 지나기를 기다린다
         # 컨베이어 그림이 그려졌는지(빈 그림이 아닌지), 전력 투입이 눌리고 쉬는 시간으로 들어가는지
         if not page.evaluate("(() => { const c = document.getElementById('belt'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n > 500; })()"): problems.append('컨베이어 그림이 비어 있다')
         if not tap('#surge'): problems.append('전력 투입을 누를 수 없다')

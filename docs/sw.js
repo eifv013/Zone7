@@ -6,9 +6,9 @@
  *   - 오프라인이거나 서버가 응답하지 않으면 마지막으로 저장해 둔 파일로 연다.
  * 게임 진행(저장 데이터)은 여기서 다루지 않는다. 그것은 페이지의 localStorage 에 있다.
  *
- * 1.4.0 은 빌드할 때 게임 버전으로 바뀐다. 버전이 달라지면 예전 저장소를 지운다.
+ * 1.4.1 은 빌드할 때 게임 버전으로 바뀐다. 버전이 달라지면 예전 저장소를 지운다.
  */
-const CACHE = 'zone7-1.4.0';
+const CACHE = 'zone7-1.4.1';
 const NOTICE_CACHE = 'zone7-notice', NOTICE_PLAN = './notice-plan';      // 게임(ui.js)이 알림 목록을 적어 두는 곳
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './version.json'];
 

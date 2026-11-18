@@ -1556,6 +1556,30 @@
       buzz(20); Store.save(); render();
     });
   }
+  /** 3구역의 품목 고르기, 고장 고치기, 출하 트럭 싣기. */
+  function wireLineExtras() {
+    rows.recipes = {};
+    C.RECIPES.forEach(function (r) {
+      var b = el('button'); b.type = 'button';
+      b.appendChild(document.createTextNode(r.name)); b.appendChild(el('small', '', r.slow + '이 느림'));
+      b.addEventListener('click', function () {
+        var res = C.setRecipe(state, r.id);
+        if (!res.ok) return;
+        log(r.name + (C.hasBatchim(r.name) ? '으로' : '로') + ' 품목을 바꾼다. 라인이 ' + res.seconds + '초 선다.', ''); sfx('machine'); buzz(15); Store.save(); render();
+      });
+      rows.recipes[r.id] = b; $('recipes').appendChild(b);
+    });
+    $('jam-fix').addEventListener('click', function () {
+      var res = C.repairJam(state);
+      if (!res.ok) return;
+      log('기계를 고쳤다. ' + res.seconds + '초 동안 라인이 ' + C.TUNE_MULT + '배로 돈다.', 'good'); sfx('upgrade'); buzz(25); Store.save(); render();
+    });
+    $('truck-load').addEventListener('click', function () {
+      var res = C.loadTruck(state, false);
+      if (!res.ok) return;
+      log('트럭에 실어 보냈다. 물자 ' + fmt(res.gain) + ' 확보.', 'good'); sfx('train'); buzz(25); Store.save(); render();
+    });
+  }
   function wireContract() {
     $('contract-fill').addEventListener('click', function () {
       var r = C.fillContract(state);
@@ -1645,7 +1669,7 @@
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
     var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.soon && state.gate);
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
-    var canFill = (!!state.order && state.goods >= state.order.need) || (!!state.contract && state.contract.have >= state.contract.need) || (!!state.salvage && state.salvage.have >= state.salvage.need);
+    var canFill = fillReady(1) || fillReady(2) || fillReady(3);      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
     $('pet-feed').classList.toggle('ready', canFeed);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
@@ -1710,7 +1734,7 @@
   /** 그 구역에서 지금 채울 수 있는 것이 있는가: 2구역 단골 주문, 3구역 납품 의뢰, 4구역 표류 화물. */
   function fillReady(zi) {
     if (zi === 1) return !!state.order && state.goods >= state.order.need;
-    if (zi === 2) return !!state.contract && state.contract.have >= state.contract.need;
+    if (zi === 2) return (!!state.contract && state.contract.have >= state.contract.need) || !!state.jam || !!state.truck;      // 납품, 고장, 출하 트럭
     if (zi === 3) return !!state.salvage && state.salvage.have >= state.salvage.need;
     return false;
   }
@@ -1903,12 +1927,33 @@
       if (ct) {
         var cl = null; C.CLIENTS.forEach(function (r) { if (r.id === ct.who) cl = r; });
         setText($('contract-left'), clock(ct.left));
-        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' 완제품 ' + fmt(ct.need) + '개를 찾아요.\n납품하면 물자 +' + fmt(C.contractReward(state)) + ' · 간식 +' + C.CONTRACT_TREATS);
+        var cItem = null; C.RECIPES.forEach(function (r) { if (r.id === ct.item) cItem = r; });
+        var cMatch = !cItem || cItem.id === C.recipeOf(state).id;
+        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' ' + (cItem ? cItem.name : '완제품') + ' ' + fmt(ct.need) + '개를 찾아요.\n납품하면 물자 +' + fmt(C.contractReward(state)) + ' · 간식 +' + C.CONTRACT_TREATS);
         fill($('contract-bar'), ct.have / ct.need);
         var cdone = ct.have >= ct.need;
         $('contract-fill').disabled = !cdone;
-        setText($('contract-fill'), cdone ? '납품한다' : '만드는 중 · ' + fmt(Math.floor(ct.have)) + ' / ' + fmt(ct.need));
+        setText($('contract-fill'), cdone ? '납품한다' : !cMatch ? cItem.name + (C.hasBatchim(cItem.name) ? '을' : '를') + ' 만들어야 차요 · ' + fmt(Math.floor(ct.have)) + ' / ' + fmt(ct.need) : '만드는 중 · ' + fmt(Math.floor(ct.have)) + ' / ' + fmt(ct.need));
       }
+      // 품목 단추: 지금 만드는 것은 채워서, 의뢰가 찾는 것은 점선 테두리로 보여 준다
+      C.RECIPES.forEach(function (r) {
+        var rb = rows.recipes[r.id];
+        rb.classList.toggle('on', r.id === C.recipeOf(state).id);
+        rb.classList.toggle('want', !!ct && ct.item === r.id && r.id !== C.recipeOf(state).id);
+        rb.setAttribute('aria-pressed', r.id === C.recipeOf(state).id ? 'true' : 'false');
+      });
+      // 고장: 고치면 잠깐 라인이 빨라진다
+      var jf = $('jam-fix'), jamName = '';
+      C.MACHINES.forEach(function (d) { if (state.jam && state.jam.id === d.id) jamName = d.name; });
+      jf.hidden = !state.jam;
+      if (state.jam) setText(jf, jamName + (C.hasBatchim(jamName) ? '이' : '가') + ' 멈칫거려요 · 고친다 (' + C.TUNE_SECONDS + '초 동안 ×' + C.TUNE_MULT + ')');
+      // 출하 트럭
+      var tk = state.truck; $('truck').hidden = !tk;
+      if (tk) {
+        setText($('truck-left'), clock(tk.left));
+        setText($('truck-text'), '출하장에 ' + Math.floor(state.stockSec) + '초분이 쌓였어요.\n실으면 물자 +' + fmt(C.truckReward(state, false)));
+      }
+      setText($('stock-note'), '출하장 ' + Math.floor(state.stockSec) + ' / ' + C.TRUCK_STOCK_MAX + '초분 · 이번 회차 출하 ' + state.trucksRun + '번 · 정비 ' + state.repairsRun + '번');
       setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 이번 회차 의뢰 ' + state.contractsRun + '번 · 완제품 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '%');
       var line = C.lineInfo(state), top = 0, names = {};
       C.MACHINES.forEach(function (d) { top = Math.max(top, line.caps[d.id]); names[d.id] = d.name; });
@@ -1916,11 +1961,12 @@
         var c = rows.cells[d.id], r = rows.machines[d.id], lv = state.machines[d.id];
         setText(c.cap, '초당 ' + fmt(line.caps[d.id]));
         c.bar.style.width = (top > 0 ? line.caps[d.id] / top * 100 : 0).toFixed(1) + '%';
-        c.cell.classList.toggle('slow', d.id === line.bottleneck);      // 가장 느린 기계: 이것을 올려야 라인이 빨라진다
+        c.cell.classList.toggle('slow', d.id === line.bottleneck);
+        c.cell.classList.toggle('jam', !!state.jam && state.jam.id === d.id);      // 가장 느린 기계: 이것을 올려야 라인이 빨라진다
         var q = qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - lv), cost = C.machineCost(state, d.id, q);
         setText(r.count, 'Lv ' + lv);
         // 이 기계가 지금 초당 몇 개를 처리하는지와, 한 레벨에 얼마나 느는지(1.4.0). 전에는 "레벨당 초당 3"뿐이라 무슨 수인지 알기 어려웠다
-        setText(r.info, '초당 ' + fmt(lv * d.rate) + '개 처리 · 레벨당 +' + d.rate + (d.id === line.bottleneck ? ' · 현재 병목' : ''));
+        setText(r.info, '초당 ' + fmt(lv * C.machineRate(state, d.id)) + '개 처리 · 레벨당 +' + C.machineRate(state, d.id) + (d.id === line.bottleneck ? ' · 현재 병목' : ''));
         // 별: 기계 레벨 합계의 2배 문턱(세 기계가 함께 채운다). 이 기계를 사서 문턱을 넘으면 "지금 2배"가 뜬다
         setMile(r, line.levels, q, cost <= state.supplies, C.LINE_MILESTONES);
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
@@ -1929,8 +1975,8 @@
       var ld = $('line-load');
       setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '%');
       ld.className = 'num' + (line.steady ? ' steady' : '');
-      setText($('line-note'), line.flow > 0
-        ? (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
+      setText($('line-note'), state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
+        ? (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
         : '기계 셋이 모두 있어야 라인이 돌아요');
       drawBelt(line);
       var sg = $('surge'), sOn = state.surgeLeft > 0;
@@ -2269,7 +2315,7 @@
           log('표류 화물을 놓쳤다.', '');
           break;
         case 'contract':
-          toast('납품 의뢰 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 완제품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          toast('납품 의뢰 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' ' + (ev.itemName || '완제품') + ' ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
           break;
         case 'contract-gone':
           log('거래처가 기다리다 돌아갔다.', '');
@@ -2282,6 +2328,21 @@
         case 'salvage-filled':
           if (ev.first) { toast('새로 적었다 · ' + ev.name); log(ev.name + '. 도감에 적었다.', 'good'); }
           else log(ev.name + (ev.type === 'order-filled' ? '에게 흥정꾼이 상품을 팔았다.' : ev.type === 'contract-filled' ? '에 알아서 납품했다.' : (C.hasBatchim(ev.name) ? '을' : '를') + ' 알아서 거뒀다.') + ' 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
+          break;
+        case 'jam':
+          toast('고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
+          break;
+        case 'jam-fixed':
+          log(ev.auto ? '자동 제어반이 기계를 다시 돌렸다.' : '기계가 저절로 다시 돈다.', '');
+          break;
+        case 'truck':
+          toast('출하 트럭이 왔어요'); log('출하 트럭이 왔다. 출하장에 ' + Math.floor(ev.seconds) + '초분이 쌓여 있다.', ''); sfx('signal');
+          break;
+        case 'truck-loaded':
+          log('자동 제어반이 트럭에 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
+          break;
+        case 'truck-gone':
+          log('트럭이 빈 채로 돌아갔다. 쌓인 것은 그대로다.', '');
           break;
         case 'order-gone':
           log('단골이 기다리다 돌아갔다.', '');
@@ -2625,7 +2686,7 @@
     wireMultiTouch();
     wirePerkReroll();
     wireOrder();
-    wireContract();
+    wireContract(); wireLineExtras();
     wireSalvage();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
