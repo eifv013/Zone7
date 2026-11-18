@@ -946,7 +946,7 @@
       px(roof, BASE_X - 2, rt - 2, W5 + 5, 2);                                                                                                     // 평지붕
       for (i = 0; i <= W5; i += stage >= 4 ? 3 : 4) px(frame, BASE_X + i, rt - (stage >= 4 ? 5 : 4), stage >= 4 ? 2 : 1, stage >= 4 ? 3 : 2);      // 난간 / 총안
       if (stage === 3) px(frame, BASE_X, rt - 4, W5 + 1, 1);
-      px('#17180f', BASE_X + 2, rt - 9, 1, 7); px(c('#f0b400', '#8a6a08'), BASE_X + 3, rt - 9, 4, 3);                                           // 깃발
+      px('#17180f', BASE_X + 2, rt - 9, 1, 7); px(c(view.flag || '#f0b400', lerpColor(view.flag || '#f0b400', '#17180f', 0.45)), BASE_X + 3, rt - 9, 4, 3);                                           // 깃발
       px(c('#3f6f8f', '#162836'), BASE_X + rw * 3 + 2, rt - 7, 6, 5); px('#17180f', BASE_X + rw * 3 + 3, rt - 2, 1, 1); px('#17180f', BASE_X + rw * 3 + 6, rt - 2, 1, 1); // 옥상 물탱크
     }
     if (stage >= 4) { px('#30343c', right - 5, rt - 8, 4, 3); if (night) for (i = 0; i < 9; i++) { px('rgba(240,220,150,' + (0.10 - i * 0.01).toFixed(2) + ')', right - 1 + i * 2, rt - 8 + i, 2, 3 + Math.floor(i / 2)); } } // 탐조등
@@ -1239,10 +1239,10 @@
     drawPeople(ctx, model, view, sky);
     // 주인공
     var hx = Math.round(h.x) - 4;
-    if (h.state === 'search') sprite(ctx, HERO_SEARCH, hx, GROUND - 11 + (Math.floor(t * 6) % 2), false, 1);
+    if (h.state === 'search') sprite(ctx, HERO_SEARCH, hx, GROUND - 11 + (Math.floor(t * 6) % 2), false, 1, view.coat);      // view.coat: 입은 우비의 색(1.9.0)
     else {
       var walking = h.state === 'out' || h.state === 'back';
-      sprite(ctx, HERO_TOP.concat(HERO_LEGS[walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0]), hx, GROUND - 11, h.face < 0, 1);
+      sprite(ctx, HERO_TOP.concat(HERO_LEGS[walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0]), hx, GROUND - 11, h.face < 0, 1, view.coat);
     }
     if (h.carrying) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(hx + 2, GROUND - 16, 5, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(hx + 2, GROUND - 15, 5, 1); }
     drawHeroKit(ctx, model, view, hx);

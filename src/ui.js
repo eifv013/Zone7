@@ -1344,7 +1344,8 @@
   function setHubTab(t) {
     hubTab = t;
     Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.hub === t)); });
-    $('chal-panel').hidden = t !== 'chal'; $('stage-panel').hidden = t !== 'exped';
+    $('chal-panel').hidden = t !== 'chal'; $('stage-panel').hidden = t !== 'exped'; $('shop-panel').hidden = t !== 'shop';
+    if (t === 'shop') renderShop();
   }
   /*
    * 원정 목록: 스테이지마다 한 칸. 규칙·목표·제한 시간과 얻은 표시(클리어·스피드·하드)를 적고, "출발"과 "하드" 단추를 둔다.
@@ -1461,6 +1462,67 @@
     $('stage-go').addEventListener('click', function () { var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0]; if (d) askStage(d, false); });
     $('stage-hard').addEventListener('click', function () { var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0]; if (d) askStage(d, true); });
   }
+  /*
+   * 상점(1.9.0): 뽑기와 옷장.
+   *   뽑기   : 뽑기권 한 장에 외형 하나. 확률은 "확률 보기"에 등급별·품목별로 모두 적는다(코어의 gachaTable 그대로). 전설 보장까지 남은 횟수도 적는다.
+   *   옷장   : 가진 것은 눌러서 입는다. 없는 것은 조각이 모이면 눌러서 얻는다.
+   */
+  var oddsOpen = false, SLOT_NAME = { coat: '우비', flag: '깃발' };
+  function renderShop() {
+    if (home) return;
+    var shopBtn = document.querySelector('[data-hub="shop"]'); shopBtn.disabled = false; setText(shopBtn, '상점');
+    setText($('shop-count'), '뽑기권 ' + state.tickets + '장 · 조각 ' + state.shards + '개 · 간식 ' + fmt(state.treats) + '개');
+    setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번\n이미 가진 것이 나오면 조각으로 바뀌어요');
+    $('gacha-pull').disabled = !(state.tickets >= 1);
+    setText($('gacha-pull'), '뽑기 · 뽑기권 1장');
+    $('ticket-buy').disabled = !(state.treats >= C.TICKET_TREATS);
+    setText($('ticket-buy'), '뽑기권 사기 · 간식 ' + C.TICKET_TREATS + '개');
+    setText($('odds-toggle'), oddsOpen ? '확률 접기' : '확률 보기');
+    $('odds').hidden = !oddsOpen;
+    if (oddsOpen && !$('odds').firstChild) {
+      var table = C.gachaTable();
+      C.RARITIES.forEach(function (rn, ri) {
+        var items = table.filter(function (t) { return t.rarity === ri; });
+        $('odds').appendChild(el('div', 'odds-head', rn + ' · 합계 ' + (C.GACHA_ODDS[ri] * 100).toFixed(0) + '% · 하나에 ' + items[0].pct.toFixed(2) + '%'));
+        $('odds').appendChild(el('div', 'odds-items', items.map(function (t) { return t.name; }).join(', ')));
+      });
+      $('odds').appendChild(el('div', 'odds-items', C.GACHA_PITY + '번 안에 전설이 한 번은 나와요. 전설이 나오면 다시 세요.'));
+    }
+    if (!rows.shop) {
+      rows.shop = {};
+      C.COSMETICS.forEach(function (c) {
+        var b = el('button', 'cos'), sw = el('i', 'cos-sw'), name = el('b', '', c.name), sub = el('span', 'cos-sub');
+        b.type = 'button'; sw.style.background = c.slot === 'coat' ? 'linear-gradient(' + c.look.y + ' 45%, ' + c.look.j + ' 45%)' : c.look;
+        b.appendChild(sw); b.appendChild(name); b.appendChild(sub);
+        b.addEventListener('click', function () { clickCosmetic(c); });
+        rows.shop[c.id] = { btn: b, sub: sub };
+        $('wardrobe-' + c.slot).appendChild(b);
+      });
+    }
+    C.COSMETICS.forEach(function (c) {
+      var r = rows.shop[c.id], own = C.ownsCosmetic(state, c.id), on = state.wear[c.slot] === c.id, cost = C.SHARDS_COST[c.rarity];
+      r.btn.className = 'cos r' + c.rarity + (own ? ' own' : '') + (on ? ' on' : '');
+      r.btn.disabled = !own && !(state.shards >= cost);
+      setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity]) : C.RARITIES[c.rarity] + ' · 조각 ' + cost);
+    });
+  }
+  function clickCosmetic(c) {
+    if (C.ownsCosmetic(state, c.id)) { if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); renderShop(); } return; }
+    confirmBox(c.name, '조각 ' + C.SHARDS_COST[c.rarity] + '개로 ' + c.name + (C.hasBatchim(c.name) ? '을' : '를') + ' 얻어요.', '그만둔다', '얻는다', function () {
+      var r = C.craftCosmetic(state, c.id);
+      if (r.ok) { C.wearCosmetic(state, c.id); log(r.name + (C.hasBatchim(r.name) ? '을' : '를') + ' 얻었다.', 'good'); sfx('goal'); Store.save(); renderShop(); }
+    });
+  }
+  function doPull() {
+    var r = C.pullGacha(state);
+    if (!r.ok) return;
+    var rn = C.RARITIES[r.rarity];
+    log('뽑기: ' + rn + ' · ' + r.name + (r.dup ? ' (이미 있어서 조각 ' + r.shards + '개)' : '') + '.', r.rarity ? 'good' : '');
+    sfx(r.rarity === 2 ? 'goal' : 'buy'); if (r.rarity === 2) { buzz([30, 40, 30]); if (fxShow) fxShow('전설', r.name + (r.dup ? ' · 조각 +' + r.shards : ''), 1, -1, -1); }      // 전설은 화면 효과와 함께
+    setText($('gacha-result'), rn + ' · ' + r.name + (r.dup ? ' · 이미 있어요 · 조각 +' + r.shards : ' · 새 외형!') + (r.pity ? ' · 보장' : ''));
+    $('gacha-result').className = 'gacha-result r' + r.rarity; void $('gacha-result').offsetWidth; $('gacha-result').classList.add('gacha-in');      // 'pop'·'show' 는 다른 곳(떠오르는 숫자, 알림)에서 쓰는 이름이라 피한다
+    Store.save(); renderShop();
+  }
   function askStage(d, hard) {
     if (home || C.stageBlock(state, d.id, hard)) return;
     confirmBox((d.boss ? '보스 · ' : '원정 · ') + d.name + (hard ? ' · 하드' : ''), '규칙 · ' + (C.stageRuleTexts(d, hard).join(', ') || '없음') + '\n목표 · ' + C.stageGoalText(d) + '\n제한 시간 · ' + clock(d.limit) + '\n\n도중에 창을 닫으면 원정은 사라져요.', '그만둔다', '출발한다', function () { enterStage(d, hard); });
@@ -1488,6 +1550,7 @@
       var gotText = res.got.map(function (k) { return MARK_NAME[k]; }).join(', ');
       log('원정 〈' + def.name + '〉 클리어. ' + clock(res.seconds) + '.' + (gotText ? ' 새 표시: ' + gotText + '. 간식 ' + res.treats + '개.' : '') + (res.badge ? ' 지역 휘장을 받았다.' : ''), 'good');
       toast('원정 클리어 · ' + def.name + (gotText ? ' · ' + gotText : '') + (res.treats ? ' · 간식 +' + res.treats : '')); sfx('goal');
+      if (res.tickets) log('뽑기권 ' + res.tickets + '장을 받았다.', 'good');
       if (fxShow) fxShow('클리어', def.name + (res.badge ? ' · 지역 휘장' : gotText ? ' · ' + gotText : ''), 1, -1, -1);
     } else {
       log('원정 〈' + def.name + '〉' + (giveUp ? '에서 돌아왔다.' : ' 실패. 시간이 다 됐다.'), giveUp ? '' : 'bad');
@@ -2703,7 +2766,8 @@
   function sceneView() {
     var b = { scouts: state.buildings.scouts, garden: state.buildings.garden, purifier: state.buildings.purifier, workshop: state.buildings.workshop,
       port: state.stalls, district: state.zone >= 1 ? state.stalls : 0 };   // 좌판은 하역장·자치구 방으로 보인다
-    return { t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
+    var wearNow = C.cosmeticLook(mainState());      // 외형은 본 게임의 것을 쓴다(원정 중에도 같은 옷)
+    return { coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
       safe: C.defensePower(state) >= C.nightStrength(state), boss: C.isBossWave(C.currentWave(state)), def: state.defenses, buildings: b,
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker', special: C.nightSpecials(state, state.day),
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },
@@ -2984,6 +3048,9 @@
     $('zmap-close').addEventListener('click', function () { $('zmap').hidden = true; });
     $('hub-close').addEventListener('click', function () { $('hub').hidden = true; });
     Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (b) { b.addEventListener('click', function () { if (b.disabled) return; setHubTab(b.dataset.hub); if (b.dataset.hub === 'exped') renderStages(); }); });
+    $('gacha-pull').addEventListener('click', doPull);
+    $('ticket-buy').addEventListener('click', function () { if (C.buyTicket(state).ok) { sfx('buy'); Store.save(); renderShop(); } });
+    $('odds-toggle').addEventListener('click', function () { oddsOpen = !oddsOpen; renderShop(); });
     $('stage-quit').addEventListener('click', function () {
       if (!home) return;
       confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 지금까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });

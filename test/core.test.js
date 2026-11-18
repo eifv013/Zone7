@@ -2950,3 +2950,48 @@ test('1.8.0 원정: 스테이지는 따로 만든 새 판이고, 본 게임에�
   const b = C.createState(0), loot0 = C.nightReward(b); b.stageMarks['s1-b'] = { clear: true, speed: false, hard: false, best: 700 };
   assert.equal(C.badgeCount(b), 1); assert.ok(Math.abs(C.nightReward(b) / loot0 - 1.1) < 1e-9);
 });
+
+test('1.9.0 뽑기: 화면의 확률표와 실제 추첨이 같고, 보장·중복·조각·입기가 맞게 돈다', () => {
+  const table = C.gachaTable();
+  assert.ok(Math.abs(table.reduce((a, t) => a + t.pct, 0) - 100) < 1e-9, '확률의 합은 100%');
+  assert.ok(table.every(t => !C.COSMETICS.find(c => c.id === t.id).base), '기본 외형은 뽑기에 없다');
+  [0, 1, 2].forEach(r => assert.ok(Math.abs(table.filter(t => t.rarity === r).reduce((a, t) => a + t.pct, 0) - C.GACHA_ODDS[r] * 100) < 1e-9));
+  // 12만 번 뽑아 품목별 빈도가 표와 맞는지(보장이 끼어들지 않게 매번 보장 횟수를 지운다)
+  let z = 12345; const rng = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };
+  const s = C.createState(0), seen = {}, N = 120000;
+  for (let i = 0; i < N; i++) { s.tickets = 1; s.gachaPity = 0; const r = C.pullGacha(s, rng); assert.ok(r.ok); seen[r.id] = (seen[r.id] || 0) + 1; }
+  table.forEach(t => assert.ok(Math.abs((seen[t.id] || 0) / N * 100 - t.pct) < 0.35, t.name + ' ' + ((seen[t.id] || 0) / N * 100).toFixed(2) + '% / ' + t.pct.toFixed(2) + '%'));
+  // 뽑기권이 없으면 못 뽑는다
+  const e = C.createState(0); assert.equal(C.pullGacha(e, rng).reason, 'tickets');
+  // 보장: 전설이 한 번도 안 나오는 난수로도 30번째에는 전설
+  const p = C.createState(0); p.tickets = 100; let last = null;
+  for (let i = 0; i < C.GACHA_PITY; i++) { assert.equal(C.gachaPityLeft(p), C.GACHA_PITY - i); last = C.pullGacha(p, () => 0); assert.equal(last.rarity === 2, i === C.GACHA_PITY - 1); }
+  assert.ok(last.pity); assert.equal(p.gachaPity, 0); assert.equal(p.tickets, 100 - C.GACHA_PITY);
+  // 중복은 조각으로
+  const d = C.createState(0); d.tickets = 2; const a = C.pullGacha(d, () => 0), b = C.pullGacha(d, () => 0);
+  assert.equal(a.dup, false); assert.ok(C.ownsCosmetic(d, a.id)); assert.equal(b.id, a.id); assert.equal(b.dup, true); assert.equal(d.shards, C.SHARDS_DUP[a.rarity]);
+  // 조각으로 얻기, 입기
+  assert.equal(C.craftCosmetic(d, 'coat-night').reason, 'shards'); d.shards = 50; assert.ok(C.craftCosmetic(d, 'coat-night').ok); assert.equal(d.shards, 0);
+  assert.equal(C.craftCosmetic(d, 'coat-night').reason, 'owned'); assert.equal(C.wearCosmetic(d, 'flag-pink').reason, 'locked');
+  assert.ok(C.wearCosmetic(d, 'coat-night').ok); assert.deepEqual(C.cosmeticLook(d).coat, { y: '#27336e', j: '#4a5fb8' }); assert.equal(C.cosmeticLook(d).flag, '#f0b400');
+  // 간식으로 뽑기권
+  const t = C.createState(0); assert.equal(C.buyTicket(t).reason, 'treats'); t.treats = C.TICKET_TREATS; assert.ok(C.buyTicket(t).ok); assert.equal(t.tickets, 1); assert.equal(t.treats, 0);
+  // 저장과 철수를 거쳐도 남고, 갖지 않은 옷을 입은 저장은 기본으로 돌린다
+  const back = C.deserialize(C.serialize(d), 0); assert.ok(C.ownsCosmetic(back, 'coat-night')); assert.equal(back.wear.coat, 'coat-night');
+  const bad = JSON.parse(C.serialize(C.createState(0))); bad.wear = { coat: 'coat-neon', flag: 'zzz' }; assert.deepEqual(C.deserialize(JSON.stringify(bad), 0).wear, { coat: 'coat-yellow', flag: 'flag-yellow' });
+  d.runEarned = 1e30; const n = C.retreat(d, 0, () => 0.5).state; assert.ok(C.ownsCosmetic(n, 'coat-night')); assert.equal(n.wear.coat, 'coat-night');
+  // 외형은 생산에 영향이 없다
+  assert.equal(C.globalMult(d), C.globalMult(C.createState(0)));
+});
+
+test('1.9.0 뽑기권: 원정의 새 표시, 도전 성공, 변이체를 막은 밤에 받는다', () => {
+  const main = C.createState(0); main.bestZone = 2;
+  const st = C.createStage(main, 's1-1', false, 0); st.runEarned = 5e6; st.runSeconds = 100; C.tick(st, 0.1, () => 0.5);
+  const r = C.finishStage(main, st); assert.equal(r.tickets, 2); assert.equal(main.tickets, 2);
+  const c = C.createState(0); c.bestZone = 6; C.startChallenge(c, 'frugal'); c.zone = 2; C.tick(c, 0.1, () => 0.5); assert.equal(c.tickets, 3);
+});
+
+test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
+  const md = require('fs').readFileSync(require('path').join(__dirname, '..', 'README.md'), 'utf8');
+  C.gachaTable().forEach(t => assert.ok(md.includes('| ' + C.RARITIES[t.rarity] + ' | ' + t.name + ' | ' + t.pct.toFixed(2) + '% |'), t.name));
+});

@@ -600,6 +600,12 @@
       challenge: null,       // 이번 회차의 도전 { id, failed, done }. 없으면 null
       nextChallenge: '',     // 다음 회차에 걸 도전(철수하면 쓰이고 지워진다)
       medals: {},            // 도전마다 성공한 횟수. 철수해도 남는다
+      tickets: 0,            // 뽑기권
+      shards: 0,             // 중복으로 받은 조각
+      cosmetics: {},         // 가진 외형 { id: true } (기본 외형은 적지 않는다)
+      wear: { coat: 'coat-yellow', flag: 'flag-yellow' },      // 입은 외형
+      gachaPity: 0,          // 전설이 나온 뒤로 뽑은 횟수(보장 계산)
+      gachaPulls: 0,         // 지금까지 뽑은 횟수
       stage: null,           // 원정 스테이지로 만든 상태에만 있다 { id, hard, won, lost, seconds }
       stageMarks: {},        // 본 게임: 스테이지마다 얻은 표시 { clear, speed, hard, best }. 철수해도 남는다
       challengeStreak: 0,    // 도전을 연달아 성공한 횟수(실패·포기하면 0). 철수해도 남는다
@@ -695,6 +701,10 @@
     s.medals = {}; CHALLENGES.forEach(function (d) { var n = raw.medals && typeof raw.medals === 'object' ? clamp(safeCount(raw.medals[d.id]), 0, 1e6) : 0; if (n > 0) s.medals[d.id] = n; });
     s.challengeStreak = clamp(safeCount(raw.challengeStreak), 0, 1e6);
     s.stageMarks = {}; STAGES.forEach(function (d) { var m = raw.stageMarks && typeof raw.stageMarks === 'object' ? raw.stageMarks[d.id] : null; if (m && typeof m === 'object' && (m.clear || m.speed || m.hard)) s.stageMarks[d.id] = { clear: !!m.clear, speed: !!m.speed, hard: !!m.hard, best: clamp(safeCount(m.best), 0, 1e6) }; });
+    s.tickets = clamp(safeCount(raw.tickets), 0, 1e9); s.shards = clamp(safeCount(raw.shards), 0, 1e9); s.gachaPity = clamp(safeCount(raw.gachaPity), 0, GACHA_PITY - 1); s.gachaPulls = clamp(safeCount(raw.gachaPulls), 0, 1e9);
+    s.cosmetics = {}; COSMETICS.forEach(function (c) { if (!c.base && raw.cosmetics && typeof raw.cosmetics === 'object' && raw.cosmetics[c.id]) s.cosmetics[c.id] = true; });
+    s.wear = { coat: 'coat-yellow', flag: 'flag-yellow' };
+    ['coat', 'flag'].forEach(function (slot) { var id = raw.wear && typeof raw.wear === 'object' ? raw.wear[slot] : '', c = typeof id === 'string' ? findById(COSMETICS, id) : null; if (c && c.slot === slot && (c.base || s.cosmetics[c.id])) s.wear[slot] = c.id; });
     s.stage = null;      // 스테이지 판은 저장하지 않는다(저장되는 것은 언제나 본 게임이다)
     s.nextChallenge = typeof raw.nextChallenge === 'string' && findById(CHALLENGES, raw.nextChallenge) ? raw.nextChallenge : '';
     s.challenge = raw.challenge && typeof raw.challenge === 'object' && findById(CHALLENGES, raw.challenge.id) ? { id: raw.challenge.id, failed: !!raw.challenge.failed, done: !!raw.challenge.done } : null;
@@ -2235,6 +2245,7 @@
       state.endedRun = true;
       state.ended = (state.ended || 0) + 1;
       if (!state.endedAt) state.endedAt = Date.now();
+      addTickets(state, 3);
       events.push({ type: 'ending', count: state.ended, day: state.day, retreats: state.retreats, seconds: state.playSeconds });
     }
     checkChallenge(state, events);      // 도전: 목표에 닿았는지, 시간을 넘겼는지
@@ -2453,7 +2464,7 @@
       state.edge = Math.min(1, (state.edge || 0) + Math.max(0, Math.min(1, defense / Math.max(1, strength) - 1)) * EDGE_GAIN);
       var edgeFull = edgeWas < 1 && state.edge >= 1;      // 넉넉하게 막은 만큼 여유 게이지가 찬다
       state.counterAt = 0;
-      if (boss && (state.bossPerks || 0) < BOSS_PERKS_MAX) { state.bossPerks = (state.bossPerks || 0) + 1; state.perkOwed = Math.min(PERK_OWED_MAX, (state.perkOwed || 0) + 1); }      // 변이체를 막으면 특전 하나(한 회차에 BOSS_PERKS_MAX 번까지)
+      if (boss && (state.bossPerks || 0) < BOSS_PERKS_MAX) { addTickets(state, 1); state.bossPerks = (state.bossPerks || 0) + 1; state.perkOwed = Math.min(PERK_OWED_MAX, (state.perkOwed || 0) + 1); }      // 변이체를 막으면 특전 하나(한 회차에 BOSS_PERKS_MAX 번까지)
       var passer = null;
       if (zoneOpen(state, 5) && defense >= strength * SAFE_NIGHT) { state.safeNights++; passer = passBridge(state, rng); }      // 6구역: 넉넉하게 막은 밤(목표)에는 가끔 누가 다리를 건넌다
       state.siege = false; state.siegeNights = 0;
@@ -2584,6 +2595,90 @@
   function challengeOn(state, id) { var c = state.challenge; return (!!c && c.id === id && !c.failed && !c.done) || stageRule(state, id); }      // 원정 스테이지의 규칙도 같은 자리에서 걸린다
 
   /*
+   * ---------- 꾸미기와 뽑기(1.9.0) ----------
+   * 외형만 바꾼다(라라의 우비, 거점의 깃발). 생산이나 방어에는 아무 영향이 없다.
+   *   뽑기권 : 원정의 새 표시(1장씩), 도전 성공(처음 3장, 다시 1장), 변이체를 막은 밤(1장), 이야기의 끝(3장). 간식 TICKET_TREATS 개로도 한 장 산다.
+   *   확률   : GACHA_ODDS 가 등급의 확률이고, 같은 등급 안에서는 모두 같다. 화면의 확률표(gachaTable)와 추첨(pullGacha)이 같은 표를 쓴다.
+   *   보장   : GACHA_PITY 번 안에 전설이 한 번은 나온다(전설이 나오면 다시 센다). 남은 횟수는 gachaPityLeft.
+   *   중복   : 이미 가진 것이 나오면 조각으로 바뀐다(SHARDS_DUP). 조각을 모으면 원하는 외형을 골라 얻는다(SHARDS_COST).
+   * 세트를 다 모아야 보상을 주는 방식(컴플리트)은 두지 않는다. 뽑기에서 나오는 것은 전부 이 표에 있는 외형이다.
+   */
+  var RARITIES = ['일반', '희귀', '전설'], GACHA_ODDS = [0.7, 0.25, 0.05], GACHA_PITY = 30, TICKET_TREATS = 20;
+  var SHARDS_DUP = [1, 3, 10], SHARDS_COST = [5, 15, 50];
+  var COSMETICS = [
+    { id: 'coat-yellow', slot: 'coat', name: '노란 우비',   rarity: 0, base: true, look: { y: '#f0b400', j: '#f0b400' } },
+    { id: 'coat-red',    slot: 'coat', name: '빨간 우비',   rarity: 0, look: { y: '#c0392b', j: '#c0392b' } },
+    { id: 'coat-blue',   slot: 'coat', name: '파란 우비',   rarity: 0, look: { y: '#3f7fb5', j: '#3f7fb5' } },
+    { id: 'coat-green',  slot: 'coat', name: '초록 우비',   rarity: 0, look: { y: '#4f9a4a', j: '#4f9a4a' } },
+    { id: 'coat-orange', slot: 'coat', name: '주황 우비',   rarity: 0, look: { y: '#e07b2a', j: '#e07b2a' } },
+    { id: 'coat-purple', slot: 'coat', name: '보라 우비',   rarity: 1, look: { y: '#8a5fc0', j: '#8a5fc0' } },
+    { id: 'coat-white',  slot: 'coat', name: '하얀 우비',   rarity: 1, look: { y: '#e6e5db', j: '#e6e5db' } },
+    { id: 'coat-black',  slot: 'coat', name: '검은 우비',   rarity: 1, look: { y: '#3a3d45', j: '#2b2d33' } },
+    { id: 'coat-night',  slot: 'coat', name: '밤하늘 우비', rarity: 2, look: { y: '#27336e', j: '#4a5fb8' } },
+    { id: 'coat-neon',   slot: 'coat', name: '형광 우비',   rarity: 2, look: { y: '#c6ff4a', j: '#8fe01f' } },
+    { id: 'flag-yellow', slot: 'flag', name: '노란 깃발',   rarity: 0, base: true, look: '#f0b400' },
+    { id: 'flag-red',    slot: 'flag', name: '빨간 깃발',   rarity: 0, look: '#c0392b' },
+    { id: 'flag-blue',   slot: 'flag', name: '파란 깃발',   rarity: 0, look: '#3f7fb5' },
+    { id: 'flag-green',  slot: 'flag', name: '초록 깃발',   rarity: 0, look: '#4f9a4a' },
+    { id: 'flag-white',  slot: 'flag', name: '하얀 깃발',   rarity: 1, look: '#e6e5db' },
+    { id: 'flag-black',  slot: 'flag', name: '검은 깃발',   rarity: 1, look: '#2b2d33' },
+    { id: 'flag-pink',   slot: 'flag', name: '분홍 깃발',   rarity: 2, look: '#ff7fb0' }
+  ];
+  function gachaPool() { return COSMETICS.filter(function (c) { return !c.base; }); }
+  /** 화면에 적는 확률표 [{ id, name, slot, rarity, pct }]. pct 는 백분율(합계 100). 추첨도 이 표를 쓴다. */
+  function gachaTable() {
+    var pool = gachaPool(), count = [0, 0, 0];
+    pool.forEach(function (c) { count[c.rarity]++; });
+    return pool.map(function (c) { return { id: c.id, name: c.name, slot: c.slot, rarity: c.rarity, pct: GACHA_ODDS[c.rarity] / count[c.rarity] * 100 }; });
+  }
+  function ownsCosmetic(state, id) { var c = findById(COSMETICS, id); return !!c && (!!c.base || !!(state.cosmetics && state.cosmetics[id])); }
+  function gachaPityLeft(state) { return Math.max(1, GACHA_PITY - (state.gachaPity || 0)); }
+  /** 뽑기권 한 장으로 하나를 뽑는다. { ok, item, rarity, dup, shards(중복으로 받은 조각), pity(보장으로 나왔는가) } */
+  function pullGacha(state, rng) {
+    if (!(state.tickets >= 1)) return fail('tickets');
+    rng = typeof rng === 'function' ? rng : Math.random;
+    var table = gachaTable(), forced = (state.gachaPity || 0) + 1 >= GACHA_PITY, pick = null;
+    if (forced) { var legends = table.filter(function (t) { return t.rarity === 2; }); pick = legends[Math.floor(rng() * legends.length) % legends.length]; }
+    else { var roll = rng() * 100, acc = 0; for (var i = 0; i < table.length; i++) { acc += table[i].pct; if (roll < acc) { pick = table[i]; break; } } if (!pick) pick = table[table.length - 1]; }
+    state.tickets -= 1;
+    state.gachaPulls = Math.min(1e9, (state.gachaPulls || 0) + 1);
+    state.gachaPity = pick.rarity === 2 ? 0 : (state.gachaPity || 0) + 1;
+    var dup = ownsCosmetic(state, pick.id), shards = 0;
+    if (dup) { shards = SHARDS_DUP[pick.rarity]; state.shards = Math.min(1e9, (state.shards || 0) + shards); }
+    else state.cosmetics[pick.id] = true;
+    return { ok: true, id: pick.id, name: pick.name, slot: pick.slot, rarity: pick.rarity, dup: dup, shards: shards, pity: forced };
+  }
+  /** 간식으로 뽑기권을 한 장 산다. */
+  function buyTicket(state) {
+    if (!(state.treats >= TICKET_TREATS)) return fail('treats');
+    state.treats -= TICKET_TREATS; state.tickets = Math.min(1e9, (state.tickets || 0) + 1);
+    return { ok: true };
+  }
+  function addTickets(state, n) { if (n > 0) state.tickets = Math.min(1e9, (state.tickets || 0) + n); return n; }
+  /** 조각으로 아직 없는 외형을 골라 얻는다. */
+  function craftCosmetic(state, id) {
+    var c = findById(COSMETICS, id);
+    if (!c) return fail('unknown');
+    if (ownsCosmetic(state, id)) return fail('owned');
+    var cost = SHARDS_COST[c.rarity];
+    if (!(state.shards >= cost)) return fail('shards');
+    state.shards -= cost; state.cosmetics[id] = true;
+    return { ok: true, id: id, name: c.name, cost: cost };
+  }
+  function wearCosmetic(state, id) {
+    var c = findById(COSMETICS, id);
+    if (!c) return fail('unknown');
+    if (!ownsCosmetic(state, id)) return fail('locked');
+    state.wear[c.slot] = id;
+    return { ok: true, id: id, slot: c.slot };
+  }
+  /** 지금 입은 외형의 색 { coat: { y, j }, flag: '#…' }. 잘못된 값이면 기본. */
+  function cosmeticLook(state) {
+    function of(slot, base) { var id = state.wear && state.wear[slot], c = id && ownsCosmetic(state, id) ? findById(COSMETICS, id) : null; return (c && c.slot === slot ? c : findById(COSMETICS, base)).look; }
+    return { coat: of('coat', 'coat-yellow'), flag: of('flag', 'flag-yellow') };
+  }
+
+  /*
    * ---------- 원정(1.8.0) ----------
    * 본 게임과 따로 도는 짧은 판. 지역마다 스테이지가 이어지고, 스테이지마다 규칙·목표·제한 시간이 있다.
    *   구조   : 스테이지는 "새 상태 하나"다. createStage 가 빈 거점을 만들고 state.stage = { id, hard } 를 단다.
@@ -2670,14 +2765,15 @@
     if (!stt.won) return { ok: true, won: false, got: [], treats: 0, badge: false };
     if (!main.stageMarks) main.stageMarks = {};
     var m = main.stageMarks[stt.def.id] || (main.stageMarks[stt.def.id] = { clear: false, speed: false, hard: false, best: 0 }), got = [], treats = 0;
-    function mark(k) { if (!m[k]) { m[k] = true; got.push(k); treats += STAGE_TREATS[k]; } }
+    function mark(k) { if (!m[k]) { m[k] = true; got.push(k); treats += STAGE_TREATS[k]; } }      // 새 표시 하나마다 간식과 뽑기권 한 장
     var badge = !!stt.def.boss && !m.clear;
     mark('clear');
     if (stt.seconds <= stt.def.speed) mark('speed');
     if (stt.hard) mark('hard');
     if (!(m.best > 0) || stt.seconds < m.best) m.best = stt.seconds;
     main.treats = Math.min(1e9, (main.treats || 0) + treats);
-    return { ok: true, won: true, got: got, treats: treats, badge: badge, seconds: stt.seconds };
+    var tickets = addTickets(main, got.length);
+    return { ok: true, won: true, got: got, treats: treats, tickets: tickets, badge: badge, seconds: stt.seconds };
   }
   /** 얻은 표시의 수와 전체 수(지역 하나 또는 전부). */
   function stageMarkCount(main, region) {
@@ -2750,7 +2846,8 @@
     state.challenge.done = true;
     state.medals[def.id] = Math.min(1e6, (state.medals[def.id] || 0) + 1);
     state.treats = Math.min(1e9, state.treats + treats);
-    events.push({ type: 'challenge-done', id: def.id, name: def.name, first: first, treats: treats, medals: medalCount(state) });
+    var tk = addTickets(state, first ? 3 : 1);
+    events.push({ type: 'challenge-done', id: def.id, name: def.name, first: first, treats: treats, tickets: tk, medals: medalCount(state) });
   }
   function retreat(state, now, rng) {
     if (!canRetreat(state)) return fail('not-ready');
@@ -2758,6 +2855,7 @@
     next.goalPick = rollGoalPick(state.goalPick, rng);      // 다음 회차의 목표는 이번과 다르게
     next.medals = state.medals || {};      // 훈장은 남는다
     next.stageMarks = state.stageMarks || {};      // 원정에서 얻은 표시도 남는다
+    next.tickets = state.tickets || 0; next.shards = state.shards || 0; next.cosmetics = state.cosmetics || {}; next.wear = state.wear || next.wear; next.gachaPity = state.gachaPity || 0; next.gachaPulls = state.gachaPulls || 0;      // 뽑기와 외형도 남는다
     next.challengeStreak = activeChallenge(state) ? 0 : (state.challengeStreak || 0);      // 도전을 달고 철수하면 포기한 것으로 친다
     next.bestZone = Math.max(state.bestZone, state.zone);
     if (state.nextChallenge && challengeOpen(next, state.nextChallenge)) next.challenge = { id: state.nextChallenge, failed: false, done: false };      // 골라 둔 도전으로 시작한다(한 번만)
@@ -3289,7 +3387,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, COSMETICS: COSMETICS, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,
