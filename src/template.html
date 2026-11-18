@@ -271,8 +271,8 @@ body { word-break: keep-all; }
 .odds-head { color: #f0b400; font-family: var(--font-mono); margin-top: 4px; } .odds-head:first-child { margin-top: 0; }
 #wardrobe { display: flex; flex-direction: column; gap: 6px; max-height: calc(100dvh - 590px); min-height: 120px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 .cos-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.story-card .cos { align-self: auto; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 0 8px; align-items: center; padding: 6px 8px; text-align: left; background: transparent; color: #e6e5db; border: 2px solid #6d6d60; font-weight: 500; }
-.cos-pic { grid-row: 1 / span 2; width: 24px; height: 26px; image-rendering: pixelated; }
+.story-card .cos { align-self: auto; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 0 8px; align-items: center; padding: 6px 8px; text-align: left; background: transparent; color: #e6e5db; border: 2px solid #6d6d60; font-weight: 500; }
+.cos-pic { grid-row: 1 / span 2; width: 28px; height: 40px; image-rendering: pixelated; }
 .look { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; background: #262820; border: 1px solid #6d6d60; }
 #look-pic { display: block; width: 100%; height: auto; image-rendering: pixelated; }
 .look-side { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 10px; min-height: 30px; } .look-side b { font-size: 14px; line-height: 1.4; }
@@ -1196,7 +1196,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.9.2</div>
+  <div class="boot-ver">7구역 알파 1.10.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1602,7 +1602,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.9.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.10.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1681,11 +1681,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="hub-line" id="shop-pity"></div>
       <button type="button" class="odds-toggle" id="odds-toggle">확률 보기</button>
       <div id="odds" hidden></div>
-      <div class="look"><canvas id="look-pic" width="104" height="46"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div></div>
-      <div id="wardrobe">
-        <div class="label">우비</div><div class="cos-grid" id="wardrobe-coat"></div>
-        <div class="label">깃발</div><div class="cos-grid" id="wardrobe-flag"></div>
-      </div>
+      <div class="look"><canvas id="look-pic" width="166" height="76"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div></div>
+      <div id="wardrobe"></div>
     </div>
     <div class="hub-pane" id="chal-panel">
       <div class="hub-line num" id="chal-count"></div>

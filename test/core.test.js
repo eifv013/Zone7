@@ -2974,11 +2974,12 @@ test('1.9.0 뽑기: 화면의 확률표와 실제 추첨이 같고, 보장·중�
   assert.equal(C.craftCosmetic(d, 'coat-night').reason, 'shards'); d.shards = 50; assert.ok(C.craftCosmetic(d, 'coat-night').ok); assert.equal(d.shards, 0);
   assert.equal(C.craftCosmetic(d, 'coat-night').reason, 'owned'); assert.equal(C.wearCosmetic(d, 'flag-pink').reason, 'locked');
   assert.ok(C.wearCosmetic(d, 'coat-night').ok); assert.deepEqual(C.cosmeticLook(d).coat, { y: '#27336e', j: '#4a5fb8' }); assert.equal(C.cosmeticLook(d).flag, '#f0b400');
+  assert.deepEqual([C.cosmeticLook(d).hood, C.cosmeticLook(d).pat, C.cosmeticLook(d).bag, C.cosmeticLook(d).fx], ['none', 'none', 'cooler', 'none']);
   // 간식으로 뽑기권
   const t = C.createState(0); assert.equal(C.buyTicket(t).reason, 'treats'); t.treats = C.TICKET_TREATS; assert.ok(C.buyTicket(t).ok); assert.equal(t.tickets, 1); assert.equal(t.treats, 0);
   // 저장과 철수를 거쳐도 남고, 갖지 않은 옷을 입은 저장은 기본으로 돌린다
   const back = C.deserialize(C.serialize(d), 0); assert.ok(C.ownsCosmetic(back, 'coat-night')); assert.equal(back.wear.coat, 'coat-night');
-  const bad = JSON.parse(C.serialize(C.createState(0))); bad.wear = { coat: 'coat-neon', flag: 'zzz' }; assert.deepEqual(C.deserialize(JSON.stringify(bad), 0).wear, { coat: 'coat-yellow', flag: 'flag-yellow' });
+  const bad = JSON.parse(C.serialize(C.createState(0))); bad.wear = { coat: 'coat-neon', flag: 'zzz' }; assert.deepEqual(C.deserialize(JSON.stringify(bad), 0).wear, C.COS_BASE);
   d.runEarned = 1e30; const n = C.retreat(d, 0, () => 0.5).state; assert.ok(C.ownsCosmetic(n, 'coat-night')); assert.equal(n.wear.coat, 'coat-night');
   // 외형은 생산에 영향이 없다
   assert.equal(C.globalMult(d), C.globalMult(C.createState(0)));
@@ -2994,4 +2995,25 @@ test('1.9.0 뽑기권: 원정의 새 표시, 도전 성공, 변이체를 막은 
 test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
   const md = require('fs').readFileSync(require('path').join(__dirname, '..', 'README.md'), 'utf8');
   C.gachaTable().forEach(t => assert.ok(md.includes('| ' + C.RARITIES[t.rarity] + ' | ' + t.name + ' | ' + t.pct.toFixed(2) + '% |'), t.name));
+});
+
+test('1.10.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발은 없다. 깃발은 도전과 원정의 확정 보상이다', () => {
+  const table = C.gachaTable();
+  assert.equal(table.length, 23); assert.ok(!table.some(t => t.slot === 'flag'));
+  ['hood', 'pat', 'bag', 'fx'].forEach(slot => assert.ok(table.some(t => t.slot === slot), slot));
+  C.COS_SLOTS.forEach(slot => assert.equal(C.COSMETICS.filter(c => c.slot === slot && c.base).length, 1, slot + ': 기본은 하나'));
+  const S = require('../src/scene.js');
+  C.COSMETICS.forEach(c => { if (c.slot === 'hood') assert.ok(S.LARA_HOODS[c.look], c.id); if (c.slot === 'bag') assert.ok(S.LARA_BAGS[c.look], c.id); });
+  // 그림: 어떤 조합과 자세에서도 14×18칸
+  Object.keys(S.LARA_HOODS).forEach(h => Object.keys(S.LARA_BAGS).forEach(b => ['stand', 'walk', 'search'].forEach(p => [0, 1].forEach(st => { const r = S.laraRows({ hood: h, bag: b }, p, st); assert.equal(r.length, S.LARA_H); r.forEach(row => assert.equal(row.length, S.LARA_W)); }))));
+  // 입기
+  const s = C.createState(0); s.cosmetics['hood-cat'] = s.cosmetics['pat-stripe'] = s.cosmetics['bag-teddy'] = s.cosmetics['fx-glow'] = true;
+  ['hood-cat', 'pat-stripe', 'bag-teddy', 'fx-glow'].forEach(id => assert.ok(C.wearCosmetic(s, id).ok));
+  assert.deepEqual(C.cosmeticLook(s), { coat: { y: '#f0b400', j: '#f0b400' }, hood: 'cat', pat: 'stripe', bag: 'teddy', fx: 'glow', flag: '#f0b400' });
+  assert.deepEqual(C.cosmeticLook(C.deserialize(C.serialize(s), 0)), C.cosmeticLook(s));
+  // 깃발: 조건을 채우면 받는다
+  const f = C.createState(0); assert.deepEqual(C.grantFlags(f), []);
+  f.medals.frugal = 1; assert.deepEqual(C.grantFlags(f), ['빨간 깃발']); assert.deepEqual(C.grantFlags(f), [], '한 번만');
+  f.stageMarks['s1-b'] = { clear: true, speed: false, hard: false, best: 1 }; assert.deepEqual(C.grantFlags(f), ['검은 깃발']);
+  assert.ok(C.wearCosmetic(f, 'flag-black').ok);
 });

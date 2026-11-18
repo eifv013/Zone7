@@ -298,8 +298,8 @@ body { word-break: keep-all; }
 .odds-head { color: #f0b400; font-family: var(--font-mono); margin-top: 4px; } .odds-head:first-child { margin-top: 0; }
 #wardrobe { display: flex; flex-direction: column; gap: 6px; max-height: calc(100dvh - 590px); min-height: 120px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 .cos-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.story-card .cos { align-self: auto; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 0 8px; align-items: center; padding: 6px 8px; text-align: left; background: transparent; color: #e6e5db; border: 2px solid #6d6d60; font-weight: 500; }
-.cos-pic { grid-row: 1 / span 2; width: 24px; height: 26px; image-rendering: pixelated; }
+.story-card .cos { align-self: auto; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 0 8px; align-items: center; padding: 6px 8px; text-align: left; background: transparent; color: #e6e5db; border: 2px solid #6d6d60; font-weight: 500; }
+.cos-pic { grid-row: 1 / span 2; width: 28px; height: 40px; image-rendering: pixelated; }
 .look { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; background: #262820; border: 1px solid #6d6d60; }
 #look-pic { display: block; width: 100%; height: auto; image-rendering: pixelated; }
 .look-side { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 10px; min-height: 30px; } .look-side b { font-size: 14px; line-height: 1.4; }
@@ -1223,7 +1223,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.9.2</div>
+  <div class="boot-ver">7구역 알파 1.10.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1764,7 +1764,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.9.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.10.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1843,11 +1843,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="hub-line" id="shop-pity"></div>
       <button type="button" class="odds-toggle" id="odds-toggle">확률 보기</button>
       <div id="odds" hidden></div>
-      <div class="look"><canvas id="look-pic" width="104" height="46"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div></div>
-      <div id="wardrobe">
-        <div class="label">우비</div><div class="cos-grid" id="wardrobe-coat"></div>
-        <div class="label">깃발</div><div class="cos-grid" id="wardrobe-flag"></div>
-      </div>
+      <div class="look"><canvas id="look-pic" width="166" height="76"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div></div>
+      <div id="wardrobe"></div>
     </div>
     <div class="hub-pane" id="chal-panel">
       <div class="hub-line num" id="chal-count"></div>
@@ -1941,7 +1938,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.0";
 </script>
 <script>
 /*
@@ -1960,6 +1957,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.10.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '새로 그린 라라와 외형',
+      items: [
+        '라라를 새로 그렸어요. 전보다 크고, 얼굴과 옷깃, 파란 냉장 상자가 보여요.',
+        '외형이 늘었어요. 후드 모양(고양이 귀, 곰 귀, 토끼 귀, 뿔), 우비 무늬(줄무늬, 물방울, 위장, 별), 가방(낡은 배낭, 구급 상자, 곰 인형 가방)이 생겼어요.',
+        '전설 효과가 생겼어요. 야광, 반짝이 가루, 머리 위 별. 게임 화면에서 계속 움직여요.',
+        '외형은 자리마다 하나씩 골라 섞어 입어요.',
+        '뽑기 품목이 23가지가 됐어요. 확률은 상점의 "확률 보기"에 있어요.',
+        '깃발은 뽑기에서 빠졌어요. 도전 훈장, 원정 표시, 지역 휘장을 모으면 받아요. 이미 가진 깃발은 그대로예요.',
+        '옷장의 그림이 게임 화면의 라라와 같은 그림이에요.'
+      ] },
     { ver: '알파 1.9.2', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '옷장 미리 보기를 장면으로',
       items: [
         '옷장의 미리 보기가 거점 앞에 선 라라의 장면으로 바뀌었어요.',
@@ -3661,7 +3668,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
       tickets: 0,            // 뽑기권
       shards: 0,             // 중복으로 받은 조각
       cosmetics: {},         // 가진 외형 { id: true } (기본 외형은 적지 않는다)
-      wear: { coat: 'coat-yellow', flag: 'flag-yellow' },      // 입은 외형
+      wear: { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', flag: 'flag-yellow' },      // 입은 외형(자리마다 하나)
       gachaPity: 0,          // 전설이 나온 뒤로 뽑은 횟수(보장 계산)
       gachaPulls: 0,         // 지금까지 뽑은 횟수
       stage: null,           // 원정 스테이지로 만든 상태에만 있다 { id, hard, won, lost, seconds }
@@ -3761,8 +3768,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
     s.stageMarks = {}; STAGES.forEach(function (d) { var m = raw.stageMarks && typeof raw.stageMarks === 'object' ? raw.stageMarks[d.id] : null; if (m && typeof m === 'object' && (m.clear || m.speed || m.hard)) s.stageMarks[d.id] = { clear: !!m.clear, speed: !!m.speed, hard: !!m.hard, best: clamp(safeCount(m.best), 0, 1e6) }; });
     s.tickets = clamp(safeCount(raw.tickets), 0, 1e9); s.shards = clamp(safeCount(raw.shards), 0, 1e9); s.gachaPity = clamp(safeCount(raw.gachaPity), 0, GACHA_PITY - 1); s.gachaPulls = clamp(safeCount(raw.gachaPulls), 0, 1e9);
     s.cosmetics = {}; COSMETICS.forEach(function (c) { if (!c.base && raw.cosmetics && typeof raw.cosmetics === 'object' && raw.cosmetics[c.id]) s.cosmetics[c.id] = true; });
-    s.wear = { coat: 'coat-yellow', flag: 'flag-yellow' };
-    ['coat', 'flag'].forEach(function (slot) { var id = raw.wear && typeof raw.wear === 'object' ? raw.wear[slot] : '', c = typeof id === 'string' ? findById(COSMETICS, id) : null; if (c && c.slot === slot && (c.base || s.cosmetics[c.id])) s.wear[slot] = c.id; });
+    s.wear = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', flag: 'flag-yellow' };
+    COS_SLOTS.forEach(function (slot) { var id = raw.wear && typeof raw.wear === 'object' ? raw.wear[slot] : '', c = typeof id === 'string' ? findById(COSMETICS, id) : null; if (c && c.slot === slot && (c.base || s.cosmetics[c.id])) s.wear[slot] = c.id; });
+    grantFlags(s);      // 조건을 이미 채운 깃발(1.10.0 전의 저장)
     s.stage = null;      // 스테이지 판은 저장하지 않는다(저장되는 것은 언제나 본 게임이다)
     s.nextChallenge = typeof raw.nextChallenge === 'string' && findById(CHALLENGES, raw.nextChallenge) ? raw.nextChallenge : '';
     s.challenge = raw.challenge && typeof raw.challenge === 'object' && findById(CHALLENGES, raw.challenge.id) ? { id: raw.challenge.id, failed: !!raw.challenge.failed, done: !!raw.challenge.done } : null;
@@ -5674,15 +5682,51 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
     { id: 'coat-black',  slot: 'coat', name: '검은 우비',   rarity: 1, look: { y: '#3a3d45', j: '#2b2d33' } },
     { id: 'coat-night',  slot: 'coat', name: '밤하늘 우비', rarity: 2, look: { y: '#27336e', j: '#4a5fb8' } },
     { id: 'coat-neon',   slot: 'coat', name: '형광 우비',   rarity: 2, look: { y: '#c6ff4a', j: '#8fe01f' } },
+    // 1.10.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
+    { id: 'hood-none',   slot: 'hood', name: '기본 후드',   rarity: 0, base: true, look: 'none' },
+    { id: 'hood-cat',    slot: 'hood', name: '고양이 귀',   rarity: 1, look: 'cat' },
+    { id: 'hood-bear',   slot: 'hood', name: '곰 귀',       rarity: 1, look: 'bear' },
+    { id: 'hood-rabbit', slot: 'hood', name: '토끼 귀',     rarity: 1, look: 'rabbit' },
+    { id: 'hood-horn',   slot: 'hood', name: '뿔 후드',     rarity: 2, look: 'horn' },
+    { id: 'pat-none',    slot: 'pat',  name: '무늬 없음',   rarity: 0, base: true, look: 'none' },
+    { id: 'pat-stripe',  slot: 'pat',  name: '줄무늬',      rarity: 0, look: 'stripe' },
+    { id: 'pat-dot',     slot: 'pat',  name: '물방울',      rarity: 0, look: 'dot' },
+    { id: 'pat-camo',    slot: 'pat',  name: '위장 무늬',   rarity: 1, look: 'camo' },
+    { id: 'pat-star',    slot: 'pat',  name: '별 무늬',     rarity: 1, look: 'star' },
+    { id: 'bag-cooler',  slot: 'bag',  name: '냉장 상자',   rarity: 0, base: true, look: 'cooler' },
+    { id: 'bag-ruck',    slot: 'bag',  name: '낡은 배낭',   rarity: 0, look: 'ruck' },
+    { id: 'bag-medkit',  slot: 'bag',  name: '구급 상자',   rarity: 1, look: 'medkit' },
+    { id: 'bag-teddy',   slot: 'bag',  name: '곰 인형 가방', rarity: 1, look: 'teddy' },
+    { id: 'fx-none',     slot: 'fx',   name: '효과 없음',   rarity: 0, base: true, look: 'none' },
+    { id: 'fx-glow',     slot: 'fx',   name: '야광',        rarity: 2, look: 'glow' },
+    { id: 'fx-sparkle',  slot: 'fx',   name: '반짝이 가루', rarity: 2, look: 'sparkle' },
+    { id: 'fx-star',     slot: 'fx',   name: '머리 위 별',  rarity: 2, look: 'star' },
+    // 깃발은 뽑기에서 뺐다(1.10.0: 화면에서 작아서 뽑아도 기쁘지 않았다). 도전·원정의 확정 보상으로 준다(FLAG_REWARDS). 조각으로도 얻을 수 있다
     { id: 'flag-yellow', slot: 'flag', name: '노란 깃발',   rarity: 0, base: true, look: '#f0b400' },
-    { id: 'flag-red',    slot: 'flag', name: '빨간 깃발',   rarity: 0, look: '#c0392b' },
-    { id: 'flag-blue',   slot: 'flag', name: '파란 깃발',   rarity: 0, look: '#3f7fb5' },
-    { id: 'flag-green',  slot: 'flag', name: '초록 깃발',   rarity: 0, look: '#4f9a4a' },
-    { id: 'flag-white',  slot: 'flag', name: '하얀 깃발',   rarity: 1, look: '#e6e5db' },
-    { id: 'flag-black',  slot: 'flag', name: '검은 깃발',   rarity: 1, look: '#2b2d33' },
-    { id: 'flag-pink',   slot: 'flag', name: '분홍 깃발',   rarity: 2, look: '#ff7fb0' }
+    { id: 'flag-red',    slot: 'flag', name: '빨간 깃발',   rarity: 0, reward: true, look: '#c0392b' },
+    { id: 'flag-blue',   slot: 'flag', name: '파란 깃발',   rarity: 0, reward: true, look: '#3f7fb5' },
+    { id: 'flag-green',  slot: 'flag', name: '초록 깃발',   rarity: 0, reward: true, look: '#4f9a4a' },
+    { id: 'flag-white',  slot: 'flag', name: '하얀 깃발',   rarity: 1, reward: true, look: '#e6e5db' },
+    { id: 'flag-black',  slot: 'flag', name: '검은 깃발',   rarity: 1, reward: true, look: '#2b2d33' },
+    { id: 'flag-pink',   slot: 'flag', name: '분홍 깃발',   rarity: 2, reward: true, look: '#ff7fb0' }
   ];
-  function gachaPool() { return COSMETICS.filter(function (c) { return !c.base; }); }
+  var COS_SLOTS = ['coat', 'hood', 'pat', 'bag', 'fx', 'flag'], COS_BASE = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', flag: 'flag-yellow' };
+  /* 깃발을 주는 조건(확정 보상): 도전 훈장의 수, 원정 표시의 수, 지역 휘장 */
+  var FLAG_REWARDS = [
+    { id: 'flag-red',   text: '도전 훈장 1개', has: function (s) { return medalCount(s) >= 1; } },
+    { id: 'flag-blue',  text: '도전 훈장 3개', has: function (s) { return medalCount(s) >= 3; } },
+    { id: 'flag-green', text: '원정 표시 6개', has: function (s) { return stageMarkCount(s).have >= 6; } },
+    { id: 'flag-white', text: '도전 훈장 6개', has: function (s) { return medalCount(s) >= 6; } },
+    { id: 'flag-black', text: '지역 휘장 1개', has: function (s) { return badgeCount(s) >= 1; } },
+    { id: 'flag-pink',  text: '도전 훈장 8개', has: function (s) { return medalCount(s) >= 8; } }
+  ];
+  /** 조건을 채운 깃발을 준다. 새로 받은 것의 이름들을 돌려준다. */
+  function grantFlags(state) {
+    var got = [];
+    FLAG_REWARDS.forEach(function (f) { if (!state.cosmetics[f.id] && f.has(state)) { state.cosmetics[f.id] = true; got.push(findById(COSMETICS, f.id).name); } });
+    return got;
+  }
+  function gachaPool() { return COSMETICS.filter(function (c) { return !c.base && !c.reward; }); }      // 기본 외형과 확정 보상(깃발)은 뽑기에 없다
   /** 화면에 적는 확률표 [{ id, name, slot, rarity, pct }]. pct 는 백분율(합계 100). 추첨도 이 표를 쓴다. */
   function gachaTable() {
     var pool = gachaPool(), count = [0, 0, 0];
@@ -5732,8 +5776,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
   }
   /** 지금 입은 외형의 색 { coat: { y, j }, flag: '#…' }. 잘못된 값이면 기본. */
   function cosmeticLook(state) {
-    function of(slot, base) { var id = state.wear && state.wear[slot], c = id && ownsCosmetic(state, id) ? findById(COSMETICS, id) : null; return (c && c.slot === slot ? c : findById(COSMETICS, base)).look; }
-    return { coat: of('coat', 'coat-yellow'), flag: of('flag', 'flag-yellow') };
+    var out = {};
+    COS_SLOTS.forEach(function (slot) { var id = state.wear && state.wear[slot], c = id && ownsCosmetic(state, id) ? findById(COSMETICS, id) : null; out[slot] = (c && c.slot === slot ? c : findById(COSMETICS, COS_BASE[slot])).look; });
+    return out;
   }
 
   /*
@@ -5831,7 +5876,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
     if (!(m.best > 0) || stt.seconds < m.best) m.best = stt.seconds;
     main.treats = Math.min(1e9, (main.treats || 0) + treats);
     var tickets = addTickets(main, got.length);
-    return { ok: true, won: true, got: got, treats: treats, tickets: tickets, badge: badge, seconds: stt.seconds };
+    var flags = grantFlags(main);
+    return { ok: true, won: true, got: got, treats: treats, tickets: tickets, flags: flags, badge: badge, seconds: stt.seconds };
   }
   /** 얻은 표시의 수와 전체 수(지역 하나 또는 전부). */
   function stageMarkCount(main, region) {
@@ -5904,8 +5950,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
     state.challenge.done = true;
     state.medals[def.id] = Math.min(1e6, (state.medals[def.id] || 0) + 1);
     state.treats = Math.min(1e9, state.treats + treats);
-    var tk = addTickets(state, first ? 3 : 1);
-    events.push({ type: 'challenge-done', id: def.id, name: def.name, first: first, treats: treats, tickets: tk, medals: medalCount(state) });
+    var tk = addTickets(state, first ? 3 : 1), flags = grantFlags(state);
+    events.push({ type: 'challenge-done', id: def.id, name: def.name, first: first, treats: treats, tickets: tk, flags: flags, medals: medalCount(state) });
   }
   function retreat(state, now, rng) {
     if (!canRetreat(state)) return fail('not-ready');
@@ -6445,7 +6491,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, COSMETICS: COSMETICS, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,
@@ -7087,9 +7133,87 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
    * 옷장에 쓰는 그림(1.9.1): 라라를 주어진 우비 색으로 그린다. 가로 8칸, 세로 11칸.
    *   look = { y 모자 색, j 몸 색 }. scale 은 한 칸의 크기(화면 픽셀).
    */
-  function drawHero(ctx, x, y, scale, look) {
+  /*
+   * 라라(1.10.0): 가로 14칸, 세로 18칸. 전에는 8×11칸이라 얼굴도 가방도 없었다.
+   *   위 세 줄은 후드의 귀·뿔 자리, 왼쪽 네 칸은 옆구리의 가방 자리다. 몸은 그 사이에 선다.
+   *   글자 뜻: y 후드, Y 후드 그늘, j 우비, J 우비 그늘, s 살, e 눈, m 입, h 머리카락, k 가방끈, w 옷깃·단추·뿔, i 귀 안쪽, p 바지, b 장화, c 가방, C 가방의 밝은 곳
+   *   겹: 후드 모양(LARA_HOODS)이 위 세 줄을, 가방(LARA_BAGS)이 왼쪽 네 칸을 갈아 끼운다. 무늬(laraPattern)는 우비 칸(j)을 골라 다른 색으로 칠한다.
+   *   look = { coat: { y, j }, hood, pat, bag, fx } — 코어의 cosmeticLook 이 준다. 없는 값은 기본으로 그린다.
+   */
+  var LARA_W = 14, LARA_H = 18;
+  var LARA_BODY = ['..............', '..............', '..............',
+    '.....yyyyy....', '....yyyyyyy...', '....yhhhhhyY..', '...yysssssyY..', '...yysesesyY..', '....yssmssyY..',
+    '.....jwwwjJ...', '....kjjjjjjJ..', '....kjwjjjJj..', '....jkjjjjJs..', '....jjjjjjJ...', '....JJJJJJJ...'];
+  var LARA_LEGS = [['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'], ['......ppp.....', '.....pp.pp....', '...bbb...bbb..']];
+  var LARA_HOODS = {
+    none:   {},
+    cat:    { 1: '....y.....y...', 2: '....yi...iy...' },
+    bear:   { 1: '....yy...yy...', 2: '....yy...yy...' },
+    rabbit: { 0: '.....y...y....', 1: '.....i...i....', 2: '.....y...y....' },
+    horn:   { 1: '...w.......w..', 2: '....w.....w...' }
+  };
+  /* 가방: 줄 번호 → 왼쪽 네 칸. 색은 c(몸), C(밝은 곳), e(눈) */
+  var LARA_BAGS = {
+    cooler: { c: '#3f7fb5', C: '#a6d4ff', rows: { 11: 'CCCC', 12: 'cccc', 13: 'cCcc', 14: 'cccc' } },      // 파란 냉장 상자(기본)
+    medkit: { c: '#c0392b', C: '#f1f0e6', rows: { 11: 'cccc', 12: 'cCCc', 13: 'cCCc', 14: 'cccc' } },      // 구급 상자
+    ruck:   { c: '#6b6f45', C: '#9a9f68', rows: { 11: '.cc.', 12: 'cccc', 13: 'cCCc', 14: 'cccc' } },      // 낡은 배낭
+    teddy:  { c: '#a8733f', C: '#e0b98a', rows: { 10: 'c..c', 11: 'cccc', 12: 'cecc', 13: 'cCCc', 14: 'cccc' } }      // 곰 인형 가방(귀와 눈)
+  };
+  /** 무늬: 우비 칸 (x, y) 를 무늬 색으로 칠할지. */
+  function laraPattern(pat, x, y) {
+    if (pat === 'stripe') return y % 2 === 0;
+    if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
+    if (pat === 'star') return (x === 6 && y === 10) || (x === 9 && y === 12) || (x === 7 && y === 13) || (x === 5 && y === 12);
+    if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
+    return false;
+  }
+  function darker(hex, k) { return lerpColor(hex, '#000000', 1 - k); }
+  /** 자세(pose 'stand' | 'walk' | 'search')와 걸음(step 0·1)에 맞는 줄들. */
+  function laraRows(look, pose, step) {
+    var rows = LARA_BODY.slice(), hood = LARA_HOODS[look && look.hood] || LARA_HOODS.none, bag = LARA_BAGS[look && look.bag] || LARA_BAGS.cooler, k;
+    for (k in hood) if (Object.prototype.hasOwnProperty.call(hood, k)) rows[k] = hood[k];
+    for (k in bag.rows) if (Object.prototype.hasOwnProperty.call(bag.rows, k)) rows[k] = bag.rows[k] + rows[k].slice(4);
+    if (pose === 'search') return ['..............', '..............'].concat(rows).concat(['....bbb.bbb...']);      // 웅크린다: 몸을 두 칸 내리고 다리를 접는다
+    return rows.concat(LARA_LEGS[pose === 'walk' && step ? 1 : 0]);
+  }
+  /** 라라를 그린다. flip 이면 왼쪽을 본다. scale 은 한 칸의 크기. */
+  function paintLara(ctx, x, y, scale, flip, look, pose, step) {
     if (!ctx) return false;
-    sprite(ctx, HERO_TOP.concat(HERO_LEGS[0]), x, y, false, scale || 1, look);
+    scale = scale || 1; look = look || {};
+    var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
+    var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#e2b48c', e: '#2b241c', m: '#c98a6a', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#30343c', b: '#17180f', c: bag.c, C: bag.C };
+    var rows = laraRows(look, pose, step);
+    for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
+      var ch = rows[r][c];
+      if (ch === '.') continue;
+      var col = pal[ch];
+      if (pat && pat !== 'none' && (ch === 'j' || (pat === 'camo' && ch === 'y')) && laraPattern(pat, c, r)) col = patCol;
+      ctx.fillStyle = col;
+      ctx.fillRect(Math.round(x + (flip ? LARA_W - 1 - c : c) * scale), Math.round(y + r * scale), scale, scale);
+    }
+    return true;
+  }
+  /**
+   * 전설 효과(look.fx)를 라라 둘레에 그린다. t 는 흐른 시간(초).
+   *   glow 둘레가 은은하게 깜박인다 · sparkle 뒤로 반짝이 가루가 떨어진다 · star 머리 위에 작은 별이 떠 있다
+   */
+  function paintLaraFx(ctx, x, y, scale, flip, look, t) {
+    var fx = look && look.fx; if (!ctx || !fx || fx === 'none') return;
+    scale = scale || 1; t = t || 0;
+    function px(col, cx, cy, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? LARA_W - cx - (w || 1) : cx) * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
+    if (fx === 'glow') {
+      var a = 0.28 + 0.2 * Math.sin(t * 3), col = 'rgba(198, 255, 74, ' + a.toFixed(2) + ')';
+      px(col, 3, 3, 9, 1); px(col, 2, 4, 1, 11); px(col, 12, 4, 1, 11); px(col, 3, 15, 9, 1); px('rgba(198, 255, 74, ' + (a * 0.5).toFixed(2) + ')', 1, 6, 1, 7); px('rgba(198, 255, 74, ' + (a * 0.5).toFixed(2) + ')', 13, 6, 1, 7);
+    }
+    if (fx === 'sparkle') for (var k = 0; k < 4; k++) { var ph = (t * 1.6 + k * 0.25) % 1; px(k % 2 ? '#ffffff' : '#ffe9a0', 1 - (k % 2), 6 + Math.floor(ph * 11), 1, 1); if (ph < 0.5) px('rgba(255, 233, 160, .5)', 3 - k % 3, 5 + Math.floor(ph * 9), 1, 1); }
+    if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
+  }
+  /** 옷장의 그림: 그 자리에 서 있는 라라를 그린다(scene 밖에서 쓴다). */
+  function drawHero(ctx, x, y, scale, look, step, t) {
+    if (!ctx) return false;
+    paintLara(ctx, x, y, scale || 1, false, look, step === undefined ? 'stand' : 'walk', step);
+    paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0);
     return true;
   }
   /** 같은 구역이면 언제나 같은 배경이 나오도록 하는 작은 난수기. */
@@ -7631,8 +7755,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
   /** 주인공이 산 수색 장비: 배낭은 등에, 수색견은 뒤를 따르고, 정찰 드론은 머리 위를 맴돈다. */
   function drawHeroKit(ctx, model, view, hx) {
     var u = view.upgrades || {}, h = model.hero, t = model.time, back = h.face < 0 ? 6 : 0;
-    if (u.backpack) { ctx.fillStyle = '#5d6b4a'; ctx.fillRect(hx + back, GROUND - 7, 2, 4); }
-    if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 7, GROUND - 5 - Math.floor(t * 6) % 2, 1, 4); }
+    if (u.backpack && h.state !== 'search') { ctx.fillStyle = '#5d6b4a'; ctx.fillRect(hx - 4 + (h.face < 0 ? 10 : 0), GROUND - 8, 4, 1); ctx.fillStyle = '#3f4a33'; ctx.fillRect(hx - 4 + (h.face < 0 ? 10 : 0), GROUND - 8, 1, 1); }      // 배낭 개조: 가방 위에 얹은 침낭
+    if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 9, GROUND - 6 - Math.floor(t * 6) % 2, 1, 5); }
     var pet = view.pet;
     if (pet) {
       // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다. 몸 색과 무늬 색은 품종마다 다르다.
@@ -7847,13 +7971,15 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
     drawShots(ctx, model);
     drawPeople(ctx, model, view, sky);
     // 주인공
-    var hx = Math.round(h.x) - 4;
-    if (h.state === 'search') sprite(ctx, HERO_SEARCH, hx, GROUND - 11 + (Math.floor(t * 6) % 2), false, 1, view.coat);      // view.coat: 입은 우비의 색(1.9.0)
+    // hx: 옛 그림(8칸) 기준의 왼쪽 끝. 곁들이는 것들(동물 친구, 지렛대)은 이 값을 그대로 쓴다. 라라(14칸)는 lx 에서 그린다
+    var hx = Math.round(h.x) - 4, lx = Math.round(h.x) - 8, ly = GROUND - LARA_H, look = view.look || (view.coat ? { coat: view.coat } : null), lflip = h.face < 0;
+    if (h.state === 'search') paintLara(ctx, lx, ly + (Math.floor(t * 6) % 2), 1, false, look, 'search', 0);
     else {
       var walking = h.state === 'out' || h.state === 'back';
-      sprite(ctx, HERO_TOP.concat(HERO_LEGS[walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0]), hx, GROUND - 11, h.face < 0, 1, view.coat);
+      paintLara(ctx, lx, ly, 1, lflip, look, walking ? 'walk' : 'stand', walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0);
     }
-    if (h.carrying) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(hx + 2, GROUND - 16, 5, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(hx + 2, GROUND - 15, 5, 1); }
+    paintLaraFx(ctx, lx, ly + (h.state === 'search' ? 2 : 0), 1, lflip && h.state !== 'search', look, t);
+    if (h.carrying) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(lx + 5, ly - 2, 6, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(lx + 5, ly - 1, 6, 1); }      // 든 상자: 머리 위
     drawHeroKit(ctx, model, view, hx);
     // 거점에 쌓인 상자(최근에 나른 만큼, 최대 6개). 건물이 서면 상자는 건물 1층 창고에 쌓인다(drawBaseBuilding)
     for (i = 0; i < Math.min(6, model.delivered) && baseStage(Math.max(totalFacilities(view), view.zoneBuilding > 0 ? 1 : 0)) < 1; i++) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(30 + (i % 3) * 5, GROUND - 4 - Math.floor(i / 3) * 4, 4, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(30 + (i % 3) * 5, GROUND - 3 - Math.floor(i / 3) * 4, 4, 1); }
@@ -7906,7 +8032,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
-           drawHero: drawHero, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
+           drawHero: drawHero, paintLara: paintLara, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });
 
@@ -9533,7 +9659,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
    *   뽑기   : 뽑기권 한 장에 외형 하나. 확률은 "확률 보기"에 등급별·품목별로 모두 적는다(코어의 gachaTable 그대로). 전설 보장까지 남은 횟수도 적는다.
    *   옷장   : 가진 것은 눌러서 입는다. 없는 것은 조각이 모이면 눌러서 얻는다.
    */
-  var oddsOpen = false, SLOT_NAME = { coat: '우비', flag: '깃발' };
+  var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', flag: '깃발 · 도전과 원정의 보상' };
   function renderShop() {
     if (home) return;
     var shopBtn = document.querySelector('[data-hub="shop"]'); shopBtn.disabled = false; setText(shopBtn, '상점');
@@ -9556,14 +9682,17 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
     }
     if (!rows.shop) {
       rows.shop = {};
-      C.COSMETICS.forEach(function (c) {
-        var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub');
-        b.type = 'button'; cv.className = 'cos-pic'; cv.width = 24; cv.height = 26;
-        drawLook(cv, c.slot === 'coat' ? c.look : null, c.slot === 'flag' ? c.look : null, 2);
-        b.appendChild(cv); b.appendChild(name); b.appendChild(sub);
-        b.addEventListener('click', function () { clickCosmetic(c); });
-        rows.shop[c.id] = { btn: b, sub: sub };
-        $('wardrobe-' + c.slot).appendChild(b);
+      C.COS_SLOTS.forEach(function (slot) {
+        $('wardrobe').appendChild(el('div', 'label', SLOT_NAME[slot]));
+        var grid = el('div', 'cos-grid'); $('wardrobe').appendChild(grid);
+        C.COSMETICS.filter(function (c) { return c.slot === slot; }).forEach(function (c) {
+          var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub');
+          b.type = 'button'; cv.className = 'cos-pic'; cv.width = 28; cv.height = 40;
+          b.appendChild(cv); b.appendChild(name); b.appendChild(sub);
+          b.addEventListener('click', function () { clickCosmetic(c); });
+          rows.shop[c.id] = { btn: b, sub: sub, cv: cv, def: c };
+          grid.appendChild(b);
+        });
       });
       $('look-act').addEventListener('click', function () {
         var c = C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0];
@@ -9574,69 +9703,67 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
         });
       });
     }
+    var worn = C.cosmeticLook(state);
     C.COSMETICS.forEach(function (c) {
       var r = rows.shop[c.id], own = C.ownsCosmetic(state, c.id), on = state.wear[c.slot] === c.id, cost = C.SHARDS_COST[c.rarity];
       r.btn.className = 'cos r' + c.rarity + (own ? ' own' : ' not') + (on ? ' on' : '') + (lookPick === c.id ? ' pick' : '');
-      setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity]) : C.RARITIES[c.rarity] + ' · 조각 ' + cost);
+      var how = c.reward ? (C.FLAG_REWARDS.filter(function (f) { return f.id === c.id; })[0] || { text: '' }).text : C.RARITIES[c.rarity] + ' · 조각 ' + cost;
+      setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity]) : how);
+      // 작은 그림: 지금 입은 모습에 이 외형 하나만 바꿔 입힌 라라(깃발은 깃대)
+      var key = JSON.stringify(worn) + c.id;
+      if (r.key !== key) { r.key = key; drawThumb(r.cv, c, worn); }
     });
     // 미리 보기: 지금 입은 모습. 아직 없는 외형을 눌렀으면 그것을 입혀서 보여 준다
-    var pc = lookPick ? C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0] : null, worn = C.cosmeticLook(state);
+    var pc = lookPick ? C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0] : null;
     if (pc && C.ownsCosmetic(state, pc.id)) { pc = null; lookPick = ''; }
-    lookNow = { coat: pc && pc.slot === 'coat' ? pc.look : worn.coat, flag: pc && pc.slot === 'flag' ? pc.look : worn.flag };
-    drawLookScene($('look-pic'), lookNow.coat, lookNow.flag, lookFrame);
+    lookNow = lookWith(worn, pc);
+    drawLookScene($('look-pic'), lookNow, lookFrame);
     if (!lookTimer) lookTimer = setInterval(function () {      // 미리 보기의 라라는 제자리걸음을 하고 깃발은 펄럭인다(상점을 보고 있을 때만 그린다)
       if ($('hub').hidden || hubTab !== 'shop' || !lookNow) return;
-      lookFrame = (lookFrame + 1) % 4; drawLookScene($('look-pic'), lookNow.coat, lookNow.flag, lookFrame);
-    }, 260);
-    var wornCoat = C.COSMETICS.filter(function (x) { return x.id === state.wear.coat; })[0], wornFlag = C.COSMETICS.filter(function (x) { return x.id === state.wear.flag; })[0];
-    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : wornCoat.name + ' · ' + wornFlag.name);
+      lookFrame = (lookFrame + 1) % 240; drawLookScene($('look-pic'), lookNow, lookFrame);
+    }, 130);
+    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '지금 입은 모습');
     $('look-act').hidden = !pc;
-    if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
+    if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
   }
   /*
-   * 외형 그림(1.9.1): 캔버스에 라라(우비 색)와 깃발(깃발 색)을 그린다. 색 조각 대신 실제 모습을 보여 준다.
-   *   coat 만 주면 라라만, flag 만 주면 깃대만, both 면 둘을 나란히(미리 보기).
+   * 외형 그림(1.10.0): 게임 화면과 같은 라라(Scene.drawHero)를 그대로 쓴다. 옷장에서 본 모습과 게임 속 모습이 같다.
+   *   lookWith  : 입은 모습에 외형 하나를 바꿔 입힌 모습
+   *   drawThumb : 목록의 작은 그림(2배). 깃발은 깃대와 깃발만.
+   *   drawLookScene : 위쪽의 큰 미리 보기. 거점 앞에 선 라라(3배)가 제자리걸음을 하고, 옥상의 깃발이 펄럭인다.
    */
   var lookPick = '', lookNow = null, lookFrame = 0, lookTimer = 0;
-  /*
-   * 옷장의 큰 미리 보기(1.9.2): 거점 앞에 선 라라를 한 장면으로 그린다. 입었을 때 게임에서 어떻게 보이는지가 한눈에 들어오게.
-   *   라라는 옷장 전용의 큰 그림(가로 16칸, 세로 20칸)이다: 모자, 얼굴, 옷깃, 가방끈, 단추, 장화까지 보인다.
-   *   글자 뜻: y 모자, Y 모자 그늘, j 우비, J 우비 그늘(색은 우비 색에서 어둡게 뽑는다), s 살, e 눈, m 입, h 머리카락, k 가방끈, w 옷깃·단추, p 바지, b 장화
-   */
-  var BIG_LARA = ['......yyyyy.....', '....yyyyyyyy....', '...yyyyyyyyyy...', '...yyhhhhhyyY...', '..yyhssssshyY...', '..yyssessesyY...', '..yysssssssyY...', '...yyssmssyyY...',
-                  '....jjwwwjjJ....', '...kjjjjjjjjJ...', '..jkjjjwjjjjJj..', '..jjkjjjjjjjJj..', '..sjjkjjwjjjJs..', '...jjjjjjjjjJ...', '...jjjjjjjjjJ...', '...JJJJJJJJJJ...'];
-  var BIG_LEGS = [['....ppp..ppp....', '....ppp..ppp....', '....bbb..bbb....', '...bbbb..bbbb...'], ['....ppp..ppp....', '....ppp..bbb....', '....bbb.bbbb....', '...bbbb.........']];
+  function lookWith(worn, c) { var o = {}; for (var k in worn) if (Object.prototype.hasOwnProperty.call(worn, k)) o[k] = worn[k]; if (c) o[c.slot] = c.look; return o; }
   function shade(hex, k) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; function c(v) { return Math.max(0, Math.min(255, Math.round(v * k))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
-  function drawLookScene(cv, coat, flag, frame) {
-    var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
-    var W = cv.width, H = cv.height, G = H - 5;      // G: 땅의 높이
-    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
-    // 하늘과 먼 건물
-    r('#a9c4c2', 0, 0, W, 14); r('#c4cfb8', 0, 14, W, 10); r('#d8d0a8', 0, 24, W, G - 24);
-    [[58, 12, 9], [70, 7, 7], [80, 15, 10], [93, 10, 8]].forEach(function (b) { r('#8fa5a2', b[0], G - 30 + b[1], b[2], 30 - b[1]); r('#7d9491', b[0] + 1, G - 28 + b[1], 2, 2); });
-    // 땅과 길
-    r('#6f6a55', 0, G, W, H - G); r('#5d5947', 0, G, W, 1); for (var d = 4; d < W; d += 12) r('#8f8a70', d, G + 3, 5, 1);
-    // 거점: 콘크리트 본관, 창, 옥상 난간, 깃대와 깃발
-    r('#8f8a78', 4, G - 22, 32, 22); r('#7a7566', 4, G - 22, 32, 2); r('#6b6759', 34, G - 22, 2, 22);
-    for (var wx = 0; wx < 3; wx++) { r(wx === 1 ? '#ffe9a0' : '#3f4a50', 8 + wx * 9, G - 17, 5, 5); r('#3f4a50', 8 + wx * 9, G - 9, 5, 4); }
-    r('#4a4035', 17, G - 7, 6, 7); for (var rl = 0; rl < 8; rl++) r('#3c3a34', 4 + rl * 4, G - 25, 1, 3); r('#3c3a34', 4, G - 25, 32, 1);
-    r('#cfcebf', 9, G - 38, 1, 16);
-    var wave = frame % 2; r(flag, 10, G - 38 + wave, 7, 4); r(shade(flag, 0.7), 10, G - 35 + wave, 7, 1); r(flag, 17, G - 37 - wave + 1, 1, 3);
-    // 모래주머니
-    r('#a39a78', 86, G - 4, 7, 4); r('#8f8767', 93, G - 4, 7, 4); r('#a39a78', 90, G - 8, 7, 4);
-    // 라라: 제자리걸음(다리 두 장 + 한 칸 들썩임)
-    var step = frame % 2, rows = BIG_LARA.concat(BIG_LEGS[step]), lx = 50, ly = G - rows.length + (step ? -1 : 0);
-    var pal = { y: coat.y, Y: shade(coat.y, 0.72), j: coat.j, J: shade(coat.j, 0.72), s: '#e2b48c', e: '#2b241c', m: '#c98a6a', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', p: '#30343c', b: '#17180f' };
-    r('rgba(0,0,0,.25)', lx + 3, G, 10, 1);
-    for (var yy = 0; yy < rows.length; yy++) for (var xx = 0; xx < 16; xx++) { var ch = rows[yy][xx]; if (ch !== '.') r(pal[ch], lx + xx, ly + yy, 1, 1); }
-  }
-  function drawLook(cv, coat, flag, k, both) {
+  function drawThumb(cv, c, worn) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
-    function flagAt(x, y) { ctx.fillStyle = '#cfcebf'; ctx.fillRect(x, y, k, k * 11); ctx.fillStyle = flag; ctx.fillRect(x + k, y, k * 5, k * 4); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x + k, y + k * 3, k * 5, k); }
-    if (both) { if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, k * 2, k, k, coat); flagAt(k * 13, k); return; }
-    if (coat && window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, Math.floor((cv.width - 8 * k) / 2), Math.floor((cv.height - 11 * k) / 2), k, coat);
-    if (flag && !coat) flagAt(Math.floor((cv.width - 6 * k) / 2), Math.floor((cv.height - 11 * k) / 2));
+    if (c.slot === 'flag') { ctx.fillStyle = '#cfcebf'; ctx.fillRect(8, 6, 2, 30); ctx.fillStyle = c.look; ctx.fillRect(10, 6, 14, 10); ctx.fillStyle = shade(c.look, 0.7); ctx.fillRect(10, 14, 14, 2); return; }
+    var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
+    if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
+    if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 1.2);
+  }
+  function drawLookScene(cv, look, frame) {
+    var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
+    var W = cv.width, H = cv.height, G = H - 6, flag = look.flag || '#f0b400', t = frame * 0.13;
+    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+    // 하늘과 먼 건물
+    r('#a9c4c2', 0, 0, W, 20); r('#c4cfb8', 0, 20, W, 16); r('#d8d0a8', 0, 36, W, G - 36);
+    [[92, 14, 14], [110, 6, 11], [126, 20, 16], [146, 12, 12]].forEach(function (b) { r('#8fa5a2', b[0], G - 46 + b[1], b[2], 46 - b[1]); r('#7d9491', b[0] + 2, G - 42 + b[1], 3, 3); });
+    // 땅과 길
+    r('#6f6a55', 0, G, W, H - G); r('#5d5947', 0, G, W, 1); for (var d = 6; d < W; d += 18) r('#8f8a70', d, G + 3, 8, 1);
+    // 거점: 콘크리트 본관, 창, 옥상 난간, 깃대와 깃발
+    r('#8f8a78', 6, G - 34, 48, 34); r('#7a7566', 6, G - 34, 48, 3); r('#6b6759', 51, G - 34, 3, 34);
+    for (var wx = 0; wx < 3; wx++) { r(wx === 1 ? '#ffe9a0' : '#3f4a50', 12 + wx * 13, G - 27, 8, 7); r('#3f4a50', 12 + wx * 13, G - 15, 8, 6); }
+    r('#4a4035', 26, G - 11, 9, 11); for (var rl = 0; rl < 9; rl++) r('#3c3a34', 6 + rl * 6, G - 38, 1, 4); r('#3c3a34', 6, G - 38, 48, 1);
+    r('#cfcebf', 14, G - 58, 2, 24);
+    var wave = Math.floor(t * 3) % 2; r(flag, 16, G - 58 + wave, 11, 6); r(shade(flag, 0.7), 16, G - 53 + wave, 11, 1); r(flag, 27, G - 57 + (1 - wave), 2, 4);
+    // 모래주머니
+    r('#a39a78', 130, G - 6, 11, 6); r('#8f8767', 141, G - 6, 11, 6); r('#a39a78', 136, G - 12, 11, 6);
+    // 라라: 3배 크기로, 제자리걸음
+    var step = Math.floor(t * 4) % 2, S = window.Scene;
+    r('rgba(0,0,0,.25)', 78, G, 30, 2);
+    if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t);
   }
   function clickCosmetic(c) {
     if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); renderShop(); } return; }
@@ -9680,6 +9807,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
       log('원정 〈' + def.name + '〉 클리어. ' + clock(res.seconds) + '.' + (gotText ? ' 새 표시: ' + gotText + '. 간식 ' + res.treats + '개.' : '') + (res.badge ? ' 지역 휘장을 받았다.' : ''), 'good');
       toast('원정 클리어 · ' + def.name + (gotText ? ' · ' + gotText : '') + (res.treats ? ' · 간식 +' + res.treats : '')); sfx('goal');
       if (res.tickets) log('뽑기권 ' + res.tickets + '장을 받았다.', 'good');
+      if (res.flags && res.flags.length) { log(res.flags.join(', ') + (C.hasBatchim(res.flags[res.flags.length - 1]) ? '을' : '를') + ' 받았다. 옷장에서 달 수 있다.', 'good'); toast('새 깃발 · ' + res.flags.join(', ')); }
       if (fxShow) fxShow('클리어', def.name + (res.badge ? ' · 지역 휘장' : gotText ? ' · ' + gotText : ''), 1, -1, -1);
     } else {
       log('원정 〈' + def.name + '〉' + (giveUp ? '에서 돌아왔다.' : ' 실패. 시간이 다 됐다.'), giveUp ? '' : 'bad');
@@ -10896,7 +11024,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
     var b = { scouts: state.buildings.scouts, garden: state.buildings.garden, purifier: state.buildings.purifier, workshop: state.buildings.workshop,
       port: state.stalls, district: state.zone >= 1 ? state.stalls : 0 };   // 좌판은 하역장·자치구 방으로 보인다
     var wearNow = C.cosmeticLook(mainState());      // 외형은 본 게임의 것을 쓴다(원정 중에도 같은 옷)
-    return { coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
+    return { look: wearNow, coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
       safe: C.defensePower(state) >= C.nightStrength(state), boss: C.isBossWave(C.currentWave(state)), def: state.defenses, buildings: b,
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker', special: C.nightSpecials(state, state.day),
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },
@@ -10943,6 +11071,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.9.2";
           log('도전 〈' + ev.name + '〉 성공. ' + (ev.first ? '훈장을 받았다. ' + (C.CHALLENGES.filter(function (d) { return d.id === ev.id; })[0] || { perk: { text: '' } }).perk.text + '. ' : '') + '간식 ' + ev.treats + '개.', 'good');
           toast('도전 성공 · ' + ev.name + (ev.first ? ' · 훈장' : '') + ' · 간식 +' + ev.treats); sfx('goal');
           if (fxShow) fxShow('도전 성공', ev.name + (ev.first ? ' · 훈장' : ''), 1, -1, -1);
+          if (ev.flags && ev.flags.length) log(ev.flags.join(', ') + (C.hasBatchim(ev.flags[ev.flags.length - 1]) ? '을' : '를') + ' 받았다. 옷장에서 달 수 있다.', 'good');
           break;
         case 'challenge-failed':
           log('도전 〈' + ev.name + '〉 실패. ' + (ev.why === 'time' ? '시간이 다 됐다.' : '조건을 지키지 못했다.') + ' 회차는 그대로 이어진다.', 'bad');

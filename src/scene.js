@@ -487,9 +487,87 @@
    * 옷장에 쓰는 그림(1.9.1): 라라를 주어진 우비 색으로 그린다. 가로 8칸, 세로 11칸.
    *   look = { y 모자 색, j 몸 색 }. scale 은 한 칸의 크기(화면 픽셀).
    */
-  function drawHero(ctx, x, y, scale, look) {
+  /*
+   * 라라(1.10.0): 가로 14칸, 세로 18칸. 전에는 8×11칸이라 얼굴도 가방도 없었다.
+   *   위 세 줄은 후드의 귀·뿔 자리, 왼쪽 네 칸은 옆구리의 가방 자리다. 몸은 그 사이에 선다.
+   *   글자 뜻: y 후드, Y 후드 그늘, j 우비, J 우비 그늘, s 살, e 눈, m 입, h 머리카락, k 가방끈, w 옷깃·단추·뿔, i 귀 안쪽, p 바지, b 장화, c 가방, C 가방의 밝은 곳
+   *   겹: 후드 모양(LARA_HOODS)이 위 세 줄을, 가방(LARA_BAGS)이 왼쪽 네 칸을 갈아 끼운다. 무늬(laraPattern)는 우비 칸(j)을 골라 다른 색으로 칠한다.
+   *   look = { coat: { y, j }, hood, pat, bag, fx } — 코어의 cosmeticLook 이 준다. 없는 값은 기본으로 그린다.
+   */
+  var LARA_W = 14, LARA_H = 18;
+  var LARA_BODY = ['..............', '..............', '..............',
+    '.....yyyyy....', '....yyyyyyy...', '....yhhhhhyY..', '...yysssssyY..', '...yysesesyY..', '....yssmssyY..',
+    '.....jwwwjJ...', '....kjjjjjjJ..', '....kjwjjjJj..', '....jkjjjjJs..', '....jjjjjjJ...', '....JJJJJJJ...'];
+  var LARA_LEGS = [['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'], ['......ppp.....', '.....pp.pp....', '...bbb...bbb..']];
+  var LARA_HOODS = {
+    none:   {},
+    cat:    { 1: '....y.....y...', 2: '....yi...iy...' },
+    bear:   { 1: '....yy...yy...', 2: '....yy...yy...' },
+    rabbit: { 0: '.....y...y....', 1: '.....i...i....', 2: '.....y...y....' },
+    horn:   { 1: '...w.......w..', 2: '....w.....w...' }
+  };
+  /* 가방: 줄 번호 → 왼쪽 네 칸. 색은 c(몸), C(밝은 곳), e(눈) */
+  var LARA_BAGS = {
+    cooler: { c: '#3f7fb5', C: '#a6d4ff', rows: { 11: 'CCCC', 12: 'cccc', 13: 'cCcc', 14: 'cccc' } },      // 파란 냉장 상자(기본)
+    medkit: { c: '#c0392b', C: '#f1f0e6', rows: { 11: 'cccc', 12: 'cCCc', 13: 'cCCc', 14: 'cccc' } },      // 구급 상자
+    ruck:   { c: '#6b6f45', C: '#9a9f68', rows: { 11: '.cc.', 12: 'cccc', 13: 'cCCc', 14: 'cccc' } },      // 낡은 배낭
+    teddy:  { c: '#a8733f', C: '#e0b98a', rows: { 10: 'c..c', 11: 'cccc', 12: 'cecc', 13: 'cCCc', 14: 'cccc' } }      // 곰 인형 가방(귀와 눈)
+  };
+  /** 무늬: 우비 칸 (x, y) 를 무늬 색으로 칠할지. */
+  function laraPattern(pat, x, y) {
+    if (pat === 'stripe') return y % 2 === 0;
+    if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
+    if (pat === 'star') return (x === 6 && y === 10) || (x === 9 && y === 12) || (x === 7 && y === 13) || (x === 5 && y === 12);
+    if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
+    return false;
+  }
+  function darker(hex, k) { return lerpColor(hex, '#000000', 1 - k); }
+  /** 자세(pose 'stand' | 'walk' | 'search')와 걸음(step 0·1)에 맞는 줄들. */
+  function laraRows(look, pose, step) {
+    var rows = LARA_BODY.slice(), hood = LARA_HOODS[look && look.hood] || LARA_HOODS.none, bag = LARA_BAGS[look && look.bag] || LARA_BAGS.cooler, k;
+    for (k in hood) if (Object.prototype.hasOwnProperty.call(hood, k)) rows[k] = hood[k];
+    for (k in bag.rows) if (Object.prototype.hasOwnProperty.call(bag.rows, k)) rows[k] = bag.rows[k] + rows[k].slice(4);
+    if (pose === 'search') return ['..............', '..............'].concat(rows).concat(['....bbb.bbb...']);      // 웅크린다: 몸을 두 칸 내리고 다리를 접는다
+    return rows.concat(LARA_LEGS[pose === 'walk' && step ? 1 : 0]);
+  }
+  /** 라라를 그린다. flip 이면 왼쪽을 본다. scale 은 한 칸의 크기. */
+  function paintLara(ctx, x, y, scale, flip, look, pose, step) {
     if (!ctx) return false;
-    sprite(ctx, HERO_TOP.concat(HERO_LEGS[0]), x, y, false, scale || 1, look);
+    scale = scale || 1; look = look || {};
+    var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
+    var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#e2b48c', e: '#2b241c', m: '#c98a6a', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#30343c', b: '#17180f', c: bag.c, C: bag.C };
+    var rows = laraRows(look, pose, step);
+    for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
+      var ch = rows[r][c];
+      if (ch === '.') continue;
+      var col = pal[ch];
+      if (pat && pat !== 'none' && (ch === 'j' || (pat === 'camo' && ch === 'y')) && laraPattern(pat, c, r)) col = patCol;
+      ctx.fillStyle = col;
+      ctx.fillRect(Math.round(x + (flip ? LARA_W - 1 - c : c) * scale), Math.round(y + r * scale), scale, scale);
+    }
+    return true;
+  }
+  /**
+   * 전설 효과(look.fx)를 라라 둘레에 그린다. t 는 흐른 시간(초).
+   *   glow 둘레가 은은하게 깜박인다 · sparkle 뒤로 반짝이 가루가 떨어진다 · star 머리 위에 작은 별이 떠 있다
+   */
+  function paintLaraFx(ctx, x, y, scale, flip, look, t) {
+    var fx = look && look.fx; if (!ctx || !fx || fx === 'none') return;
+    scale = scale || 1; t = t || 0;
+    function px(col, cx, cy, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? LARA_W - cx - (w || 1) : cx) * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
+    if (fx === 'glow') {
+      var a = 0.28 + 0.2 * Math.sin(t * 3), col = 'rgba(198, 255, 74, ' + a.toFixed(2) + ')';
+      px(col, 3, 3, 9, 1); px(col, 2, 4, 1, 11); px(col, 12, 4, 1, 11); px(col, 3, 15, 9, 1); px('rgba(198, 255, 74, ' + (a * 0.5).toFixed(2) + ')', 1, 6, 1, 7); px('rgba(198, 255, 74, ' + (a * 0.5).toFixed(2) + ')', 13, 6, 1, 7);
+    }
+    if (fx === 'sparkle') for (var k = 0; k < 4; k++) { var ph = (t * 1.6 + k * 0.25) % 1; px(k % 2 ? '#ffffff' : '#ffe9a0', 1 - (k % 2), 6 + Math.floor(ph * 11), 1, 1); if (ph < 0.5) px('rgba(255, 233, 160, .5)', 3 - k % 3, 5 + Math.floor(ph * 9), 1, 1); }
+    if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
+  }
+  /** 옷장의 그림: 그 자리에 서 있는 라라를 그린다(scene 밖에서 쓴다). */
+  function drawHero(ctx, x, y, scale, look, step, t) {
+    if (!ctx) return false;
+    paintLara(ctx, x, y, scale || 1, false, look, step === undefined ? 'stand' : 'walk', step);
+    paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0);
     return true;
   }
   /** 같은 구역이면 언제나 같은 배경이 나오도록 하는 작은 난수기. */
@@ -1031,8 +1109,8 @@
   /** 주인공이 산 수색 장비: 배낭은 등에, 수색견은 뒤를 따르고, 정찰 드론은 머리 위를 맴돈다. */
   function drawHeroKit(ctx, model, view, hx) {
     var u = view.upgrades || {}, h = model.hero, t = model.time, back = h.face < 0 ? 6 : 0;
-    if (u.backpack) { ctx.fillStyle = '#5d6b4a'; ctx.fillRect(hx + back, GROUND - 7, 2, 4); }
-    if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 7, GROUND - 5 - Math.floor(t * 6) % 2, 1, 4); }
+    if (u.backpack && h.state !== 'search') { ctx.fillStyle = '#5d6b4a'; ctx.fillRect(hx - 4 + (h.face < 0 ? 10 : 0), GROUND - 8, 4, 1); ctx.fillStyle = '#3f4a33'; ctx.fillRect(hx - 4 + (h.face < 0 ? 10 : 0), GROUND - 8, 1, 1); }      // 배낭 개조: 가방 위에 얹은 침낭
+    if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 9, GROUND - 6 - Math.floor(t * 6) % 2, 1, 5); }
     var pet = view.pet;
     if (pet) {
       // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다. 몸 색과 무늬 색은 품종마다 다르다.
@@ -1247,13 +1325,15 @@
     drawShots(ctx, model);
     drawPeople(ctx, model, view, sky);
     // 주인공
-    var hx = Math.round(h.x) - 4;
-    if (h.state === 'search') sprite(ctx, HERO_SEARCH, hx, GROUND - 11 + (Math.floor(t * 6) % 2), false, 1, view.coat);      // view.coat: 입은 우비의 색(1.9.0)
+    // hx: 옛 그림(8칸) 기준의 왼쪽 끝. 곁들이는 것들(동물 친구, 지렛대)은 이 값을 그대로 쓴다. 라라(14칸)는 lx 에서 그린다
+    var hx = Math.round(h.x) - 4, lx = Math.round(h.x) - 8, ly = GROUND - LARA_H, look = view.look || (view.coat ? { coat: view.coat } : null), lflip = h.face < 0;
+    if (h.state === 'search') paintLara(ctx, lx, ly + (Math.floor(t * 6) % 2), 1, false, look, 'search', 0);
     else {
       var walking = h.state === 'out' || h.state === 'back';
-      sprite(ctx, HERO_TOP.concat(HERO_LEGS[walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0]), hx, GROUND - 11, h.face < 0, 1, view.coat);
+      paintLara(ctx, lx, ly, 1, lflip, look, walking ? 'walk' : 'stand', walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0);
     }
-    if (h.carrying) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(hx + 2, GROUND - 16, 5, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(hx + 2, GROUND - 15, 5, 1); }
+    paintLaraFx(ctx, lx, ly + (h.state === 'search' ? 2 : 0), 1, lflip && h.state !== 'search', look, t);
+    if (h.carrying) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(lx + 5, ly - 2, 6, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(lx + 5, ly - 1, 6, 1); }      // 든 상자: 머리 위
     drawHeroKit(ctx, model, view, hx);
     // 거점에 쌓인 상자(최근에 나른 만큼, 최대 6개). 건물이 서면 상자는 건물 1층 창고에 쌓인다(drawBaseBuilding)
     for (i = 0; i < Math.min(6, model.delivered) && baseStage(Math.max(totalFacilities(view), view.zoneBuilding > 0 ? 1 : 0)) < 1; i++) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(30 + (i % 3) * 5, GROUND - 4 - Math.floor(i / 3) * 4, 4, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(30 + (i % 3) * 5, GROUND - 3 - Math.floor(i / 3) * 4, 4, 1); }
@@ -1306,6 +1386,6 @@
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
-           drawHero: drawHero, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
+           drawHero: drawHero, paintLara: paintLara, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });

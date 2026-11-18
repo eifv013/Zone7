@@ -1467,7 +1467,7 @@
    *   뽑기   : 뽑기권 한 장에 외형 하나. 확률은 "확률 보기"에 등급별·품목별로 모두 적는다(코어의 gachaTable 그대로). 전설 보장까지 남은 횟수도 적는다.
    *   옷장   : 가진 것은 눌러서 입는다. 없는 것은 조각이 모이면 눌러서 얻는다.
    */
-  var oddsOpen = false, SLOT_NAME = { coat: '우비', flag: '깃발' };
+  var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', flag: '깃발 · 도전과 원정의 보상' };
   function renderShop() {
     if (home) return;
     var shopBtn = document.querySelector('[data-hub="shop"]'); shopBtn.disabled = false; setText(shopBtn, '상점');
@@ -1490,14 +1490,17 @@
     }
     if (!rows.shop) {
       rows.shop = {};
-      C.COSMETICS.forEach(function (c) {
-        var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub');
-        b.type = 'button'; cv.className = 'cos-pic'; cv.width = 24; cv.height = 26;
-        drawLook(cv, c.slot === 'coat' ? c.look : null, c.slot === 'flag' ? c.look : null, 2);
-        b.appendChild(cv); b.appendChild(name); b.appendChild(sub);
-        b.addEventListener('click', function () { clickCosmetic(c); });
-        rows.shop[c.id] = { btn: b, sub: sub };
-        $('wardrobe-' + c.slot).appendChild(b);
+      C.COS_SLOTS.forEach(function (slot) {
+        $('wardrobe').appendChild(el('div', 'label', SLOT_NAME[slot]));
+        var grid = el('div', 'cos-grid'); $('wardrobe').appendChild(grid);
+        C.COSMETICS.filter(function (c) { return c.slot === slot; }).forEach(function (c) {
+          var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub');
+          b.type = 'button'; cv.className = 'cos-pic'; cv.width = 28; cv.height = 40;
+          b.appendChild(cv); b.appendChild(name); b.appendChild(sub);
+          b.addEventListener('click', function () { clickCosmetic(c); });
+          rows.shop[c.id] = { btn: b, sub: sub, cv: cv, def: c };
+          grid.appendChild(b);
+        });
       });
       $('look-act').addEventListener('click', function () {
         var c = C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0];
@@ -1508,69 +1511,67 @@
         });
       });
     }
+    var worn = C.cosmeticLook(state);
     C.COSMETICS.forEach(function (c) {
       var r = rows.shop[c.id], own = C.ownsCosmetic(state, c.id), on = state.wear[c.slot] === c.id, cost = C.SHARDS_COST[c.rarity];
       r.btn.className = 'cos r' + c.rarity + (own ? ' own' : ' not') + (on ? ' on' : '') + (lookPick === c.id ? ' pick' : '');
-      setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity]) : C.RARITIES[c.rarity] + ' · 조각 ' + cost);
+      var how = c.reward ? (C.FLAG_REWARDS.filter(function (f) { return f.id === c.id; })[0] || { text: '' }).text : C.RARITIES[c.rarity] + ' · 조각 ' + cost;
+      setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity]) : how);
+      // 작은 그림: 지금 입은 모습에 이 외형 하나만 바꿔 입힌 라라(깃발은 깃대)
+      var key = JSON.stringify(worn) + c.id;
+      if (r.key !== key) { r.key = key; drawThumb(r.cv, c, worn); }
     });
     // 미리 보기: 지금 입은 모습. 아직 없는 외형을 눌렀으면 그것을 입혀서 보여 준다
-    var pc = lookPick ? C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0] : null, worn = C.cosmeticLook(state);
+    var pc = lookPick ? C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0] : null;
     if (pc && C.ownsCosmetic(state, pc.id)) { pc = null; lookPick = ''; }
-    lookNow = { coat: pc && pc.slot === 'coat' ? pc.look : worn.coat, flag: pc && pc.slot === 'flag' ? pc.look : worn.flag };
-    drawLookScene($('look-pic'), lookNow.coat, lookNow.flag, lookFrame);
+    lookNow = lookWith(worn, pc);
+    drawLookScene($('look-pic'), lookNow, lookFrame);
     if (!lookTimer) lookTimer = setInterval(function () {      // 미리 보기의 라라는 제자리걸음을 하고 깃발은 펄럭인다(상점을 보고 있을 때만 그린다)
       if ($('hub').hidden || hubTab !== 'shop' || !lookNow) return;
-      lookFrame = (lookFrame + 1) % 4; drawLookScene($('look-pic'), lookNow.coat, lookNow.flag, lookFrame);
-    }, 260);
-    var wornCoat = C.COSMETICS.filter(function (x) { return x.id === state.wear.coat; })[0], wornFlag = C.COSMETICS.filter(function (x) { return x.id === state.wear.flag; })[0];
-    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : wornCoat.name + ' · ' + wornFlag.name);
+      lookFrame = (lookFrame + 1) % 240; drawLookScene($('look-pic'), lookNow, lookFrame);
+    }, 130);
+    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '지금 입은 모습');
     $('look-act').hidden = !pc;
-    if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
+    if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
   }
   /*
-   * 외형 그림(1.9.1): 캔버스에 라라(우비 색)와 깃발(깃발 색)을 그린다. 색 조각 대신 실제 모습을 보여 준다.
-   *   coat 만 주면 라라만, flag 만 주면 깃대만, both 면 둘을 나란히(미리 보기).
+   * 외형 그림(1.10.0): 게임 화면과 같은 라라(Scene.drawHero)를 그대로 쓴다. 옷장에서 본 모습과 게임 속 모습이 같다.
+   *   lookWith  : 입은 모습에 외형 하나를 바꿔 입힌 모습
+   *   drawThumb : 목록의 작은 그림(2배). 깃발은 깃대와 깃발만.
+   *   drawLookScene : 위쪽의 큰 미리 보기. 거점 앞에 선 라라(3배)가 제자리걸음을 하고, 옥상의 깃발이 펄럭인다.
    */
   var lookPick = '', lookNow = null, lookFrame = 0, lookTimer = 0;
-  /*
-   * 옷장의 큰 미리 보기(1.9.2): 거점 앞에 선 라라를 한 장면으로 그린다. 입었을 때 게임에서 어떻게 보이는지가 한눈에 들어오게.
-   *   라라는 옷장 전용의 큰 그림(가로 16칸, 세로 20칸)이다: 모자, 얼굴, 옷깃, 가방끈, 단추, 장화까지 보인다.
-   *   글자 뜻: y 모자, Y 모자 그늘, j 우비, J 우비 그늘(색은 우비 색에서 어둡게 뽑는다), s 살, e 눈, m 입, h 머리카락, k 가방끈, w 옷깃·단추, p 바지, b 장화
-   */
-  var BIG_LARA = ['......yyyyy.....', '....yyyyyyyy....', '...yyyyyyyyyy...', '...yyhhhhhyyY...', '..yyhssssshyY...', '..yyssessesyY...', '..yysssssssyY...', '...yyssmssyyY...',
-                  '....jjwwwjjJ....', '...kjjjjjjjjJ...', '..jkjjjwjjjjJj..', '..jjkjjjjjjjJj..', '..sjjkjjwjjjJs..', '...jjjjjjjjjJ...', '...jjjjjjjjjJ...', '...JJJJJJJJJJ...'];
-  var BIG_LEGS = [['....ppp..ppp....', '....ppp..ppp....', '....bbb..bbb....', '...bbbb..bbbb...'], ['....ppp..ppp....', '....ppp..bbb....', '....bbb.bbbb....', '...bbbb.........']];
+  function lookWith(worn, c) { var o = {}; for (var k in worn) if (Object.prototype.hasOwnProperty.call(worn, k)) o[k] = worn[k]; if (c) o[c.slot] = c.look; return o; }
   function shade(hex, k) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; function c(v) { return Math.max(0, Math.min(255, Math.round(v * k))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
-  function drawLookScene(cv, coat, flag, frame) {
-    var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
-    var W = cv.width, H = cv.height, G = H - 5;      // G: 땅의 높이
-    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
-    // 하늘과 먼 건물
-    r('#a9c4c2', 0, 0, W, 14); r('#c4cfb8', 0, 14, W, 10); r('#d8d0a8', 0, 24, W, G - 24);
-    [[58, 12, 9], [70, 7, 7], [80, 15, 10], [93, 10, 8]].forEach(function (b) { r('#8fa5a2', b[0], G - 30 + b[1], b[2], 30 - b[1]); r('#7d9491', b[0] + 1, G - 28 + b[1], 2, 2); });
-    // 땅과 길
-    r('#6f6a55', 0, G, W, H - G); r('#5d5947', 0, G, W, 1); for (var d = 4; d < W; d += 12) r('#8f8a70', d, G + 3, 5, 1);
-    // 거점: 콘크리트 본관, 창, 옥상 난간, 깃대와 깃발
-    r('#8f8a78', 4, G - 22, 32, 22); r('#7a7566', 4, G - 22, 32, 2); r('#6b6759', 34, G - 22, 2, 22);
-    for (var wx = 0; wx < 3; wx++) { r(wx === 1 ? '#ffe9a0' : '#3f4a50', 8 + wx * 9, G - 17, 5, 5); r('#3f4a50', 8 + wx * 9, G - 9, 5, 4); }
-    r('#4a4035', 17, G - 7, 6, 7); for (var rl = 0; rl < 8; rl++) r('#3c3a34', 4 + rl * 4, G - 25, 1, 3); r('#3c3a34', 4, G - 25, 32, 1);
-    r('#cfcebf', 9, G - 38, 1, 16);
-    var wave = frame % 2; r(flag, 10, G - 38 + wave, 7, 4); r(shade(flag, 0.7), 10, G - 35 + wave, 7, 1); r(flag, 17, G - 37 - wave + 1, 1, 3);
-    // 모래주머니
-    r('#a39a78', 86, G - 4, 7, 4); r('#8f8767', 93, G - 4, 7, 4); r('#a39a78', 90, G - 8, 7, 4);
-    // 라라: 제자리걸음(다리 두 장 + 한 칸 들썩임)
-    var step = frame % 2, rows = BIG_LARA.concat(BIG_LEGS[step]), lx = 50, ly = G - rows.length + (step ? -1 : 0);
-    var pal = { y: coat.y, Y: shade(coat.y, 0.72), j: coat.j, J: shade(coat.j, 0.72), s: '#e2b48c', e: '#2b241c', m: '#c98a6a', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', p: '#30343c', b: '#17180f' };
-    r('rgba(0,0,0,.25)', lx + 3, G, 10, 1);
-    for (var yy = 0; yy < rows.length; yy++) for (var xx = 0; xx < 16; xx++) { var ch = rows[yy][xx]; if (ch !== '.') r(pal[ch], lx + xx, ly + yy, 1, 1); }
-  }
-  function drawLook(cv, coat, flag, k, both) {
+  function drawThumb(cv, c, worn) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
-    function flagAt(x, y) { ctx.fillStyle = '#cfcebf'; ctx.fillRect(x, y, k, k * 11); ctx.fillStyle = flag; ctx.fillRect(x + k, y, k * 5, k * 4); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x + k, y + k * 3, k * 5, k); }
-    if (both) { if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, k * 2, k, k, coat); flagAt(k * 13, k); return; }
-    if (coat && window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, Math.floor((cv.width - 8 * k) / 2), Math.floor((cv.height - 11 * k) / 2), k, coat);
-    if (flag && !coat) flagAt(Math.floor((cv.width - 6 * k) / 2), Math.floor((cv.height - 11 * k) / 2));
+    if (c.slot === 'flag') { ctx.fillStyle = '#cfcebf'; ctx.fillRect(8, 6, 2, 30); ctx.fillStyle = c.look; ctx.fillRect(10, 6, 14, 10); ctx.fillStyle = shade(c.look, 0.7); ctx.fillRect(10, 14, 14, 2); return; }
+    var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
+    if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
+    if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 1.2);
+  }
+  function drawLookScene(cv, look, frame) {
+    var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
+    var W = cv.width, H = cv.height, G = H - 6, flag = look.flag || '#f0b400', t = frame * 0.13;
+    function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+    // 하늘과 먼 건물
+    r('#a9c4c2', 0, 0, W, 20); r('#c4cfb8', 0, 20, W, 16); r('#d8d0a8', 0, 36, W, G - 36);
+    [[92, 14, 14], [110, 6, 11], [126, 20, 16], [146, 12, 12]].forEach(function (b) { r('#8fa5a2', b[0], G - 46 + b[1], b[2], 46 - b[1]); r('#7d9491', b[0] + 2, G - 42 + b[1], 3, 3); });
+    // 땅과 길
+    r('#6f6a55', 0, G, W, H - G); r('#5d5947', 0, G, W, 1); for (var d = 6; d < W; d += 18) r('#8f8a70', d, G + 3, 8, 1);
+    // 거점: 콘크리트 본관, 창, 옥상 난간, 깃대와 깃발
+    r('#8f8a78', 6, G - 34, 48, 34); r('#7a7566', 6, G - 34, 48, 3); r('#6b6759', 51, G - 34, 3, 34);
+    for (var wx = 0; wx < 3; wx++) { r(wx === 1 ? '#ffe9a0' : '#3f4a50', 12 + wx * 13, G - 27, 8, 7); r('#3f4a50', 12 + wx * 13, G - 15, 8, 6); }
+    r('#4a4035', 26, G - 11, 9, 11); for (var rl = 0; rl < 9; rl++) r('#3c3a34', 6 + rl * 6, G - 38, 1, 4); r('#3c3a34', 6, G - 38, 48, 1);
+    r('#cfcebf', 14, G - 58, 2, 24);
+    var wave = Math.floor(t * 3) % 2; r(flag, 16, G - 58 + wave, 11, 6); r(shade(flag, 0.7), 16, G - 53 + wave, 11, 1); r(flag, 27, G - 57 + (1 - wave), 2, 4);
+    // 모래주머니
+    r('#a39a78', 130, G - 6, 11, 6); r('#8f8767', 141, G - 6, 11, 6); r('#a39a78', 136, G - 12, 11, 6);
+    // 라라: 3배 크기로, 제자리걸음
+    var step = Math.floor(t * 4) % 2, S = window.Scene;
+    r('rgba(0,0,0,.25)', 78, G, 30, 2);
+    if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t);
   }
   function clickCosmetic(c) {
     if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); renderShop(); } return; }
@@ -1614,6 +1615,7 @@
       log('원정 〈' + def.name + '〉 클리어. ' + clock(res.seconds) + '.' + (gotText ? ' 새 표시: ' + gotText + '. 간식 ' + res.treats + '개.' : '') + (res.badge ? ' 지역 휘장을 받았다.' : ''), 'good');
       toast('원정 클리어 · ' + def.name + (gotText ? ' · ' + gotText : '') + (res.treats ? ' · 간식 +' + res.treats : '')); sfx('goal');
       if (res.tickets) log('뽑기권 ' + res.tickets + '장을 받았다.', 'good');
+      if (res.flags && res.flags.length) { log(res.flags.join(', ') + (C.hasBatchim(res.flags[res.flags.length - 1]) ? '을' : '를') + ' 받았다. 옷장에서 달 수 있다.', 'good'); toast('새 깃발 · ' + res.flags.join(', ')); }
       if (fxShow) fxShow('클리어', def.name + (res.badge ? ' · 지역 휘장' : gotText ? ' · ' + gotText : ''), 1, -1, -1);
     } else {
       log('원정 〈' + def.name + '〉' + (giveUp ? '에서 돌아왔다.' : ' 실패. 시간이 다 됐다.'), giveUp ? '' : 'bad');
@@ -2830,7 +2832,7 @@
     var b = { scouts: state.buildings.scouts, garden: state.buildings.garden, purifier: state.buildings.purifier, workshop: state.buildings.workshop,
       port: state.stalls, district: state.zone >= 1 ? state.stalls : 0 };   // 좌판은 하역장·자치구 방으로 보인다
     var wearNow = C.cosmeticLook(mainState());      // 외형은 본 게임의 것을 쓴다(원정 중에도 같은 옷)
-    return { coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
+    return { look: wearNow, coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
       safe: C.defensePower(state) >= C.nightStrength(state), boss: C.isBossWave(C.currentWave(state)), def: state.defenses, buildings: b,
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker', special: C.nightSpecials(state, state.day),
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },
@@ -2877,6 +2879,7 @@
           log('도전 〈' + ev.name + '〉 성공. ' + (ev.first ? '훈장을 받았다. ' + (C.CHALLENGES.filter(function (d) { return d.id === ev.id; })[0] || { perk: { text: '' } }).perk.text + '. ' : '') + '간식 ' + ev.treats + '개.', 'good');
           toast('도전 성공 · ' + ev.name + (ev.first ? ' · 훈장' : '') + ' · 간식 +' + ev.treats); sfx('goal');
           if (fxShow) fxShow('도전 성공', ev.name + (ev.first ? ' · 훈장' : ''), 1, -1, -1);
+          if (ev.flags && ev.flags.length) log(ev.flags.join(', ') + (C.hasBatchim(ev.flags[ev.flags.length - 1]) ? '을' : '를') + ' 받았다. 옷장에서 달 수 있다.', 'good');
           break;
         case 'challenge-failed':
           log('도전 〈' + ev.name + '〉 실패. ' + (ev.why === 'time' ? '시간이 다 됐다.' : '조건을 지키지 못했다.') + ' 회차는 그대로 이어진다.', 'bad');
