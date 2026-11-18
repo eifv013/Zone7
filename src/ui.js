@@ -1306,7 +1306,7 @@
   function renderChallenges() {
     var panel = $('hub-panel'); if (!panel) return;
     var any = C.CHALLENGES.some(function (d) { return C.challengeOpen(state, d.id); }) || !!state.challenge;
-    renderStageBar();
+    renderStageBar(); applyLaraArt();
     panel.hidden = !!home; $('mnav-hub').hidden = !!home;      // 스테이지 중에는 모험 창을 열 수 없다
     if (!$('hub').hidden && hubTab === 'exped') renderStages();
     if (home) return;
@@ -1541,6 +1541,23 @@
    *   drawLookScene : 위쪽의 큰 미리 보기. 거점 앞에 선 라라(3배)가 제자리걸음을 하고, 옥상의 깃발이 펄럭인다.
    */
   var lookPick = '', lookNow = null, lookFrame = 0, lookTimer = 0;
+  /*
+   * 라라가 나오는 모든 곳에 입은 외형을 입힌다(1.10.2): 제목 옆, 지도 위, 이야기 창, 자리 비움 창, 시작 화면.
+   *   이 그림들은 CSS 변수 --art-boy 하나를 같이 쓴다. 입은 모습을 작은 캔버스에 그려 그 변수에 넣으면 한꺼번에 바뀐다.
+   *   같은 모습이면 다시 만들지 않는다. 캔버스를 못 쓰는 환경이면 원래 그림(노란 우비)이 그대로 남는다.
+   */
+  var laraArtKey = '';
+  function applyLaraArt() {
+    try {
+      var S = window.Scene, look = C.cosmeticLook(mainState()), key = JSON.stringify(look);
+      if (!S || !S.drawHero || key === laraArtKey) return;
+      var cv = document.createElement('canvas'), k = 4; cv.width = S.LARA_W * k; cv.height = S.LARA_H * k;
+      var ctx = cv.getContext('2d'); if (!ctx) return;
+      S.drawHero(ctx, 0, 0, k, { coat: look.coat, hood: look.hood, pat: look.pat, bag: look.bag, fx: 'none' });      // 움직이는 효과는 정지 그림에 넣지 않는다
+      document.documentElement.style.setProperty('--art-boy', 'url("' + cv.toDataURL('image/png') + '")');
+      laraArtKey = key;
+    } catch (e) { console.warn('laraArt', e); }
+  }
   function lookWith(worn, c) { var o = {}; for (var k in worn) if (Object.prototype.hasOwnProperty.call(worn, k)) o[k] = worn[k]; if (c) o[c.slot] = c.look; return o; }
   function shade(hex, k) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; function c(v) { return Math.max(0, Math.min(255, Math.round(v * k))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
   function drawThumb(cv, c, worn) {
@@ -1574,7 +1591,7 @@
     if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t);
   }
   function clickCosmetic(c) {
-    if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); renderShop(); } return; }
+    if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); applyLaraArt(); renderShop(); } return; }
     lookPick = lookPick === c.id ? '' : c.id; sfx('tab'); renderShop();      // 아직 없는 외형: 입혀서 미리 보여 준다(다시 누르면 원래대로)
   }
   function doPull() {
