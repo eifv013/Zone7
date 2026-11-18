@@ -653,3 +653,24 @@ test('특별한 좀비가 섞인 밤: 화면에 실제로 걸어 나오고, 종�
   }
   assert.ok(seen.vendor, '특별한 좀비가 한 번은 나와야 한다');
 });
+
+test('1.6.0: 구역 이동 연출 — 라라가 나갔다가 반대쪽에서 들어와 집에 선다', () => {
+  for (const dir of [1, -1]) {
+    const m = S.create(256);
+    assert.equal(S.travel(m, 2, dir), true);
+    assert.equal(S.shownZone(m, 3), 2, '떠나는 동안은 떠나는 구역을 그린다');
+    let turned = false;
+    for (let i = 0; i < 400 && m.move; i++) {
+      S.step(m, { t: 0.3, zone: 3 }, 0.07, () => 0.5);
+      if (m.move && m.move.turned) turned = true;
+      assert.ok(isFinite(m.hero.x));
+    }
+    assert.ok(turned, '한 번은 화면 밖으로 나간다');
+    assert.equal(m.move, null, '연출은 반드시 끝난다');
+    assert.equal(m.hero.x, m.home);
+    assert.equal(S.shownZone(m, 3), 3);
+  }
+  assert.equal(S.travel(null, 0, 1), false, '모델이 없어도 오류가 나지 않는다');
+  const d = S.create(256); S.travel(d, 'x', 0);
+  assert.deepEqual([d.move.from, d.move.dir], [0, 1], '잘못된 값은 기본값으로');
+});

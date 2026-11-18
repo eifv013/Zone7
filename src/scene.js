@@ -331,12 +331,39 @@
   }
 
   /** 모델 전체를 dt 초 진행한다. 잘못된 dt 는 무시하고, 긴 dt 는 한 번에 0.25초까지만 반영한다. */
+  /*
+   * 구역 이동과 철수의 연출(1.6.0): 라라가 화면 밖으로 달려 나갔다가 반대쪽에서 들어온다.
+   *   dir +1 = 다음 구역으로(오른쪽으로 나가 왼쪽에서 들어온다), -1 = 철수(왼쪽으로 나가 오른쪽에서 들어온다)
+   * 나가는 동안에는 배경을 떠나는 구역(from)으로 그리고, 들어올 때부터 새 구역으로 그린다(shownZone).
+   */
+  var TRAVEL_TIME = 2.4, TRAVEL_SPEED = 3.2;
+  function travel(model, from, dir) {
+    if (!model || !model.hero) return false;
+    model.move = { t: 0, from: typeof from === 'number' && from >= 0 ? Math.floor(from) : 0, dir: dir < 0 ? -1 : 1, turned: false };
+    model.hero.carrying = false; model.hero.boost = 0; model.hero.state = 'out';
+    return true;
+  }
+  function stepTravel(model, dt) {
+    var mv = model.move, h = model.hero, sp = WALK * TRAVEL_SPEED * dt, W = model.W || 256;
+    mv.t += dt;
+    if (!mv.turned) {
+      h.face = mv.dir; h.x += mv.dir * sp;
+      if (h.x > W + 10 || h.x < -12 || mv.t >= TRAVEL_TIME / 2) { mv.turned = true; h.x = mv.dir > 0 ? -12 : W + 10; }
+    } else {
+      h.face = mv.dir;
+      if (mv.dir > 0) h.x = Math.min(model.home, h.x + sp); else h.x = Math.max(model.home, h.x - sp);
+      if (h.x === model.home || mv.t >= TRAVEL_TIME * 2) { h.x = model.home; h.state = 'home'; h.timer = 0.6; h.face = 1; model.move = null; }
+    }
+    return null;
+  }
+  /** 지금 배경으로 그릴 구역: 떠나는 중이면 떠나는 구역. */
+  function shownZone(model, zone) { return model && model.move && !model.move.turned ? model.move.from : zone; }
   function step(model, view, dt, rng) {
     if (!(typeof dt === 'number' && isFinite(dt) && dt > 0)) return null;
     dt = Math.min(dt, 0.25);
     rng = typeof rng === 'function' ? rng : Math.random;
     model.time += dt;
-    var ev = stepHero(model, dt, view.t >= DUSK, rng);
+    var ev = model.move ? stepTravel(model, dt) : stepHero(model, dt, view.t >= DUSK, rng);
     if (ev === 'found') burst(model, model.hero.x + 3, GROUND - 6, '#c9c2a3', 5, rng);
     if (ev === 'delivered') burst(model, model.home - 4, GROUND - 10, '#f0b400', 6, rng);
     stepZombies(model, view, dt, rng);
@@ -1167,6 +1194,7 @@
   }
 
   function draw(ctx, model, view) {
+    if (model.move && !model.move.turned && view.zone !== model.move.from) view = Object.assign({}, view, { zone: model.move.from });      // 떠나는 동안은 떠나는 구역의 배경
     var sky = skyAt(view.t), h = model.hero, t = model.time, i;
     drawBackdrop(ctx, model, view, sky);
     // 잔해 더미
@@ -1262,11 +1290,13 @@
     return {
       poke: function () { poke(model); },
       night: function (defended) { night(model, defended); },
+      travel: function (from, dir) { return still ? false : travel(model, from, dir); },
       model: model
     };
   }
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
+           travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });

@@ -14,6 +14,13 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
   // dt: 한 걸음에 흐르는 초(1.2.2). 엔딩까지 재려면 수백 시간을 돌려야 하므로 3~5초로 성기게 돌릴 수 있다
   let z = seed >>> 0; const rng = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };
   let s = C.createState(0), day = 0, active = 0, cheapest = Infinity; const marks = [];
+  // MAXED=1: 특성, 친구 레벨, 업적을 모두 채운 채로 시작한다(다 키운 사람에게 한 회차가 얼마나 걸리는지 본다)
+  if (process.env.MAXED) {
+    C.TRAITS.forEach(t => { s.traits[t.id] = t.max; });
+    C.ACHIEVEMENTS.forEach(a => { s.ach[a.id] = true; });
+    s.petLv = s.petLv || {}; (C.BREEDS || []).forEach(b => { s.petLv[b.id] = C.PET_LEVEL_MAX || 10; });
+    s.retreats = 30;
+  }
   if (process.env.LIVE) { const push = marks.push.bind(marks); marks.push = (m) => { console.log(JSON.stringify(Object.assign({}, m, { hours: +m.hours.toFixed(1), pps: undefined }))); return push(m); }; }      // LIVE=1: 생기는 대로 찍는다(오래 도는 측정용)
   const traitOrder = ['immune', 'bulwark', 'immune', 'dealer', 'immune', 'pioneer', 'immune', 'thrift', 'legacy', 'immune', 'bulwark', 'dealer', 'engineer', 'railman', 'scholar'];
   const spendTraits = () => { for (let k = 0, bought = true; bought && k < 500; k++) { bought = false; for (const id of traitOrder) if ((id !== 'engineer' || s.bestZone >= 2) && (id !== 'railman' || s.bestZone >= 3) && (id !== 'scholar' || s.bestZone >= 4) && C.buyTrait(s, id).ok) bought = true; } };

@@ -37,6 +37,12 @@
   var guideNow = null; // 지금 '다음 할 일' 칸에 보이는 안내(바로 가기 단추가 읽는다)
   var frameErrorShown = false;
   var paused = false;        // 다른 기기가 진행 중이라 이 기기가 멈춰 있는지(Cloud 가 관리한다)
+  var MOVE_FX = ['tape', 'shutter', 'stamp', 'blinds'], lastFx = '';      // 구역 이동·철수 효과의 종류와 바로 앞에 쓴 것
+  /** 효과 하나를 고른다. 바로 앞의 것(prev)은 빼고 고른다. */
+  function pickMoveFx(prev, rng) {
+    var pool = MOVE_FX.filter(function (k) { return k !== prev; });
+    return pool[Math.floor((typeof rng === 'function' ? rng() : Math.random()) * pool.length) % pool.length];
+  }
   var scene = null;          // 도트 화면 핸들(캔버스를 못 쓰는 환경이면 null)
   var heldLogged = false;    // 이번 농성에서 '버텼다' 로그를 이미 남겼는지(1분마다 같은 줄이 쌓이지 않게)
   /** 효과음. 모듈이 없거나 소리를 못 내는 환경이면 아무 일도 하지 않는다. */
@@ -2708,7 +2714,7 @@
       var r = C.openZone(state);
       if (!r.ok) return;
       if (r.soon) log(r.zone.no + '구역 ' + r.zone.name + '의 문 앞에 닿았다. 문은 아직 열리지 않는다.', 'good');
-      else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; }
+      else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; moveFx(r.zone.no + '구역', r.zone.name, 1, r.index - 1, r.index); }
       sfx('relocate'); Store.save(); Cloud.flush(); render();
     });
     // 5구역: 점수를 조금 내고 과제 셋을 다시 뽑는다.
@@ -2780,10 +2786,33 @@
       if (!C.canRetreat(state)) return;
       confirmBox('철수', '거점을 버리고 1구역에서 다시 시작해요. 항체 샘플 +' + fmt(C.antibodiesOnRetreat(state)) + '개를 받아요. 물자, 시설, 방벽, 연 구역은 사라지고 항체 샘플, 영구 특성, 일지, 업적, 도감은 남아요.', '남는다', '철수한다', doRetreat);
     });
+    /*
+     * 구역을 넘어가거나 철수할 때의 화면 효과(1.6.0).
+     *   MOVE_FX 가운데 하나를 고른다. 바로 앞에 나온 것은 다시 고르지 않는다(pickMoveFx).
+     *   dir +1 = 다음 구역, -1 = 철수(같은 효과를 반대 방향으로). 그림 속 라라도 같은 쪽으로 달려 나간다.
+     *   동작 줄이기 설정이면 글자만 잠깐 보여 준다. 효과는 누르는 것을 막지 않는다(pointer-events: none).
+     */
+    function moveFx(big, small, dir, from, to) {
+      try {
+        var box = $('move-fx'); if (!box) return;
+        lastFx = pickMoveFx(lastFx, Math.random);
+        setText($('move-fx-big'), big); setText($('move-fx-small'), small);
+        box.className = 'move-fx fx-' + lastFx + (dir < 0 ? ' back' : '');
+        box.hidden = false; void box.offsetWidth; box.classList.add('go');
+        clearTimeout(moveFx.timer);
+        moveFx.timer = setTimeout(function () { box.hidden = true; box.classList.remove('go'); }, 2300);
+        if (scene && scene.travel) scene.travel(from, dir);
+        // 위쪽 구역 번호 칸: 새로 선 구역이 노랗게 차오른다
+        var li = $('route').children[to];
+        if (li) { li.classList.remove('arrive'); void li.offsetWidth; li.classList.add('arrive'); }
+        buzz(dir < 0 ? [30, 40, 30] : 30);
+      } catch (e) { console.warn('moveFx', e); }
+    }
     function doRetreat() {
-      var r = C.retreat(state, Date.now());
+      var wasZone = state.zone, r = C.retreat(state, Date.now());
       if (!r.ok) return;
       state = r.state;
+      moveFx('철수', (state.retreats + 1) + '회차 · 다시 1구역', -1, wasZone, 0);
       tab = 'z0'; perkShown = '';
       log('거점을 버리고 철수했다. 항체 샘플 ' + fmt(r.gained) + '개를 챙겼다. 다시 1구역이다.', 'good');
       log('이번 회차는 구역 목표가 달라졌다.', '');      // 1.4.2: 철수할 때마다 목표를 다시 뽑는다

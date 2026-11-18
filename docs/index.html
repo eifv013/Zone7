@@ -271,6 +271,42 @@ body { word-break: keep-all; }
 #night.boss { box-shadow: inset 0 0 0 2px #9a5ac8; }
 #night-sub { margin-top: 2px; }
 @media (prefers-reduced-motion: reduce) { .boss-tag { animation: none; } }
+/* ── 구역 이동·철수 효과(1.6.0): 네 가지 가운데 하나가 나온다. 누르는 것을 막지 않는다 ── */
+.move-fx { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.move-fx i { position: absolute; display: block; opacity: 0; }
+.move-fx .fx-text { position: absolute; left: 0; right: 0; top: 38%; text-align: center; opacity: 0; }
+.move-fx .fx-text b { display: inline-block; padding: 6px 18px; font-size: 44px; line-height: 1.15; font-weight: 800; color: #17180f; background: #f0b400; border: 4px solid #17180f; }
+.move-fx .fx-text span { display: block; width: max-content; max-width: 90%; margin: 8px auto 0; padding: 3px 12px; font-size: 16px; font-weight: 700; color: #f4f2e6; background: #17180f; white-space: nowrap; }
+.move-fx.go .fx-text { animation: fx-text 2.2s ease both; }
+@keyframes fx-text { 0% { opacity: 0; transform: translateY(10px); } 22% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; } }
+/* 1. 경고 띠: 빗금 띠 두 줄이 화면을 가로지른다 */
+.fx-tape i { left: -20%; width: 140%; height: 34px; opacity: 1; background: repeating-linear-gradient(-45deg, #f0b400 0 18px, #17180f 18px 36px); transform: translateX(-130%); }
+.fx-tape .fx-a { top: 30%; } .fx-tape .fx-b { top: calc(38% + 118px); }
+.fx-tape.go .fx-a { animation: fx-sweep 2s cubic-bezier(.2,.7,.2,1) both; }
+.fx-tape.go .fx-b { animation: fx-sweep 2s cubic-bezier(.2,.7,.2,1) .12s both reverse; }
+@keyframes fx-sweep { 0% { transform: translateX(-130%); } 30%, 70% { transform: translateX(0); } 100% { transform: translateX(130%); } }
+/* 2. 셔터: 위아래에서 검은 판이 닫혔다 열린다 */
+.fx-shutter i { left: 0; right: 0; height: 50%; opacity: 1; background: #17180f; border: 0 solid #f0b400; }
+.fx-shutter .fx-a { top: 0; border-bottom-width: 6px; transform: translateY(-101%); } .fx-shutter .fx-b { bottom: 0; border-top-width: 6px; transform: translateY(101%); }
+.fx-shutter.go .fx-a { animation: fx-shut-a 2.1s ease both; } .fx-shutter.go .fx-b { animation: fx-shut-b 2.1s ease both; }
+@keyframes fx-shut-a { 0%, 100% { transform: translateY(-101%); } 22%, 72% { transform: translateY(-38%); } }
+@keyframes fx-shut-b { 0%, 100% { transform: translateY(101%); } 22%, 72% { transform: translateY(38%); } }
+/* 3. 도장: 글자가 비스듬히 쾅 찍힌다 */
+.fx-stamp.go .fx-text { animation: fx-stamp 2.1s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes fx-stamp { 0% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 14% { opacity: 1; transform: scale(1) rotate(-5deg); } 80% { opacity: 1; transform: scale(1) rotate(-5deg); } 100% { opacity: 0; transform: scale(.96) rotate(-5deg); } }
+/* 4. 가림막: 비스듬한 판 둘이 엇갈려 지나간다 */
+.fx-blinds i { top: -10%; height: 120%; width: 70%; opacity: .92; background: #17180f; transform: translateX(-160%) skewX(-14deg); }
+.fx-blinds .fx-b { background: #f0b400; width: 16%; }
+.fx-blinds.go .fx-a { animation: fx-blind 1.9s ease-in-out both; } .fx-blinds.go .fx-b { animation: fx-blind 1.9s ease-in-out .1s both; }
+@keyframes fx-blind { 0% { transform: translateX(-160%) skewX(-14deg); } 35%, 60% { transform: translateX(20%) skewX(-14deg); } 100% { transform: translateX(260%) skewX(-14deg); } }
+.fx-blinds .fx-b { left: 0; } 
+/* 철수는 같은 효과를 반대 방향으로 */
+.move-fx.back { transform: scaleX(-1); } .move-fx.back .fx-text { transform-origin: center; } .move-fx.back .fx-text b, .move-fx.back .fx-text span { transform: scaleX(-1); }
+.move-fx.back .fx-text b { background: #a8261b; color: #f4f2e6; }
+/* 위쪽 구역 번호 칸이 노랗게 차오른다 */
+.route li.arrive { animation: route-arrive 1.4s ease both; }
+@keyframes route-arrive { 0% { box-shadow: inset 0 -0px 0 #f0b400; transform: scale(1); } 40% { transform: scale(1.5); box-shadow: 0 0 0 4px #f0b400; } 100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .move-fx i { display: none; } .move-fx.go .fx-text { animation: fx-text 2.2s linear both; } .route li.arrive { animation: none; } }
 .row-mile.full:not(.hit) { color: var(--hazard); border-color: var(--hazard); text-shadow: 0 0 6px color-mix(in srgb, var(--hazard) 70%, transparent); }
 /* 아이폰: 두 번 누르면 화면이 커지는 것을 막는다(벌려서 키우기는 그대로 된다) */
 html, body, button, .row, .panel { touch-action: manipulation; }
@@ -1057,7 +1093,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.5.9</div>
+  <div class="boot-ver">7구역 알파 1.6.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1243,6 +1279,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <button type="button" id="update-now">지금 업데이트</button>
 </div>
 <div class="tape" aria-hidden="true"></div>
+<div id="move-fx" class="move-fx" hidden aria-hidden="true"><i class="fx-a"></i><i class="fx-b"></i><div class="fx-text"><b id="move-fx-big"></b><span id="move-fx-small"></span></div></div>
 <header class="mast">
   <div>
     <h1>7구역</h1>
@@ -1591,7 +1628,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.5.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.6.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1727,7 +1764,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.9";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.0";
 </script>
 <script>
 /*
@@ -1746,6 +1783,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.9";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.6.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '구역 이동과 철수 효과',
+      items: [
+        '다음 구역으로 넘어갈 때 화면 효과가 나와요. 라라도 새 구역으로 달려가요.',
+        '철수할 때도 효과가 나와요.',
+        '효과는 네 가지예요. 같은 효과가 연달아 나오지 않아요.'
+      ] },
     { ver: '알파 1.5.9', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '5구역 약품과 구역별 시간 맞추기',
       items: [
         '5구역 연구원이 약품을 만들어 물자를 벌어요. 5구역에서 오래 막히던 것을 풀었어요.',
@@ -6201,12 +6244,39 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.9";
   }
 
   /** 모델 전체를 dt 초 진행한다. 잘못된 dt 는 무시하고, 긴 dt 는 한 번에 0.25초까지만 반영한다. */
+  /*
+   * 구역 이동과 철수의 연출(1.6.0): 라라가 화면 밖으로 달려 나갔다가 반대쪽에서 들어온다.
+   *   dir +1 = 다음 구역으로(오른쪽으로 나가 왼쪽에서 들어온다), -1 = 철수(왼쪽으로 나가 오른쪽에서 들어온다)
+   * 나가는 동안에는 배경을 떠나는 구역(from)으로 그리고, 들어올 때부터 새 구역으로 그린다(shownZone).
+   */
+  var TRAVEL_TIME = 2.4, TRAVEL_SPEED = 3.2;
+  function travel(model, from, dir) {
+    if (!model || !model.hero) return false;
+    model.move = { t: 0, from: typeof from === 'number' && from >= 0 ? Math.floor(from) : 0, dir: dir < 0 ? -1 : 1, turned: false };
+    model.hero.carrying = false; model.hero.boost = 0; model.hero.state = 'out';
+    return true;
+  }
+  function stepTravel(model, dt) {
+    var mv = model.move, h = model.hero, sp = WALK * TRAVEL_SPEED * dt, W = model.W || 256;
+    mv.t += dt;
+    if (!mv.turned) {
+      h.face = mv.dir; h.x += mv.dir * sp;
+      if (h.x > W + 10 || h.x < -12 || mv.t >= TRAVEL_TIME / 2) { mv.turned = true; h.x = mv.dir > 0 ? -12 : W + 10; }
+    } else {
+      h.face = mv.dir;
+      if (mv.dir > 0) h.x = Math.min(model.home, h.x + sp); else h.x = Math.max(model.home, h.x - sp);
+      if (h.x === model.home || mv.t >= TRAVEL_TIME * 2) { h.x = model.home; h.state = 'home'; h.timer = 0.6; h.face = 1; model.move = null; }
+    }
+    return null;
+  }
+  /** 지금 배경으로 그릴 구역: 떠나는 중이면 떠나는 구역. */
+  function shownZone(model, zone) { return model && model.move && !model.move.turned ? model.move.from : zone; }
   function step(model, view, dt, rng) {
     if (!(typeof dt === 'number' && isFinite(dt) && dt > 0)) return null;
     dt = Math.min(dt, 0.25);
     rng = typeof rng === 'function' ? rng : Math.random;
     model.time += dt;
-    var ev = stepHero(model, dt, view.t >= DUSK, rng);
+    var ev = model.move ? stepTravel(model, dt) : stepHero(model, dt, view.t >= DUSK, rng);
     if (ev === 'found') burst(model, model.hero.x + 3, GROUND - 6, '#c9c2a3', 5, rng);
     if (ev === 'delivered') burst(model, model.home - 4, GROUND - 10, '#f0b400', 6, rng);
     stepZombies(model, view, dt, rng);
@@ -7037,6 +7107,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.9";
   }
 
   function draw(ctx, model, view) {
+    if (model.move && !model.move.turned && view.zone !== model.move.from) view = Object.assign({}, view, { zone: model.move.from });      // 떠나는 동안은 떠나는 구역의 배경
     var sky = skyAt(view.t), h = model.hero, t = model.time, i;
     drawBackdrop(ctx, model, view, sky);
     // 잔해 더미
@@ -7132,12 +7203,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.9";
     return {
       poke: function () { poke(model); },
       night: function (defended) { night(model, defended); },
+      travel: function (from, dir) { return still ? false : travel(model, from, dir); },
       model: model
     };
   }
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
+           travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });
 
@@ -7334,6 +7407,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.9";
   var guideNow = null; // 지금 '다음 할 일' 칸에 보이는 안내(바로 가기 단추가 읽는다)
   var frameErrorShown = false;
   var paused = false;        // 다른 기기가 진행 중이라 이 기기가 멈춰 있는지(Cloud 가 관리한다)
+  var MOVE_FX = ['tape', 'shutter', 'stamp', 'blinds'], lastFx = '';      // 구역 이동·철수 효과의 종류와 바로 앞에 쓴 것
+  /** 효과 하나를 고른다. 바로 앞의 것(prev)은 빼고 고른다. */
+  function pickMoveFx(prev, rng) {
+    var pool = MOVE_FX.filter(function (k) { return k !== prev; });
+    return pool[Math.floor((typeof rng === 'function' ? rng() : Math.random()) * pool.length) % pool.length];
+  }
   var scene = null;          // 도트 화면 핸들(캔버스를 못 쓰는 환경이면 null)
   var heldLogged = false;    // 이번 농성에서 '버텼다' 로그를 이미 남겼는지(1분마다 같은 줄이 쌓이지 않게)
   /** 효과음. 모듈이 없거나 소리를 못 내는 환경이면 아무 일도 하지 않는다. */
@@ -10005,7 +10084,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.9";
       var r = C.openZone(state);
       if (!r.ok) return;
       if (r.soon) log(r.zone.no + '구역 ' + r.zone.name + '의 문 앞에 닿았다. 문은 아직 열리지 않는다.', 'good');
-      else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; }
+      else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; moveFx(r.zone.no + '구역', r.zone.name, 1, r.index - 1, r.index); }
       sfx('relocate'); Store.save(); Cloud.flush(); render();
     });
     // 5구역: 점수를 조금 내고 과제 셋을 다시 뽑는다.
@@ -10077,10 +10156,33 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.5.9";
       if (!C.canRetreat(state)) return;
       confirmBox('철수', '거점을 버리고 1구역에서 다시 시작해요. 항체 샘플 +' + fmt(C.antibodiesOnRetreat(state)) + '개를 받아요. 물자, 시설, 방벽, 연 구역은 사라지고 항체 샘플, 영구 특성, 일지, 업적, 도감은 남아요.', '남는다', '철수한다', doRetreat);
     });
+    /*
+     * 구역을 넘어가거나 철수할 때의 화면 효과(1.6.0).
+     *   MOVE_FX 가운데 하나를 고른다. 바로 앞에 나온 것은 다시 고르지 않는다(pickMoveFx).
+     *   dir +1 = 다음 구역, -1 = 철수(같은 효과를 반대 방향으로). 그림 속 라라도 같은 쪽으로 달려 나간다.
+     *   동작 줄이기 설정이면 글자만 잠깐 보여 준다. 효과는 누르는 것을 막지 않는다(pointer-events: none).
+     */
+    function moveFx(big, small, dir, from, to) {
+      try {
+        var box = $('move-fx'); if (!box) return;
+        lastFx = pickMoveFx(lastFx, Math.random);
+        setText($('move-fx-big'), big); setText($('move-fx-small'), small);
+        box.className = 'move-fx fx-' + lastFx + (dir < 0 ? ' back' : '');
+        box.hidden = false; void box.offsetWidth; box.classList.add('go');
+        clearTimeout(moveFx.timer);
+        moveFx.timer = setTimeout(function () { box.hidden = true; box.classList.remove('go'); }, 2300);
+        if (scene && scene.travel) scene.travel(from, dir);
+        // 위쪽 구역 번호 칸: 새로 선 구역이 노랗게 차오른다
+        var li = $('route').children[to];
+        if (li) { li.classList.remove('arrive'); void li.offsetWidth; li.classList.add('arrive'); }
+        buzz(dir < 0 ? [30, 40, 30] : 30);
+      } catch (e) { console.warn('moveFx', e); }
+    }
     function doRetreat() {
-      var r = C.retreat(state, Date.now());
+      var wasZone = state.zone, r = C.retreat(state, Date.now());
       if (!r.ok) return;
       state = r.state;
+      moveFx('철수', (state.retreats + 1) + '회차 · 다시 1구역', -1, wasZone, 0);
       tab = 'z0'; perkShown = '';
       log('거점을 버리고 철수했다. 항체 샘플 ' + fmt(r.gained) + '개를 챙겼다. 다시 1구역이다.', 'good');
       log('이번 회차는 구역 목표가 달라졌다.', '');      // 1.4.2: 철수할 때마다 목표를 다시 뽑는다
