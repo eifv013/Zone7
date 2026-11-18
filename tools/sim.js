@@ -13,6 +13,9 @@ const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(k + '='));
 function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck = 300, share = 0.5, dt = 1 } = {}) {
   // dt: 한 걸음에 흐르는 초(1.2.2). 엔딩까지 재려면 수백 시간을 돌려야 하므로 3~5초로 성기게 돌릴 수 있다
   let z = seed >>> 0; const rng = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };
+  // 2.3.2: core 의 함수 가운데 rng 를 받지 못한 호출은 Math.random 으로 떨어진다. 그래서 같은 SEED 로도 돌릴 때마다 결과가 달랐다(같은 판이 16일도 되고 20일도 됐다).
+  // 시뮬레이터 안에서는 Math.random 도 같은 씨앗의 난수로 바꿔, 같은 SEED 면 늘 같은 결과가 나오게 한다.
+  Math.random = rng;
   let s = C.createState(0), day = 0, active = 0, cheapest = Infinity; const marks = [];
   // MAXED=1: 특성, 친구 레벨, 업적을 모두 채운 채로 시작한다(다 키운 사람에게 한 회차가 얼마나 걸리는지 본다)
   if (process.env.MAXED) {
@@ -41,6 +44,8 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
   const step = () => {
     active += dt;
     const evs = C.tick(s, dt, rng);
+    // PROBE=분: 접속 시간으로 그만큼마다 한 줄씩 찍는다(어디서 막혔는지 본다)
+    if (process.env.PROBE && active % (Number(process.env.PROBE) * 60) < dt) console.log(`  @${(active / 3600).toFixed(1)}h ${s.zone + 1}구역 물자 ${C.formatNumber(s.supplies)} 초당 ${C.formatNumber(C.productionPerSec(s))} 혈청 ${s.serumStage}(${isFinite(C.serumCost(s)) ? C.formatNumber(C.serumCost(s)) : '-'}) 방어 ${C.formatNumber(C.defensePower(s))}/${C.formatNumber(C.nightStrength(s))} 농성 ${s.siege ? 1 : 0} 뚫림 ${s.breaches || 0} 목표 ${C.goals(s, s.zone).map(g => g.id + (g.done ? '✓' : ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need))).join(' ')}`);
     if (process.env.STAGE) {
       if (s.runSeconds >= stageBeat) { stageBeat += 60; if (process.env.CURVE) console.log(`  ${Math.round(s.runSeconds / 60)}분 누적 ${C.formatNumber(s.runEarned)} 시설 ${C.totalBuildings(s)} 밤 ${s.wavesCleared} 동네 ${s.sweeps} 뚫림 ${s.breaches}`); }
       const st = C.stageStatus(s);

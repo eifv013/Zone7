@@ -3060,7 +3060,7 @@ test('2.1.0 위험 단계: 끝을 본 뒤에 고르고, 무리와 문 값이 오
   const base = C.createState(0);
   assert.ok(Math.abs(C.nightStrength(n) / C.nightStrength(base) - C.DANGER_HORDE) < 0.2);
   assert.ok(Math.abs(C.nextZone(n).cost / C.nextZone(base).cost - C.DANGER_COST) < 1e-6);
-  n.zone = 6; base.zone = 6; assert.ok(Math.abs(C.serumCost(n) / C.serumCost(base) - C.DANGER_COST) < 1e-6);
+  n.zone = 6; base.zone = 6; assert.ok(Math.abs(C.serumCost(n) / C.serumCost(base) - C.DANGER_SERUM) < 1e-6, '혈청 값은 문 값과 따로 오른다');
   n.runEarned = base.runEarned = 1e30; assert.ok(C.antibodiesOnRetreat(n) > C.antibodiesOnRetreat(base), '철수 항체가 는다');
   // 위험 1에서 끝을 보면: 다음 단계가 열리고, 전체 생산이 영구히 늘고, 뽑기권을 더 받고, 구조한 생존자가 쌓인다
   const g0 = C.globalMult(n), t0 = n.tickets; n.survivors = 6000; n.runSeconds = 5000;
@@ -3138,4 +3138,14 @@ test('엄마의 수첩: 15쪽이고, 글에 채우지 못한 자리가 없고, �
   if (st) { assert.equal(C.afterEnding(st), false); assert.ok(!C.tick(st, 0.1, half).some(e => e.type === 'story' && e.mom)); }
   // 일지 업적의 문턱은 본편 일지(22편)만으로 닿는다
   assert.ok(C.BEATS.filter(b => !b.mom).length >= 17);
+});
+
+test('위험 단계의 값: 문 값은 10단계까지 2.2배씩, 그 뒤로는 덜 가파르게 오르고, 혈청 값은 그보다 완만하다', () => {
+  assert.equal(C.dangerCost(0), 1); assert.equal(C.dangerSerum(0), 1);
+  for (let n = 1; n <= C.DANGER_MAX; n++) {
+    const step = C.dangerCost(n) / C.dangerCost(n - 1);
+    assert.ok(Math.abs(step - (n <= C.DANGER_COST_KNEE ? C.DANGER_COST : C.DANGER_COST_LATE)) < 1e-9, '단계 ' + n);
+    assert.ok(C.dangerSerum(n) > C.dangerSerum(n - 1) && C.dangerSerum(n) < C.dangerCost(n), '혈청은 문보다 덜 오른다: ' + n);
+  }
+  assert.ok(C.DANGER_COST_LATE < C.DANGER_COST && C.DANGER_COST_LATE > C.DANGER_PROD, '뒤쪽도 힘보다는 빨리 오른다(쉬워지지는 않는다)');
 });

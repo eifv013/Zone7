@@ -16,10 +16,10 @@ test('의견: 쓴 글과 판 정보가 한 덩어리로 묶인다', () => {
   const out = F.compose(base());
   assert.ok(out.startsWith('[7구역 의견] 알파 0.6.4\n'));
   assert.ok(out.includes('\n3구역이 너무 빨리 끝나요\n'));
-  assert.ok(out.includes('지금: 3구역 공단 · 가장 멀리: 3구역 공단'));
+  assert.ok(out.includes('현재: 3구역 공단 · 가장 멀리: 3구역 공단'));
   assert.ok(out.includes('철수 2번 · 항체 누적 120 · 막아낸 밤 31 · 뚫린 밤 1'));
-  assert.ok(out.includes('플레이 2시간 5분 · 자리 비움 5시간 0분 · 이번 판 40분 0초 · 3일째'));
-  assert.ok(out.includes('지난 판: 2구역 재래시장 35분 0초 (+12) / 3구역 공단 50분 0초 (+40)'));
+  assert.ok(out.includes('플레이 2시간 5분 · 자리 비움 5시간 0분 · 이번 회차 40분 0초 · 3일째'));
+  assert.ok(out.includes('지난 회차: 2구역 재래시장 35분 0초 (+12) / 3구역 공단 50분 0초 (+40)'));
   assert.ok(out.includes('기기: 안드로이드 · 앱 · 화면 390×760'));
 });
 
@@ -51,14 +51,14 @@ test('의견: 빠지거나 깨진 값이 있어도 죽지 않는다', () => {
     assert.ok(!/undefined|NaN|null|\[object|Infinity/.test(out), out);
   }
   const out = F.compose({ text: '글' });
-  assert.ok(out.includes('알파 ?') && out.includes('지금: ?') && out.includes('화면 0×0'));
-  assert.ok(!out.includes('지난 판'), '기록이 없으면 그 줄은 없다');
+  assert.ok(out.includes('알파 ?') && out.includes('현재: ?') && out.includes('화면 0×0'));
+  assert.ok(!out.includes('지난 회차'), '기록이 없으면 그 줄은 없다');
 });
 
 test('의견: 지난 판은 최근 것 몇 개만 붙인다', () => {
   const input = base();
   input.stats.runs = Array.from({ length: 10 }, (_, i) => ({ zone: 0, seconds: 60 * (i + 1), antibodies: i }));
-  const line = F.compose(input).split('\n').find(l => l.startsWith('지난 판'));
+  const line = F.compose(input).split('\n').find(l => l.startsWith('지난 회차'));
   assert.equal(line.split(' / ').length, F.MAX_RUNS);
 });
 

@@ -192,6 +192,8 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .row-mile { display: inline-flex; align-items: center; gap: 1px; padding: 4px 7px; font: 600 11px/1 var(--font-body); }
 .row-mile .st { display: block; width: 10px; height: 10px; background: currentColor; opacity: .28; clip-path: polygon(50% 2%, 62% 36%, 98% 36%, 69% 58%, 80% 93%, 50% 72%, 20% 93%, 31% 58%, 2% 36%, 38% 36%); }
 .row-mile .st.on { opacity: 1; }
+/* 좁은 휴대폰(2.3.2): 별이 열다섯 개인 줄(3구역 기계)에서 'Lv 180 / 500'의 끝이 카드 밖으로 밀려 났다. 별을 줄여 한 줄에 넣는다 */
+@media (max-width: 380px) { .row-mile { gap: 1px !important; padding-left: 5px !important; padding-right: 5px !important; } .row-mile .st { width: 6px; height: 6px; } }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
 /* 7구역 송신탑과 끝 화면 */
@@ -1206,7 +1208,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.3.1</div>
+  <div class="boot-ver">7구역 알파 2.3.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1254,7 +1256,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </script>
 <div class="update-bar" id="update-bar" role="status" hidden>
   <p id="update-text"></p>
-  <button type="button" id="update-now">지금 업데이트</button>
+  <button type="button" id="update-now">바로 업데이트</button>
 </div>
 <div class="tape" aria-hidden="true"></div>
 <div id="move-fx" class="move-fx" hidden aria-hidden="true"><i class="fx-a"></i><i class="fx-b"></i><div class="fx-text"><b id="move-fx-big"></b><span id="move-fx-small"></span></div></div>
@@ -1604,7 +1606,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     </div>
     <h3 class="stats-h">저장</h3>
     <div class="save-actions">
-      <button type="button" id="save-now">지금 저장</button>
+      <button type="button" id="save-now">바로 저장</button>
       <button type="button" id="export">저장 코드 복사</button>
       <button type="button" id="import">저장 코드 불러오기</button>
       <button type="button" id="feedback-open">의견 보내기</button>
@@ -1613,7 +1615,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.3.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.3.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

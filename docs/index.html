@@ -219,6 +219,8 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 .row-mile { display: inline-flex; align-items: center; gap: 1px; padding: 4px 7px; font: 600 11px/1 var(--font-body); }
 .row-mile .st { display: block; width: 10px; height: 10px; background: currentColor; opacity: .28; clip-path: polygon(50% 2%, 62% 36%, 98% 36%, 69% 58%, 80% 93%, 50% 72%, 20% 93%, 31% 58%, 2% 36%, 38% 36%); }
 .row-mile .st.on { opacity: 1; }
+/* 좁은 휴대폰(2.3.2): 별이 열다섯 개인 줄(3구역 기계)에서 'Lv 180 / 500'의 끝이 카드 밖으로 밀려 났다. 별을 줄여 한 줄에 넣는다 */
+@media (max-width: 380px) { .row-mile { gap: 1px !important; padding-left: 5px !important; padding-right: 5px !important; } .row-mile .st { width: 6px; height: 6px; } }
 .row-mile span { margin-left: 4px; white-space: nowrap; }
 #retreat-sub { margin-bottom: 10px; }
 /* 7구역 송신탑과 끝 화면 */
@@ -1233,7 +1235,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.3.1</div>
+  <div class="boot-ver">7구역 알파 2.3.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1416,7 +1418,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </script>
 <div class="update-bar" id="update-bar" role="status" hidden>
   <p id="update-text"></p>
-  <button type="button" id="update-now">지금 업데이트</button>
+  <button type="button" id="update-now">바로 업데이트</button>
 </div>
 <div class="tape" aria-hidden="true"></div>
 <div id="move-fx" class="move-fx" hidden aria-hidden="true"><i class="fx-a"></i><i class="fx-b"></i><div class="fx-text"><b id="move-fx-big"></b><span id="move-fx-small"></span></div></div>
@@ -1766,7 +1768,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     </div>
     <h3 class="stats-h">저장</h3>
     <div class="save-actions">
-      <button type="button" id="save-now">지금 저장</button>
+      <button type="button" id="save-now">바로 저장</button>
       <button type="button" id="export">저장 코드 복사</button>
       <button type="button" id="import">저장 코드 불러오기</button>
       <button type="button" id="feedback-open">의견 보내기</button>
@@ -1775,7 +1777,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.3.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.3.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1949,7 +1951,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.2";
 </script>
 <script>
 /*
@@ -1968,6 +1970,17 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 2.3.2', date: '2026-11-19', at: '2026-11-19 00:59:59', title: '전체 검수와 위험 단계 다시 맞춤',
+      items: [
+        '위험 단계를 다시 맞췄어요. 전에는 12단계부터 한 회차가 한 달을 넘었고, 16단계부터는 사실상 끝낼 수 없었어요.',
+        '끝을 본 위험 단계마다 받는 영구 생산이 ×1.25에서 ×1.35로 올랐어요.',
+        '문 비용은 10단계까지 2.2배씩, 그 뒤로는 1.93배씩 올라요.',
+        '혈청 비용은 문 비용보다 완만하게, 단계마다 1.6배씩 올라요.',
+        '좁은 휴대폰에서 제목 줄의 구역 이름이 잘리던 것을 고쳤어요. 다 들어가지 않으면 구역 번호만 적어요.',
+        '좁은 휴대폰에서 3구역 기계의 레벨 글자가 카드 밖으로 나가던 것을 고쳤어요.',
+        '"지금"으로 적혀 있던 글을 "현재"와 "바로"로 통일했어요. 도전 "무결"의 설명도 다듬었어요.',
+        '의견 보내기에 붙는 정보의 낱말을 "회차"로 맞췄어요.'
+      ] },
     { ver: '알파 2.3.1', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '일지의 가려진 장',
       items: [
         '일지에 아직 열리지 않은 장이 ???로 보여요. 이야기의 끝을 본 뒤의 회차에서 열려요.'
@@ -2706,7 +2719,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
         '생존 일지를 처음부터 다시 썼어요. 노란 우비를 입은 아이가 냉장 상자를 들고 7구역으로 가는 이야기예요. 한 편마다 제목이 있고 길이가 훨씬 길어졌어요. 지금 17편이에요.',
         '일지에 장 탭이 생겼어요. 구역마다 한 장이고, 아직 적지 않은 편은 자리만 보여요. 이미 읽은 편은 새 글로 바뀌어 있으니 다시 읽어 보세요.',
         '도움말에 탭이 생겼어요. 한 번에 한 항목만 보여서 길게 내리지 않아도 돼요.',
-        '통계 화면을 새로 짰어요. 맨 위에 큰 숫자 셋, 그 아래 이번 판과 전체를 나눠 보여 줘요. "지난 판" 대신 "지난 구역"에서 구역마다 머문 시간을 막대로 볼 수 있어요.',
+        '통계 화면을 새로 짰어요. 맨 위에 큰 숫자 셋, 그 아래 이번 회차와 전체를 나눠 보여 줘요. "지난 판" 대신 "지난 구역"에서 구역마다 머문 시간을 막대로 볼 수 있어요.',
         '무전 로그를 정리했어요. 업데이트 알림, 신호 수신, 방벽 보강, 판매, 수색조 같은 되풀이되는 줄을 뺐고, 막아낸 밤은 변이체와 10번째마다만 남아요.',
         '설정이 늘었어요: 진동, 숫자 표기(1.23억 / 1.23e8), 새 일지를 바로 띄울지, 화면 흔들림. "처음부터 다시"는 맨 아래로 내렸어요.'
       ] },
@@ -2819,7 +2832,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     { ver: '알파 0.6.4', date: '2026-11-16', at: '2026-11-16 22:35:25', title: '의견 보내기',
       items: [
         '기록 > 설정에 "의견 보내기"가 생겼다. 느낀 점을 적으면 공유하거나 복사하거나 GitHub 에 올릴 수 있다.',
-        '의견에는 버전, 구역, 철수 횟수, 플레이 시간, 지난 판 기록, 화면 크기가 함께 붙는다. 어떤 판에서 나온 의견인지 알기 위해서다.',
+        '의견에는 버전, 구역, 철수 횟수, 플레이 시간, 지난 회차 기록, 화면 크기가 함께 붙는다. 어떤 회차에서 나온 의견인지 알기 위해서다.',
         '이름, 연락처, 기기 모델명, 저장 데이터는 붙지 않는다. 붙는 내용은 보내기 전에 창에서 미리 볼 수 있다.'
       ] },
     { ver: '알파 0.6.3', date: '2026-11-16', at: '2026-11-16 22:23:04', title: '설명 다듬기',
@@ -3049,12 +3062,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
       text,
       '',
       '--- 자동으로 붙는 정보 ---',
-      '지금: ' + (str(input.zone) || '?') + ' · 가장 멀리: ' + name(s.bestZone),
+      '현재: ' + (str(input.zone) || '?') + ' · 가장 멀리: ' + name(s.bestZone),
       '철수 ' + num(s.retreats) + '번 · 항체 누적 ' + num(s.antibodyTotal) + ' · 막아낸 밤 ' + num(s.wavesCleared) + ' · 뚫린 밤 ' + num(s.breaches),
-      '플레이 ' + span(s.play, input.duration) + ' · 자리 비움 ' + span(s.away, input.duration) + ' · 이번 판 ' + span(s.run, input.duration) + (num(s.days) ? ' · ' + num(s.days) + '일째' : '')
+      '플레이 ' + span(s.play, input.duration) + ' · 자리 비움 ' + span(s.away, input.duration) + ' · 이번 회차 ' + span(s.run, input.duration) + (num(s.days) ? ' · ' + num(s.days) + '일째' : '')
     ];
     var runs = (Array.isArray(s.runs) ? s.runs : []).filter(function (r) { return r && typeof r === 'object'; }).slice(0, MAX_RUNS);
-    if (runs.length) lines.push('지난 판: ' + runs.map(function (r) { return name(r.zone) + ' ' + span(r.seconds, input.duration) + ' (+' + num(r.antibodies) + ')'; }).join(' / '));
+    if (runs.length) lines.push('지난 회차: ' + runs.map(function (r) { return name(r.zone) + ' ' + span(r.seconds, input.duration) + ' (+' + num(r.antibodies) + ')'; }).join(' / '));
     var sc = input.screen && typeof input.screen === 'object' ? input.screen : {};
     lines.push('기기: ' + device(input.ua) + ' · 화면 ' + Math.round(num(sc.w)) + '×' + Math.round(num(sc.h)));
     return lines.join('\n');
@@ -4018,7 +4031,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     return pay(state, antennaCost(state, qty), function () { state.antennas += qty; });
   }
   function survivorRate(state) { return zoneOpen(state, 6) && state.antennas > 0 ? state.antennas * milestoneMult(state.antennas) * mods(state).z7 : 0; }
-  function serumCost(state) { return state.serumStage < SERUM_COSTS.length && zoneOpen(state, 6) ? Math.ceil(SERUM_COSTS[state.serumStage] * mods(state).cost * dangerCost(dangerOf(state))) : Infinity; }
+  function serumCost(state) { return state.serumStage < SERUM_COSTS.length && zoneOpen(state, 6) ? Math.ceil(SERUM_COSTS[state.serumStage] * mods(state).cost * dangerSerum(dangerOf(state))) : Infinity; }
   /** 혈청을 한 단계 진행한다. 마지막 단계를 끝내면 last 가 참이다. */
   function buySerum(state) {
     if (!zoneOpen(state, 6)) return fail('locked');
@@ -5732,7 +5745,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     { id: 'hands',    name: '손수',      rule: '자동 개조 금지 · 자리 비움 효율 절반',      goal: 3, perk: { key: 'autoshare', add: 0.1, text: '현재 구역 자동 효율 +10%p' } },
     { id: 'sprint',   name: '질주',      rule: '45분 안에 닿아야 해요',          goal: 3, perk: { key: 'scout', mult: 0.85, text: '길 정찰 시간 -15%' } },
     { id: 'onewall',  name: '외벽',      rule: '방벽을 한 종류만 살 수 있어요',  goal: 4, perk: { key: 'defense', mult: 1.1, text: '방어력 +10%' } },
-    { id: 'unbroken', name: '무결',      rule: '한 번도 뚫리면 안 돼요',         goal: 4, perk: { key: 'loot', mult: 1.2, text: '방어 성공 시 전리품 +20%' } },
+    { id: 'unbroken', name: '무결',      rule: '방어 실패가 한 번도 없어야 해요',         goal: 4, perk: { key: 'loot', mult: 1.2, text: '방어 성공 시 전리품 +20%' } },
     { id: 'horde',    name: '거센 무리', rule: '무리가 3배로 와요',              goal: 5, perk: { key: 'defcost', mult: 0.9, text: '방벽 비용 -10%' } },
     { id: 'lean',     name: '반쪽 보급', rule: '전체 생산이 절반이에요',         goal: 6, perk: { key: 'prod', mult: 1.1, text: '전체 생산 +10%' } },
     { id: 'oneshot',  name: '단숨에',    rule: '철수 없이 끝까지 가요',          goal: 'end', perk: { key: 'antibody', mult: 1.1, text: '철수 항체 샘플 +10%' } }
@@ -5757,17 +5770,27 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
    *               단계가 오를수록 천천히 어려워진다(재 보니 값만 올리면 어느 단계에서 갑자기 며칠짜리 벽이 됐다).
    *               고를 수 있는 가장 높은 단계는 "끝을 본 가장 높은 단계 + 1"이다(dangerMax). 끝을 한 번도 못 봤으면 0뿐이다.
    *               다음 회차의 단계(dangerNext)를 정해 두면 철수할 때 그 단계로 시작한다.
+   *               2.3.2 다시 맞춤(다 키운 사람, 하루 1시간, 한 회차로 끝까지 재 봄):
+   *                 전: 5단계 2일, 8단계 9일, 12단계 34일, 16단계부터는 40일 안에 못 끝냄(스무 단계 가운데 여덟이 사실상 닫혀 있었다).
+   *                 후: 10단계까지 2일, 12단계 3일, 16단계 4일, 18단계 12일, 20단계 14~17일.
+   *                 바꾼 것 셋: ① 영구 생산 DANGER_PROD 1.25 → 1.35
+   *                            ② 문 값은 10단계(DANGER_COST_KNEE)까지 2.2배씩, 그 뒤로는 1.93배씩(DANGER_COST_LATE)
+   *                            ③ 혈청 값은 문 값과 따로 1.6배씩(DANGER_SERUM). 7구역은 생산이 더 늘지 않는 곳이라
+   *                               혈청 값이 문 값만큼 오르면 그대로 기다리는 시간이 됐다(막힌 곳은 늘 7구역이었다).
    *   구조      : 끝을 볼 때 그 회차에 모은 생존자가 누적(rescued)에 더해진다(위험 단계마다 +100%).
    *               누적이 RESCUE_TIERS 의 문턱을 넘을 때마다 전체 생산이 RESCUE_BONUS 씩 영구히 는다.
    *   기록      : 가장 빨리 끝낸 시간(전체, 단계별), 끝을 본 가장 높은 단계, 최근 끝 10번(endLog).
    */
   var DANGER_MAX = 20, DANGER_HORDE = 1.2, DANGER_COST = 2.2, DANGER_ANTIBODY = 0.3, DANGER_TICKETS = 2;
-  var DANGER_PROD = 1.25;      // 끝을 본 가장 높은 위험 단계마다 전체 생산이 이만큼 곱해진다(영구). 이것이 다음 단계를 넘을 힘이 된다
+  var DANGER_PROD = 1.35;      // 끝을 본 가장 높은 위험 단계마다 전체 생산이 이만큼 곱해진다(영구). 이것이 다음 단계를 넘을 힘이 된다
   var RESCUE_TIERS = [1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13], RESCUE_BONUS = 0.02;
   function dangerOf(state) { return clamp(Math.floor(state.danger || 0), 0, DANGER_MAX); }
   function dangerMax(state) { return (state.ended || 0) >= 1 ? Math.min(DANGER_MAX, (state.bestDanger || 0) + 1) : 0; }
   function dangerHorde(n) { return Math.pow(DANGER_HORDE, n); }
-  function dangerCost(n) { return Math.pow(DANGER_COST, n); }
+  var DANGER_COST_LATE = 1.93, DANGER_COST_KNEE = 10;
+  function dangerCost(n) { return Math.pow(DANGER_COST, Math.min(n, DANGER_COST_KNEE)) * Math.pow(DANGER_COST_LATE, Math.max(0, n - DANGER_COST_KNEE)); }
+  var DANGER_SERUM = 1.6;
+  function dangerSerum(n) { return Math.pow(DANGER_SERUM, n); }
   function dangerPower(state) { return Math.pow(DANGER_PROD, clamp(Math.floor(state.bestDanger || 0), 0, DANGER_MAX)); }
   function setDangerNext(state, n) {
     n = Math.floor(n);
@@ -6643,7 +6666,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     if (open) return g('goal', (state.zone + 1) + '구역 목표: ' + open.text + ' (' + formatNumber(open.value) + ' / ' + formatNumber(open.need) + ')', 'zone');
     var n = nextZone(state);
     if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + (n.enough ? '의 문을 열 수 있어요.' : '의 문은 이번 회차 누적 물자 ' + formatNumber(n.cost) + '에 열려요.'), 'zone');
-    return g('retreat', '지금은 더 나아갈 곳이 없어요. 철수해서 항체 샘플을 챙기고, 더 강하게 다시 시작해 보세요.');
+    return g('retreat', '현재는 더 나아갈 곳이 없어요. 철수해서 항체 샘플을 챙기고, 더 강하게 다시 시작해 보세요.');
   }
 
   /* ---------- 통계 ---------- */
@@ -6741,7 +6764,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,
@@ -6807,7 +6830,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
         '1구역에서 시작해 ' + core.ZONES.length + '구역까지 거점을 넓혀 가는 게임이에요. 다음 구역으로 넘어가도 앞 구역은 남아서 계속 물자를 보내 줘요.',
         '구역마다 하는 일이 달라요. ' + ready.map(function (z) { return z.no + '구역 ' + z.name; }).join(', ') + ' 순서예요.',
         '꺼 두었다 켜도 그동안의 몫을 받아요. 뭘 해야 할지 모르겠으면 상황 화면의 "다음 할 일"을 따라가면 돼요.',
-        '지금은 ' + ready.length + '구역까지 만들어져 있어요.' + (next ? ' ' + next.no + '구역 ' + topic(next.name) + ' 문 앞까지만 갈 수 있고, 다음 버전에서 열려요.' : '') ] },
+        '현재는 ' + ready.length + '구역까지 만들어져 있어요.' + (next ? ' ' + next.no + '구역 ' + topic(next.name) + ' 문 앞까지만 갈 수 있고, 다음 버전에서 열려요.' : '') ] },
 
       { id: 'zone', tab: '구역', title: '구역과 목표', items: [
         '구역 화면의 번호 탭에서 구역을 골라요. 구역마다 운영, 개조, 목표 세 화면이 있어요. "구역 지도"를 열면 일곱 구역이 길로 이어진 지도가 나오고, 구역을 누르면 버는 양을 볼 수 있어요.',
@@ -9369,7 +9392,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     if (r.mileKey !== key) {
       r.mileKey = key;
       while (r.mile.firstChild) r.mile.removeChild(r.mile.firstChild);
-      if (hit) { r.mile.appendChild(el('i', 'st on')); r.mile.appendChild(el('span', '', '지금 2배')); }
+      if (hit) { r.mile.appendChild(el('i', 'st on')); r.mile.appendChild(el('span', '', '현재 2배')); }
       else for (var si = 0; si < total; si++) r.mile.appendChild(el('i', si < tier ? 'st on' : 'st'));
       r.mile.setAttribute('aria-label', hit ? '이번에 사면 2배' : '2배 등급 ' + tier + ' / ' + total);
     }
@@ -10126,7 +10149,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
       if ($('hub').hidden || hubTab !== 'shop' || !lookNow) return;
       lookFrame = (lookFrame + 1) % 240; drawLookScene($('look-pic'), lookNow, lookFrame);
     }, 130);
-    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '지금 입은 모습');
+    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '현재 입은 모습');
     $('look-act').hidden = !pc;
     if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
   }
@@ -10341,7 +10364,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
       }
       head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier] + (p.retreats ? ' · 철수 ' + p.retreats + '번 뒤' : '')));      // 달성한 날짜(적어 둔 것만)
       card.appendChild(head); card.appendChild(el('p', '', a.text));
-      if (p.locked) card.appendChild(el('p', 'ach-lock', '철수를 ' + p.retreats + '번 한 뒤에 달성할 수 있어요(지금 ' + state.retreats + '번).'));
+      if (p.locked) card.appendChild(el('p', 'ach-lock', '철수를 ' + p.retreats + '번 한 뒤에 달성할 수 있어요(현재 ' + state.retreats + '번).'));
       if (!p.done) {
         var bar = el('div', 'autobar');
         fill(bar, p.value / p.need);
@@ -10763,7 +10786,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     setText($('click-value'), '+' + fmt(C.clickValue(state)));
     setText($('day'), ('00' + state.day).slice(-3));
     var label = C.zoneLabel(state);
-    setText($('base-no'), label);
+    // 제목 줄의 구역 이름(2.3.2): 좁은 휴대폰에서는 '6구역 강변 검문소'가 '6구역 강…'으로 잘렸다(360px 에서는 일곱 구역 모두).
+    // 다 들어가지 않으면 '6구역'만 적는다. 이름은 바로 아래 줄(구역 · 하는 일)에 다시 나온다. 재는 일은 글이나 너비가 바뀔 때만 한다.
+    var baseKey = label + '|' + window.innerWidth;
+    if (baseKey !== baseNoKey) {
+      baseNoKey = baseKey;
+      var bn = $('base-no'); bn.textContent = label;
+      if (bn.scrollWidth > bn.clientWidth + 1) bn.textContent = C.ZONES[state.zone].no + '구역';
+    }
     var dTag = $('danger-tag'), dNow = C.dangerOf(state);      // 위험 단계로 하는 회차는 그림 오른쪽 위에 붉은 딱지로 알린다(제목 줄은 좁아서 잘렸다)
     dTag.hidden = !(dNow > 0); if (dNow > 0) setText(dTag, '위험 ' + dNow);
     setText($('zone-name'), label);
@@ -10812,7 +10842,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     var ph = C.dayPhase(state), fighting = ph.phase === 'battle', scale = Math.max(strength, defense, 1);
     $('day-bar').style.width = Math.max(0, Math.min(100, (fighting ? ph.left / ph.total : 1 - ph.left / ph.total) * 100)).toFixed(1) + '%';
     $('night-timer-row').classList.toggle('battle', fighting);
-    setText($('night-timer-label'), fighting ? (state.siege && !safe ? '농성 중 · 버티는 시간' : safe ? '방어 중 · 버티는 시간' : '방어 중 · 지금 보강해야 한다') : '무리 도착까지');
+    setText($('night-timer-label'), fighting ? (state.siege && !safe ? '농성 중 · 버티는 시간' : safe ? '방어 중 · 버티는 시간' : '방어 중 · 당장 보강해야 한다') : '무리 도착까지');
     setText($('night-timer'), clock(ph.left));
     setText($('horde-strength'), fmt(strength));
     setText($('defense-power'), fmt(defense));
@@ -11005,7 +11035,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
         if (n.ready && n.enough && n.wait > 0) setText(ob.children[0], n.zone.no + '구역 가는 길을 정찰하고 있어요');
         ob.children[2].firstChild.style.width = (n.cost > 0 ? Math.min(100, n.have / n.cost * 100) : 100).toFixed(1) + '%';
       }
-      var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 지금은 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 지금은 문 앞까지 갈 수 있어요.')
+      var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 현재는 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 현재는 문 앞까지 갈 수 있어요.')
         : !open ? '아직 열지 않은 구역이에요. 앞 구역의 목표를 모두 채우면 문을 열 수 있어요.' : '';
       $('soon').hidden = !soonText;
       setText($('soon'), soonText);
@@ -11067,11 +11097,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
       rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
       var mult = C.streakMult(state);
       setText($('streak-note'), state.streak
-        ? '연속 호가 ' + state.streak + ' · 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 직접 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
+        ? '연속 호가 ' + state.streak + ' · 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 직접 팔면 끊겨요' : state.streakUsed ? '' : ' · 바로 팔면 올라요')
         : '평균 이상에서 팔리면 연속 호가가 쌓여요');
       var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
-      setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.peakPrice(state) ? ' · 고점' : '') : '팔 상품이 없다');
+      setText(sb, state.goods > 0 ? '바로 판다 · 물자 +' + fmt(worth) + (state.price >= C.peakPrice(state) ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
       // 자동 판매: 흥정꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
       var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= (state.sellPeak ? C.peakPrice(state) : C.priceRange(state).mean);
@@ -11428,6 +11458,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
    * 일지: 구역(장)마다 탭이 하나씩 있고, 고른 장의 글을 편 순서대로 보여 준다.
    * 아직 열리지 않은 편은 자리만 보이고(몇 편이 남았는지 알 수 있게), 아직 가지 못한 구역의 장은 누를 수 없다.
    */
+  var baseNoKey = '';        // 제목 줄의 구역 이름을 마지막으로 잰 때의 글과 화면 너비
   var journalTab = 0;        // 보고 있는 장(구역 번호). 0 이면 가장 최근에 글이 적힌 장을 고른다
   function renderJournal() {
     var read = C.BEATS.filter(function (b) { return state.story[b.id]; });
@@ -11543,7 +11574,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
         case 'ending':
           pendingEnding = ev;      // 일지 창과 특전 창이 닫힌 뒤에 끝 화면을 띄운다(render 가 본다)
           log('혈청을 완성했다. 7구역에 닿았다.', 'story');
-          log('생존자 ' + fmt(ev.saved) + '명을 구조했다. 지금까지 ' + fmt(Math.floor(ev.rescued)) + '명.' + (ev.tierUp ? ' 거점이 더 북적인다. 전체 생산이 늘었다.' : ''), 'good');
+          log('생존자 ' + fmt(ev.saved) + '명을 구조했다. 모두 ' + fmt(Math.floor(ev.rescued)) + '명.' + (ev.tierUp ? ' 거점이 더 북적인다. 전체 생산이 늘었다.' : ''), 'good');
           if (ev.higher) { log('위험 ' + ev.danger + '단계에서 끝을 봤다. 위험 ' + Math.min(C.DANGER_MAX, ev.danger + 1) + '단계를 고를 수 있다. 전체 생산이 영구히 늘었다.', 'good'); toast('위험 ' + ev.danger + '단계 돌파'); }
           else if (ev.fastestHere && ev.count > 1) { log('이 단계의 가장 빠른 기록이다. ' + C.formatDuration(ev.runSeconds) + '.', 'good'); toast('새 기록 · ' + C.formatDuration(ev.runSeconds)); }
           if (ev.count === 1) log('이제 철수할 때 다음 회차의 위험 단계를 고를 수 있다.', 'good');
@@ -11766,7 +11797,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.1";
     $('odds-toggle').addEventListener('click', function () { oddsOpen = !oddsOpen; renderShop(); });
     $('stage-quit').addEventListener('click', function () {
       if (!home) return;
-      confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 지금까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });
+      confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 여기까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });
     });
     $('hub-open').addEventListener('click', openHub);
     $('mnav-hub').addEventListener('click', openHub);

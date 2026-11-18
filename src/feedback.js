@@ -58,12 +58,12 @@
       text,
       '',
       '--- 자동으로 붙는 정보 ---',
-      '지금: ' + (str(input.zone) || '?') + ' · 가장 멀리: ' + name(s.bestZone),
+      '현재: ' + (str(input.zone) || '?') + ' · 가장 멀리: ' + name(s.bestZone),
       '철수 ' + num(s.retreats) + '번 · 항체 누적 ' + num(s.antibodyTotal) + ' · 막아낸 밤 ' + num(s.wavesCleared) + ' · 뚫린 밤 ' + num(s.breaches),
-      '플레이 ' + span(s.play, input.duration) + ' · 자리 비움 ' + span(s.away, input.duration) + ' · 이번 판 ' + span(s.run, input.duration) + (num(s.days) ? ' · ' + num(s.days) + '일째' : '')
+      '플레이 ' + span(s.play, input.duration) + ' · 자리 비움 ' + span(s.away, input.duration) + ' · 이번 회차 ' + span(s.run, input.duration) + (num(s.days) ? ' · ' + num(s.days) + '일째' : '')
     ];
     var runs = (Array.isArray(s.runs) ? s.runs : []).filter(function (r) { return r && typeof r === 'object'; }).slice(0, MAX_RUNS);
-    if (runs.length) lines.push('지난 판: ' + runs.map(function (r) { return name(r.zone) + ' ' + span(r.seconds, input.duration) + ' (+' + num(r.antibodies) + ')'; }).join(' / '));
+    if (runs.length) lines.push('지난 회차: ' + runs.map(function (r) { return name(r.zone) + ' ' + span(r.seconds, input.duration) + ' (+' + num(r.antibodies) + ')'; }).join(' / '));
     var sc = input.screen && typeof input.screen === 'object' ? input.screen : {};
     lines.push('기기: ' + device(input.ua) + ' · 화면 ' + Math.round(num(sc.w)) + '×' + Math.round(num(sc.h)));
     return lines.join('\n');

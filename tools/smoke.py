@@ -236,7 +236,7 @@ def run_case(browser, name, size, state, mode):
         if not tap('#feedback-open'): problems.append('의견 보내기 단추를 누를 수 없다')
         if not page.locator('#feedback').is_visible(): problems.append('의견 창이 뜨지 않았다')
         if not page.is_disabled('#feedback-copy'): problems.append('빈 글인데 복사 단추가 켜져 있다')
-        if '지금: 1구역 주택가' not in text('feedback-info'): problems.append('붙는 정보 미리 보기가 없다: ' + text('feedback-info')[:60])
+        if '현재: 1구역 주택가' not in text('feedback-info'): problems.append('붙는 정보 미리 보기가 없다: ' + text('feedback-info')[:60])
         page.fill('#feedback-text', '시험 의견입니다')
         if page.is_disabled('#feedback-copy') or page.is_disabled('#feedback-issue'): problems.append('글을 썼는데 단추가 꺼져 있다')
         page.click('#feedback-copy'); page.wait_for_timeout(300)

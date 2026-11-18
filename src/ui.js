@@ -773,7 +773,7 @@
     if (r.mileKey !== key) {
       r.mileKey = key;
       while (r.mile.firstChild) r.mile.removeChild(r.mile.firstChild);
-      if (hit) { r.mile.appendChild(el('i', 'st on')); r.mile.appendChild(el('span', '', '지금 2배')); }
+      if (hit) { r.mile.appendChild(el('i', 'st on')); r.mile.appendChild(el('span', '', '현재 2배')); }
       else for (var si = 0; si < total; si++) r.mile.appendChild(el('i', si < tier ? 'st on' : 'st'));
       r.mile.setAttribute('aria-label', hit ? '이번에 사면 2배' : '2배 등급 ' + tier + ' / ' + total);
     }
@@ -1530,7 +1530,7 @@
       if ($('hub').hidden || hubTab !== 'shop' || !lookNow) return;
       lookFrame = (lookFrame + 1) % 240; drawLookScene($('look-pic'), lookNow, lookFrame);
     }, 130);
-    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '지금 입은 모습');
+    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '현재 입은 모습');
     $('look-act').hidden = !pc;
     if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
   }
@@ -1745,7 +1745,7 @@
       }
       head.appendChild(el('b', '', a.name)); head.appendChild(el('span', 'ach-tier', p.done ? '달성' + (p.at ? ' · ' + dayText(p.at) : '') : TIER_NAMES[a.tier] + (p.retreats ? ' · 철수 ' + p.retreats + '번 뒤' : '')));      // 달성한 날짜(적어 둔 것만)
       card.appendChild(head); card.appendChild(el('p', '', a.text));
-      if (p.locked) card.appendChild(el('p', 'ach-lock', '철수를 ' + p.retreats + '번 한 뒤에 달성할 수 있어요(지금 ' + state.retreats + '번).'));
+      if (p.locked) card.appendChild(el('p', 'ach-lock', '철수를 ' + p.retreats + '번 한 뒤에 달성할 수 있어요(현재 ' + state.retreats + '번).'));
       if (!p.done) {
         var bar = el('div', 'autobar');
         fill(bar, p.value / p.need);
@@ -2167,7 +2167,14 @@
     setText($('click-value'), '+' + fmt(C.clickValue(state)));
     setText($('day'), ('00' + state.day).slice(-3));
     var label = C.zoneLabel(state);
-    setText($('base-no'), label);
+    // 제목 줄의 구역 이름(2.3.2): 좁은 휴대폰에서는 '6구역 강변 검문소'가 '6구역 강…'으로 잘렸다(360px 에서는 일곱 구역 모두).
+    // 다 들어가지 않으면 '6구역'만 적는다. 이름은 바로 아래 줄(구역 · 하는 일)에 다시 나온다. 재는 일은 글이나 너비가 바뀔 때만 한다.
+    var baseKey = label + '|' + window.innerWidth;
+    if (baseKey !== baseNoKey) {
+      baseNoKey = baseKey;
+      var bn = $('base-no'); bn.textContent = label;
+      if (bn.scrollWidth > bn.clientWidth + 1) bn.textContent = C.ZONES[state.zone].no + '구역';
+    }
     var dTag = $('danger-tag'), dNow = C.dangerOf(state);      // 위험 단계로 하는 회차는 그림 오른쪽 위에 붉은 딱지로 알린다(제목 줄은 좁아서 잘렸다)
     dTag.hidden = !(dNow > 0); if (dNow > 0) setText(dTag, '위험 ' + dNow);
     setText($('zone-name'), label);
@@ -2216,7 +2223,7 @@
     var ph = C.dayPhase(state), fighting = ph.phase === 'battle', scale = Math.max(strength, defense, 1);
     $('day-bar').style.width = Math.max(0, Math.min(100, (fighting ? ph.left / ph.total : 1 - ph.left / ph.total) * 100)).toFixed(1) + '%';
     $('night-timer-row').classList.toggle('battle', fighting);
-    setText($('night-timer-label'), fighting ? (state.siege && !safe ? '농성 중 · 버티는 시간' : safe ? '방어 중 · 버티는 시간' : '방어 중 · 지금 보강해야 한다') : '무리 도착까지');
+    setText($('night-timer-label'), fighting ? (state.siege && !safe ? '농성 중 · 버티는 시간' : safe ? '방어 중 · 버티는 시간' : '방어 중 · 당장 보강해야 한다') : '무리 도착까지');
     setText($('night-timer'), clock(ph.left));
     setText($('horde-strength'), fmt(strength));
     setText($('defense-power'), fmt(defense));
@@ -2409,7 +2416,7 @@
         if (n.ready && n.enough && n.wait > 0) setText(ob.children[0], n.zone.no + '구역 가는 길을 정찰하고 있어요');
         ob.children[2].firstChild.style.width = (n.cost > 0 ? Math.min(100, n.have / n.cost * 100) : 100).toFixed(1) + '%';
       }
-      var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 지금은 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 지금은 문 앞까지 갈 수 있어요.')
+      var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 현재는 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 현재는 문 앞까지 갈 수 있어요.')
         : !open ? '아직 열지 않은 구역이에요. 앞 구역의 목표를 모두 채우면 문을 열 수 있어요.' : '';
       $('soon').hidden = !soonText;
       setText($('soon'), soonText);
@@ -2471,11 +2478,11 @@
       rows.pips.forEach(function (p, i) { var c = i < state.streak ? 'on' : ''; if (p.className !== c) p.className = c; });
       var mult = C.streakMult(state);
       setText($('streak-note'), state.streak
-        ? '연속 호가 ' + state.streak + ' · 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 직접 팔면 끊겨요' : state.streakUsed ? '' : ' · 지금 팔면 올라요')
+        ? '연속 호가 ' + state.streak + ' · 판매 +' + Math.round((mult - 1) * 100) + '%' + (state.price < range.mean ? ' · 직접 팔면 끊겨요' : state.streakUsed ? '' : ' · 바로 팔면 올라요')
         : '평균 이상에서 팔리면 연속 호가가 쌓여요');
       var sb = $('sell'), worth = state.goods * state.price * C.goodsValue(state) * mult;
       sb.disabled = !(state.goods > 0);
-      setText(sb, state.goods > 0 ? '지금 판다 · 물자 +' + fmt(worth) + (state.price >= C.peakPrice(state) ? ' · 고점' : '') : '팔 상품이 없다');
+      setText(sb, state.goods > 0 ? '바로 판다 · 물자 +' + fmt(worth) + (state.price >= C.peakPrice(state) ? ' · 고점' : '') : '팔 상품이 없다');
       $('auto-sell').checked = state.autoSell;
       // 자동 판매: 흥정꾼(개조)이 있어야 한다. 막대는 다음 자동 판매까지 — 시세가 평균 이상이면 창고의 1/4, 아니면 가득 찰 때까지
       var broker = C.autoOn(state, 1), selling = broker && state.autoSell, goodPrice = state.price >= (state.sellPeak ? C.peakPrice(state) : C.priceRange(state).mean);
@@ -2832,6 +2839,7 @@
    * 일지: 구역(장)마다 탭이 하나씩 있고, 고른 장의 글을 편 순서대로 보여 준다.
    * 아직 열리지 않은 편은 자리만 보이고(몇 편이 남았는지 알 수 있게), 아직 가지 못한 구역의 장은 누를 수 없다.
    */
+  var baseNoKey = '';        // 제목 줄의 구역 이름을 마지막으로 잰 때의 글과 화면 너비
   var journalTab = 0;        // 보고 있는 장(구역 번호). 0 이면 가장 최근에 글이 적힌 장을 고른다
   function renderJournal() {
     var read = C.BEATS.filter(function (b) { return state.story[b.id]; });
@@ -2947,7 +2955,7 @@
         case 'ending':
           pendingEnding = ev;      // 일지 창과 특전 창이 닫힌 뒤에 끝 화면을 띄운다(render 가 본다)
           log('혈청을 완성했다. 7구역에 닿았다.', 'story');
-          log('생존자 ' + fmt(ev.saved) + '명을 구조했다. 지금까지 ' + fmt(Math.floor(ev.rescued)) + '명.' + (ev.tierUp ? ' 거점이 더 북적인다. 전체 생산이 늘었다.' : ''), 'good');
+          log('생존자 ' + fmt(ev.saved) + '명을 구조했다. 모두 ' + fmt(Math.floor(ev.rescued)) + '명.' + (ev.tierUp ? ' 거점이 더 북적인다. 전체 생산이 늘었다.' : ''), 'good');
           if (ev.higher) { log('위험 ' + ev.danger + '단계에서 끝을 봤다. 위험 ' + Math.min(C.DANGER_MAX, ev.danger + 1) + '단계를 고를 수 있다. 전체 생산이 영구히 늘었다.', 'good'); toast('위험 ' + ev.danger + '단계 돌파'); }
           else if (ev.fastestHere && ev.count > 1) { log('이 단계의 가장 빠른 기록이다. ' + C.formatDuration(ev.runSeconds) + '.', 'good'); toast('새 기록 · ' + C.formatDuration(ev.runSeconds)); }
           if (ev.count === 1) log('이제 철수할 때 다음 회차의 위험 단계를 고를 수 있다.', 'good');
@@ -3170,7 +3178,7 @@
     $('odds-toggle').addEventListener('click', function () { oddsOpen = !oddsOpen; renderShop(); });
     $('stage-quit').addEventListener('click', function () {
       if (!home) return;
-      confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 지금까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });
+      confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 여기까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });
     });
     $('hub-open').addEventListener('click', openHub);
     $('mnav-hub').addEventListener('click', openHub);
