@@ -1698,8 +1698,9 @@
     var bar = $('stage-bar'), stt = home ? C.stageStatus(state) : null;
     bar.hidden = !stt; document.body.classList.toggle('in-stage', !!stt);
     if (!stt) return;
-    setText($('stage-bar-name'), (stt.def.boss ? '보스 · ' : '원정 · ') + stt.def.name + (stt.hard ? ' · 하드' : ''));
-    setText($('stage-bar-goal'), C.stageGoalText(stt.def) + ' · ' + (stt.def.goal === 'earn' ? fmt(stt.value) : Math.floor(stt.value)) + ' / ' + (stt.def.goal === 'earn' ? fmt(stt.need) : stt.need));
+    setText($('stage-bar-name'), stt.def.name + (stt.hard ? ' · 하드' : ''));
+    var goalWord = { earn: '물자', build: '시설', nights: '막은 밤', sweep: '수색' }[stt.def.goal] || '';      // 한 줄에 들어가게 목표는 낱말 하나로
+    setText($('stage-bar-goal'), goalWord + ' ' + (stt.def.goal === 'earn' ? fmt(stt.value) : Math.floor(stt.value)) + ' / ' + (stt.def.goal === 'earn' ? fmt(stt.need) : stt.need));
     setText($('stage-bar-time'), clock(stt.left));
     $('stage-bar-time').classList.toggle('low', stt.left <= 60);
     $('stage-bar-fill').style.width = Math.min(100, stt.value / stt.need * 100).toFixed(1) + '%';
@@ -2655,11 +2656,11 @@
       if (sv) {
         var cg = null; C.CARGOS.forEach(function (r) { if (r.id === sv.who) cg = r; });
         setText($('salvage-left'), clock(sv.left));
-        setText($('salvage-text'), '선로에 멈춰 선 ' + (cg ? cg.name + (C.hasBatchim(cg.name) ? '을' : '를') : '화물칸을') + ' 찾았어요.\n끌어오면 물자 +' + fmt(C.salvageReward(state)) + ' · 간식 +' + C.SALVAGE_TREATS);
+        setText($('salvage-text'), '선로에 멈춰 선 ' + (cg ? cg.name + (C.hasBatchim(cg.name) ? '을' : '를') : '화물칸을') + ' 찾았어요.\n끌어오면 물자 +' + fmt(C.salvageReward(state)) + ' · 간식 +' + C.SALVAGE_TREATS + '\n돌아온 열차의 화물이 ' + fmt(sv.need) + '만큼 쌓이면 끌어올 수 있어요.');
         fill($('salvage-bar'), sv.need > 0 ? sv.have / sv.need : 0);
         var sdone = sv.have >= sv.need;
         $('salvage-fill').disabled = !sdone;
-        setText($('salvage-fill'), sdone ? '끌어온다' : '열차를 기다리는 중 · ' + Math.floor(sv.need > 0 ? sv.have / sv.need * 100 : 0) + '%');
+        setText($('salvage-fill'), sdone ? '끌어온다' : '쌓인 화물 ' + fmt(sv.have) + ' / ' + fmt(sv.need) + ' · ' + Math.floor(sv.need > 0 ? sv.have / sv.need * 100 : 0) + '%');
       }
       setText($('salvage-note'), '화물 ' + C.cargoCount(state) + ' / ' + C.CARGOS.length + ' · 이번 회차 ' + state.salvagesRun + '번 · 화물 값 +' + Math.round((C.salvageMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.SALVAGE_BONUS_MAX * 100) + '%)');
       var plan = C.railPlan(state), cargo = C.cargoValue(state);
@@ -3374,6 +3375,43 @@
     document.addEventListener('keydown', function (e) {
       if (!$('story').hidden && (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); Story.advance(); }
     });
+
+    /*
+     * 휴대폰의 뒤로 가기(2.7.0): 전에는 누르면 곧바로 게임에서 나가 홈 화면이 됐다. 이제 게임 안에서 한 단계씩 물러난다.
+     *   열린 창이 있으면 그 창을 닫는다 → 원정 중이면 돌아갈지 묻는다 → 상황 화면이 아니면 상황 화면으로 → 상황 화면이면 "한 번 더 누르면 나가요".
+     *   2초 안에 한 번 더 누르면 정말 나간다. 고르기 전에는 닫을 수 없는 창(특전 고르기)은 그대로 둔다.
+     * 방법: 시작할 때 방문 기록에 한 칸을 더 쌓아 두고, 뒤로 가기로 그 칸이 빠질 때마다(popstate) 위 일을 한 뒤 다시 쌓는다.
+     */
+    (function () {
+      var armed = 0;
+      function push() { try { history.pushState({ zone7: 1 }, ''); } catch (e) { /* 기록을 쌓지 못하는 환경: 전처럼 바로 나간다 */ } }
+      function shown(el) { return !!el && !el.hidden && el.getClientRects().length > 0; }      // offsetParent 로 보면 안 된다: 화면에 고정된 창(position: fixed)은 보여도 offsetParent 가 없다
+      function goBack() {
+        var veils = Array.prototype.slice.call(document.querySelectorAll('.story-veil, [role="dialog"], [role="alertdialog"]')).filter(shown);
+        if (veils.length) {
+          // 뒤에 있는 창부터 본다. 닫을 수 있는 창을 만나면 그것을 닫는다(특전 고르기처럼 닫을 수 없는 창이 함께 떠 있어도 다른 창은 닫힌다)
+          for (var vi = veils.length - 1; vi >= 0; vi--) {
+            var top = veils[vi];
+            if (top.id === 'story') { Story.advance(); return true; }
+            var x = top.querySelector('.feedback-close, [id$="-close"], #confirm-no, [data-close]');
+            if (x && shown(x)) { x.click(); return true; }
+          }
+          return true;      // 닫는 단추가 없는 창(특전 고르기)만 있으면 그대로 둔다. 그래도 게임에서 나가지는 않는다
+        }
+        if (home && shown($('stage-quit'))) { $('stage-quit').click(); return true; }
+        var base = document.querySelector('[data-mview-set="base"]');
+        if (base && shown(base) && base.getAttribute('aria-pressed') !== 'true') { base.click(); return true; }
+        return false;
+      }
+      push();
+      window.addEventListener('popstate', function () {
+        var done = false;
+        try { done = goBack(); } catch (e) { done = false; }
+        if (done) { armed = 0; push(); return; }
+        if (Date.now() - armed < 2000) { try { history.back(); } catch (e) { /* 더 물러날 곳이 없다 */ } return; }      // 두 번째: 정말 나간다
+        armed = Date.now(); toast('한 번 더 누르면 게임을 나가요'); push();
+      });
+    })();
 
     // 효과음: 브라우저 규칙상 첫 입력 뒤에야 소리를 낼 수 있다. 켬/끔은 이 브라우저에 기억한다.
     var SOUND_KEY = 'zone7-sound';

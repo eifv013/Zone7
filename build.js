@@ -38,7 +38,17 @@ try {
   const creditFile = path.join(bgmDir, 'CREDIT.txt');
   const bgmCredit = Object.keys(bgm).length && fs.existsSync(creditFile) ? fs.readFileSync(creditFile, 'utf8').split('\n')[0].trim().slice(0, 60) : '';
   if (Object.keys(bgm).length) console.log(`음원 ${Object.keys(bgm).join(', ')} (${(bgmBytes / 1024).toFixed(0)} KB)`);
-  const html = tpl.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)}; window.ZONE7_BGM_CREDIT = ${JSON.stringify(bgmCredit)};`)
+  // 라라의 기본 그림(2.7.0): 화면 여러 곳에 쓰는 --art-boy 의 처음 값이 옛 소년 그림이라, 게임을 열면 옛 그림이 잠깐 보였다가 지금의 라라로 바뀌었다.
+  // 지금의 라라(Scene.drawHero, 기본 외형)를 네모들로 받아 적어 SVG 로 만들고, 처음 값으로 넣는다.
+  const SceneForArt = require('./src/scene.js');
+  const artRects = []; const artCtx = { fillStyle: '#000', globalAlpha: 1, save() {}, restore() {}, fillRect(x, y, w, h) { if (w > 0 && h > 0) artRects.push([Math.round(x), Math.round(y), Math.round(w), Math.round(h), this.fillStyle]); } };
+  SceneForArt.drawHero(artCtx, 0, 0, 1, null);
+  if (artRects.length < 20 || artRects.some(r => !/^#[0-9a-f]{3,8}$/i.test(r[4]))) throw new Error('라라의 기본 그림을 만들지 못했습니다.');
+  const artSvg = `%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${SceneForArt.LARA_W} ${SceneForArt.LARA_H}' shape-rendering='crispEdges'%3E` + artRects.map(r => `%3Crect x='${r[0]}' y='${r[1]}' width='${r[2]}' height='${r[3]}' fill='%23${r[4].slice(1)}'/%3E`).join('') + '%3C/svg%3E';
+  const artRe = /--art-boy: url\("data:image\/svg\+xml,[^"]*"\);/;
+  if (!artRe.test(tpl)) throw new Error('template.html 에 --art-boy 의 처음 값이 없습니다.');
+  const tplArt = tpl.replace(artRe, () => `--art-boy: url("data:image/svg+xml,${artSvg}");`);
+  const html = tplArt.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)}; window.ZONE7_BGM_CREDIT = ${JSON.stringify(bgmCredit)};`)
     .replace('/*__BOOT__*/', () => read('boot.js'))
     .replace('/*__NOTES__*/', () => read('notes.js'))
     .replace('/*__FEEDBACK__*/', () => read('feedback.js'))

@@ -110,7 +110,11 @@
             if (Math.abs(w1 - w0) > 0.5) doc.body.classList.add('font-display-ok');
           } catch (e) { /* 그대로 둔다 */ }
         };
-        if (doc.fonts && doc.fonts.load) doc.fonts.load('40px "Black Han Sans"', '7구역').then(fontOk, function () {});
+        // 글꼴이 자리 잡았다는 표시(font-settled): 도착했든 못 받았든 결과가 나오면, 늦어도 1.2초 뒤에는 붙인다. 그때까지 시작 화면의 제목을 감춘다
+        var settle = function () { try { doc.body.classList.add('font-settled'); } catch (e) { /* 그대로 둔다 */ } };
+        (win && win.setTimeout ? win.setTimeout : setTimeout)(settle, 1200);
+        if (!(doc.fonts && doc.fonts.load)) settle();
+        if (doc.fonts && doc.fonts.load) doc.fonts.load('40px "Black Han Sans"', '7구역').then(function () { fontOk(); settle(); }, settle);
         if (doc.fonts && doc.fonts.ready && doc.fonts.ready.then) doc.fonts.ready.then(fontOk, function () {});
       } catch (e) { /* 글꼴은 없어도 된다 */ }
       var boot = createBoot({ now: Date.now() });

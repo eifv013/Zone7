@@ -69,6 +69,8 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); ou
 #boot.boot-out { opacity: 0; pointer-events: none; }
 #boot .boot-tape { flex: none; height: 22px; background: repeating-linear-gradient(-45deg, #f0b400 0 18px, #17180f 18px 36px); }
 #boot .boot-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+/* 시작 화면의 제목(2.7.0): 제목 글꼴이 도착하기 전에는 가는 글꼴로 먼저 보였다가 바뀌어서, 두 번 겹쳐 나오는 것처럼 보였다. 글꼴이 자리 잡을 때까지(길어야 1.2초) 감춘다 */
+body:not(.font-settled) #boot .boot-title { color: transparent; }
 #boot .boot-title { margin: 0; font: 400 clamp(64px, 22vw, 120px)/1 var(--font-display); letter-spacing: -.01em; }
 #boot .boot-sub { margin: 10px 0 20px; font: 400 14px/1.5 var(--font-body); letter-spacing: .12em; color: #cfcfc4; }
 #boot .boot-track { width: min(280px, 72vw); height: 18px; border: 2px solid #f0b400; padding: 2px; box-sizing: border-box; }
@@ -355,15 +357,18 @@ body { word-break: keep-all; }
 .st-node.locked .st-pad, .st-node.locked .st-num, .st-node.locked .st-skull, .st-node.locked .st-dot { opacity: .55; } .st-node.locked .zm-name { fill: #a09f8e; }
 .st-node.pick .zm-hit { fill: rgba(240, 180, 0, .12); stroke: #f0b400; stroke-width: 1.5; stroke-dasharray: 3 3; rx: 6; }
 @media (prefers-reduced-motion: reduce) { .st-wave, .st-fire, .st-beam, .st-node.next .st-halo { animation: none; } }
-#stage-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 15; padding: 8px 12px 6px; background: #17180f; color: #e6e5db; border-bottom: 3px solid #f0b400; }
+/* 원정 띠(2.7.0): 전에는 화면 맨 위에 두 줄로 떠서 제목 줄을 덮고 위쪽 그림까지 가렸다. 이제 제목 줄이 있던 자리에 한 줄로 들어간다(원정 중에는 제목 줄을 감춘다).
+   진행 막대는 띠의 아래 테두리가 겸한다. */
+#stage-bar { position: sticky; top: 0; z-index: 15; margin: 0 0 6px; padding: 5px 10px 0; background: #17180f; color: #e6e5db; }
+body.in-stage .mast { display: none; }
 #stage-bar[hidden] { display: none; }
-.stage-bar-row { display: flex; align-items: center; gap: 10px; }
-.stage-bar-row b { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#stage-bar-time { font: 700 20px/1 var(--font-mono); color: #f0b400; }
+.stage-bar-row { display: flex; align-items: center; gap: 8px; min-height: 30px; }
+.stage-bar-row b { flex: 0 1 auto; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#stage-bar-time { font: 700 17px/1 var(--font-mono); color: #f0b400; }
 #stage-bar-time.low { color: #ff7a6b; }
 #stage-quit { padding: 4px 10px; background: transparent; color: #e6e5db; border: 1px solid #e6e5db; font: 600 12px/1.4 var(--font-body); cursor: pointer; }
-.stage-bar-goal { margin-top: 3px; font: 500 13px/1.4 var(--font-mono); color: #b9b8ab; }
-.stage-bar-track { height: 5px; margin-top: 4px; background: #33342a; }
+.stage-bar-goal { flex: 1 1 auto; min-width: 0; font: 500 12px/1.3 var(--font-mono); color: #b9b8ab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage-bar-track { height: 4px; margin: 5px -10px 0; background: #33342a; }
 .stage-bar-track i { display: block; height: 100%; width: 0; background: #f0b400; transition: width .3s; }
 /* ── 도전(1.7.0): 조건 하나를 걸고 목표 구역까지 ── */
 .chal { display: block; width: 100%; margin: 0 0 8px; padding: 10px 12px; text-align: left; background: transparent; color: var(--ink); border: 2px solid var(--ink); cursor: pointer; font: 500 14px/1.45 var(--font-body); }
@@ -1211,7 +1216,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.6.7</div>
+  <div class="boot-ver">7구역 알파 2.7.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1263,7 +1268,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </div>
 <div class="tape" aria-hidden="true"></div>
 <div id="move-fx" class="move-fx" hidden aria-hidden="true"><i class="fx-a"></i><i class="fx-b"></i><div class="fx-text"><b id="move-fx-big"></b><span id="move-fx-small"></span></div></div>
-<div id="stage-bar" hidden><div class="stage-bar-row"><b id="stage-bar-name"></b><span class="num" id="stage-bar-time"></span><button type="button" id="stage-quit">돌아가기</button></div><div class="stage-bar-goal" id="stage-bar-goal"></div><div class="stage-bar-track"><i id="stage-bar-fill"></i></div></div>
+<div id="stage-bar" hidden><div class="stage-bar-row"><b id="stage-bar-name"></b><span class="stage-bar-goal" id="stage-bar-goal"></span><span class="num" id="stage-bar-time"></span><button type="button" id="stage-quit">돌아가기</button></div><div class="stage-bar-track"><i id="stage-bar-fill"></i></div></div>
 <header class="mast">
   <div>
     <h1><span class="seven">7</span>구역</h1>
@@ -1623,7 +1628,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.6.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.7.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
