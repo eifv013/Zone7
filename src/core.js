@@ -1150,8 +1150,9 @@
     if (!zoneOpen(state, 2)) return fail('locked');
     if (!findById(RECIPES, id)) return fail('unknown');
     if (recipeOf(state).id === id) return fail('same');
-    state.recipe = id; state.retool = RETOOL_SECONDS;
-    return { ok: true, id: id, seconds: RETOOL_SECONDS };
+    // 이미 라인이 서 있으면(기계 다시 맞추기 30초 등) 남은 시간을 줄이지 않는다: 전에는 품목을 바꾸면 30초가 6초로 덮여서 기다림을 건너뛸 수 있었다
+    state.recipe = id; state.retool = Math.max(state.retool || 0, RETOOL_SECONDS);
+    return { ok: true, id: id, seconds: Math.ceil(state.retool) };
   }
   /** 지금 이 순간 라인에 걸린 배수: 품목을 바꾸는 중이면 0, 고장이면 느려지고, 정비 직후면 빨라진다. */
   function lineFactor(state) {

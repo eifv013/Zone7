@@ -2725,3 +2725,14 @@ test('선제 공격·반격을 쓸 수 있게 된 순간을 알리고, 급한 �
   assert.deepEqual(held.map((e) => !!e.counterReady), [false, false, true, false]);
   assert.equal(C.guide(b).id, 'counter');
 });
+
+test('기계를 다시 맞추는 동안 품목을 바꿔도 남은 시간이 줄지 않는다', () => {
+  const s = inFactory(); s.machines = { sorter: 87, press: 80, assembler: 95 };
+  assert.ok(C.rebalanceLine(s).ok); assert.equal(s.retool, C.REBALANCE_SECONDS);
+  C.tick(s, 5, () => 0.99); const left = s.retool; assert.ok(left > C.RETOOL_SECONDS);
+  const r = C.setRecipe(s, 'plate'); assert.ok(r.ok); assert.equal(s.retool, left, '30초가 6초로 덮이지 않는다'); assert.equal(r.seconds, Math.ceil(left));
+  // 평소에는 품목을 바꾸면 6초
+  const t = inFactory(); t.machines = { sorter: 10, press: 15, assembler: 30 }; assert.equal(C.setRecipe(t, 'gear').seconds, C.RETOOL_SECONDS); assert.equal(t.retool, C.RETOOL_SECONDS);
+  // 거의 끝나 갈 때 바꾸면 다시 6초
+  s.retool = 2; s.recipe = 'bolt'; C.setRecipe(s, 'gear'); assert.equal(s.retool, C.RETOOL_SECONDS);
+});
