@@ -1174,14 +1174,16 @@
     } catch (e) { /* 그림이 없어도 아래 목록으로 다 보인다 */ }
   }
 
-  function confirmBox(title, text, noText, yesText, onYes) {
+  /** 확인 창. guardMs 를 주면 창이 뜬 뒤 그 시간 동안은 '예'가 눌리지 않는다(화면을 연달아 누르다 그대로 확인까지 눌러 버리는 일을 막는다). */
+  function confirmBox(title, text, noText, yesText, onYes, guardMs) {
+    var openedAt = Date.now();
     setText($('confirm-title'), title);
     setText($('confirm-text'), text);
     setText($('confirm-no'), noText);
     setText($('confirm-yes'), yesText);
     function close() { $('confirm').hidden = true; $('confirm-no').onclick = null; $('confirm-yes').onclick = null; }
     $('confirm-no').onclick = close;
-    $('confirm-yes').onclick = function () { close(); onYes(); };
+    $('confirm-yes').onclick = function () { if (guardMs > 0 && Date.now() - openedAt < guardMs) return; close(); onYes(); };
     $('confirm').hidden = false;
     try { $('confirm-no').focus(); } catch (e) { /* 초점을 못 옮겨도 진행한다 */ }
   }
@@ -2185,11 +2187,15 @@
       name.setAttribute('data-lv', 'Lv ' + state.perks[id] + ' → ' + (state.perks[id] + 1));
       btn.appendChild(name);
       btn.appendChild(el('span', '', '레벨당 ' + def.desc));
+      // 고르기 전에 한 번 더 묻는다(2.8.1). 다른 것을 연달아 누르던 중에 특전 창이 뜨면, 읽기도 전에 누른 자리의 특전이 골라졌다.
+      // 확인 창의 '고른다'는 뜬 뒤 0.5초 동안 눌리지 않는다: 연달아 누르던 손이 확인까지 눌러 버리지 않게.
       btn.addEventListener('click', function () {
-        var r = C.choosePerk(state, id);
-        if (!r.ok) return;
-        log('특전을 골랐다: ' + def.name + ' Lv ' + r.level + '.', 'good');
-        sfx('perk'); Store.save(); render();
+        confirmBox('특전 고르기', '〈' + def.name + '〉 Lv ' + state.perks[id] + ' → ' + (state.perks[id] + 1) + '\n레벨당 ' + def.desc + '\n이 특전을 고를까요?', '다시 본다', '고른다', function () {
+          var r = C.choosePerk(state, id);
+          if (!r.ok) return;
+          log('특전을 골랐다: ' + def.name + ' Lv ' + r.level + '.', 'good');
+          sfx('perk'); Store.save(); render();
+        }, 500);
       });
       box.appendChild(btn);
     });

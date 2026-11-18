@@ -112,6 +112,10 @@ def run_case(browser, name, size, state, mode):
             if page.evaluate("!document.getElementById('%s').hidden" % box): page.click(btn); page.wait_for_timeout(120)
         if page.evaluate("!document.getElementById('perk').hidden"):
             page.locator('#perk-list button').first.click(); page.wait_for_timeout(200)
+            if page.evaluate("document.getElementById('confirm').hidden"): problems.append('특전을 눌렀는데 확인 창이 뜨지 않았다')
+            page.locator('#confirm-yes').click(); page.wait_for_timeout(150)      # 0.5초 안에는 눌리지 않아야 한다
+            if page.evaluate("document.getElementById('confirm').hidden"): problems.append('확인 창이 뜨자마자 눌렸다(연달아 누르기를 막지 못했다)')
+            page.wait_for_timeout(500); page.locator('#confirm-yes').click(); page.wait_for_timeout(200)
             if page.evaluate("!document.getElementById('perk').hidden"): problems.append('특전을 골랐는데 창이 닫히지 않았다')
     def tap(sel):   # 넓은 화면에는 하단 메뉴가 없으므로 보이는 것만 누른다
         clear()
@@ -308,7 +312,9 @@ def run_case(browser, name, size, state, mode):
             close_story()
             for b2 in page.locator('#perk-list button').all()[:1]:
                 try:
-                    if b2.is_visible(): b2.click()
+                    if b2.is_visible():
+                        b2.click(); page.wait_for_timeout(560)
+                        if page.locator('#confirm-yes').is_visible(): page.locator('#confirm-yes').click()
                 except Exception: pass
             if page.locator('#ending').is_visible(): ended = True; break
             page.wait_for_timeout(500)
