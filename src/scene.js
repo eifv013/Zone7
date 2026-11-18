@@ -88,10 +88,11 @@
 
   /**
    * 위험 단계의 풍경(2.2.0): 단계가 오를수록 화면이 달라진다. 5단계마다 한 묶음(tier)씩 더해진다.
-   *   1묶음(1~5)   하늘이 녹빛으로 물들고 재가 날린다
-   *   2묶음(6~10)  달이 붉어지고 먼 건물 사이에서 불길과 연기가 오른다
-   *   3묶음(11~15) 불티가 날아오르고 좀비의 눈이 붉게 빛난다
-   *   4묶음(16~20) 붉은 보름달이 뜨고 하늘이 핏빛이 된다
+   *   1묶음(1~5)   하늘이 녹빛으로 물들고 재가 날리며, 멀리서 불 하나가 탄다
+   *   2묶음(6~10)  해와 달이 붉어지고 불길이 늘며, 불티가 오르고 까마귀 떼가 맴돈다
+   *   3묶음(11~15) 좀비의 눈이 붉게 빛나고 화면 가장자리가 어둡게 물든다
+   *   4묶음(16~20) 붉은 보름달이 뜨고 하늘이 핏빛이 되며, 이따금 붉은 번개가 친다
+   * 2.2.1: 전체를 더 세게 했다(하늘색·불의 수와 크기·재의 양, 화면 전체의 붉은 기운). 낮에는 변화가 약하다는 말이 있었다.
    * 숫자가 아니거나 0 이하면 0(평소 풍경), 20 을 넘으면 4.
    */
   function dangerTier(d) { return !(typeof d === 'number' && isFinite(d) && d > 0) ? 0 : Math.min(4, Math.ceil(d / 5)); }
@@ -99,9 +100,9 @@
   function dangerSky(sky, d) {
     var tier = dangerTier(d);
     if (!tier) return sky;
-    var k = 0.2 + 0.5 * Math.min(1, d / 20);
-    return { top: lerpColor(sky.top, lerpColor('#8a4a3a', '#2b0a10', sky.dark), k),
-             bottom: lerpColor(sky.bottom, lerpColor('#e0a070', '#5a1a1c', sky.dark), k),
+    var k = 0.34 + 0.56 * Math.min(1, d / 20);
+    return { top: lerpColor(sky.top, lerpColor('#7a2e24', '#3a0810', sky.dark), k),
+             bottom: lerpColor(sky.bottom, lerpColor('#e8884a', '#7a1c1a', sky.dark), k),
              dark: sky.dark, tier: tier };
   }
 
@@ -695,7 +696,8 @@
     } else {
       var k = Math.min(1, view.t / 0.78), sunX = Math.round(70 + (W - 110) * k), sunY = Math.round(8 + 44 * k * k);
       ctx.fillStyle = 'rgba(255,240,190,0.16)'; ctx.fillRect(sunX - 4, sunY - 4, 15, 15); ctx.fillRect(sunX - 2, sunY - 2, 11, 11); // 햇무리
-      ctx.fillStyle = lerpColor('#fff6c9', '#f08a3c', sky.dark * 1.6); ctx.fillRect(sunX, sunY, 7, 7);
+      if (sky.tier >= 2) { glow(ctx, sunX + 3, sunY + 3, 9 + sky.tier, '230,70,40', 0.07); ctx.fillStyle = sky.tier >= 4 ? '#c0392b' : '#e8623a'; ctx.fillRect(sunX, sunY + 1, 7, 5); ctx.fillRect(sunX + 1, sunY, 5, 7); }      // 위험 6단계부터: 연기에 가린 붉은 해
+      else { ctx.fillStyle = lerpColor('#fff6c9', '#f08a3c', sky.dark * 1.6); ctx.fillRect(sunX, sunY, 7, 7); }
     }
     var cl = seeded(31), cloud = lerpColor('#f4f1e4', '#343a52', sky.dark);
     if (sky.tier) cloud = lerpColor(cloud, lerpColor('#6b4a44', '#3a1418', sky.dark), 0.25 + sky.tier * 0.15);      // 위험 단계: 구름이 연기 빛으로 탁해진다
@@ -706,6 +708,13 @@
       ctx.fillRect(cx, cy, cw, 3); ctx.fillRect(cx + 3, cy - 2, cw - 8, 2); ctx.fillRect(cx + 2, cy + 3, cw - 6, 1);
     }
     ctx.globalAlpha = 1;
+    if (sky.tier >= 2) {      // 위험 6단계부터: 까마귀 떼가 하늘을 맴돈다(낮밤 없이)
+      ctx.fillStyle = '#0d0a0a';
+      for (i = 0; i < 2 + sky.tier * 2; i++) {
+        var ca = t * (0.5 + (i % 3) * 0.12) + i * 1.9, ccx = W * (0.35 + (i % 4) * 0.15), kx = Math.round(ccx + Math.cos(ca) * (16 + i * 3)), ky = Math.round(30 + (i % 3) * 4 + Math.sin(ca) * 5), flap = Math.floor(t * 6 + i) % 2 ? -1 : 1;
+        ctx.fillRect(kx, ky + flap, 1, 1); ctx.fillRect(kx + 1, ky, 1, 1); ctx.fillRect(kx + 2, ky + flap, 1, 1);
+      }
+    }
     if (sky.dark < 0.3) { // 낮에는 까마귀 두 마리가 지나간다
       ctx.fillStyle = '#17180f';
       for (i = 0; i < 2; i++) {
@@ -818,42 +827,50 @@
   }
 
   /**
-   * 위험 단계의 먼 불길(2묶음부터): 건물 사이에서 불빛이 일렁이고 연기 기둥이 바람에 기울어 오른다.
-   * 불의 수는 묶음마다 하나씩 는다. 자리는 구역마다 정해져 있어 매번 같은 곳에서 탄다.
+   * 위험 단계의 먼 불길: 건물 사이에서 불빛이 일렁이고 연기 기둥이 바람에 기울어 오른다.
+   * 불은 1·2·3·5곳으로 늘고 묶음이 오를수록 불꽃도 크다. 자리는 구역마다 정해져 있어 매번 같은 곳에서 탄다.
    */
   function drawDangerFires(ctx, model, view, sky) {
-    if (!(sky.tier >= 2)) return;
-    var W = model.W, t = model.time, rnd = seeded(view.zone * 7 + 19), n = sky.tier - 1, i, j;
+    if (!sky.tier) return;
+    var W = model.W, t = model.time, rnd = seeded(view.zone * 7 + 19), n = sky.tier >= 4 ? 5 : sky.tier, big = sky.tier - 1, i, j;
     var span = Math.max(40, W - model.wall - 60);
     for (i = 0; i < n; i++) {
       var fx = Math.round(model.wall + 40 + (i + 0.2 + rnd() * 0.6) * span / n), fy = GROUND - 6 - Math.floor(rnd() * 8);
       var flick = Math.floor(t * 7 + i * 3) % 3;
-      glow(ctx, fx, fy + 2, 9 + flick, '240,120,40', 0.10 + 0.05 * sky.dark, true);
-      ctx.fillStyle = '#f08a3c'; ctx.fillRect(fx - 2, fy - 1 - flick, 4, 3 + flick);
+      glow(ctx, fx, fy + 2, 10 + big * 2 + flick, '240,120,40', 0.12 + 0.06 * sky.dark, true);
+      ctx.fillStyle = '#d8452f'; ctx.fillRect(fx - 3, fy - big, 6, 2 + big);      // 불꽃: 붉은 바깥, 주황, 노란 속
+      ctx.fillStyle = '#f08a3c'; ctx.fillRect(fx - 2, fy - 1 - big - flick, 4, 3 + big + flick); ctx.fillRect(fx - 1 + (flick - 1), fy - 3 - big - flick, 2, 2);
       ctx.fillStyle = '#ffd36a'; ctx.fillRect(fx - 1, fy - (flick ? 1 : 0), 2, 2);
       for (j = 0; j < 9; j++) {      // 연기: 위로 갈수록 넓고 옅다
         var sy = fy - 5 - j * 4, lean = Math.round(j * j * 0.22 + Math.sin(t * 0.8 + j * 0.7 + i) * 1.5);
         if (sy < 2) break;
-        ctx.fillStyle = 'rgba(' + (sky.dark > 0.5 ? '40,26,30' : '70,58,56') + ',' + (0.5 - j * 0.045).toFixed(3) + ')';
+        ctx.fillStyle = 'rgba(' + (sky.dark > 0.5 ? '40,26,30' : '58,46,44') + ',' + (0.62 - j * 0.05).toFixed(3) + ')';
         ctx.fillRect(fx - 1 - Math.floor(j / 2) + lean, sy, 3 + j, 4);
       }
     }
   }
   /**
-   * 위험 단계의 재와 불티: 재는 1묶음부터 비스듬히 내리고(묶음이 오를수록 많다), 불티는 3묶음부터 아래에서 위로 오른다.
+   * 위험 단계의 재와 불티: 재는 1묶음부터 비스듬히 내리고(묶음이 오를수록 많다), 불티는 2묶음부터 아래에서 위로 오른다.
    * 날씨처럼 상태를 두지 않고 시간에서 자리를 계산한다. 흔들림을 끈 설정(still)이어도 그리되, 그때는 양을 반으로 줄인다.
    */
   function drawDangerAir(ctx, model, view, sky) {
     if (!sky.tier) return;
     var W = model.W, t = model.time, rnd = seeded(23), i, less = view.still ? 0.5 : 1;
-    var ash = Math.floor(W / 14 * sky.tier * less);
+    // 붉은 기운: 화면 전체에 엷게 덮는다. 낮에도 달라진 것이 한눈에 보이게 하는 것이 목적이다
+    ctx.fillStyle = 'rgba(150,40,20,' + (0.04 + 0.03 * sky.tier).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
+    if (sky.tier >= 3) {      // 가장자리 어둠: 양옆과 아래가 검붉게 죈다
+      for (i = 0; i < 8; i++) { ctx.fillStyle = 'rgba(40,4,6,' + ((0.05 + 0.03 * (sky.tier - 3)) * (8 - i) / 3).toFixed(3) + ')'; ctx.fillRect(i * 2, 0, 2, H); ctx.fillRect(W - 2 - i * 2, 0, 2, H); if (i < 4) ctx.fillRect(0, H - 1 - i, W, 1); }
+    }
+    // 붉은 번개(16단계부터): 9초쯤마다 하늘이 잠깐 번쩍인다. 흔들림을 끈 설정이면 치지 않는다
+    if (sky.tier >= 4 && !view.still) { var lp = (t + 3) % 9; if (lp < 0.12 || (lp > 0.25 && lp < 0.32)) { ctx.fillStyle = 'rgba(255,90,70,0.14)'; ctx.fillRect(0, 0, W, GROUND); } }
+    var ash = Math.floor(W / 9 * sky.tier * less);
     ctx.fillStyle = sky.dark > 0.5 ? 'rgba(150,140,140,0.55)' : 'rgba(70,64,60,0.5)';
     for (i = 0; i < ash; i++) {
       var ax = (rnd() * W + t * (5 + (i % 3) * 2) + Math.sin(t * 0.9 + i) * 2 + W) % W, ay = (rnd() * H + t * (6 + (i % 4))) % (GROUND + 4);
-      ctx.fillRect(Math.round(ax), Math.round(ay), 1, 1);
+      ctx.fillRect(Math.round(ax), Math.round(ay), i % 5 ? 1 : 2, 1);      // 다섯에 하나는 큰 재
     }
-    if (sky.tier >= 3) {
-      var emb = Math.floor(W / 22 * (sky.tier - 2) * less);
+    if (sky.tier >= 2) {
+      var emb = Math.floor(W / 16 * (sky.tier - 1) * less);
       for (i = 0; i < emb; i++) {
         var life = (rnd() + t * (0.10 + (i % 5) * 0.02)) % 1;      // 0 땅 ~ 1 하늘: 오를수록 사그라든다
         var ex = (rnd() * W + life * 26 + Math.sin(t * 2 + i) * 2) % W, ey = GROUND + 4 - life * (GROUND - 6);
