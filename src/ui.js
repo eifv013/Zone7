@@ -2846,7 +2846,8 @@
     tabs.textContent = ''; list.textContent = '';
     chapters.forEach(function (zone) {
       var got = byZone[zone].filter(function (b) { return state.story[b.id]; }).length;
-      var btn = el('button', '', zone + '장 ' + byZone[zone][0].zoneName + ' ' + got + '/' + byZone[zone].length);
+      if (zone === C.MOM_CHAPTER && !got) return;      // 엄마의 수첩: 한 쪽이라도 받기 전에는 장 자체를 보이지 않는다(있다는 것부터가 이야기다)
+      var btn = el('button', '', (zone === C.MOM_CHAPTER ? '' : zone + '장 ') + byZone[zone][0].zoneName + ' ' + got + '/' + byZone[zone].length);
       btn.type = 'button'; btn.disabled = !got; btn.setAttribute('aria-pressed', zone === journalTab ? 'true' : 'false');
       btn.addEventListener('click', function () { journalTab = zone; renderJournal(); });
       tabs.appendChild(btn);
@@ -2855,16 +2856,17 @@
       var li = el('li');
       if (!state.story[b.id]) {
         li.className = 'locked';
-        li.appendChild(el('span', 'j-no', (k + 1) + '편'));
-        li.appendChild(el('span', 'j-title', '아직 적지 않았어요. 이 구역의 목표를 채우면 이어져요.'));
+        li.appendChild(el('span', 'j-no', (k + 1) + (b.mom ? '쪽' : '편')));
+        li.appendChild(el('span', 'j-title', b.mom ? '아직 반창고를 떼지 않았어요. 구역을 지나면 이어져요.' : '아직 적지 않았어요. 이 구역의 목표를 채우면 이어져요.'));
       } else {
-        li.appendChild(el('span', 'j-no', b.zone + '장 ' + (k + 1) + '편'));
+        li.appendChild(el('span', 'j-no', b.mom ? (k + 1) + '쪽' : b.zone + '장 ' + (k + 1) + '편'));
         li.appendChild(el('span', 'j-title', b.title));
         C.fillStory(b.text, state.heroName, state.heroGender).split('\n\n').forEach(function (para) { li.appendChild(el('p', '', para)); });      // 이름 자리에 지금의 주인공 이름을 넣는다
       }
       list.appendChild(li);
     });
-    setText($('journal-count'), read.length + ' / ' + C.BEATS.length + '편');
+    var momGot = C.momRead(state) > 0;      // 수첩을 받기 전에는 전체 편수에도 넣지 않는다
+    setText($('journal-count'), read.length + ' / ' + C.BEATS.filter(function (b) { return momGot || !b.mom; }).length + '편');
   }
 
   /** 도트 화면에 넘길 값. 장면은 예전 구조의 이름(시설 열 종, 연구, 장비)을 쓰므로 지금 상태를 거기에 맞춰 옮긴다. */
@@ -3007,9 +3009,9 @@
           toast('업적 달성 · ' + ev.name); log('업적을 달성했다. 〈' + ev.name + '〉 ' + ev.text + '.', 'good'); sfx('goal'); buzz(25);
           break;
         case 'story':
-          log('일지에 새 글을 적었다. 〈' + ev.title + '〉', 'story');
+          log(ev.mom ? '엄마의 수첩에서 반창고를 하나 뗐다. 〈' + ev.title + '〉' : '일지에 새 글을 적었다. 〈' + ev.title + '〉', 'story');
           journalTab = ev.zone;                                 // 일지를 열면 방금 적힌 장이 보인다
-          if (prefs.storyPop !== 'off') Story.push(ev.zone + '구역 ' + ev.zoneName + ' · 생존 일지', ev.text, ev.title);
+          if (prefs.storyPop !== 'off') Story.push(ev.mom ? ev.zoneName : ev.zone + '구역 ' + ev.zoneName + ' · 생존 일지', ev.text, ev.title);
           else notice('일지에 새 글이 적혔어요. 기록 > 일지에서 읽을 수 있어요.');
           break;
       }

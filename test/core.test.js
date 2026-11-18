@@ -1540,7 +1540,7 @@ test('자동화: 레벨이 오를수록 대기 시간이 줄고, 절반 아래�
 test('일지: 편마다 제목과 여러 문단이 있고, 구역마다 3편씩이다', () => {
   for (const b of C.BEATS) {
     assert.ok(typeof b.title === 'string' && b.title.length > 0, b.id);
-    assert.ok(b.text.split('\n\n').length >= 4, b.id + ' 는 문단이 너무 적다');
+    assert.ok(b.text.split('\n\n').length >= (b.mom ? 3 : 4), b.id + ' 는 문단이 너무 적다');      // 엄마의 수첩은 한 쪽이 짧다(하루에 한 쪽을 겨우 쓴다)
     assert.ok(b.part >= 1);
   }
   for (const no of [1, 2, 3, 4, 5]) assert.equal(C.BEATS.filter(b => b.id.startsWith('z' + no + '-')).length, 3);
@@ -3079,4 +3079,63 @@ test('2.1.0 위험 단계: 끝을 본 뒤에 고르고, 무리와 문 값이 오
   C.setDangerNext(n, 0); assert.equal(C.retreat(n, 0, () => 0.5).state.danger, 0);
   // 구조 단계는 문턱마다 오르고 상한이 있다
   const q = C.createState(0); q.rescued = 1e30; assert.equal(C.rescueTier(q), C.RESCUE_TIERS.length); assert.equal(C.rescueNext(q), 0);
+});
+
+/* ================= 엄마의 수첩 ================= */
+
+test('엄마의 수첩: 끝을 보기 전에도, 끝을 본 바로 그 회차에도 열리지 않는다', () => {
+  const s = C.createState(0);
+  assert.equal(C.afterEnding(s), false);
+  assert.ok(!C.tick(s, 0.1, half).some(e => e.type === 'story' && e.mom));
+  // 끝을 본 회차: zone 이 7구역이어도 한 쪽도 열리지 않는다(15쪽이 한꺼번에 쏟아지지 않는다)
+  s.ended = 1; s.endedRun = true; s.zone = 6;
+  assert.equal(C.afterEnding(s), false);
+  assert.ok(!C.tick(s, 0.1, half).some(e => e.type === 'story' && e.mom));
+  assert.equal(C.momRead(s), 0);
+});
+
+test('엄마의 수첩: 끝을 본 뒤의 회차에서 구역을 따라 한 쪽씩 열린다', () => {
+  const s = C.createState(0); s.ended = 1;
+  const moms = (st) => C.tick(st, 0.1, half).filter(e => e.type === 'story' && e.mom).map(e => e.id);
+  assert.deepEqual(moms(s), ['mom-0'], '새 회차가 시작되면 여는 글');
+  assert.deepEqual(moms(s), [], '같은 쪽은 다시 열리지 않는다');
+  // 1구역: 목표 둘을 채우면 첫 쪽, 모두 채우면 둘째 쪽
+  const g0 = C.activeGoals(s, 0);
+  s.goalsDone[g0[0].id] = true; s.goalsDone[g0[1].id] = true;
+  assert.ok(moms(s).includes('mom-1'));
+  g0.forEach(g => { s.goalsDone[g.id] = true; });
+  assert.ok(moms(s).includes('mom-2'));
+  // 3구역에 들어서면 2구역·3구역의 첫 쪽이 열린다(둘째 쪽은 그 구역의 목표를 다 채워야 한다)
+  s.zone = 2;
+  const got = moms(s);
+  assert.ok(got.includes('mom-3') && got.includes('mom-5'));
+  assert.ok(!got.includes('mom-6') && !got.includes('mom-7'));
+  // 마지막 쪽은 끝을 두 번째로 봐야 열린다
+  s.zone = 6;
+  assert.ok(!moms(s).includes('mom-14'));
+  s.ended = 2; s.endedRun = true;
+  assert.deepEqual(moms(s), ['mom-14']);
+  // 철수해도 읽은 쪽은 남는다
+  s.runEarned = 1e20; s.pendingPerks = [];
+  const n = C.retreat(s, 0).state;
+  assert.ok(n.story['mom-0'] && n.story['mom-14']);
+});
+
+test('엄마의 수첩: 15쪽이고, 글에 채우지 못한 자리가 없고, 원정에서는 열리지 않는다', () => {
+  assert.equal(C.MOM_PAGES.length, 15);
+  const moms = C.BEATS.filter(b => b.mom);
+  assert.equal(moms.length, 15);
+  assert.ok(moms.every(b => b.zone === C.MOM_CHAPTER));
+  for (const g of ['none', 'm', 'f']) for (const name of ['라라', '민준']) for (const b of moms) {
+    const text = C.fillStory(b.text, name, g);
+    assert.ok(!/[{}]/.test(text), b.id);
+    assert.ok(!text.includes('undefined') && !text.includes('null'), b.id);
+  }
+  assert.equal(new Set(C.BEATS.map(b => b.id)).size, C.BEATS.length);
+  // 원정의 상태는 끝을 본 횟수를 옮기지 않으므로 수첩이 열리지 않는다
+  const main = C.createState(0); main.ended = 1; main.bestZone = 6; main.zone = 3;
+  const st = C.createStage(main, 's1-1', false, 0);
+  if (st) { assert.equal(C.afterEnding(st), false); assert.ok(!C.tick(st, 0.1, half).some(e => e.type === 'story' && e.mom)); }
+  // 일지 업적의 문턱은 본편 일지(22편)만으로 닿는다
+  assert.ok(C.BEATS.filter(b => !b.mom).length >= 17);
 });
