@@ -569,6 +569,7 @@
       // 특전(이번 판)
       zev: { rail: null, guard: null, tower: null }, zevIn: { rail: 60, guard: 60, tower: 60 }, railBoost: 0, guardBoost: 0, zevRun: 0, focusLeft: 0, focusCool: 0, push: { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } },      // 4·6·7구역 사건과 5구역 밤샘 연구
       autoOff: {},      // 구역 index → true 면 그 구역의 주문·사건 자동을 꺼 둔 것(철수해도 남는다)
+      goalExt: {},      // 목표 id → 채운 연장 단계 수(이번 회차)
       goalPick: {},      // 이번 회차의 목표 고르기(구역 index → 자리별 0|1). 비어 있으면 원래 목표 셋
       perks: {}, pendingPerks: [], goalsDone: {}, rerollsUsed: 0,      // rerollsUsed: 이번 판에 특전을 다시 뽑은 횟수(철수하면 0)
       // 영구
@@ -718,6 +719,8 @@
     s.defStreak = clamp(safeCount(raw.defStreak), 0, 1e6); s.perkOwed = clamp(safeCount(raw.perkOwed), 0, PERK_OWED_MAX); s.bossPerks = clamp(safeCount(raw.bossPerks), 0, BOSS_PERKS_MAX); s.perkFrom = raw.perkFrom === 'boss' ? 'boss' : 'goal';
     var ao = raw.autoOff && typeof raw.autoOff === 'object' ? raw.autoOff : {};
     for (var az = 1; az < AUTO_KEYS.length; az++) if (ao[az] === true) s.autoOff[az] = true;
+    var ge = raw.goalExt && typeof raw.goalExt === 'object' ? raw.goalExt : {};
+    GOALS.concat(GOALS_ALT).forEach(function (list) { list.forEach(function (g) { if (g && s.goalsDone[g.id]) { var tv = clamp(safeCount(ge[g.id]), 0, EXT_MAX); if (tv > 0) s.goalExt[g.id] = tv; } }); });
     var gp = raw.goalPick && typeof raw.goalPick === 'object' ? raw.goalPick : {};
     GOALS_ALT.forEach(function (alt, zi) { var p = gp[zi]; if (Array.isArray(p) && alt.some(function (g) { return !!g; })) s.goalPick[zi] = [0, 1, 2].map(function (k) { return p[k] && alt[k] ? 1 : 0; }); });
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
@@ -2107,6 +2110,44 @@
       return { id: g.id, text: g.text, value: Math.min(v, g.need), need: g.need, unit: g.unit || null, done: !!state.goalsDone[g.id] };
     });
   }
+  /*
+   * 연장 목표(1.5.5): 목표를 채운 뒤에도 같은 자리에 더 큰 목표가 이어서 뜬다. 문 값보다 목표가 한참 먼저 끝나서 채우는 맛이 없다는 말에서 나왔다.
+   *   문이 열리는 조건과 일지는 그대로다(원래 목표 셋). 연장 목표는 덤이고, 채울 때마다 간식 EXT_TREATS 개와 생산 EXT_SECONDS 초분을 받는다. 특전은 주지 않는다.
+   *   크기: 수를 세는 목표는 단계마다 원래의 절반씩 는다(50 → 75 → 100 …). 물자 누적 목표(100만 이상)는 단계마다 10배.
+   *   한 목표에 EXT_MAX 단계까지. 7구역은 없다(마지막 장의 목표는 이야기의 끝이다).
+   *   state.goalExt = { 목표 id: 채운 연장 단계 수 }. 철수하면 비워진다.
+   */
+  var EXT_MAX = 5, EXT_TREATS = 2, EXT_SECONDS = 60;
+  function extNeed(g, tier) { return g.need >= 1e6 && g.unit !== 'time' ? g.need * Math.pow(10, tier) : Math.ceil(g.need * (1 + 0.5 * tier)); }
+  /** 목표 글 속의 수를 새 크기로 바꿔 적는다(글의 마지막 수를 바꾼다: "1구역 시설 합계 200곳" → "… 300곳"). */
+  function extText(g, need) {
+    var shown = g.unit === 'time' ? String(Math.round(need / 6) / 10) : need >= 1e6 ? formatNumber(need) : String(need);
+    var re = /[\d][\d,.]*(?:[만억조경해자양구간정재극](?![가-힣]))?/g, last = null, m;
+    while ((m = re.exec(g.text))) last = m;
+    return last ? g.text.slice(0, last.index) + shown + g.text.slice(last.index + last[0].length) : g.text + ' (' + shown + ')';
+  }
+  /** 그 구역의 연장 목표 [{ id, tier, text, value, need, unit } | null]. 원래 목표를 아직 못 채웠거나 끝까지 채운 자리는 null. */
+  function extGoals(state, index) {
+    if (index >= ZONES.length - 1) return [null, null, null];
+    return activeGoals(state, index).map(function (g) {
+      var tier = (state.goalExt && state.goalExt[g.id]) || 0;
+      if (!state.goalsDone[g.id] || tier >= EXT_MAX) return null;
+      var need = extNeed(g, tier + 1), v = 0;
+      try { v = safeNum(g.value(state), 0); } catch (e) { v = 0; }
+      return { id: g.id, tier: tier + 1, text: extText(g, need), value: Math.min(v, need), need: need, unit: g.unit || null };
+    });
+  }
+  function checkExtGoals(state, events) {
+    for (var z = 0; z <= state.zone; z++) {
+      extGoals(state, z).forEach(function (x) {
+        if (!x || x.value < x.need) return;
+        var gain = productionPerSec(state) * EXT_SECONDS;
+        state.goalExt[x.id] = x.tier;
+        earn(state, gain); state.treats = Math.min(1e9, state.treats + EXT_TREATS);
+        events.push({ type: 'goal-ext', zone: z, id: x.id, tier: x.tier, text: x.text, gain: gain, treats: EXT_TREATS });
+      });
+    }
+  }
   function goalsComplete(state, index) { return activeGoals(state, index).every(function (g) { return !!state.goalsDone[g.id]; }); }
   /** 새로 채운 목표를 달성 처리하고 특전 선택을 건다. 한 번에 하나씩(고르기 전에는 다음 것을 걸지 않는다). */
   function checkGoals(state, rng, events) {
@@ -2125,6 +2166,7 @@
         events.push({ type: 'goal', zone: z, id: g.id, text: g.text });
       }
     }
+    checkExtGoals(state, events);
     // 7구역의 목표를 모두 채우면 이야기가 끝난다. 한 회차에 한 번만 센다(endedRun). 끝낸 횟수(ended)는 철수해도 남는다
     if (state.zone >= ZONES.length - 1 && !state.endedRun && goalsComplete(state, ZONES.length - 1)) {
       state.endedRun = true;
@@ -2947,7 +2989,7 @@
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE, peakPrice: peakPrice,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
-    ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
+    ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, rebalancePlan: rebalancePlan, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,

@@ -2680,3 +2680,35 @@ test('구역마다 주문·사건 자동을 끌 수 있다: 꺼 두면 자동 �
   assert.equal(C.setAutoEvents(off, 0, false).reason, 'unknown'); assert.equal(C.setAutoEvents(off, 9, false).reason, 'unknown');
   assert.deepEqual(C.sanitizeState({ version: 2, autoOff: { 2: 'yes', 4: true, 99: true } }, 0).autoOff, { 4: true });
 });
+
+test('연장 목표: 채운 목표 자리에 더 큰 목표가 이어서 뜨고, 채우면 간식과 물자를 받는다. 문과 일지는 그대로다', () => {
+  const s = fresh();
+  assert.deepEqual(C.extGoals(s, 0), [null, null, null], '원래 목표를 채우기 전에는 없다');
+  s.buildings.scouts = 50; s.supplies = 0;
+  for (let i = 0; i < 3; i++) { C.tick(s, 0.1, () => 0.5); if (s.pendingPerks.length) C.choosePerk(s, s.pendingPerks[0]); }
+  assert.ok(s.goalsDone.z1a);
+  let x = C.extGoals(s, 0)[0];
+  assert.equal(x.tier, 1); assert.equal(x.need, 75); assert.equal(x.text, '잔해 수색조 75곳'); assert.equal(x.value, 50);
+  // 채우면 다음 단계로 넘어가고 보상을 받는다. 특전은 없다
+  s.buildings.scouts = 75; const treats = s.treats, sup = s.supplies;
+  const ev = C.tick(s, 0.1, () => 0.5).filter((e) => e.type === 'goal-ext');
+  assert.equal(ev.length, 1); assert.equal(ev[0].tier, 1); assert.equal(s.treats - treats, C.EXT_TREATS); assert.ok(s.supplies > sup); assert.equal(s.pendingPerks.length, 0);
+  x = C.extGoals(s, 0)[0]; assert.equal(x.tier, 2); assert.equal(x.need, 100);
+  // 크기: 수는 절반씩 더하고, 물자 누적은 10배씩. 글의 마지막 수를 바꿔 적는다
+  assert.equal(C.extNeed({ need: 50 }, 2), 100); assert.equal(C.extNeed({ need: 3 }, 1), 5); assert.equal(C.extNeed({ need: 1e11 }, 2), 1e13);
+  assert.equal(C.extNeed({ need: 120, unit: 'time' }, 1), 180);
+  assert.equal(C.extText({ text: '1구역 시설 합계 200곳', need: 200 }, 300), '1구역 시설 합계 300곳');
+  assert.equal(C.extText({ text: '상품 판매 누적 1,000억', need: 1e11 }, 1e12), '상품 판매 누적 ' + C.formatNumber(1e12));
+  assert.equal(C.extText({ text: '정속 가동 누적 2분', need: 120, unit: 'time' }, 180), '정속 가동 누적 3분');
+  assert.equal(C.extText({ text: '1구역 개조를 모두 합쳐 12번', need: 12 }, 18), '1구역 개조를 모두 합쳐 18번');
+  // 끝까지 채우면 그 자리는 더 없다. 7구역은 처음부터 없다
+  s.goalExt.z1a = C.EXT_MAX; assert.equal(C.extGoals(s, 0)[0], null);
+  const last = inLab(); last.zone = 6; C.GOALS[6].forEach((g) => { last.goalsDone[g.id] = true; }); assert.deepEqual(C.extGoals(last, 6), [null, null, null]);
+  // 문은 원래 목표로만 열린다. 저장과 철수
+  assert.equal(C.goalsComplete(s, 0), false);
+  const round = C.sanitizeState(JSON.parse(JSON.stringify(s)), 0); assert.deepEqual(round.goalExt, s.goalExt);
+  assert.deepEqual(C.sanitizeState({ version: 2, goalsDone: { z1a: true }, goalExt: { z1a: 99, z1b: 3, nope: 2 } }, 0).goalExt, { z1a: C.EXT_MAX });
+  s.runEarned = 1e30; s.pendingPerks = []; assert.deepEqual(C.retreat(s, 1).state.goalExt, {});
+  // 모든 목표의 글이 수를 바꿔 적을 수 있는 모양이다(괄호로 덧붙이는 일이 없다)
+  C.GOALS.slice(0, 6).concat(C.GOALS_ALT.slice(0, 6)).forEach((list) => list.forEach((g) => { if (g) { const t = C.extText(g, C.extNeed(g, 1)); assert.ok(!/\($/.test(t) && !t.endsWith(')'), g.text + ' → ' + t); assert.notEqual(t, g.text, g.text); } }));
+});

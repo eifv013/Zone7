@@ -22,11 +22,12 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const evs = C.tick(s, dt, rng);
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
-    if (s.jam) C.repairJam(s); if (s.truck) C.loadTruck(s, false);      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
+    const IDLE = !!process.env.IDLE;      // IDLE=1: 사기만 하고 사건·단추는 손대지 않는 사람(자동 개조가 대신 하는 것만 일어난다)
+    if (!IDLE) { if (s.jam) C.repairJam(s); if (s.truck) C.loadTruck(s, false); }      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
     // 4·6·7구역 사건: 배수를 먼저 다 쌓고, 그 뒤로는 바로 받는다. 5구역 밤샘 연구는 되는 대로 누른다
-    for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
-    if (s.zone >= 4 && !(s.focusCool > 0)) C.focusLab(s); if (s.zone >= 5) C.pushZone(s, 'guard'); if (s.zone >= 6) C.pushZone(s, 'tower');
-    if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s);
+    if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
+    if (!IDLE) { if (s.zone >= 4 && !(s.focusCool > 0)) C.focusLab(s); if (s.zone >= 5) C.pushZone(s, 'guard'); if (s.zone >= 6) C.pushZone(s, 'tower'); }
+    if (!IDLE) { if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s); }
     if (s.zone >= 6 && C.serumCost(s) <= s.supplies * 0.5) C.buySerum(s);      // 7구역: 혈청은 가진 물자의 절반으로 살 수 있을 때 산다
     for (let zi = 1; zi <= s.zone; zi++) if (!marks.some(m => m.enter === zi)) marks.push({ enter: zi, day: day + 1, hours: active / 3600, retreats: s.retreats, pps: C.productionPerSec(s) });
     for (let k = 0; k < taps * dt; k++) C.scavenge(s);
@@ -43,7 +44,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     }
     C.fortify(s);
     // 선제 공격은 지금 방어력으로 못 막을 밤에 쓰고, 반격은 되는 대로 쓴다
-    if (C.strikeReady(s) && C.defensePower(s) < C.nightStrength(s)) C.strike(s); if (C.counterReady(s)) C.counterAttack(s);
+    if (!IDLE) { if (C.strikeReady(s) && C.defensePower(s) < C.nightStrength(s)) C.strike(s); if (C.counterReady(s)) C.counterAttack(s); }
     // 목표를 보고 사는 것(사람도 목표 줄을 보고 산다): 이번 회차에 뽑힌 목표(C.goals)마다, 살 수 있으면 목표 쪽으로 먼저 산다
     const cheapestUp = (zone) => { const u = C.UPGRADES.filter(x => x.zone === zone && isFinite(C.upgradeCost(s, x.id))).sort((x, y) => C.upgradeCost(s, x.id) - C.upgradeCost(s, y.id))[0]; return u ? C.buyUpgrade(s, u.id) : { ok: false }; };
     const cheapestDef = () => { const d = C.DEFENSES.slice().sort((x, y) => C.defenseCost(s, x.id, 1) - C.defenseCost(s, y.id, 1))[0]; return C.buyDefense(s, d.id, 1); };
@@ -60,7 +61,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     };
     for (let zi = 0; zi <= s.zone; zi++) for (const g of C.goals(s, zi)) { const act = toward[g.id]; for (let k = 0; act && !g.done && k < 5 && C.goals(s, zi).find(x => x.id === g.id).value < g.need && act().ok; k++); }
     // 3구역: 의뢰가 다른 품목을 찾으면 그 품목으로 바꾼다(의뢰가 없으면 볼트로 돌아온다)
-    if (s.zone >= 2) { const want = s.contract && s.contract.item ? s.contract.item : 'bolt'; if (C.recipeOf(s).id !== want && !(s.retool > 0)) C.setRecipe(s, want); }
+    if (!IDLE && s.zone >= 2) { const want = s.contract && s.contract.item ? s.contract.item : 'bolt'; if (C.recipeOf(s).id !== want && !(s.retool > 0)) C.setRecipe(s, want); }
     const n = C.nextZone(s);
     if (n && n.ready && n.enough) C.openZone(s);
     // 7구역의 마지막 목표가 혈청뿐이고 3시간 안에 모을 수 있으면, 다른 것을 사지 않고 모은다(사람도 그렇게 한다)

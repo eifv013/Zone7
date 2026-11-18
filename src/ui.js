@@ -1914,11 +1914,20 @@
 
     // 목표와 다음 구역
     if (zi >= 0) {
-      var gs = open ? C.goals(state, zi) : [];
+      var gs = open ? C.goals(state, zi) : [], xs = open ? C.extGoals(state, zi) : [];
       rows.goals.forEach(function (r, i) {
         var g = gs[i];
         r.li.hidden = !g;
         if (!g) return;
+        // 연장 목표: 원래 목표를 채운 자리에 더 큰 목표가 이어서 뜬다. 채우면 간식과 물자를 받는다
+        var x = xs[i];
+        if (x) {
+          r.li.className = 'ext';
+          setText(r.text, '◆ 연장 ' + x.tier + ' · ' + x.text);
+          setText(r.num, x.unit === 'time' ? clock(x.value) + ' / ' + clock(x.need) : fmt(x.value) + ' / ' + fmt(x.need));
+          r.bar.style.width = Math.min(100, x.value / x.need * 100).toFixed(1) + '%';
+          return;
+        }
         r.li.className = g.done ? 'done' : '';
         setText(r.text, (g.done ? '■ ' : '□ ') + g.text);
         // 시간으로 재는 목표(정속 가동 등)는 분:초로 보여 준다
@@ -2436,6 +2445,10 @@
           break;
         case 'arrive':
           if (!ev.siege && ev.defense < ev.strength) { log('무리가 도착했다. ' + C.BATTLE_SECONDS + '초 안에 방벽을 보강하지 않으면 뚫린다.', 'bad'); sfx('dusk'); }
+          break;
+        case 'goal-ext':
+          log((ev.zone + 1) + '구역 연장 목표 달성: ' + ev.text + '. 물자 ' + fmt(ev.gain) + ', 간식 ' + ev.treats + '개.', 'good');
+          toast('연장 목표 · ' + ev.text + ' · 간식 +' + ev.treats); sfx('upgrade');
           break;
         case 'goal':
           log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
