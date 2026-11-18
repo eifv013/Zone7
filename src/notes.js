@@ -14,6 +14,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 2.6.3', date: '2026-11-19', at: '2026-11-19 03:59:59', title: '변이체의 음악',
+      items: [
+        '변이체가 온 밤과 위험 11단계부터 나오는 곡이 따로 생겼어요.',
+        '밤의 곡을 조금 느리고 낮게 바꾸고, 낮게 울리는 소리를 깔았어요.'
+      ] },
     { ver: '알파 2.6.2', date: '2026-11-19', at: '2026-11-19 03:59:59', title: '밤의 음악',
       items: [
         '무리가 온 밤에 나오는 곡이 생겼어요. Echoes_of_Lumen의 곡이에요(Pixabay).',
