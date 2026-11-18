@@ -513,7 +513,7 @@ test('이야기: 구역에 들어설 때, 목표 둘, 목표 셋에 일지가 �
   assert.deepEqual(story(s), ['z1-1']);
   s.goalsDone.z1c = true;
   assert.deepEqual(story(s), ['z1-2']);
-  s.runEarned = 1e9; assert.ok(C.openZone(s).ok);
+  s.runEarned = C.ZONES[1].cost; assert.ok(C.openZone(s).ok);
   const ev = C.tick(s, 0.1, half).filter(e => e.type === 'story');
   assert.equal(ev[0].id, 'z2-0');
   assert.equal(ev[0].zoneName, '재래시장');
@@ -2735,4 +2735,25 @@ test('기계를 다시 맞추는 동안 품목을 바꿔도 남은 시간이 줄
   const t = inFactory(); t.machines = { sorter: 10, press: 15, assembler: 30 }; assert.equal(C.setRecipe(t, 'gear').seconds, C.RETOOL_SECONDS); assert.equal(t.retool, C.RETOOL_SECONDS);
   // 거의 끝나 갈 때 바꾸면 다시 6초
   s.retool = 2; s.recipe = 'bolt'; C.setRecipe(s, 'gear'); assert.equal(s.retool, C.RETOOL_SECONDS);
+});
+
+test('1.5.9: 5구역 연구원은 약품을 만들어 물자를 번다', () => {
+  const s = C.createState(0);
+  assert.equal(C.labRate(s), 0, '5구역이 잠겨 있으면 약품이 없다');
+  s.zone = 4; s.staff = 0;
+  assert.equal(C.labRate(s), 0, '연구원이 없으면 약품이 없다');
+  s.staff = 5; const five = C.labRate(s);
+  assert.ok(five > 0);
+  s.staff = 10;
+  assert.ok(C.labRate(s) >= five * 4 - 1, '10명 문턱에서 2배가 붙는다');
+  assert.ok(C.productionPerSec(s) >= C.labRate(s), '초당 생산에 약품이 들어 있다');
+  const before = s.supplies, earned = s.runEarned;
+  C.tick(s, 1, () => 0.5);
+  assert.ok(s.supplies > before && s.runEarned > earned, '시간이 흐르면 약품 값이 물자와 누적에 쌓인다');
+});
+
+test('1.5.9: 구역 문 값은 뒤로 갈수록 커지고, 혈청 값은 7구역 문 값보다 크다', () => {
+  for (let i = 1; i < C.ZONES.length; i++) assert.ok(C.ZONES[i].cost > C.ZONES[i - 1].cost);
+  assert.ok(C.SERUM_COSTS[0] > C.ZONES[6].cost);
+  for (let i = 1; i < C.SERUM_COSTS.length; i++) assert.ok(C.SERUM_COSTS[i] > C.SERUM_COSTS[i - 1]);
 });

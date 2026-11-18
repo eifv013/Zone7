@@ -84,7 +84,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
         consider(C.trainCost(s, 1), C.railRate(t) - rate, () => C.buyTrain(s, 1));
         for (const r of C.ROUTES) { const q = probe(); q.routes[r.id]++; consider(C.routeCost(s, r.id), Math.max(C.railRate(q) - rate, s.trains ? 0 : C.cargoValue(s) * 0.1), () => C.buyRoute(s, r.id)); }
       }
-      if (s.zone >= 4) consider(C.staffCost(s, 1), per * 0.03, () => C.buyStaff(s, 1));
+      if (s.zone >= 4) { const q = Object.create(s); q.staff = s.staff + 1; consider(C.staffCost(s, 1), Math.max(C.labRate(q) - C.labRate(s), per * 0.03), () => C.buyStaff(s, 1)); }      // 5구역: 연구원은 약품도 만든다
       if (s.zone >= 5) { const q = Object.create(s); q.posts = s.posts + 1; consider(C.postCost(s, 1), Math.max(C.guardRate(q) - C.guardRate(s), per * 0.01), () => C.buyPost(s, 1)); }      // 6구역: 초소
       if (s.zone >= 6) { const q = Object.create(s); q.antennas = s.antennas + 1; consider(C.antennaCost(s, 1), Math.max(per * 0.05, per * (C.survivorRate(q) - C.survivorRate(s)) / Math.max(1, C.survivorRate(s)) * 0.2), () => C.buyAntenna(s, 1)); }      // 7구역: 안테나(생존자가 전체 배수를 올린다)   // 5구역: 연구원은 물자를 직접 벌지 않으므로 어림값으로 따진다
       for (const u of C.UPGRADES) { const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' || u.key === 'trip' || u.key === 'traincost' || u.key === 'routecost' || u.key === 'staffcost' || u.key === 'labcost' ? 0.03 : u.key === 'lab' ? 0.06 : 0.12), () => C.buyUpgrade(s, u.id)); }

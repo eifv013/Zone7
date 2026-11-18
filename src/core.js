@@ -90,6 +90,7 @@
   var FLEET_MILESTONES = [4, 8, 12, 16, 24, 32, 48, 64, 80, 100]; // 열차가 이 수에 닿을 때마다 화물 2배
   // 5구역 연구
   var STAFF_COST = 3e22;           // 첫 연구원의 값
+  var LAB_VALUE = 2e18;            // 연구원 한 명이 초당 만드는 약품의 값(개조와 전체 배수를 곱하기 전)
   var STAFF_GROWTH = 1.25;         // 연구원을 한 명 더 뽑을 때마다 값이 오르는 배수
   var PROJECT_BASE = 60;           // 첫 연구 과제에 드는 연구 점수
   var PROJECT_GROWTH = 1.8;        // 과제를 하나 끝낼 때마다 다음 과제의 점수가 오르는 배수
@@ -232,7 +233,7 @@
           "{student:이} 화를 냈다. 우리도 모자란데 누굴 주냐고. 아저씨는 지붕을 가리켰다. “저 숫자 써 놓은 사람도 모자랐을 거다. 그래도 썼잖냐.”",
           "나는 우리 집 현관에 쪽지를 붙였다. “엄마, 나 7구역으로 가. 상자는 잘 들고 있어. — {hero}” 붙이고 나서 한참 서 있었다. 엄마가 이걸 읽을 일이 있을까.",
           "돌아보지 않으려고 했는데 한 번 돌아봤다. 지붕 위의 7이 비에 젖어 번들거렸다."] }] },
-    { no: 2, name: '재래시장', kind: 'trade', cost: 5e7, lead: '좌판을 열고 시세를 봐 가며 판다',
+    { no: 2, name: '재래시장', kind: 'trade', cost: 5e9, lead: '좌판을 열고 시세를 봐 가며 판다',
       story: [
         { title: "저울", text: [
           "2구역. 시장 골목은 셔터가 전부 내려가 있다. 그런데 좌판 하나에 저울이 그대로 놓여 있었다. 바늘이 0을 가리키고 있다. 누가 닦아 놓은 것처럼 깨끗하다.",
@@ -252,7 +253,7 @@
           "전부 같은 쪽으로 걷는다. 강 쪽이다. 우리가 가려는 방향이다.",
           "밤에 혼자 무전기를 켰다. “여기는 7구역. 생존자는 7구역으로 오라.” 방벽 너머에서 발소리가 멈췄다. 틈으로 내다보니, 골목의 놈들이 전부 서 있었다. 고개를 한쪽으로 기울이고. 듣고 있었다.",
           "나는 무전기를 껐다. 발소리가 다시 시작됐다. 이 얘기는 아직 아무한테도 하지 않았다."] }] },
-    { no: 3, name: '공단', kind: 'line', cost: 2e12, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
+    { no: 3, name: '공단', kind: 'line', cost: 8e11, lead: '멈춘 공장의 기계 셋을 맞물려 돌린다',
       story: [
         { title: "멈춘 자리", text: [
           "3구역. 공단의 철문은 안쪽에서 잠겨 있었다. 밖에서 잠근 게 아니다. 안에 있던 사람들이 잠그고, 다른 길로 나간 것이다.",
@@ -315,7 +316,7 @@
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
           "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
-    { no: 6, name: '강변 검문소', kind: 'guard', cost: 5e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
+    { no: 6, name: '강변 검문소', kind: 'guard', cost: 2e27, lead: '다리를 지키며 밀려오는 무리를 막는다',
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
@@ -333,7 +334,7 @@
           "새벽에 건너편에서 쇠 긁는 소리가 났다. 차단기가 올라가는 소리였다. 저쪽 차단기다. 절반쯤 올라가다 멈췄다.",
           "탐조등이 다리 한가운데를 비췄다. 버려진 버스 한 대가 가로로 서 있다. 그 지붕 위에 밧줄 뭉치가 놓여 있었다. 어제는 없던 것이다.",
           "아저씨가 말했다. “저쪽에서도 길을 내고 있는 거야. 우리가 여기서 버티는 걸 보고.” 나는 냉장 상자를 고쳐 멨다. 강은 넓고, 다리는 하나뿐이다."] }] },
-    { no: 7, name: '송신탑', kind: 'tower', cost: 5e30, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
+    { no: 7, name: '송신탑', kind: 'tower', cost: 2e31, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',
       story: [
         { title: "밧줄", text: [
           "7구역. 버스 지붕의 밧줄을 잡고 건넜다. 밧줄은 저쪽에서 당겨 주었다. 당긴 손은 작았다. 여럿이었다.",
@@ -821,7 +822,7 @@
    *   전체 생산 배수 = 1 + TOWER_GAIN × log10(1 + 생존자).  10만 명이면 3.5배.
    *   혈청: 물자를 들여 세 단계로 완성한다(SERUM_COSTS). 마지막 단계를 끝내면 이야기가 끝난다(ended).
    */
-  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [5e30, 2e31, 7.5e31];
+  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [3e31, 1.2e32, 4.5e32];
   function towerMult(state) { return zoneOpen(state, 6) ? 1 + TOWER_GAIN * Math.log(1 + Math.max(0, state.survivors || 0)) / Math.LN10 : 1; }
   function globalMult(state) {
     return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state) * towerMult(state);
@@ -1881,7 +1882,17 @@
     if (!zoneOpen(state, 5) || !(state.posts > 0)) return 0;
     return state.posts * milestoneMult(state.posts) * GUARD_VALUE * mods(state).z6 * globalMult(state) * bridgeSafety(state) * passerMult(state) * (1 + (state.guardBoost || 0));
   }
-  function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + guardRate(state); }
+  /**
+   * 5구역 약품(1.5.9): 연구원이 연구하는 틈에 약품을 만들어 물자로 바꾼다.
+   *   약품 물자 = 연구원 수 × 2배 문턱 배수 × LAB_VALUE × 연구 개조 × 전체 배수
+   * 넣은 까닭: 5구역만 직접 버는 것이 없어서, 6구역 문 값을 앞 구역 수입으로만 채워야 했다.
+   * 그래서 철수의 3분의 1에서 절반이 5구역에서 나왔다. 연구원을 뽑는 일이 곧 수입이 되게 해서 다른 구역과 같은 흐름으로 맞췄다.
+   */
+  function labRate(state) {
+    if (!zoneOpen(state, 4) || !(state.staff > 0)) return 0;
+    return state.staff * milestoneMult(state.staff) * LAB_VALUE * mods(state).lab * globalMult(state);
+  }
+  function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + labRate(state) + guardRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
   function clickPower(state) { return 1 + Math.log(Math.max(1, mods(state).click)) / Math.LN2; }
   function clickValue(state) { return (globalMult(state) + productionPerSec(state) * CLICK_SHARE) * clickPower(state); }
@@ -2793,6 +2804,8 @@
     if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * dt * pushFactor(state, 'tower', dt));      // 7구역: 방송을 듣고 생존자가 모인다(직접 방송 중이면 더 빨리)
     var guard = guardRate(state) * dt * pushFactor(state, 'guard', dt);      // 6구역 통행 물자(순찰 중이면 더 많이)
     if (guard > 0) { earn(state, guard); state.guardEarned += guard; }
+    var drug = labRate(state) * dt;      // 5구역 약품(1.5.9)
+    if (drug > 0) earn(state, drug);
     if (state.surgeLeft > 0 || state.surgeCool > 0) {
       var wasOn = state.surgeLeft > 0;
       state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
@@ -2855,7 +2868,7 @@
     report.gain = (searchRate(state) + sweepRate(state)) * counted * rate + trade + line;      // 순찰조는 자리를 비운 동안에도 돈다
     if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * counted * rate);
     var guardAway = guardRate(state) * counted * rate;
-    report.gain += guardAway;
+    report.gain += guardAway + labRate(state) * counted * rate;      // 약품도 자리를 비운 동안 쌓인다
     earn(state, report.gain);
     state.tradeEarned += trade;
     state.lineEarned += line;
@@ -2894,7 +2907,7 @@
     // 선제 공격·반격을 쓸 수 있는데 오늘 밤을 못 막거나 변이체가 오는 밤이면 먼저 알려 준다(1.5.6)
     var tight = defensePower(state) < nightStrength(state) || isBossWave(currentWave(state));
     if (counterReady(state)) return g('counter', '반격할 수 있어요. 아래 오늘 밤 칸에서 누르면 오늘 밤 무리가 절반이 돼요.');
-    if (strikeReady(state) && tight) return g('strike', '선제 공격을 쓸 수 있어요. 아래 오늘 밤 칸에서 누르면 오늘 밤 무리가 절반이 돼요.');
+    if (strikeReady(state) && tight) return g('strike', '선제 공격을 할 수 있어요. 아래 오늘 밤 칸에서 누르면 오늘 밤 무리가 절반이 돼요.');
     if (!state.siege && defensePower(state) < nightStrength(state)) return g('defend', '방어력이 모자라요. 방벽을 보강해 주세요.', 'wall');
     if (state.antibodies > 0 && TRAITS.some(function (t) { return traitCost(state, t.id) <= state.antibodies; })) return g('trait', '쓸 수 있는 항체 샘플이 있어요. 특성을 찍어 보세요.', 'trait');
     var open = goals(state, state.zone).filter(function (x) { return !x.done; })[0];
@@ -2982,7 +2995,7 @@
     TRAIN_VALUE: TRAIN_VALUE, TRAIN_COST: TRAIN_COST, TRAIN_GROWTH: TRAIN_GROWTH, TRAIN_MAX: TRAIN_MAX, ROUTE_GROWTH: ROUTE_GROWTH, ROUTE_SLOTS: ROUTE_SLOTS, ROUTE_MAX: ROUTE_MAX,
     FLEET_MILESTONES: FLEET_MILESTONES, ROUTES: ROUTES, fleetMilestone: fleetMilestone, trainCost: trainCost, maxTrains: maxTrains, buyTrain: buyTrain,
     routeCost: routeCost, buyRoute: buyRoute, tripSeconds: tripSeconds, railPlan: railPlan, cargoValue: cargoValue, railRate: railRate,
-    STAFF_COST: STAFF_COST, STAFF_GROWTH: STAFF_GROWTH, PROJECT_BASE: PROJECT_BASE, PROJECT_GROWTH: PROJECT_GROWTH, OFFER_COUNT: OFFER_COUNT,
+    LAB_VALUE: LAB_VALUE, labRate: labRate, STAFF_COST: STAFF_COST, STAFF_GROWTH: STAFF_GROWTH, PROJECT_BASE: PROJECT_BASE, PROJECT_GROWTH: PROJECT_GROWTH, OFFER_COUNT: OFFER_COUNT,
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,

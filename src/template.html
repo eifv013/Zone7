@@ -276,6 +276,9 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .row-cost { font-weight: 600; white-space: pre; margin-left: auto; }
 .row:not(:disabled) .row-cost { color: var(--ink); }
 .row-owned .row-count { font-size: 12px; color: var(--safe); }
+/* 끝까지 올린 줄: 수와 '최대'를 초록으로, 왼쪽에 초록 띠 */
+.row.row-max { box-shadow: inset 4px 0 0 var(--safe); }
+.row.row-max .row-count, .row.row-max .row-cost { color: var(--safe); }
 /* 구역 고유 시설·방벽: 왼쪽 띠와 꼬리표로 구분한다 */
 .row-zone { border-left: 4px solid var(--hazard); padding-left: 8px; }
 .row-zone .row-name::after { content: '이 구역 전용'; margin-left: 8px; padding: 0 5px; font: 600 11px/1.7 var(--font-body); background: var(--hazard); color: var(--on-hazard); vertical-align: 2px; }
@@ -1027,7 +1030,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.5.8</div>
+  <div class="boot-ver">7구역 알파 1.5.9</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1426,7 +1429,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.5.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.5.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

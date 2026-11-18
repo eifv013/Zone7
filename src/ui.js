@@ -589,6 +589,18 @@
   /* ---------- 작은 DOM 도우미 ---------- */
   /** 값이 바뀐 경우에만 DOM 을 건드려 0.1초 주기 갱신 비용을 줄인다. */
   /** 진행 바 채우기: el 의 --p 를 0~1 로 둔다. 잘못된 값(NaN, 범위 밖)은 0~1 로 맞춘다. 값이 같으면 건드리지 않는다. */
+  /**
+   * 값 아래에 "지금 가진 물자가 그 값의 얼마쯤인지"를 가는 띠로 칠한다(1.5.9). 살 수 있으면 띠를 지운다.
+   * 얼마나 더 모아야 하는지를 숫자를 견주지 않고도 알 수 있다.
+   */
+  function afford(el, cost) {
+    if (!el) return;
+    var p = !(cost > 0) || !isFinite(cost) || cost <= state.supplies ? -1 : Math.max(0, Math.min(1, state.supplies / cost)), key = p < 0 ? '' : (p * 100).toFixed(0);
+    if (el._afford === key) return;
+    el._afford = key;
+    el.style.background = p < 0 ? '' : 'linear-gradient(90deg, var(--hazard) ' + key + '%, var(--rule) ' + key + '%) left bottom / 100% 3px no-repeat';
+    el.style.paddingBottom = p < 0 ? '' : '4px';
+  }
   function fill(el, ratio) {
     if (!el) return;
     var p = typeof ratio === 'number' && ratio > 0 ? Math.min(1, ratio) : 0, v = p.toFixed(3);
@@ -951,10 +963,10 @@
     $('zmap-map').appendChild(svg);
     $('zmap-go').addEventListener('click', function () { $('zmap').hidden = true; tab = 'z' + zmapPick; pane = 'play'; goTo('tab'); });
   }
-  /** 구역 zi 가 버는 양을 글로. 5구역은 물자가 아니라 연구 점수다. 잠긴 구역은 '잠김'. */
+  /** 구역 zi 가 버는 양을 글로. 잠긴 구역은 '잠김'. */
   function zmapRate(zi, rates) {
     if (zi > state.zone) return '잠김';
-    if (zi === 4) return '점수 +' + fmt(C.researchRate(state)) + '/초';
+    if (zi === 4) return '+' + fmt(C.labRate(state)) + '/초';
     if (zi === 5) return '+' + fmt(C.guardRate(state)) + '/초';
     if (zi === 6) return '생산 ×' + C.towerMult(state).toFixed(2);
     return zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '';
@@ -1171,7 +1183,7 @@
       });
       rows.offers.push({ btn: b, name: name, desc: desc, cost: cost }); $('lab-offers').appendChild(b);
     })(k);
-    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수를 모은다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff)), 'staff'); });
+    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수와 약품을 만든다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff)), 'staff'); });
     $('rows-z4').appendChild(rows.staff.btn);
     // 6구역: 초소
     rows.post = buildRow({ id: 'post', name: '초소', desc: '다리를 건너오는 사람들에게서 통행 물자를 받는다. 10·25·50곳마다 2배' }, function () { buy(C.buyPost(state, qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts)), 'defense'); });
@@ -1748,6 +1760,11 @@
       $('ending').hidden = false; sfx('goal');
       try { $('ending-ok').focus(); } catch (e) { /* 초점을 못 옮겨도 된다 */ }
     }
+    // 끝까지 올린 줄은 색을 바꾼다(1.5.9): 값 자리에 '최대'가 적힌 줄
+    Array.prototype.forEach.call(document.querySelectorAll('button.row'), function (b) {
+      var c = b.querySelector('.row-cost'), full = !!c && c.textContent === '최대';
+      if (b.__max !== full) { b.__max = full; b.classList.toggle('row-max', full); }
+    });
     // 아래 탭의 붉은 점: 살 것이 있는데 다른 화면을 보느라 놓치지 않게 한다
     var feedCost = state.pet ? C.petFeedCost(state) : Infinity;
     var canFeed = isFinite(feedCost) && feedCost <= state.treats;
@@ -1825,7 +1842,7 @@
   /** 구역 화면: 고른 탭에 따라 목표, 거래 칸, 목록을 바꿔 보여 준다. */
   /** 그 구역에서 지금 채울 수 있는 것이 있는가: 2구역 단골 주문, 3구역 납품 의뢰, 4구역 표류 화물. */
   function fillReady(zi) {
-    if (zi < state.zone && C.autoEvents(state, zi)) return false;      // 지나온 구역을 자동에 맡겼으면 점으로 부르지 않는다(1.5.1)
+    if (C.autoEvents(state, zi)) return false;      // 자동에 맡긴 구역은 점으로 부르지 않는다(1.5.9: 지금 있는 구역도. 자동이 몇 초 안에 처리하는데 그 사이 점이 깜박여서, 살 것도 없는데 자꾸 부르는 것처럼 보였다)
     if (zi === 1) return !!state.order && state.goods >= state.order.need;
     if (zi === 2) return (!!state.contract && state.contract.have >= state.contract.need) || !!state.jam || !!state.truck;      // 납품, 고장, 출하 트럭
     if (zi === 3) return (!!state.salvage && state.salvage.have >= state.salvage.need) || !!(state.zev && state.zev.rail);
@@ -1978,7 +1995,7 @@
         setMile(r, n, q, cost <= state.supplies);
         setText(r.info, (n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state))) + (r.next ? ' · ' + r.next + '곳에서 2배' : ''));
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
-        r.btn.disabled = !(cost <= state.supplies);
+        r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
     }
     if (tab === 'z1' && open) {
@@ -2043,13 +2060,13 @@
       setMile(rows.stall, state.stalls, q2, sc <= state.supplies);
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
       setText(rows.stall.cost, isFinite(sc) ? '×' + q2 + ' ' + fmt(sc) : '최대');
-      rows.stall.btn.disabled = !(sc <= state.supplies);
+      rows.stall.btn.disabled = !(sc <= state.supplies); afford(rows.stall.cost, sc);
       C.HANDS.forEach(function (d) {
         var r = rows.hands[d.id], n = state.hands[d.id], q = qtyFor(C.maxHands(state, d.id), d.max - n), cost = C.handCost(state, d.id, q);
         setText(r.count, n + ' / ' + d.max);
         setText(r.info, '현재 +' + Math.round((C.handBonus(state, d.id) - 1) * 100) + '%');
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
-        r.btn.disabled = !(cost <= state.supplies);
+        r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
     }
     if (tab === 'z2' && open) {
@@ -2107,7 +2124,7 @@
         // 별: 기계 레벨 합계의 2배 문턱(세 기계가 함께 채운다). 이 기계를 사서 문턱을 넘으면 "지금 2배"가 뜬다
         setMile(r, line.levels, q, cost <= state.supplies, C.LINE_MILESTONES);
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
-        r.btn.disabled = !(cost <= state.supplies);
+        r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
       var ld = $('line-load');
       setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '% · 정속 ' + Math.round(line.steadyAt * 100) + '% 이상');
@@ -2124,7 +2141,7 @@
       fill(sg, sOn ? state.surgeLeft / C.SURGE_SECONDS : state.surgeCool > 0 ? 1 - state.surgeCool / C.surgeCooldown(state) : 0);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
-      tb.disabled = !(tc <= state.supplies);
+      tb.disabled = !(tc <= state.supplies); afford(tb, tc);
       setText(tb, isFinite(tc) ? '병목 올리기 · ' + names[line.bottleneck] + ' · 물자 ' + fmt(tc) + (qtyMode === 1 ? '' : qtyMode === 'max' ? ' · 되는 만큼' : ' · ' + qtyMode + '번') : '기계가 모두 최대다');
     }
     if (tab === 'z3' && open) {
@@ -2153,7 +2170,7 @@
         setText(r.count, lv ? lv + '단계' : '끊김');
         setText(r.info, (lv ? '열차 ' + plan.slots[d.id] + '대까지' : '복구하면 열차 ' + C.ROUTE_SLOTS + '대') + ' · ' + clock(trip) + ' · 화물 ×' + d.mult);
         setText(r.cost, isFinite(cost) ? (lv ? '증편 ' : '복구 ') + fmt(cost) : '최대');
-        r.btn.disabled = !(cost <= state.supplies);
+        r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
       drawRail(plan);
       var gb = $('green'), running = 0;
@@ -2168,7 +2185,7 @@
       setMile(rows.train, state.trains, tq, tcost <= state.supplies, C.FLEET_MILESTONES);
       setText(rows.train.info, '대당 초당 화물 ' + fmt(cargo) + (plan.idle ? ' · 탈 노선이 없음' : ''));
       setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + fmt(tcost) : '최대');
-      rows.train.btn.disabled = !(tcost <= state.supplies);
+      rows.train.btn.disabled = !(tcost <= state.supplies); afford(rows.train.cost, tcost);
     }
     if (tab === 'z6' && open) {
       renderZoneEvent('tower'); renderPush('tower', '직접 방송');
@@ -2185,7 +2202,7 @@
       setMile(rows.antenna, state.antennas, aq, acost <= state.supplies);
       setText(rows.antenna.info, state.antennas ? '초당 ' + fmt(sRate) + '명' : '세우면 생존자가 모여요');
       setText(rows.antenna.cost, isFinite(acost) ? '×' + aq + ' ' + fmt(acost) : '최대');
-      rows.antenna.btn.disabled = !(acost <= state.supplies);
+      rows.antenna.btn.disabled = !(acost <= state.supplies); afford(rows.antenna.cost, acost);
     }
     if (tab === 'z5' && open) {
       renderZoneEvent('guard'); renderPush('guard', '순찰');
@@ -2200,7 +2217,7 @@
       setMile(rows.post, state.posts, pq, pcost <= state.supplies);
       setText(rows.post.info, state.posts ? '초당 ' + fmt(gRate) : '사면 통행 물자가 들어와요');
       setText(rows.post.cost, isFinite(pcost) ? '×' + pq + ' ' + fmt(pcost) : '최대');
-      rows.post.btn.disabled = !(pcost <= state.supplies);
+      rows.post.btn.disabled = !(pcost <= state.supplies); afford(rows.post.cost, pcost);
     }
     if (tab === 'z4' && open) {
       var pc = C.projectCost(state), rc = C.rerollCost(state), rate = C.researchNow(state);
@@ -2232,9 +2249,9 @@
       var sq = qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff), scost = C.staffCost(state, sq);
       setText(rows.staff.count, state.staff + ' / ' + C.COUNT_MAX);
       setMile(rows.staff, state.staff, sq, scost <= state.supplies);
-      setText(rows.staff.info, '초당 연구 점수 ' + fmt(rate));
+      setText(rows.staff.info, '초당 점수 ' + fmt(rate) + ' · 약품 +' + fmt(C.labRate(state)));      // 1.5.9: 연구원은 약품(물자)도 만든다
       setText(rows.staff.cost, isFinite(scost) ? '×' + sq + ' ' + fmt(scost) : '최대');
-      rows.staff.btn.disabled = !(scost <= state.supplies);
+      rows.staff.btn.disabled = !(scost <= state.supplies); afford(rows.staff.cost, scost);
     }
     if (tab === 'wall') {
       // 방벽을 사는 자리에서 바로 견줘 볼 수 있게: 지금 방어력과 오늘 밤 무리(1.5.1)
@@ -2246,7 +2263,7 @@
         setText(r.count, String(state.defenses[d.id]));
         setText(r.info, '하나에 방어력 +' + fmt(d.power * m.defense));
         setText(r.cost, '×' + q + ' ' + fmt(cost));
-        r.btn.disabled = !(cost <= state.supplies);
+        r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
         var adLeft = C.autoDefLeft(state, d.id);
         setText(rows.autoDef[d.id], d.name + ' · ' + (adLeft ? adLeft + '개 더' : '끔'));
         rows.autoDef[d.id].setAttribute('aria-pressed', adLeft ? 'true' : 'false');
@@ -2278,7 +2295,7 @@
       if (softCap < u.max && lv >= softCap && lv < u.max) infoText = (infoText ? infoText + ' · ' : '') + '숙련 상한 Lv ' + softCap + ' · 넘기면 값이 ' + C.CAP_OVER + '배씩';      // 지금까지 쌓인 효과(1.3.0). 설명 줄은 레벨당 오르는 양이다
       setText(r.info, infoText);
       setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');
-      r.btn.disabled = !(cost <= state.supplies);
+      r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       r.btn.classList.toggle('row-owned', lv >= u.max);
     });
   }
@@ -2434,7 +2451,7 @@
             toast((ev.passer.first ? '새 통행인 · ' : '통행인 · ') + ev.passer.name);
             log(ev.passer.name + (C.hasBatchim(ev.passer.name) ? '이' : '가') + ' 다리를 건넜다.' + (ev.passer.first ? ' 도감에 적었다.' : ''), 'good');
           }
-          if (ev.edgeFull) { toast('선제 공격을 쓸 수 있어요'); log('방어 여유가 가득 찼다. 선제 공격을 나갈 수 있다.', 'good'); }
+          if (ev.edgeFull) { toast('선제 공격을 할 수 있어요'); log('방어 여유가 가득 찼다. 선제 공격을 할 수 있다.', 'good'); }
           sfx('defended'); buzz(20); if (scene) scene.night(true);
           break;
         case 'breached':
