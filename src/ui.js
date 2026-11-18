@@ -1354,7 +1354,7 @@
     tabBtn.disabled = false; setText(tabBtn, '원정');
     var all = C.stageMarkCount(state);
     setText($('stage-count'), open ? '표시 ' + all.have + ' / ' + all.all + ' · 지역 휘장 ' + C.badgeCount(state) + ' / ' + C.REGIONS.length : '');
-    setText($('stage-hint'), open ? '따로 도는 짧은 판이에요. 특성과 업적 없이 빈 거점에서 시작해요.\n하는 동안 본 게임은 자리 비움처럼 계속 벌어요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
+    setText($('stage-hint'), open ? '빈 거점에서 시작하는 짧은 판이에요. 본 게임은 그동안 계속 벌어요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
     if (!rows.stages) buildStageMap();
     // 고른 스테이지가 없으면: 아직 클리어하지 않은 것 가운데 맨 앞
     if (!stagePick || !rows.stages[stagePick]) { stagePick = C.STAGES[0].id; C.STAGES.some(function (d) { if (!C.stageMarks(state, d.id).clear) { stagePick = d.id; return true; } return false; }); }
@@ -1374,8 +1374,9 @@
     }
     setText($('stage-d-no'), d.boss ? '지역 보스' : '스테이지 ' + C.REGIONS[0].no + '-' + (idx + 1));
     setText($('stage-d-name'), d.name);
-    setText($('stage-d-sub'), (C.stageRuleTexts(d, false).join(' · ') || '규칙 없음') + '\n목표 ' + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit) + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
-    setText($('stage-d-marks'), ['clear', 'speed', 'hard'].map(function (k) { return (m[k] ? '● ' : '○ ') + MARK_NAME[k] + (k === 'speed' ? ' ' + clock(d.speed) : k === 'hard' ? ' +' + C.STAGE_RULES[d.hard] : ''); }).join('\n') + (m.best ? '\n최고 기록 ' + clock(m.best) : '') + (d.boss ? '\n보상 · 지역 휘장 · 방어 성공 시 전리품 +10%' : ''));
+    setText($('stage-d-sub'), (C.stageRuleTexts(d, false).join(' · ') || '규칙 없음') + ' · 하드는 +' + C.STAGE_RULES[d.hard] + '\n목표 ' + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit) + (d.boss ? '\n보상 · 지역 휘장 · 방어 성공 시 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
+    // 한 줄로: 창이 화면보다 길어져 위아래로 밀리지 않게(1.8.4)
+    setText($('stage-d-marks'), ['clear', 'speed', 'hard'].map(function (k) { return (m[k] ? '● ' : '○ ') + MARK_NAME[k] + (k === 'speed' ? ' ' + clock(d.speed) : ''); }).join('  ') + (m.best ? '  · 최고 ' + clock(m.best) : ''));
     $('stage-go').disabled = !!why; $('stage-hard').disabled = !!C.stageBlock(state, d.id, true);
   }
   /*
