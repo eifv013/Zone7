@@ -209,10 +209,27 @@ public class MainActivity extends Activity {
         if (web != null) web.saveState(out);
     }
 
-    /** 뒤로 가기: 앱을 끝내지 않고 뒤로 보낸다. 실수로 눌러도 게임이 처음부터 다시 열리지 않는다. */
+    /**
+     * 뒤로 가기: 먼저 게임에게 묻는다(window.Zone7Back). 게임이 창을 닫거나 화면을 옮겼으면("stay") 앱은 그대로 있고,
+     * 게임이 더 물러날 곳이 없다고 하면("exit") 앱을 끝내지 않고 뒤로 보낸다(실수로 눌러도 게임이 처음부터 다시 열리지 않는다).
+     * 전에는 묻지 않고 곧바로 뒤로 보내서, 창 하나 닫으려고 눌러도 홈 화면이 됐다.
+     * 게임이 아직 뜨지 않았거나 오래된 게임이라 그 함수가 없으면 전처럼 바로 뒤로 보낸다.
+     */
     @Override
     public void onBackPressed() {
-        moveTaskToBack(true);
+        if (web == null) { moveTaskToBack(true); return; }
+        try {
+            web.evaluateJavascript(
+                "(function(){try{return window.Zone7Back?String(window.Zone7Back()):'exit'}catch(e){return 'exit'}})()",
+                new android.webkit.ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String value) {
+                        if (value == null || !value.contains("stay")) moveTaskToBack(true);
+                    }
+                });
+        } catch (Exception e) {
+            moveTaskToBack(true);
+        }
     }
 
     @Override

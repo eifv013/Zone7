@@ -3380,11 +3380,10 @@
      * 휴대폰의 뒤로 가기(2.7.0): 전에는 누르면 곧바로 게임에서 나가 홈 화면이 됐다. 이제 게임 안에서 한 단계씩 물러난다.
      *   열린 창이 있으면 그 창을 닫는다 → 원정 중이면 돌아갈지 묻는다 → 상황 화면이 아니면 상황 화면으로 → 상황 화면이면 "한 번 더 누르면 나가요".
      *   2초 안에 한 번 더 누르면 정말 나간다. 고르기 전에는 닫을 수 없는 창(특전 고르기)은 그대로 둔다.
-     * 방법: 시작할 때 방문 기록에 한 칸을 더 쌓아 두고, 뒤로 가기로 그 칸이 빠질 때마다(popstate) 위 일을 한 뒤 다시 쌓는다.
+     * 받는 길은 둘이다: 안드로이드 앱은 앱이 직접 묻고(window.Zone7Back), 브라우저와 웹 앱은 방문 기록으로 받는다(아래).
      */
     (function () {
       var armed = 0;
-      function push() { try { history.pushState({ zone7: 1 }, ''); } catch (e) { /* 기록을 쌓지 못하는 환경: 전처럼 바로 나간다 */ } }
       function shown(el) { return !!el && !el.hidden && el.getClientRects().length > 0; }      // offsetParent 로 보면 안 된다: 화면에 고정된 창(position: fixed)은 보여도 offsetParent 가 없다
       function goBack() {
         var veils = Array.prototype.slice.call(document.querySelectorAll('.story-veil, [role="dialog"], [role="alertdialog"]')).filter(shown);
@@ -3403,13 +3402,29 @@
         if (base && shown(base) && base.getAttribute('aria-pressed') !== 'true') { base.click(); return true; }
         return false;
       }
-      push();
-      window.addEventListener('popstate', function () {
+      /** 한 걸음 물러난다. 게임 안에서 처리했으면 'stay', 정말 나가야 하면 'exit'. 상황 화면에서는 2초 안에 두 번 눌러야 나간다. */
+      function step() {
         var done = false;
         try { done = goBack(); } catch (e) { done = false; }
-        if (done) { armed = 0; push(); return; }
-        if (Date.now() - armed < 2000) { try { history.back(); } catch (e) { /* 더 물러날 곳이 없다 */ } return; }      // 두 번째: 정말 나간다
-        armed = Date.now(); toast('한 번 더 누르면 게임을 나가요'); push();
+        if (done) { armed = 0; return 'stay'; }
+        if (Date.now() - armed < 2000) { armed = 0; return 'exit'; }
+        armed = Date.now(); toast('한 번 더 누르면 게임을 나가요');
+        return 'stay';
+      }
+      // 안드로이드 앱(껍데기)의 뒤로 가기는 앱이 받아서 이 함수에 묻는다(MainActivity.onBackPressed). 'exit' 일 때만 앱이 뒤로 물러난다.
+      window.Zone7Back = step;
+      /*
+       * 브라우저와 홈 화면에 설치한 웹 앱(2.7.1): 2.7.0 은 시작할 때 방문 기록을 한 칸 쌓아 두는 방식이었는데, 실제 휴대폰에서는 그냥 나가졌다.
+       * 크롬은 사람이 화면을 건드리지 않은 채 쌓인 칸을 뒤로 가기에서 건너뛴다(뒤로 가기를 막는 사이트를 거르는 장치).
+       * 그래서 사람이 화면을 누를 때마다 한 칸씩, 세 칸까지 쌓아 둔다. 건드린 뒤에 쌓인 칸은 건너뛰지 않는다.
+       * 뒤로 가기로 한 칸이 빠지면(popstate) 한 걸음 물러나고, 빠진 칸은 다음에 화면을 누를 때 다시 채운다.
+       */
+      var depth = 0, DEPTH_MAX = 3;
+      function arm() { if (depth >= DEPTH_MAX) return; try { history.pushState({ zone7: depth + 1 }, ''); depth++; } catch (e) { /* 기록을 쌓지 못하는 환경: 전처럼 바로 나간다 */ } }
+      ['pointerdown', 'keydown'].forEach(function (type) { document.addEventListener(type, arm, { passive: true, capture: true }); });
+      window.addEventListener('popstate', function () {
+        depth = Math.max(0, depth - 1);
+        if (step() === 'exit') { try { history.go(-(depth + 1)); } catch (e) { /* 더 물러날 곳이 없다 */ } depth = 0; }
       });
     })();
 
