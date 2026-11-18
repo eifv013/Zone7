@@ -1092,43 +1092,85 @@
 
   /**
    * 4구역 노선도를 그린다(320×92 도트). 왼쪽이 환승역이고, 노선 넷이 위에서 아래로 놓인다(먼 노선일수록 길다).
-   *   - 복구한 노선은 실선, 끊긴 노선은 점선이다. 열차는 종점까지 갔다가 돌아온다(운행 시계의 절반이 가는 길).
+   *   - 노선마다 색이 있다(RAIL_COLORS). 복구한 노선은 그 색의 두 줄 레일과 중간역, 끊긴 노선은 회색 점선이다.
+   *   - 열차는 기관차 한 대에 화물칸이 붙는다. 화물칸의 수는 그 노선의 열차 수를 따른다(4대마다 한 칸, 세 칸까지).
+   *     종점까지 갔다가 돌아온다(운행 시계의 절반이 가는 길). 돌아오는 열차의 화물칸에는 상자가 실려 있다.
    *   - 방금 도착한 노선은 역 쪽에 불빛이 잠깐 켜진다.
+   * 2.4.0: 전에는 노란 네모에 바퀴 둘이라 열차로 보이지 않았다. 기관차(창, 전조등, 지붕)와 화물칸을 따로 그린다.
    * 그리다 실패해도 게임은 계속된다: 같은 정보가 아래 목록에 글로 있다.
    */
+  var RAIL_COLORS = { loop: '#4f9a3a', river: '#2f7fd0', outer: '#d8702a', express: '#9a5fd0' };
+  /** 기관차(11×8). x,y 는 왼쪽 위, dir 은 가는 쪽(1 오른쪽, -1 왼쪽). 왼쪽을 볼 때는 좌우를 뒤집어 그린다. */
+  function railLoco(g, x, y, dir, col, ink) {
+    function r(c, a, b, w, h) { g.fillStyle = c; g.fillRect(x + (dir > 0 ? a : 11 - a - w), y + b, w, h); }
+    r(col, 0, 1, 10, 5); r(col, 10, 3, 1, 3);                                  // 몸통과 앞코
+    r('#1b1c14', 1, 2, 5, 2); r('#bfe3f2', 6, 2, 3, 2);                        // 창 띠와 운전실 창
+    r('#fff6c9', 10, 4, 1, 1);                                                 // 전조등
+    r('#2a2b22', 0, 6, 11, 1); r('#0c0d08', 1, 7, 2, 1); r('#0c0d08', 7, 7, 2, 1);      // 하부와 바퀴
+    r(ink, 2, 0, 6, 1);                                                        // 지붕
+  }
+  /** 화물칸(8×8 자리에 그린다). full 이면 상자가 실려 있다. */
+  function railCar(g, x, y, full) {
+    function r(c, a, b, w, h) { g.fillStyle = c; g.fillRect(x + a, y + b, w, h); }
+    r('#7b7c70', 0, 3, 8, 3); r('#55564c', 0, 3, 8, 1); r('#2a2b22', 0, 6, 8, 1); r('#0c0d08', 1, 7, 2, 1); r('#0c0d08', 5, 7, 2, 1);
+    if (full) { r('#a8763f', 1, 0, 3, 3); r('#8a5a34', 4, 1, 3, 2); r('#f0b400', 1, 1, 3, 1); }
+  }
+  /** 화물칸의 수: 열차 4대마다 한 칸, 한 칸에서 세 칸까지. */
+  function railCars(n) { return Math.max(1, Math.min(3, Math.ceil((n || 0) / 4))); }
   function drawRail(plan) {
     try {
       var cv = $('railmap'), g = cv.getContext('2d'), css = getComputedStyle(document.body);
       var ink = css.getPropertyValue('--ink').trim() || '#17180f', hazard = css.getPropertyValue('--hazard').trim() || '#f0b400', soft = css.getPropertyValue('--ink-soft').trim() || '#666';
-      var W = cv.width, H = cv.height, x0 = 30, ends = [110, 170, 240, 306], now = Date.now();
+      var bg = css.getPropertyValue('--concrete').trim() || '#cfcfc4';
+      var W = cv.width, H = cv.height, x0 = 34, ends = [112, 172, 242, 306], now = Date.now(), still = prefs.shake === 'off';
       g.clearRect(0, 0, W, H);
       C.ROUTES.forEach(function (d, i) {
-        var y = 12 + i * 22, x1 = ends[i], lv = state.routes[d.id], n = plan.riders[d.id];
-        // 선로와 침목
-        g.fillStyle = lv ? ink : soft;
-        if (lv) { g.fillRect(x0, y, x1 - x0, 2); for (var tx = x0 + 4; tx < x1; tx += 8) g.fillRect(tx, y - 2, 2, 6); }
-        else for (var dx = x0; dx < x1; dx += 8) g.fillRect(dx, y, 4, 2);
-        // 종점
-        g.fillStyle = lv ? ink : soft; g.fillRect(x1 - 2, y - 5, 8, 12);
-        if (!lv) return;
-        // 열차: 운행 시계의 앞 절반은 가는 길, 뒤 절반은 오는 길. 여러 대는 조금씩 뒤따른다(세 대까지만 그린다).
-        var trip = C.tripSeconds(state, d.id), p = Math.max(0, Math.min(1, state.routeClock[d.id] / trip));
-        if (!n && state.routeLoad[d.id] > 0) n = 1;      // 열차가 다른 노선으로 옮겨 갔어도, 싣고 돌아오는 마지막 한 대는 보인다
-        for (var k = 0; k < Math.min(3, n); k++) {
-          var q = Math.max(0, Math.min(1, p - k * 0.04)), pos = q < 0.5 ? q * 2 : 2 - q * 2, back = q >= 0.5;
-          var x = Math.round(x0 + 4 + pos * (x1 - x0 - 16));
-          g.fillStyle = hazard; g.fillRect(x, y - 5, 10, 7);
-          g.fillStyle = ink; g.fillRect(back ? x : x + 8, y - 5, 2, 7); g.fillRect(x + 1, y + 2, 2, 2); g.fillRect(x + 7, y + 2, 2, 2);
-          if (back) { g.fillStyle = soft; g.fillRect(x + 3, y - 8, 5, 3); }      // 돌아오는 열차는 화물을 실었다
+        var y = 13 + i * 22, x1 = ends[i], lv = state.routes[d.id], n = plan.riders[d.id], col = RAIL_COLORS[d.id] || hazard, tx, sx;
+        if (!lv) {      // 끊긴 노선: 회색 점선과 불 꺼진 종점
+          g.fillStyle = soft; for (tx = x0; tx < x1; tx += 8) g.fillRect(tx, y + 2, 4, 1);
+          g.fillRect(x1 - 1, y - 6, 10, 11);
+          return;
+        }
+        g.fillStyle = soft; for (tx = x0 + 3; tx < x1; tx += 6) g.fillRect(tx, y, 2, 5);            // 침목
+        g.fillStyle = col; g.fillRect(x0, y + 1, x1 - x0, 1); g.fillRect(x0, y + 3, x1 - x0, 1);     // 두 줄 레일
+        for (sx = x0 + 34; sx < x1 - 10; sx += 38) {                                                // 중간역
+          g.fillStyle = ink; g.fillRect(sx, y - 1, 5, 7); g.fillStyle = bg; g.fillRect(sx + 1, y, 3, 5); g.fillStyle = col; g.fillRect(sx + 2, y + 1, 1, 3);
+        }
+        // 종점 역사: 노선 색 지붕, 불 켜진 창
+        g.fillStyle = ink; g.fillRect(x1 - 1, y - 6, 10, 11); g.fillStyle = col; g.fillRect(x1 - 2, y - 8, 12, 3);
+        g.fillStyle = bg; g.fillRect(x1 + 2, y - 2, 4, 7); g.fillStyle = '#ffe9a0'; g.fillRect(x1 + 3, y - 1, 2, 2);
+        // 열차: 운행 시계의 앞 절반은 가는 길, 뒤 절반은 오는 길
+        var ghost = !n && state.routeLoad[d.id] > 0;      // 열차가 다른 노선으로 옮겨 갔어도, 싣고 돌아오는 마지막 한 대는 보인다
+        if (n || ghost) {
+          var trip = C.tripSeconds(state, d.id), p = Math.max(0, Math.min(1, state.routeClock[d.id] / trip));
+          var pos = p < 0.5 ? p * 2 : 2 - p * 2, back = p >= 0.5, cars = ghost ? 1 : railCars(n), len = 11 + cars * 9;
+          var head = Math.round(x0 + len + pos * (x1 - x0 - len - 14));      // 기관차의 앞쪽 끝이 닿는 자리(가는 길 기준)
+          var lx = back ? head - len : head - 11, ty = y - 6, k;
+          railLoco(g, lx, ty, back ? -1 : 1, col, ink);
+          for (k = 0; k < cars; k++) {
+            var cx = back ? lx + 12 + k * 9 : lx - 9 * (k + 1);
+            g.fillStyle = '#2a2b22'; g.fillRect(back ? cx - 1 : cx + 8, ty + 5, 1, 1);      // 연결기
+            railCar(g, cx, ty, back);
+          }
+          if (!still) {      // 연기: 꼬리 쪽으로 두 점이 번갈아 뜬다
+            var puff = Math.floor(now / 260) % 2, tail = back ? lx + len + 2 : lx - cars * 9 - 4;
+            g.fillStyle = soft; g.fillRect(tail + (back ? puff : -puff), ty - 2 - puff, 2, 2); g.fillRect(tail + (back ? 3 : -4), ty - 4 + puff, 3, 2);
+          }
         }
         // 도착 불빛(0.7초)
-        if (railFlash[d.id] && now - railFlash[d.id] < 700) { g.fillStyle = hazard; g.fillRect(x0 - 2, y - 7, 6, 16); g.fillRect(x0 + 6, y - 9, 3, 3); g.fillRect(x0 + 8, y + 6, 3, 3); }
+        if (railFlash[d.id] && now - railFlash[d.id] < 700) { g.fillStyle = hazard; g.fillRect(x0 - 2, y - 5, 4, 12); g.fillRect(x0 + 4, y - 7, 3, 3); g.fillRect(x0 + 6, y + 6, 3, 3); }
       });
-      // 환승역
-      g.fillStyle = ink; g.fillRect(4, 4, 24, H - 8);
-      g.fillStyle = css.getPropertyValue('--concrete').trim() || '#cfcfc4';
-      for (var wy = 10; wy < H - 12; wy += 12) { g.fillRect(8, wy, 6, 6); g.fillRect(18, wy, 6, 6); }
-      g.fillStyle = hazard; g.fillRect(4, 4, 24, 3);
+      // 환승역: 지붕 아래 전광판, 승강장마다 노선 색 문
+      g.fillStyle = ink; g.fillRect(4, 3, 26, H - 6);
+      g.fillStyle = hazard; g.fillRect(4, 3, 26, 3);
+      g.fillStyle = '#11120c'; g.fillRect(7, 9, 20, 7);
+      g.fillStyle = hazard; for (var li = 0; li < 4; li++) if (still || Math.floor(now / 500 + li) % 4) g.fillRect(9 + li * 5, 11, 3, 3);
+      g.fillStyle = bg; for (var wy = 28; wy < H - 14; wy += 22) { g.fillRect(8, wy, 5, 5); g.fillRect(16, wy, 5, 5); }
+      C.ROUTES.forEach(function (d, i) {
+        var y = 13 + i * 22;
+        g.fillStyle = bg; g.fillRect(24, y - 3, 8, 9);
+        g.fillStyle = state.routes[d.id] ? (RAIL_COLORS[d.id] || hazard) : soft; g.fillRect(26, y - 1, 6, 5);
+      });
     } catch (e) { /* 그림이 없어도 아래 목록으로 다 보인다 */ }
   }
 
