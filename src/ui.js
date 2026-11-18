@@ -1266,10 +1266,13 @@
    */
   var CHAL_WHY = { locked: '', used: '이번 회차에는 더 켤 수 없어요', late: '2구역 문을 열기 전에만 켤 수 있어요', broken: '이미 조건을 어겼어요. 다음 회차에 켜요' };
   function renderChallenges() {
-    var panel = $('chal-panel'); if (!panel) return;
+    var panel = $('hub-panel'); if (!panel) return;
     var any = C.CHALLENGES.some(function (d) { return C.challengeOpen(state, d.id); }) || !!state.challenge;
-    panel.hidden = !any;
-    if (!any) return;
+    panel.hidden = !any; $('mnav-hub').hidden = !any;      // 고를 수 있는 도전이 생기면 모험 칸과 아래 탭이 나타난다
+    if (!any) { if (!$('hub').hidden) $('hub').hidden = true; return; }
+    var actNow = C.activeChallenge(state), mn = C.medalCount(state);
+    setText($('hub-count'), '훈장 ' + mn + ' / ' + C.CHALLENGES.length);
+    setText($('hub-hint'), actNow ? '도전 중 · ' + actNow.name + ' · ' + actNow.rule : '도전을 고르면 조건을 걸고 목표 구역까지 가요.');
     if (!rows.chal) {
       rows.chal = {};
       C.CHALLENGES.forEach(function (d) {
@@ -1294,6 +1297,8 @@
         : d.rule + ' · 목표 ' + C.challengeGoalText(d) + '\n' + (won ? '받은 보상 · ' : '보상 · ') + d.perk.text + (on ? ' · 누르면 포기' : mine ? ' · ' + mine : why && CHAL_WHY[why] ? '\n' + CHAL_WHY[why] : ''));
     });
   }
+  /** 모험 창을 연다. 아래 탭과 상황 화면의 단추가 같이 쓴다. */
+  function openHub() { if ($('mnav-hub').hidden) return; $('hub').hidden = false; renderChallenges(); }
   function clickChallenge(d) {
     if (C.activeChallenge(state) && state.challenge.id === d.id) {
       confirmBox('도전 포기', '〈' + d.name + '〉 도전을 포기해요. 조건이 풀리고 회차는 그대로 이어져요. 이번 회차에는 다시 켤 수 없고, 연속 성공이 끊겨요.', '계속한다', '포기한다', function () {
@@ -1305,7 +1310,7 @@
     if (C.challengeBlock(state, d.id)) return;
     confirmBox('도전 〈' + d.name + '〉', d.rule + '. 목표는 ' + C.challengeGoalText(d) + '이에요. 보상은 ' + d.perk.text + '예요. 한 회차에 도전은 한 번만 켤 수 있어요.', '그만둔다', '도전한다', function () {
       var s = C.startChallenge(state, d.id);
-      if (s.ok) { log('도전 〈' + d.name + '〉을 시작했다. ' + d.rule.replace('없어요', '없다').replace('해요', '한다').replace('돼요', '된다').replace('와요', '온다').replace('이에요', '이다').replace('가요', '간다') + '.', 'good'); sfx('relocate'); if (fxShow) fxShow('도전', d.name + ' · ' + C.challengeGoalText(d), 1, -1, -1); Store.save(); render(); }
+      if (s.ok) { log('도전 〈' + d.name + '〉을 시작했다. ' + d.rule.replace('없어요', '없다').replace('해요', '한다').replace('돼요', '된다').replace('와요', '온다').replace('이에요', '이다').replace('가요', '간다') + '.', 'good'); sfx('relocate'); $('hub').hidden = true; if (fxShow) fxShow('도전', d.name + ' · ' + C.challengeGoalText(d), 1, -1, -1); Store.save(); render(); }
     });
   }
   function buy(result, sound) { if (result && result.ok) { sfx(sound || 'buy'); render(); } }
@@ -2766,6 +2771,9 @@
     $('zmap-open').addEventListener('click', openMap);
     $('route').addEventListener('click', openMap);
     $('zmap-close').addEventListener('click', function () { $('zmap').hidden = true; });
+    $('hub-close').addEventListener('click', function () { $('hub').hidden = true; });
+    $('hub-open').addEventListener('click', openHub);
+    $('mnav-hub').addEventListener('click', openHub);
     $('away-ok').addEventListener('click', function () { $('away').hidden = true; sfx('buy'); });
     ['goal-go', 'm-goal-go'].forEach(function (id) { $(id).addEventListener('click', function () { if (guideNow && guideNow.view) goTo(guideNow.view); }); });
     $('signal').addEventListener('click', function () {
