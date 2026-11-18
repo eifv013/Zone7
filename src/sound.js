@@ -145,5 +145,130 @@
     } catch (e) { return false; }
   }
 
-  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, VOLUME_DEFAULT: VOLUME_DEFAULT, setVolume: setVolume, getVolume: getVolume, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled, duration: duration, play: play };
+  /*
+   * ---------- 배경 음악(2.5.0) ----------
+   * 녹음한 파일 없이, 효과음처럼 그 자리에서 소리를 만들어 낸다(파일 하나짜리 게임이라 음원을 실을 수 없다).
+   * 곡은 셋이고 모두 가단조다. 한 곡은 여덟 마디, 한 마디는 16칸(16분음표)이다.
+   *   day   낮: 보통 빠르기. 베이스, 화음을 한 음씩 짚는 반주, 가락, 여린 박자
+   *   night 밤(무리가 온 뒤): 느리다. 심장 소리 같은 낮은 두 박, 길게 끄는 음, 드문드문한 높은 가락
+   *   dread 변이체가 온 밤과 높은 위험 단계: 가장 느리다. 반음 부딪히는 화음, 낮게 깔리는 음
+   * 구조: MUSIC(곡의 정의) → musicStep(곡, 마디, 칸)이 그 칸에 낼 음의 목록을 돌려준다(계산만 한다: 테스트가 이것을 본다)
+   *       → 일정 간격으로 깨어나(pump) 조금 앞의 칸들을 미리 예약한다. 곡이 바뀌면 다음 마디부터 바뀐다.
+   * 효과음과 따로 켜고 끄고, 음량도 따로다(musicBus). 탭이 가려지면 멈추고, 돌아오면 그 마디부터 다시 잇는다.
+   */
+  function midi(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+  var MUSIC = {
+    day: { bpm: 92,
+      chords: [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62], [57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]],
+      lead: [[[0, 76, 4], [4, 72, 2], [6, 69, 2], [8, 72, 4], [12, 74, 4]], [[0, 72, 6], [6, 69, 2], [8, 65, 4], [12, 69, 4]],
+             [[0, 67, 4], [4, 72, 4], [8, 76, 6], [14, 74, 2]], [[0, 74, 8], [8, 71, 4], [12, 67, 4]],
+             [[0, 76, 4], [4, 79, 2], [6, 76, 2], [8, 72, 4], [12, 69, 4]], [[0, 77, 6], [6, 76, 2], [8, 72, 8]],
+             [[0, 74, 4], [4, 71, 4], [8, 74, 4], [12, 79, 4]], [[0, 76, 12], [12, 71, 4]]] },
+    night: { bpm: 74,
+      chords: [[57, 60, 64], [57, 60, 64], [50, 53, 57], [52, 56, 59], [57, 60, 64], [53, 57, 60], [50, 53, 57], [52, 56, 59]],
+      lead: [[[8, 81, 8]], [[0, 80, 4], [8, 76, 8]], [[4, 77, 4], [8, 74, 8]], [[0, 71, 8], [8, 68, 8]],
+             [[8, 76, 4], [12, 81, 4]], [[0, 84, 8], [8, 81, 8]], [[4, 77, 4], [8, 74, 8]], [[0, 76, 4], [4, 71, 12]]] },
+    dread: { bpm: 66,
+      chords: [[45, 48, 52], [45, 48, 51], [46, 49, 53], [45, 48, 52], [45, 48, 52], [44, 48, 51], [46, 49, 53], [45, 52, 57]],
+      lead: [[[0, 75, 2], [2, 76, 10]], [[8, 72, 2], [10, 71, 6]], [[0, 77, 2], [2, 76, 6], [12, 73, 4]], [[4, 69, 12]],
+             [[0, 75, 2], [2, 76, 6], [8, 79, 8]], [[0, 80, 4], [4, 79, 12]], [[8, 77, 2], [10, 76, 6]], [[0, 69, 16]]] }
+  };
+  var MUSIC_BARS = 8, MUSIC_STEPS = 16, MUSIC_GAIN = 2.4, MUSIC_VOLUME_DEFAULT = 40;
+  function musicDef(mood) { return Object.prototype.hasOwnProperty.call(MUSIC, mood) ? MUSIC[mood] : MUSIC.day; }
+  /** 한 칸의 길이(초). */
+  function musicStepSeconds(mood) { return 60 / musicDef(mood).bpm / 4; }
+  /**
+   * 그 칸에서 시작하는 음들 [{ f 주파수, d 길이(초), type 파형, g 크기, noise, cut }].
+   * 모르는 곡이면 낮의 곡으로, 마디와 칸은 범위를 넘으면 돌아서(나머지) 읽는다. 잘못된 숫자는 0 으로 본다.
+   */
+  function musicStep(mood, bar, step) {
+    var def = musicDef(mood), sec = musicStepSeconds(mood), out = [];
+    var b = ((Math.floor(Number(bar) || 0) % MUSIC_BARS) + MUSIC_BARS) % MUSIC_BARS, st = ((Math.floor(Number(step) || 0) % MUSIC_STEPS) + MUSIC_STEPS) % MUSIC_STEPS;
+    var chord = def.chords[b], kind = def === MUSIC.night ? 'night' : def === MUSIC.dread ? 'dread' : 'day';
+    function add(m, steps, type, g) { out.push({ f: midi(m), d: steps * sec * 0.95, type: type, g: g }); }
+    if (kind === 'day') {
+      if (st === 0 || st === 8) add(chord[0] - 12, 5, 'triangle', 0.050);                     // 베이스: 근음
+      if (st === 6 || st === 14) add(chord[2] - 12, 2, 'triangle', 0.036);                    // 베이스: 5음
+      if (st % 2 === 0) add(chord[[0, 1, 2, 1, 0, 2, 1, 2][st / 2]] + 12, 2, 'sine', 0.016);  // 반주: 화음을 한 음씩
+      if (st === 4 || st === 12) out.push({ noise: true, cut: 2200, d: 0.05, g: 0.010, f: 0 });      // 여린 박자
+    } else if (kind === 'night') {
+      if (st === 0 || st === 3) add(chord[0] - 12, 3, 'triangle', 0.075);                     // 심장 소리: 쿵, 쿵(휴대폰 스피커로도 들리게 한 옥타브만 내리고 세모 파형을 쓴다)
+      if (st === 0) { add(chord[0], 16, 'sine', 0.014); add(chord[2], 16, 'sine', 0.011); }   // 길게 끄는 음
+      if (st === 8 || (b % 2 === 1 && st === 12)) add(chord[1] + 12, 4, 'sine', 0.012);
+      if (st === 10) out.push({ noise: true, cut: 900, d: 0.12, g: 0.008, f: 0 });
+    } else {
+      if (st === 0 || st === 2 || st === 8) add(chord[0], 3, 'triangle', 0.075);              // 낮게 깔리는 박
+      if (st === 0) { add(chord[0] + 12, 16, 'triangle', 0.014); add(chord[1] + 12, 16, 'sine', 0.012); add(chord[2] + 13, 16, 'sine', 0.007); }      // 반음이 부딪히는 화음
+      if (st % 4 === 2) out.push({ noise: true, cut: 500, d: 0.2, g: 0.012, f: 0 });
+    }
+    def.lead[b].forEach(function (n) { if (n[0] === st) add(n[1], n[2], kind === 'day' ? 'triangle' : 'sine', kind === 'day' ? 0.030 : 0.020); });
+    return out;
+  }
+
+  var musicOn = true, musicVolume = MUSIC_VOLUME_DEFAULT, musicMood = 'day', musicNow = 'day', musicBus = null, musicTimer = null;
+  var musicNext = 0, musicBar = 0, musicAt = 0;      // 다음에 예약할 칸의 시각(초), 마디, 칸
+  function setMusicVolume(v) {
+    var n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+    musicVolume = typeof n === 'number' && isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : MUSIC_VOLUME_DEFAULT;
+    try { if (musicBus) musicBus.gain.value = musicVolume / MUSIC_VOLUME_DEFAULT; } catch (e) { /* 소리는 없어도 된다 */ }
+    return musicVolume;
+  }
+  function getMusicVolume() { return musicVolume; }
+  function setMusicEnabled(on) { musicOn = on === true; if (!musicOn) musicNext = 0; return musicOn; }
+  function isMusicEnabled() { return musicOn; }
+  /** 곡을 고른다. 모르는 이름이면 그대로 둔다. 실제로는 다음 마디부터 바뀐다. */
+  function setMood(mood) { if (Object.prototype.hasOwnProperty.call(MUSIC, mood)) musicMood = mood; return musicMood; }
+  function getMood() { return musicMood; }
+  function musicNote(n, start) {
+    var gain = ctx.createGain(), peak = Math.max(0.0002, Math.min(0.5, n.g * MUSIC_GAIN)), src;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(0.03, n.d / 3));
+    gain.gain.setValueAtTime(peak, start + n.d * 0.55);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + n.d);
+    if (n.noise) {
+      var len = Math.max(1, Math.floor(ctx.sampleRate * n.d)), buf = ctx.createBuffer(1, len, ctx.sampleRate), data = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      src = ctx.createBufferSource(); src.buffer = buf;
+      var filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = n.cut || 800;
+      src.connect(filter); filter.connect(gain);
+    } else {
+      src = ctx.createOscillator(); src.type = n.type || 'sine'; src.frequency.setValueAtTime(n.f, start);
+      src.connect(gain);
+    }
+    gain.connect(musicBus);
+    src.start(start); src.stop(start + n.d + 0.03);
+  }
+  /** 조금 앞의 칸들을 예약한다. 꺼져 있거나, 깨우지 못했거나, 탭이 가려져 있으면 아무것도 하지 않는다. */
+  function pump() {
+    if (!musicOn || !unlocked || !ctx || musicVolume <= 0) { musicNext = 0; return 0; }
+    if (typeof document !== 'undefined' && document.hidden) { musicNext = 0; return 0; }
+    var made = 0;
+    try {
+      if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+      if (!musicBus) {
+        musicBus = ctx.createGain(); musicBus.gain.value = musicVolume / MUSIC_VOLUME_DEFAULT;
+        var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = SOFT_CUT;
+        musicBus.connect(soft); soft.connect(ctx.destination);
+      }
+      var now = ctx.currentTime;
+      if (!(musicNext > now - 0.5)) { musicNext = now + 0.08; musicAt = 0; musicNow = musicMood; }      // 처음이거나 오래 쉬었다: 마디의 처음부터 다시
+      while (musicNext < now + 0.45 && made < 64) {
+        if (musicAt === 0) musicNow = musicMood;      // 곡은 마디가 바뀔 때만 바꾼다
+        musicStep(musicNow, musicBar, musicAt).forEach(function (n) { musicNote(n, musicNext); made++; });
+        musicNext += musicStepSeconds(musicNow);
+        musicAt++;
+        if (musicAt >= MUSIC_STEPS) { musicAt = 0; musicBar = (musicBar + 1) % MUSIC_BARS; }
+      }
+    } catch (e) { musicNext = 0; }
+    return made;
+  }
+  /** 음악을 돌리기 시작한다(여러 번 불러도 한 번만). 실제 소리는 첫 입력으로 깨운 뒤부터 난다. */
+  function startMusic() {
+    if (musicTimer || typeof setInterval !== 'function') return !!musicTimer;
+    musicTimer = setInterval(pump, 120);
+    return true;
+  }
+
+  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, VOLUME_DEFAULT: VOLUME_DEFAULT, setVolume: setVolume, getVolume: getVolume, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled,
+           MUSIC: MUSIC, MUSIC_BARS: MUSIC_BARS, MUSIC_STEPS: MUSIC_STEPS, MUSIC_VOLUME_DEFAULT: MUSIC_VOLUME_DEFAULT, musicStep: musicStep, musicStepSeconds: musicStepSeconds, setMusicVolume: setMusicVolume, getMusicVolume: getMusicVolume, setMusicEnabled: setMusicEnabled, isMusicEnabled: isMusicEnabled, setMood: setMood, getMood: getMood, startMusic: startMusic, pump: pump, duration: duration, play: play };
 });

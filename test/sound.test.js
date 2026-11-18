@@ -48,7 +48,7 @@ test('소리는 부드러운 파형만 쓰고, 높은 음은 거름막 아래에
   for (const [name, notes] of Object.entries(S.SOUNDS)) for (const n of notes) {
     if (n.noise) { assert.ok(n.cut <= 400, name); continue; }
     assert.ok(['sine', 'triangle'].includes(n.type), name + ': ' + n.type);
-    assert.ok(n.f <= 1000 && n.f < S.SOFT_CUT, name + ': ' + n.f);
+    assert.ok(n.f <= 1000 && n.f < Sound.SOFT_CUT, name + ': ' + n.f);
     if (n.to !== undefined) assert.ok(n.to > 0 && n.to <= 1200, name + ' to: ' + n.to);
     assert.ok(n.g <= S.MAX_GAIN, name);
   }
@@ -61,4 +61,52 @@ test('음량: 0 ~ 100 으로 맞추고 기본은 50, 잘못된 값은 기본으�
   S.setVolume(0); assert.equal(S.play('click'), false);
   S.setVolume(50);
   for (const name of ['sell', 'peak', 'surge', 'green', 'answer', 'fortify', 'goal', 'feed', 'tab']) assert.ok(S.duration(name) > 0, name);
+});
+
+/* ================= 배경 음악 ================= */
+
+test('배경 음악: 곡은 셋이고, 곡마다 여덟 마디의 화음과 가락이 있다', () => {
+  assert.deepEqual(Object.keys(Sound.MUSIC), ['day', 'night', 'dread']);
+  for (const [name, def] of Object.entries(Sound.MUSIC)) {
+    assert.ok(def.bpm >= 50 && def.bpm <= 140, name);
+    assert.equal(def.chords.length, Sound.MUSIC_BARS, name); assert.equal(def.lead.length, Sound.MUSIC_BARS, name);
+    for (const bar of def.lead) for (const [at, m, len] of bar) {
+      assert.ok(at >= 0 && at < Sound.MUSIC_STEPS && len >= 1 && at + len <= Sound.MUSIC_STEPS, name + ': 가락은 마디를 넘지 않는다');
+      assert.ok(m >= 60 && m <= 88, name + ': 가락의 높이');
+    }
+  }
+  assert.ok(Sound.MUSIC.day.bpm > Sound.MUSIC.night.bpm && Sound.MUSIC.night.bpm > Sound.MUSIC.dread.bpm, '밤일수록, 위험할수록 느리다');
+});
+
+test('배경 음악: 칸마다 내는 음은 들을 수 있는 높이이고 작으며, 마디마다 소리가 난다', () => {
+  for (const mood of ['day', 'night', 'dread']) {
+    let total = 0;
+    for (let bar = 0; bar < Sound.MUSIC_BARS; bar++) {
+      let inBar = 0;
+      for (let st = 0; st < Sound.MUSIC_STEPS; st++) {
+        const notes = Sound.musicStep(mood, bar, st);
+        assert.ok(notes.length <= 8, '한 칸에 여덟 음을 넘지 않는다');
+        for (const n of notes) {
+          assert.ok(n.g > 0 && n.g <= 0.09, mood + ': 효과음보다 작다');
+          assert.ok(n.d > 0.02 && n.d < 6, mood + ': 길이');
+          if (!n.noise) assert.ok(n.f >= 60 && n.f <= Sound.SOFT_CUT, mood + ': 높이 ' + n.f);
+        }
+        inBar += notes.length;
+      }
+      assert.ok(inBar >= 4, mood + ' ' + bar + '마디가 비어 있다'); total += inBar;
+    }
+    assert.ok(total >= 60, mood);
+  }
+  assert.ok(Math.abs(Sound.musicStepSeconds('day') - 60 / 92 / 4) < 1e-9);
+});
+
+test('배경 음악: 모르는 곡과 범위를 벗어난 마디·칸, 잘못된 값에도 죽지 않는다', () => {
+  assert.deepEqual(Sound.musicStep('없는 곡', 0, 0), Sound.musicStep('day', 0, 0));
+  assert.deepEqual(Sound.musicStep('night', 8, 16), Sound.musicStep('night', 0, 0));
+  assert.deepEqual(Sound.musicStep('dread', -1, -1), Sound.musicStep('dread', 7, 15));
+  assert.deepEqual(Sound.musicStep('day', NaN, undefined), Sound.musicStep('day', 0, 0));
+  assert.equal(Sound.setMood('night'), 'night'); assert.equal(Sound.setMood('없는 곡'), 'night', '모르는 곡은 그대로 둔다'); Sound.setMood('day');
+  assert.equal(Sound.setMusicVolume(250), 100); assert.equal(Sound.setMusicVolume(-5), 0); assert.equal(Sound.setMusicVolume('abc'), Sound.MUSIC_VOLUME_DEFAULT); assert.equal(Sound.setMusicVolume(null), Sound.MUSIC_VOLUME_DEFAULT);
+  assert.equal(Sound.setMusicEnabled('yes'), false); assert.equal(Sound.setMusicEnabled(true), true);
+  assert.equal(Sound.pump(), 0, '깨우기 전에는 아무것도 예약하지 않는다');
 });

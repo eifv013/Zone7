@@ -1369,7 +1369,7 @@
     }
     var act = C.activeChallenge(state), n = C.medalCount(state);
     setText($('chal-count'), '훈장 ' + n + ' / ' + C.CHALLENGES.length + ' · 생산 +' + Math.round(n * C.MEDAL_BONUS * 100) + '%');
-    setText($('chal-hint'), act ? '진행 중 · ' + act.name + ' · ' + act.rule + (act.id === 'sprint' ? ' · 남은 시간 ' + clock(Math.max(0, C.SPRINT_SECONDS - state.runSeconds)) : '')
+    setText($('chal-hint'), act ? '진행 중 · ' + act.name + ' · ' + act.rule + (act.id === 'oneshot' ? ' · 남은 시간 ' + clock(Math.max(0, C.ONESHOT_SECONDS - state.runSeconds)) : act.id === 'horde' ? ' · 방어 실패 ' + state.breaches + ' / ' + C.HORDE_BREACHES : act.id === 'sprint' ? ' · 남은 시간 ' + clock(Math.max(0, C.SPRINT_SECONDS - state.runSeconds)) : '')
       : '조건을 하나 걸고 목표 구역까지 가요. 처음 성공하면 훈장과 영구 보상을 받아요.' + (state.challengeStreak > 0 ? '\n연속 성공 ' + state.challengeStreak + '번 · 간식 +' + C.streakTreats(state) + ' (최대 +' + C.STREAK_TREATS_MAX + ')' : ''));
     C.CHALLENGES.forEach(function (d) {
       var r = rows.chal[d.id], open = C.challengeOpen(state, d.id), on = !!act && act.id === d.id, why = on ? '' : C.challengeBlock(state, d.id), won = state.medals[d.id] > 0;
@@ -2218,6 +2218,13 @@
       var bn = $('base-no'); bn.textContent = label;
       if (bn.scrollWidth > bn.clientWidth + 1) bn.textContent = C.ZONES[state.zone].no + '구역';
     }
+    // 배경 음악의 곡: 변이체가 온 밤이나 위험 11단계부터는 dread, 무리가 온 밤은 night, 그 밖에는 day
+    try {
+      if (window.Sound) {
+        var fightNow = C.dayPhase(state).phase === 'battle';
+        window.Sound.setMood((fightNow && C.isBossWave(C.currentWave(state))) || C.dangerOf(state) >= 11 ? 'dread' : fightNow || state.dayClock / C.DAY_SECONDS > 0.82 ? 'night' : 'day');
+      }
+    } catch (e) { /* 소리는 없어도 된다 */ }
     var dTag = $('danger-tag'), dNow = C.dangerOf(state);      // 위험 단계로 하는 회차는 그림 오른쪽 위에 붉은 딱지로 알린다(제목 줄은 좁아서 잘렸다)
     dTag.hidden = !(dNow > 0); if (dNow > 0) setText(dTag, '위험 ' + dNow);
     setText($('zone-name'), label);
@@ -3437,6 +3444,21 @@
     wireOrder();
     wireContract(); wireLineExtras(); wireZoneEvents();
     wireSalvage();
+    // 배경 음악(2.5.0): 켬/끔과 음량을 효과음과 따로 기억한다. 곡은 render 가 상황에 맞춰 고른다(pickMood)
+    (function () {
+      var btn = $('bgm-toggle'), bar = $('bgm-volume'), label = $('bgm-volume-num'), on = recall('zone7-bgm') !== 'off';
+      function show() { btn.setAttribute('aria-pressed', String(on)); setText(btn, on ? '음악 켬' : '음악 끔'); }
+      function vol(v, keep) {
+        var n = 40;
+        try { if (window.Sound) n = window.Sound.setMusicVolume(v); } catch (e) { /* 소리는 없어도 된다 */ }
+        bar.value = n; setText(label, String(n));
+        if (keep) remember('zone7-bgm-volume', n);
+      }
+      try { if (window.Sound) { window.Sound.setMusicEnabled(on); window.Sound.startMusic(); } } catch (e) { /* 소리는 없어도 된다 */ }
+      show(); vol(recall('zone7-bgm-volume'), false);
+      btn.addEventListener('click', function () { on = !on; try { if (window.Sound) window.Sound.setMusicEnabled(on); } catch (e) { /* 없어도 된다 */ } remember('zone7-bgm', on ? 'on' : 'off'); show(); });
+      bar.addEventListener('input', function () { vol(bar.value, true); });
+    })();
     // 음량: 0 ~ 100(기본 50). 기기에 기억한다. 손을 떼면 그 크기로 소리를 한 번 들려준다
     (function () {
       var bar = $('volume'), label = $('volume-num');

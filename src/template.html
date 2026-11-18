@@ -1208,7 +1208,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.4.0</div>
+  <div class="boot-ver">7구역 알파 2.5.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1589,8 +1589,12 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="qty" role="group" aria-label="화면 테마"><button type="button" data-skin-set="light" aria-pressed="true">라이트</button><button type="button" data-skin-set="dark" aria-pressed="false">다크</button></div></div>
       <div class="set-row"><span class="label">효과음</span>
         <div class="qty"><button type="button" data-sound-toggle aria-pressed="true">소리 켬</button></div></div>
-      <div class="set-row"><label class="label" for="volume">음량</label>
+      <div class="set-row"><label class="label" for="volume">효과음 음량</label>
         <div class="vol"><input type="range" id="volume" min="0" max="100" step="5" value="50"><b class="num" id="volume-num">50</b></div></div>
+      <div class="set-row"><span class="label">배경 음악</span>
+        <div class="qty"><button type="button" id="bgm-toggle" aria-pressed="true">음악 켬</button></div></div>
+      <div class="set-row"><label class="label" for="bgm-volume">음악 음량</label>
+        <div class="vol"><input type="range" id="bgm-volume" min="0" max="100" step="5" value="40"><b class="num" id="bgm-volume-num">40</b></div></div>
       <div class="set-row" id="notify-row" hidden><span class="label">앱 알림 · 하루에 많아야 두 번</span>
         <div class="qty" role="group" aria-label="앱 알림"><button type="button" data-notify="on">켬</button><button type="button" data-notify="off">끔</button></div></div>
       <div class="set-row"><span class="label">진동</span>
@@ -1615,7 +1619,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.4.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.5.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
