@@ -515,18 +515,24 @@
    *   look = { coat: { y, j }, hood, pat, bag, fx } — 코어의 cosmeticLook 이 준다. 없는 값은 기본으로 그린다.
    */
   var LARA_W = 14, LARA_H = 18;
+  /*
+   * 2.7.2 다시 그림: "수염이 났다, 예전 라라가 더 귀엽다"는 말이 있었다. 예전 그림(14×16)의 좋은 점을 가져왔다.
+   *   - 턱 밑의 흰 옷깃이 수염으로 보였다 → 옷깃을 없애고, 예전처럼 우비 가운데에 지퍼 선(J)을 내렸다
+   *   - 머리가 작고 앞머리·코가 있어 얼굴이 복잡했다 → 후드를 크고 둥글게, 얼굴은 눈 둘과 붉은 입만
+   *   - 가방끈을 없애고 상자는 손에 든다(손은 살색). 장화는 예전처럼 붉은색, 살색은 예전의 밝은 색
+   */
   var LARA_BODY = ['..............', '..............', '..............',
-    '.....yyyyy....', '....yyyyyyy...', '....yhhhhhyY..', '...yysssssyY..', '...yysesesyY..', '....yssmssyY..',
-    '.....jwwwjJ...', '....kjjjjjjJ..', '....kjwjjjJj..', '....jkjjjjJs..', '....jjjjjjJ...', '....JJJJJJJ...'];
+    '.....yyyyyy...', '....yyyyyyyy..', '...yyyssssyyY.', '...yysessesyY.', '...yyssssssyY.', '....yssmmssY..',
+    '....yyyyyyyY..', '....jjjJjjjJ..', '....jjjJjjjJ..', '....sjjJjjjJs.', '....jjjJjjjJ..', '....JJJJJJJJ..'];
   // 다리(2.0.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
   var LARA_STAND = ['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'];
   var LARA_LEGS = [['.....pp.pp....', '.....pp.bbb...', '....bbb.......'], ['.....pp.pp....', '....bbb.pp....', '........bbb...']];
   var LARA_HOODS = {
     none:   {},
-    cat:    { 1: '....y.....y...', 2: '....yi...iy...' },
-    bear:   { 1: '....yy...yy...', 2: '....yy...yy...' },
-    rabbit: { 0: '.....y...y....', 1: '.....i...i....', 2: '.....y...y....' },
-    horn:   { 1: '...w.......w..', 2: '....w.....w...' }
+    cat:    { 1: '....y......y..', 2: '....yi....iy..' },
+    bear:   { 1: '....yy....yy..', 2: '....yy....yy..' },
+    rabbit: { 0: '......y..y....', 1: '......i..i....', 2: '......y..y....' },
+    horn:   { 1: '...w........w.', 2: '....w......w..' }
   };
   /* 가방: 줄 번호 → 왼쪽 네 칸. 색은 c(몸), C(밝은 곳), e(눈) */
   var LARA_BAGS = {
@@ -539,7 +545,7 @@
   function laraPattern(pat, x, y) {
     if (pat === 'stripe') return y % 2 === 0;
     if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
-    if (pat === 'star') return (x === 6 && y === 10) || (x === 9 && y === 12) || (x === 7 && y === 13) || (x === 5 && y === 12);
+    if (pat === 'star') return (x === 5 && y === 10) || (x === 9 && y === 11) || (x === 6 && y === 13) || (x === 10 && y === 13);
     if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
     return false;
   }
@@ -558,7 +564,7 @@
     scale = scale || 1; look = look || {};
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
     var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
-    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#e2b48c', e: '#2b241c', m: '#c98a6a', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#30343c', b: '#17180f', c: bag.c, C: bag.C };
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#c0392b', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];

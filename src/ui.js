@@ -2656,11 +2656,11 @@
       if (sv) {
         var cg = null; C.CARGOS.forEach(function (r) { if (r.id === sv.who) cg = r; });
         setText($('salvage-left'), clock(sv.left));
-        setText($('salvage-text'), '선로에 멈춰 선 ' + (cg ? cg.name + (C.hasBatchim(cg.name) ? '을' : '를') : '화물칸을') + ' 찾았어요.\n끌어오면 물자 +' + fmt(C.salvageReward(state)) + ' · 간식 +' + C.SALVAGE_TREATS + '\n돌아온 열차의 화물이 ' + fmt(sv.need) + '만큼 쌓이면 끌어올 수 있어요.');
+        setText($('salvage-text'), '선로에 멈춰 선 ' + (cg ? cg.name + (C.hasBatchim(cg.name) ? '을' : '를') : '화물칸을') + ' 찾았어요.\n끌어오면 물자 +' + fmt(C.salvageReward(state)) + ' · 간식 +' + C.SALVAGE_TREATS);      // 얼마나 쌓아야 하는지는 아래 단추에 적는다(여기에 한 줄 더 적으니 휴대폰에서 두 줄로 넘어갔다)
         fill($('salvage-bar'), sv.need > 0 ? sv.have / sv.need : 0);
         var sdone = sv.have >= sv.need;
         $('salvage-fill').disabled = !sdone;
-        setText($('salvage-fill'), sdone ? '끌어온다' : '쌓인 화물 ' + fmt(sv.have) + ' / ' + fmt(sv.need) + ' · ' + Math.floor(sv.need > 0 ? sv.have / sv.need * 100 : 0) + '%');
+        setText($('salvage-fill'), sdone ? '끌어온다' : '열차 화물 ' + fmt(sv.have) + ' / ' + fmt(sv.need) + ' · ' + Math.floor(sv.need > 0 ? sv.have / sv.need * 100 : 0) + '%');
       }
       setText($('salvage-note'), '화물 ' + C.cargoCount(state) + ' / ' + C.CARGOS.length + ' · 이번 회차 ' + state.salvagesRun + '번 · 화물 값 +' + Math.round((C.salvageMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.SALVAGE_BONUS_MAX * 100) + '%)');
       var plan = C.railPlan(state), cargo = C.cargoValue(state);
