@@ -1491,27 +1491,53 @@
     if (!rows.shop) {
       rows.shop = {};
       C.COSMETICS.forEach(function (c) {
-        var b = el('button', 'cos'), sw = el('i', 'cos-sw'), name = el('b', '', c.name), sub = el('span', 'cos-sub');
-        b.type = 'button'; sw.style.background = c.slot === 'coat' ? 'linear-gradient(' + c.look.y + ' 45%, ' + c.look.j + ' 45%)' : c.look;
-        b.appendChild(sw); b.appendChild(name); b.appendChild(sub);
+        var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub');
+        b.type = 'button'; cv.className = 'cos-pic'; cv.width = 24; cv.height = 26;
+        drawLook(cv, c.slot === 'coat' ? c.look : null, c.slot === 'flag' ? c.look : null, 2);
+        b.appendChild(cv); b.appendChild(name); b.appendChild(sub);
         b.addEventListener('click', function () { clickCosmetic(c); });
         rows.shop[c.id] = { btn: b, sub: sub };
         $('wardrobe-' + c.slot).appendChild(b);
       });
+      $('look-act').addEventListener('click', function () {
+        var c = C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0];
+        if (!c || C.ownsCosmetic(state, c.id)) return;
+        confirmBox(c.name, '조각 ' + C.SHARDS_COST[c.rarity] + '개로 ' + c.name + (C.hasBatchim(c.name) ? '을' : '를') + ' 얻어요.', '그만둔다', '얻는다', function () {
+          var r = C.craftCosmetic(state, c.id);
+          if (r.ok) { C.wearCosmetic(state, c.id); lookPick = ''; log(r.name + (C.hasBatchim(r.name) ? '을' : '를') + ' 얻었다.', 'good'); sfx('goal'); Store.save(); renderShop(); }
+        });
+      });
     }
     C.COSMETICS.forEach(function (c) {
       var r = rows.shop[c.id], own = C.ownsCosmetic(state, c.id), on = state.wear[c.slot] === c.id, cost = C.SHARDS_COST[c.rarity];
-      r.btn.className = 'cos r' + c.rarity + (own ? ' own' : '') + (on ? ' on' : '');
-      r.btn.disabled = !own && !(state.shards >= cost);
+      r.btn.className = 'cos r' + c.rarity + (own ? ' own' : ' not') + (on ? ' on' : '') + (lookPick === c.id ? ' pick' : '');
       setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity]) : C.RARITIES[c.rarity] + ' · 조각 ' + cost);
     });
+    // 미리 보기: 지금 입은 모습. 아직 없는 외형을 눌렀으면 그것을 입혀서 보여 준다
+    var pc = lookPick ? C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0] : null, worn = C.cosmeticLook(state);
+    if (pc && C.ownsCosmetic(state, pc.id)) { pc = null; lookPick = ''; }
+    drawLook($('look-pic'), pc && pc.slot === 'coat' ? pc.look : worn.coat, pc && pc.slot === 'flag' ? pc.look : worn.flag, 6, true);
+    var wornCoat = C.COSMETICS.filter(function (x) { return x.id === state.wear.coat; })[0], wornFlag = C.COSMETICS.filter(function (x) { return x.id === state.wear.flag; })[0];
+    setText($('look-name'), pc ? '미리 보기 · ' + pc.name : wornCoat.name + ' · ' + wornFlag.name);
+    $('look-act').hidden = !pc;
+    if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
+  }
+  /*
+   * 외형 그림(1.9.1): 캔버스에 라라(우비 색)와 깃발(깃발 색)을 그린다. 색 조각 대신 실제 모습을 보여 준다.
+   *   coat 만 주면 라라만, flag 만 주면 깃대만, both 면 둘을 나란히(미리 보기).
+   */
+  var lookPick = '';
+  function drawLook(cv, coat, flag, k, both) {
+    var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    function flagAt(x, y) { ctx.fillStyle = '#cfcebf'; ctx.fillRect(x, y, k, k * 11); ctx.fillStyle = flag; ctx.fillRect(x + k, y, k * 5, k * 4); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x + k, y + k * 3, k * 5, k); }
+    if (both) { if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, k * 2, k, k, coat); flagAt(k * 13, k); return; }
+    if (coat && window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, Math.floor((cv.width - 8 * k) / 2), Math.floor((cv.height - 11 * k) / 2), k, coat);
+    if (flag && !coat) flagAt(Math.floor((cv.width - 6 * k) / 2), Math.floor((cv.height - 11 * k) / 2));
   }
   function clickCosmetic(c) {
-    if (C.ownsCosmetic(state, c.id)) { if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); renderShop(); } return; }
-    confirmBox(c.name, '조각 ' + C.SHARDS_COST[c.rarity] + '개로 ' + c.name + (C.hasBatchim(c.name) ? '을' : '를') + ' 얻어요.', '그만둔다', '얻는다', function () {
-      var r = C.craftCosmetic(state, c.id);
-      if (r.ok) { C.wearCosmetic(state, c.id); log(r.name + (C.hasBatchim(r.name) ? '을' : '를') + ' 얻었다.', 'good'); sfx('goal'); Store.save(); renderShop(); }
-    });
+    if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); renderShop(); } return; }
+    lookPick = lookPick === c.id ? '' : c.id; sfx('tab'); renderShop();      // 아직 없는 외형: 입혀서 미리 보여 준다(다시 누르면 원래대로)
   }
   function doPull() {
     var r = C.pullGacha(state);

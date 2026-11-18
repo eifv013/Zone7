@@ -483,6 +483,15 @@
       }
     }
   }
+  /**
+   * 옷장에 쓰는 그림(1.9.1): 라라를 주어진 우비 색으로 그린다. 가로 8칸, 세로 11칸.
+   *   look = { y 모자 색, j 몸 색 }. scale 은 한 칸의 크기(화면 픽셀).
+   */
+  function drawHero(ctx, x, y, scale, look) {
+    if (!ctx) return false;
+    sprite(ctx, HERO_TOP.concat(HERO_LEGS[0]), x, y, false, scale || 1, look);
+    return true;
+  }
   /** 같은 구역이면 언제나 같은 배경이 나오도록 하는 작은 난수기. */
   function seeded(seed) {
     var s = (seed * 9301 + 49297) % 233280;
@@ -1297,6 +1306,6 @@
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
-           travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
+           drawHero: drawHero, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });
