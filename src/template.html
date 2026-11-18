@@ -89,6 +89,8 @@ body:not(.font-settled) #boot .boot-title { color: transparent; }
   padding: 18px 20px 14px; border-bottom: 3px solid var(--ink); max-width: 1280px; margin: 0 auto;
 }
 .mast h1 { margin: 0; font: 400 clamp(40px, 7vw, 64px)/1 var(--font-display); letter-spacing: -.01em; }
+/* 옆으로 밀어 탭을 넘길 때(2.8.0) 브라우저가 그 밀기를 '앞 페이지로 가기'로 받아 게임에서 나가 버리지 않게 한다 */
+html, body { overscroll-behavior-x: none; }
 /* 제목의 숫자 7(2.6.5): 이 글꼴은 숫자가 한글보다 키가 작아서 '7'만 낮아 보였다. 숫자만 1.2배로 키워 '구역'과 윗선을 맞춘다(아랫선은 그대로 맞는다) */
 /* 제목 글꼴(Black Han Sans)을 받아 왔을 때만 키운다(body.font-display-ok). 받지 못해 다른 글꼴로 보일 때는 숫자와 한글의 키가 이미 같다 */
 body.font-display-ok .seven { font-size: 1.22em; line-height: 0; }      /* 받은 화면에서 재 보니 7은 179칸, 구·역은 216~219칸: 1.21~1.22배 */
@@ -418,7 +420,9 @@ body.in-stage .mast { display: none; }
 @keyframes fx-blind { 0% { transform: translateX(-160%) skewX(-14deg); } 35%, 60% { transform: translateX(20%) skewX(-14deg); } 100% { transform: translateX(260%) skewX(-14deg); } }
 .fx-blinds .fx-b { left: 0; } 
 /* 철수는 같은 효과를 반대 방향으로 */
-.move-fx.back { transform: scaleX(-1); } .move-fx.back .fx-text { transform-origin: center; } .move-fx.back .fx-text b, .move-fx.back .fx-text span { transform: scaleX(-1); }
+/* 물러나는 효과(철수)는 무늬만 좌우로 뒤집는다(2.8.0). 전에는 효과 전체를 뒤집고 글자만 다시 뒤집어 놓았는데, 기기에 따라 설명 글이 거꾸로 보였다.
+   이제 글자는 뒤집는 것과 아예 상관없는 자리에 있다: 무늬(.fx-deco)만 뒤집힌다 */
+.move-fx .fx-deco { position: absolute; inset: 0; } .move-fx.back .fx-deco { transform: scaleX(-1); }
 .move-fx.back .fx-text b { background: #a8261b; color: #f4f2e6; }
 /* 위쪽 구역 번호 칸이 노랗게 차오른다 */
 .route li.arrive { animation: route-arrive 1.4s ease both; }
@@ -1216,7 +1220,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.7.7</div>
+  <div class="boot-ver">7구역 알파 2.8.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1267,7 +1271,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <button type="button" id="update-now">바로 업데이트</button>
 </div>
 <div class="tape" aria-hidden="true"></div>
-<div id="move-fx" class="move-fx" hidden aria-hidden="true"><i class="fx-a"></i><i class="fx-b"></i><div class="fx-text"><b id="move-fx-big"></b><span id="move-fx-small"></span></div></div>
+<div id="move-fx" class="move-fx" hidden aria-hidden="true"><div class="fx-deco"><i class="fx-a"></i><i class="fx-b"></i></div><div class="fx-text"><b id="move-fx-big"></b><span id="move-fx-small"></span></div></div>
 <div id="stage-bar" hidden><div class="stage-bar-row"><b id="stage-bar-name"></b><span class="stage-bar-goal" id="stage-bar-goal"></span><span class="num" id="stage-bar-time"></span><button type="button" id="stage-quit">돌아가기</button></div><div class="stage-bar-track"><i id="stage-bar-fill"></i></div></div>
 <header class="mast">
   <div>
@@ -1628,7 +1632,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.7.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.8.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

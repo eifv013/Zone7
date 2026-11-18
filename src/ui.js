@@ -2257,7 +2257,7 @@
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
     var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.wait > 0) && !(nz.soon && state.gate);
     $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
-    var canFill = fillReady(1) || fillReady(2) || fillReady(3) || fillReady(5) || fillReady(6);      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
+    var canFill = fillReady(state.zone);      // 지금 있는 구역의 것만(2.8.0: 지나온 구역은 부르지 않는다)      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
     $('mnav-base').classList.toggle('dot', C.strikeReady(state) || C.counterReady(state));      // 상황: 선제 공격이나 반격을 쓸 수 있다
     $('pet-feed').classList.toggle('ready', canFeed);
@@ -2365,6 +2365,7 @@
     return false;
   }
   function zoneTodo(zi) {
+    if (zi < state.zone) return false;      // 지나온 구역은 점으로 부르지 않는다(2.8.0). 지나온 구역은 알아서 돌아가는 곳이라, 점이 늘 켜져 있으면 지금 구역의 점이 묻힌다
     if (fillReady(zi) || zoneBuyReady(zi)) return true;
     var nz = C.nextZone(state);
     return zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.wait > 0);
@@ -3426,6 +3427,70 @@
         depth = Math.max(0, depth - 1);
         if (step() === 'exit') { try { history.go(-(depth + 1)); } catch (e) { /* 더 물러날 곳이 없다 */ } depth = 0; }
       });
+    })();
+
+    /*
+     * 옆으로 밀어 탭 넘기기(2.8.0): 화면을 왼쪽으로 밀면 다음 탭, 오른쪽으로 밀면 앞 탭으로 간다.
+     *   기록 화면: 일지 · 업적 · 도감 · 무전 · 통계 · 패치 · 도움말 · 설정
+     *   구역 화면: 1구역 · 2 · 3 … · 방벽
+     *   모험 창  : 도전 · 원정 · 상점
+     * 밀기로 치는 것: 가로로 60px 넘게, 세로보다 두 배 넘게, 0.6초 안에. 위아래로 읽는 중에 잘못 넘어가지 않게 한다.
+     * 넘기지 않는 곳: 옆으로 미는 줄(탭 줄, 도감의 묶음 줄), 음량 막대, 글을 적는 칸, 그리고 다른 창(일지 알림, 확인창)이 떠 있을 때.
+     * 끝에서는 더 넘어가지 않는다(처음으로 돌아가지 않는다).
+     */
+    (function () {
+      var sx = 0, sy = 0, st = 0, ok = false;
+      function vis(el) { return !!el && !el.hidden && el.getClientRects().length > 0; }
+      function group() {
+        if (vis($('hub'))) return Array.prototype.slice.call(document.querySelectorAll('#hub [data-hub]'));
+        if (Array.prototype.slice.call(document.querySelectorAll('.story-veil, [role="dialog"], [role="alertdialog"]')).some(vis)) return null;      // 다른 창이 떠 있다
+        var now = document.querySelector('[data-mview-set][aria-pressed="true"]'), view = now ? now.getAttribute('data-mview-set') : '';
+        if (view === 'record') return Array.prototype.slice.call(document.querySelectorAll('[data-rtab-set]'));
+        if (view === 'manage') return Array.prototype.slice.call(document.querySelectorAll('#zone-tabs button'));
+        return null;
+      }
+      /** 누른 곳이 옆으로 미는 줄이나 막대 안인가. */
+      function blocked(el) {
+        for (var p = el; p && p !== document.body; p = p.parentElement) {
+          var tag = p.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+          if (p.scrollWidth > p.clientWidth + 4) { var ox = getComputedStyle(p).overflowX; if (ox === 'auto' || ox === 'scroll') return true; }
+        }
+        return false;
+      }
+      /** dir: 1 다음, -1 앞. 넘겼으면 true. 테스트와 다른 입력(키보드)도 쓸 수 있게 밖에 둔다. */
+      function turn(dir) {
+        var g = group(); if (!g) return false;
+        g = g.filter(function (b) { return vis(b) && !b.disabled; });
+        var at = -1; g.forEach(function (b, i) { if (b.getAttribute('aria-pressed') === 'true') at = i; });
+        var to = at + dir;
+        if (at < 0 || to < 0 || to >= g.length) return false;
+        g[to].click();
+        try { g[to].scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) { /* 줄이 길 때 고른 탭이 보이게만 한다 */ }
+        return true;
+      }
+      window.Zone7Swipe = turn;
+      document.addEventListener('touchstart', function (e) {
+        var t = e.touches && e.touches.length === 1 ? e.touches[0] : null;
+        ok = !!t && !blocked(e.target);
+        if (t) { sx = t.clientX; sy = t.clientY; st = Date.now(); }
+      }, { passive: true });
+      // 옆으로 미는 중이라는 것이 분명해지면 브라우저의 기본 동작을 막는다. 일부 브라우저는 옆으로 미는 것을 '앞 페이지로 가기'로 받아서,
+      // 탭을 넘기려다 게임 안의 뒤로 가기가 눌리거나 게임에서 나가졌다(시험 중에 실제로 그랬다). 위아래로 미는 것은 건드리지 않는다.
+      document.addEventListener('touchmove', function (e) {
+        var t = e.touches && e.touches.length === 1 ? e.touches[0] : null;
+        if (!ok || !t) return;
+        var dx = Math.abs(t.clientX - sx), dy = Math.abs(t.clientY - sy);
+        if (dx > 12 && dx > dy * 1.5 && e.cancelable) e.preventDefault();
+      }, { passive: false });
+      document.addEventListener('touchend', function (e) {
+        var t = e.changedTouches && e.changedTouches[0];
+        if (!ok || !t) return;
+        ok = false;
+        var dx = t.clientX - sx, dy = t.clientY - sy;
+        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 2 || Date.now() - st > 600) return;
+        turn(dx < 0 ? 1 : -1);
+      }, { passive: true });
     })();
 
     // 효과음: 브라우저 규칙상 첫 입력 뒤에야 소리를 낼 수 있다. 켬/끔은 이 브라우저에 기억한다.
