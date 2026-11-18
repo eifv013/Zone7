@@ -978,7 +978,7 @@
     return zi < rates.length ? '+' + fmt(rates[zi]) + '/초' : '';
   }
   function renderZoneMap() {
-    var rates = [C.searchRate(state), C.tradeRate(state), C.lineRate(state), C.railRate(state)], total = C.productionPerSec(state);
+    var rates = [C.searchRate(state), C.tradeRate(state), C.lineRate(state), C.railRate(state), C.labRate(state), C.guardRate(state)], total = C.productionPerSec(state);
     if (zmapPick > C.ZONES.length - 1 || zmapPick < 0) zmapPick = state.zone;
     setText($('zmap-total'), '+' + fmt(total));
     rows.zmap.forEach(function (r, zi) {
@@ -994,7 +994,7 @@
     setText($('zmap-lead'), soon ? '다음 버전에서 열려요.' : open ? z.lead + '.' : '아직 열지 않았어요. ' + z.lead + '.');
     setText($('zmap-rate'), zmapRate(zmapPick, rates));
     fill($('zmap-share'), open && zmapPick < rates.length && total > 0 ? rates[zmapPick] / total : 0);
-    setText($('zmap-share-note'), open && zmapPick < rates.length && total > 0 ? '전체 생산의 ' + Math.round(rates[zmapPick] / total * 100) + '%' : open && zmapPick === 4 ? '물자 대신 연구 점수를 모아요' : '');
+    setText($('zmap-share-note'), open && zmapPick < rates.length && total > 0 ? '전체 생산의 ' + (rates[zmapPick] > 0 && rates[zmapPick] / total < 0.01 ? '1% 미만' : Math.round(rates[zmapPick] / total * 100) + '%') : '');      // 1.6.3: 0%로 보이던 앞 구역은 "1% 미만"으로
     $('zmap-go').disabled = !open || soon;
     setText($('zmap-go'), open && !soon ? '이 구역 보기' : '아직 갈 수 없어요');
   }
@@ -1601,7 +1601,7 @@
       log('기계를 고쳤다. ' + res.seconds + '초 동안 라인이 ' + C.TUNE_MULT + '배로 돈다.', 'good'); sfx('upgrade'); buzz(25); Store.save(); render();
     });
     $('rebalance').addEventListener('click', function () {
-      confirmBox('기계 다시 맞추기', '기계에 쓴 물자만큼, 세 기계의 처리량이 같아지도록 레벨을 다시 나눠요. 싼 기계만 올렸다면 레벨 합계가 줄어요. ' + C.REBALANCE_SECONDS + '초 동안 라인이 서요.', '그만둔다', '다시 맞춘다', function () {
+      confirmBox('기계 다시 맞추기', '기계에 쓴 물자만큼, 세 기계의 처리량이 같아지도록 레벨을 다시 나눠요. 남는 값은 물자로 돌려받아요. ' + C.REBALANCE_SECONDS + '초 동안 라인이 서요.', '그만둔다', '다시 맞춘다', function () {
         var res = C.rebalanceLine(state);
         if (!res.ok) return;
         log('기계를 다시 맞췄다. ' + res.seconds + '초 동안 라인이 선다.', 'good'); sfx('machine'); buzz(25); Store.save(); render();
@@ -1629,7 +1629,7 @@
   }
   /** 4·6·7구역의 사건 칸과 5구역의 밤샘 연구. */
   var ZEV_TEXT = {
-    rail:  { lead: '급한 화물을 실어 달라는 무전이 왔어요.', now: '바로 받는다', boost: '단골 화주로 삼는다', what: '화물 값', done: '특별 화물을 실어 보냈다.', kept: '단골 화주가 생겼다.' },
+    rail:  { lead: '급한 화물을 실어 달라는 무전이 왔어요.', now: '바로 받는다', boost: '단골로 삼는다', what: '화물 값', done: '특별 화물을 실어 보냈다.', kept: '화물을 맡기는 단골이 생겼다.' },
     guard: { lead: '사람들이 다리 앞에 줄을 섰어요.', now: '통과시킨다', boost: '쉬어 가게 한다', what: '통행 물자', done: '행렬을 통과시켰다.', kept: '행렬이 초소 옆에서 쉬어 갔다. 소문이 난다.' },
     tower: { lead: '어딘가에서 무전이 들어왔어요.', now: '응답한다', boost: '', what: '', done: '무전에 응답했다.', kept: '' }
   };
@@ -1680,7 +1680,7 @@
     if (t.boost) {
       var cur = id === 'rail' ? state.railBoost : state.guardBoost, full = cur >= C.ZEV_BOOST_MAX - 1e-9, bb = $('zev-' + id + '-boost');
       bb.disabled = full;
-      setText(bb, full ? t.what + ' +' + Math.round(cur * 100) + '% · 최대' : t.boost + ' · ' + t.what + ' +' + Math.round(C.ZEV_BOOST * 100) + '% (현재 +' + Math.round(cur * 100) + '%)');
+      setText(bb, full ? t.what + ' +' + Math.round(cur * 100) + '% · 최대' : t.boost + ' · ' + t.what + ' +' + Math.round(C.ZEV_BOOST * 100) + '% (현재 +' + Math.round(cur * 100) + '% / 최대 +' + Math.round(C.ZEV_BOOST_MAX * 100) + '%)');
     }
   }
   function wireContract() {
@@ -2110,7 +2110,7 @@
       // 기계 다시 맞추기: 가동률이 정속 기준 아래로 무너졌을 때만 보인다
       var rbLine = C.lineInfo(state), rb = $('rebalance');
       rb.hidden = !(rbLine.flow > 0 && !rbLine.steady) || state.retool > 0;
-      if (!rb.hidden) { var rp = C.rebalancePlan(state); setText(rb, '기계 다시 맞추기 · Lv ' + rp.sorter + ' / ' + rp.press + ' / ' + rp.assembler + '로'); }
+      if (!rb.hidden) { var rp = C.rebalancePlan(state); var rf = C.rebalanceRefund(state); setText(rb, '기계 다시 맞추기 · Lv ' + rp.sorter + ' / ' + rp.press + ' / ' + rp.assembler + '로' + (rf > 0 ? ' · 물자 +' + fmt(rf) : '')); }
       // 고장: 고치면 잠깐 라인이 빨라진다
       var jf = $('jam-fix'), jamName = '';
       C.MACHINES.forEach(function (d) { if (state.jam && state.jam.id === d.id) jamName = d.name; });
@@ -2182,7 +2182,7 @@
         setText(v.side, !lv ? '끊김' : on ? on + ' / ' + plan.slots[d.id] + '대 · ' + clock(trip - state.routeClock[d.id]) : '0 / ' + plan.slots[d.id] + '대');
         v.bar.style.width = (lv && (on || state.routeLoad[d.id] > 0) ? Math.min(100, state.routeClock[d.id] / trip * 100) : 0).toFixed(1) + '%';
         var cost = C.routeCost(state, d.id);
-        setText(r.count, lv ? lv + '단계' : '끊김');
+        setText(r.count, lv ? lv + ' / ' + C.ROUTE_MAX + '단계' : '끊김');
         setText(r.info, (lv ? '열차 ' + plan.slots[d.id] + '대까지' : '복구하면 열차 ' + C.ROUTE_SLOTS + '대') + ' · ' + clock(trip) + ' · 화물 ×' + d.mult);
         setText(r.cost, isFinite(cost) ? (lv ? '증편 ' : '복구 ') + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);

@@ -2807,3 +2807,13 @@ test('1.6.2 길 정찰: 7구역의 끝도 정찰 시간이 지나야 온다', ()
   s.runSeconds = 100 + C.scoutNeed(6);
   assert.ok(C.tick(s, 0.1, () => 0.5).some(e => e.type === 'ending'));
 });
+
+test('1.6.3: 기계를 다시 맞추고 남는 값은 물자로 돌려받는다. 누적은 늘지 않고, 되풀이해도 이득이 없다', () => {
+  const s = inFactory(); s.machines = { sorter: 110, press: 120, assembler: 238 }; s.supplies = 0;      // 받은 화면: 선별기를 80 → 110 으로 올린 상태
+  const spent = C.machineSpent(s), earned = s.runEarned, refund = C.rebalanceRefund(s);
+  assert.ok(refund > 0);
+  const r = C.rebalanceLine(s); assert.ok(r.ok); assert.equal(r.refund, refund);
+  assert.equal(s.supplies, refund); assert.equal(s.runEarned, earned, '되받은 물자는 번 것으로 세지 않는다');
+  assert.ok(Math.abs(C.machineSpent(s) + refund - spent) <= spent * 1e-9, '기계 값 + 돌려받은 물자 = 쓴 물자');
+  const few = inFactory(); few.machines = { sorter: 1, press: 0, assembler: 0 }; assert.equal(C.rebalanceRefund(few), 0);
+});
