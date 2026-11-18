@@ -2042,7 +2042,9 @@
   /** 이번 회차에 그 구역에서 채울 목표 셋(정의). */
   function activeGoals(state, index) {
     var base = GOALS[index] || [], alt = GOALS_ALT[index] || [], pick = (state.goalPick && state.goalPick[index]) || [];
-    return base.map(function (g, k) { return pick[k] && alt[k] ? alt[k] : g; });
+    // 도전 '맨몸'(개조 금지) 중에는 "개조를 N번" 목표가 뽑혀 있어도 원래 목표로 돌린다: 그대로 두면 채울 방법이 없어 도전이 막힌다(1.7.2)
+    var noUps = challengeOn(state, 'frugal');
+    return base.map(function (g, k) { return pick[k] && alt[k] && !(noUps && /개조/.test(alt[k].text)) ? alt[k] : g; });
   }
   /** 다음 회차의 목표를 뽑는다. 바로 앞 회차(prev)와 셋이 모두 같은 구역이 없게 한다. */
   function rollGoalPick(prev, rng) {

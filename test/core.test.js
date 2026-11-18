@@ -2891,3 +2891,12 @@ test('1.7.0 도전의 고유 보상: 훈장이 있으면 붙고, 여러 번 성�
   assert.ok(Math.abs(C.globalMult(has('lean', 5)) - C.globalMult(has('lean', 1))) < 1e-9, '다섯 번 성공해도 보상은 한 번');
   const r0 = C.createState(0), r1 = has('oneshot'); r0.runEarned = r1.runEarned = 1e30; assert.ok(C.antibodiesOnRetreat(r1) > C.antibodiesOnRetreat(r0));
 });
+
+test('1.7.2 맨몸 도전 중에는 개조를 세는 목표가 원래 목표로 돌아간다(채울 방법이 없어 막히지 않게)', () => {
+  const s = C.createState(0); s.bestZone = 6; s.goalPick = { 0: [1, 1, 1], 1: [1, 1, 1] };
+  assert.ok(C.activeGoals(s, 0).some(g => /개조/.test(g.text)), '평소에는 개조 목표가 뽑힐 수 있다');
+  assert.ok(C.startChallenge(s, 'frugal').ok);
+  for (const zi of [0, 1]) assert.ok(!C.activeGoals(s, zi).some(g => /개조/.test(g.text)), (zi + 1) + '구역');
+  assert.equal(C.activeGoals(s, 0)[0].id, 'z1a2', '개조와 상관없는 바뀐 목표는 그대로');
+  C.quitChallenge(s); assert.ok(C.activeGoals(s, 0).some(g => /개조/.test(g.text)), '포기하면 돌아온다');
+});

@@ -21,12 +21,19 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     s.petLv = s.petLv || {}; (C.BREEDS || []).forEach(b => { s.petLv[b.id] = C.PET_LEVEL_MAX || 10; });
     s.retreats = 30;
   }
+  // PRE=mid: 특성 40%, 업적 절반, 철수 8번(중간쯤 키운 사람).  MEDALS=1: 도전 훈장을 모두 가진 채로.
+  if (process.env.PRE === 'mid') { C.TRAITS.forEach(t => { s.traits[t.id] = Math.floor(t.max * 0.4); }); C.ACHIEVEMENTS.forEach((a, i) => { if (i % 2) s.ach[a.id] = true; }); s.retreats = 8; }
+  if (process.env.PRE === 'weak') { C.TRAITS.forEach(t => { s.traits[t.id] = Math.floor(t.max * 0.12); }); s.retreats = 3; }      // 3구역쯤까지 가 본 사람
+  if (process.env.MEDALS) C.CHALLENGES.forEach(d => { s.medals[d.id] = 1; });
+  // CHAL=id: 그 도전을 켠 채로 시작해서, 성공하거나 실패하면 결과를 찍고 끝낸다. 도전 중에는 철수하지 않는다.
+  if (process.env.CHAL) { s.bestZone = 6; s.ended = 1; const r = C.startChallenge(s, process.env.CHAL); if (!r.ok) { console.log('도전을 켜지 못함', r.reason); process.exit(1); } }
   if (process.env.LIVE) { const push = marks.push.bind(marks); marks.push = (m) => { console.log(JSON.stringify(Object.assign({}, m, { hours: +m.hours.toFixed(1), pps: undefined }))); return push(m); }; }      // LIVE=1: 생기는 대로 찍는다(오래 도는 측정용)
   const traitOrder = ['immune', 'bulwark', 'immune', 'dealer', 'immune', 'pioneer', 'immune', 'thrift', 'legacy', 'immune', 'bulwark', 'dealer', 'engineer', 'railman', 'scholar'];
   const spendTraits = () => { for (let k = 0, bought = true; bought && k < 500; k++) { bought = false; for (const id of traitOrder) if ((id !== 'engineer' || s.bestZone >= 2) && (id !== 'railman' || s.bestZone >= 3) && (id !== 'scholar' || s.bestZone >= 4) && C.buyTrait(s, id).ok) bought = true; } };
   const step = () => {
     active += dt;
     const evs = C.tick(s, dt, rng);
+    if (s.zone >= 1 && s.goods > 0 && s.price >= C.peakPrice(s)) C.sellGoods(s, false);      // 고점이면 손으로 판다(흥정꾼이 없는 도전에서도 2구역 목표를 채우게)
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
     const IDLE = !!process.env.IDLE;      // IDLE=1: 사기만 하고 사건·단추는 손대지 않는 사람(자동 개조가 대신 하는 것만 일어난다)
@@ -94,7 +101,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       if (s.zone >= 4) { const q = Object.create(s); q.staff = s.staff + 1; consider(C.staffCost(s, 1), Math.max(C.labRate(q) - C.labRate(s), per * 0.03), () => C.buyStaff(s, 1)); }      // 5구역: 연구원은 약품도 만든다
       if (s.zone >= 5) { const q = Object.create(s); q.posts = s.posts + 1; consider(C.postCost(s, 1), Math.max(C.guardRate(q) - C.guardRate(s), per * 0.01), () => C.buyPost(s, 1)); }      // 6구역: 초소
       if (s.zone >= 6) { const q = Object.create(s); q.antennas = s.antennas + 1; consider(C.antennaCost(s, 1), Math.max(per * 0.05, per * (C.survivorRate(q) - C.survivorRate(s)) / Math.max(1, C.survivorRate(s)) * 0.2), () => C.buyAntenna(s, 1)); }      // 7구역: 안테나(생존자가 전체 배수를 올린다)   // 5구역: 연구원은 물자를 직접 벌지 않으므로 어림값으로 따진다
-      for (const u of C.UPGRADES) { const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' || u.key === 'trip' || u.key === 'traincost' || u.key === 'routecost' || u.key === 'staffcost' || u.key === 'labcost' ? 0.03 : u.key === 'lab' ? 0.06 : 0.12), () => C.buyUpgrade(s, u.id)); }
+      for (const u of C.UPGRADES) { if (C.challengeOn(s, 'frugal') || (C.challengeOn(s, 'hands') && C.AUTO_KEYS.indexOf(u.key) >= 0)) continue; const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' || u.key === 'trip' || u.key === 'traincost' || u.key === 'routecost' || u.key === 'staffcost' || u.key === 'labcost' ? 0.03 : u.key === 'lab' ? 0.06 : 0.12), () => C.buyUpgrade(s, u.id)); }
       if (!best) break;
       best.buy();
     }
@@ -103,7 +110,8 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const isStuck = cheapest - s.supplies > C.productionPerSec(s) * stuck;
     const nz = C.nextZone(s), wall = nz && nz.ready && (nz.cost - nz.have) > C.incomePerSec(s) * 6 * 3600;      // 문 값의 벽: 목표는 다 채웠는데 문 값이 한참 멀다
     const endWall = !nz && s.zone >= 6 && !s.endedRun && isFinite(C.serumCost(s)) && (C.serumCost(s) - s.supplies) > C.incomePerSec(s) * 6 * 3600;
-    if (C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', goals: C.goals(s, s.zone).filter(g => !g.done).map(g => g.id + ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need)).join(' ') }); s = C.retreat(s, 0, rng).state; spendTraits(); }
+    if (process.env.CHAL && s.challenge && (s.challenge.done || s.challenge.failed)) { console.log(`도전 ${process.env.CHAL}: ${s.challenge.done ? '성공' : '실패'} · 회차 ${(s.runSeconds / 3600).toFixed(1)}시간(접속 ${(active / 3600).toFixed(1)}시간) · ${s.zone + 1}구역 · 뚫림 ${s.breaches}`); process.exit(0); }
+    if (!C.activeChallenge(s) && C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', goals: C.goals(s, s.zone).filter(g => !g.done).map(g => g.id + ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need)).join(' ') }); s = C.retreat(s, 0, rng).state; spendTraits(); }
   };
   const gap = Math.max(0, 16 * 3600 / sessions - minutes * 60);
   while (day < days && !marks.some(m => m.end)) {
