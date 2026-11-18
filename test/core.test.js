@@ -3152,7 +3152,7 @@ test('위험 단계의 값: 문 값은 10단계까지 2.2배씩, 그 뒤로는 �
 
 test('4구역: 열차가 0대가 된 노선은 싣고 있던 것을 한 번에 내리고 멈춘다(혼자 끝없이 돌지 않는다)', () => {
   const s = inStation();
-  s.routes.loop = 1; s.routes.river = 1; s.trains = C.ROUTE_SLOTS;      // 열차는 배수가 높은 강변선으로 모두 간다
+  s.routes.loop = 1; s.routes.river = 1; s.trains = 1;      // 한 대뿐이면 배수가 높은 강변선으로 간다
   assert.equal(C.railPlan(s).riders.loop, 0);
   s.routeLoad.loop = 50; s.routeClock.loop = 3;      // 순환선에는 옮겨 가기 전에 실은 것이 남아 있다
   let trains = 0;
@@ -3177,4 +3177,20 @@ test('2.5.0 도전 난이도: 외벽·무결은 무리가 불고, 거센 무리�
   const o2 = on('oneshot'); o2.runSeconds = C.ONESHOT_SECONDS - 1; C.checkChallenge(o2, []); assert.ok(!o2.challenge.failed);
   // 목표 구역: 여덟 개 가운데 여섯이 6구역 이상이다(전에는 3~5구역이 다섯이었다)
   assert.deepEqual(C.CHALLENGES.map(d => d.goal), [4, 6, 3, 6, 6, 6, 6, 'end']);
+});
+
+test('4구역 배차: 복구한 노선에는 먼저 한 대씩 가고, 남은 열차는 배수가 높은 노선부터 채운다', () => {
+  const s = inStation();
+  s.routes.loop = 7; s.routes.river = 8; s.routes.outer = 5; s.routes.express = 2;
+  s.trains = 22;
+  const p = C.railPlan(s);
+  assert.ok(p.riders.loop >= 1, '순환선도 돈다');
+  assert.deepEqual(p.riders, { express: p.slots.express, outer: p.slots.outer, river: 22 - p.slots.express - p.slots.outer - 1, loop: 1 });
+  assert.equal(p.idle, 0);
+  // 열차가 노선 수보다 적으면 배수가 높은 노선부터 한 대씩
+  s.trains = 2; assert.deepEqual(C.railPlan(s).riders, { express: 1, outer: 1, river: 0, loop: 0 });
+  // 끊긴 노선에는 가지 않는다. 자리가 남으면 쉬는 열차로 센다
+  s.routes.loop = 0; s.trains = 22; assert.equal(C.railPlan(s).riders.loop, 0);
+  s.routes = { loop: 1, river: 0, outer: 0, express: 0 }; s.trains = 5;
+  const q = C.railPlan(s); assert.equal(q.riders.loop, Math.min(5, q.slots.loop)); assert.equal(q.idle, 5 - q.riders.loop);
 });

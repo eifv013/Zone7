@@ -1533,10 +1533,18 @@
    */
   function railPlan(state) {
     var left = zoneOpen(state, 3) ? state.trains : 0, riders = {}, slots = {};
-    ROUTES.slice().sort(function (a, b) { return b.mult - a.mult; }).forEach(function (d) {
+    var order = ROUTES.slice().sort(function (a, b) { return b.mult - a.mult; });
+    // 2.5.4: 복구한 노선에는 먼저 한 대씩 보낸다(배수가 높은 노선부터). 그다음 남은 열차를 배수가 높은 노선부터 채운다.
+    // 전에는 배수 순서로만 채워서, 열차가 모자라면 순환선처럼 배수가 낮은 노선은 0대로 서 있었다.
+    // 돈 들여 복구한 노선이 멈춰 있으니 고장으로 보였다. 한 대를 낮은 배수로 돌리는 손해는 작다(22대 가운데 한 대가 ×1.4 대신 ×1).
+    order.forEach(function (d) {
       slots[d.id] = (state.routes[d.id] || 0) * ROUTE_SLOTS;
-      riders[d.id] = Math.min(left, slots[d.id]);
+      riders[d.id] = slots[d.id] > 0 && left > 0 ? 1 : 0;
       left -= riders[d.id];
+    });
+    order.forEach(function (d) {
+      var more = Math.min(left, slots[d.id] - riders[d.id]);
+      riders[d.id] += more; left -= more;
     });
     return { riders: riders, slots: slots, idle: left };
   }

@@ -1235,7 +1235,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.5.3</div>
+  <div class="boot-ver">7구역 알파 2.5.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1781,7 +1781,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.5.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.5.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1955,7 +1955,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.5.3";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.5.4";
 </script>
 <script>
 /*
@@ -1974,6 +1974,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.5.3";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 2.5.4', date: '2026-11-19', at: '2026-11-19 02:59:59', title: '모든 노선에 열차가 돌아요',
+      items: [
+        '4구역에서 복구한 노선에는 열차가 먼저 한 대씩 가요.',
+        '전에는 화물 배수가 높은 노선부터 채워서, 열차가 모자라면 순환선이 0대로 서 있었어요.',
+        '남은 열차는 전처럼 화물 배수가 높은 노선부터 채워요.'
+      ] },
     { ver: '알파 2.5.3', date: '2026-11-19', at: '2026-11-19 02:59:59', title: '음악 음량 100',
       items: [
         '음악 음량을 100으로 올렸을 때 소리가 살짝 찢어질 수 있던 것을 막았어요.'
@@ -4735,10 +4741,18 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.5.3";
    */
   function railPlan(state) {
     var left = zoneOpen(state, 3) ? state.trains : 0, riders = {}, slots = {};
-    ROUTES.slice().sort(function (a, b) { return b.mult - a.mult; }).forEach(function (d) {
+    var order = ROUTES.slice().sort(function (a, b) { return b.mult - a.mult; });
+    // 2.5.4: 복구한 노선에는 먼저 한 대씩 보낸다(배수가 높은 노선부터). 그다음 남은 열차를 배수가 높은 노선부터 채운다.
+    // 전에는 배수 순서로만 채워서, 열차가 모자라면 순환선처럼 배수가 낮은 노선은 0대로 서 있었다.
+    // 돈 들여 복구한 노선이 멈춰 있으니 고장으로 보였다. 한 대를 낮은 배수로 돌리는 손해는 작다(22대 가운데 한 대가 ×1.4 대신 ×1).
+    order.forEach(function (d) {
       slots[d.id] = (state.routes[d.id] || 0) * ROUTE_SLOTS;
-      riders[d.id] = Math.min(left, slots[d.id]);
+      riders[d.id] = slots[d.id] > 0 && left > 0 ? 1 : 0;
       left -= riders[d.id];
+    });
+    order.forEach(function (d) {
+      var more = Math.min(left, slots[d.id] - riders[d.id]);
+      riders[d.id] += more; left -= more;
     });
     return { riders: riders, slots: slots, idle: left };
   }
