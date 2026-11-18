@@ -363,32 +363,36 @@ body { word-break: keep-all; }
 /* 1.8.6: 어떤 효과든 글자가 떠 있는 동안에는 뒤 화면을 어둡게 가린다(글자와 뒤의 글이 겹쳐 읽히지 않게) */
 .move-fx::before { content: ''; position: absolute; inset: 0; background: #17180f; opacity: 0; }
 .move-fx.go::before { animation: fx-veil 2.2s ease both; }
-@keyframes fx-veil { 0% { opacity: 0; } 14%, 78% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes fx-veil { 0% { opacity: 0; } 12%, 82% { opacity: 1; } 100% { opacity: 0; } }
 .move-fx .fx-text { position: absolute; left: 0; right: 0; top: 38%; text-align: center; opacity: 0; }
 .move-fx .fx-text b { display: inline-block; padding: 6px 18px; font-size: 44px; line-height: 1.15; font-weight: 800; color: #17180f; background: #f0b400; border: 4px solid #17180f; }
 .move-fx .fx-text span { display: block; width: max-content; max-width: 90%; margin: 8px auto 0; padding: 3px 12px; font-size: 16px; font-weight: 700; color: #f4f2e6; background: #17180f; white-space: nowrap; }
 .move-fx.go .fx-text { animation: fx-text 2.2s ease both; }
-@keyframes fx-text { 0% { opacity: 0; transform: translateY(10px); } 22% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; } }
+/* 1.8.7 시간표: 가림 막이 먼저 다 덮고(12%) → 글자가 뜨고(12~22%) → 글자가 먼저 사라지고(70~78%) → 막이 걷힌다(82~100%). 글자가 뒤 화면 위에 겹쳐 보이는 순간이 없다 */
+@keyframes fx-text { 0%, 12% { opacity: 0; transform: translateY(10px); } 22% { opacity: 1; transform: none; } 70% { opacity: 1; } 78%, 100% { opacity: 0; } }
 /* 1. 경고 띠: 빗금 띠 두 줄이 화면을 가로지른다 */
 .fx-tape i { left: -20%; width: 140%; height: 34px; opacity: 1; background: repeating-linear-gradient(-45deg, #f0b400 0 18px, #17180f 18px 36px); transform: translateX(-130%); }
 .fx-tape .fx-a { top: 30%; } .fx-tape .fx-b { top: calc(38% + 118px); }
-.fx-tape.go .fx-a { animation: fx-sweep 2s cubic-bezier(.2,.7,.2,1) both; }
-.fx-tape.go .fx-b { animation: fx-sweep 2s cubic-bezier(.2,.7,.2,1) .12s both reverse; }
-@keyframes fx-sweep { 0% { transform: translateX(-130%); } 30%, 70% { transform: translateX(0); } 100% { transform: translateX(130%); } }
+.fx-tape.go .fx-a { animation: fx-sweep 1.9s cubic-bezier(.2,.7,.2,1) both; }
+.fx-tape.go .fx-b { animation: fx-sweep-r 1.9s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes fx-sweep-r { 0% { transform: translateX(130%); } 26%, 66% { transform: translateX(0); } 88%, 100% { transform: translateX(-130%); } }
+@keyframes fx-sweep { 0% { transform: translateX(-130%); } 26%, 66% { transform: translateX(0); } 88%, 100% { transform: translateX(130%); } }
 /* 2. 셔터: 위아래에서 검은 판이 닫혔다 열린다 */
 .fx-shutter i { left: 0; right: 0; height: 50%; opacity: 1; background: #17180f; border: 0 solid #f0b400; }
 .fx-shutter .fx-a { top: 0; border-bottom-width: 6px; transform: translateY(-101%); } .fx-shutter .fx-b { bottom: 0; border-top-width: 6px; transform: translateY(101%); }
 .fx-shutter.go .fx-a { animation: fx-shut-a 2.1s ease both; } .fx-shutter.go .fx-b { animation: fx-shut-b 2.1s ease both; }
 /* 1.8.6: 셔터는 끝까지 닫힌다. 반쯤만 닫혀서 가운데로 뒤 화면이 보이고 글자와 겹쳐 어수선했다 */
-@keyframes fx-shut-a { 0%, 100% { transform: translateY(-101%); } 20%, 74% { transform: translateY(0); } }
-@keyframes fx-shut-b { 0%, 100% { transform: translateY(101%); } 20%, 74% { transform: translateY(0); } }
+@keyframes fx-shut-a { 0% { transform: translateY(-101%); } 16%, 74% { transform: translateY(0); } 92%, 100% { transform: translateY(-101%); } }
+@keyframes fx-shut-b { 0% { transform: translateY(101%); } 16%, 74% { transform: translateY(0); } 92%, 100% { transform: translateY(101%); } }
 /* 3. 도장: 글자가 비스듬히 쾅 찍힌다 */
 .fx-stamp.go .fx-text { animation: fx-stamp 2.1s cubic-bezier(.2,1.4,.4,1) both; }
-@keyframes fx-stamp { 0% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 14% { opacity: 1; transform: scale(1) rotate(-5deg); } 80% { opacity: 1; transform: scale(1) rotate(-5deg); } 100% { opacity: 0; transform: scale(.96) rotate(-5deg); } }
+@keyframes fx-stamp { 0%, 12% { opacity: 0; transform: scale(2.6) rotate(-14deg); } 24% { opacity: 1; transform: scale(1) rotate(-5deg); } 70% { opacity: 1; transform: scale(1) rotate(-5deg); } 78%, 100% { opacity: 0; transform: scale(.96) rotate(-5deg); } }
 /* 4. 가림막: 비스듬한 판 둘이 엇갈려 지나간다 */
 .fx-blinds i { top: -10%; height: 120%; width: 70%; opacity: .92; background: #17180f; transform: translateX(-160%) skewX(-14deg); }
 .fx-blinds .fx-b { background: #f0b400; width: 16%; }
-.fx-blinds.go .fx-a { animation: fx-blind 1.9s ease-in-out both; } .fx-blinds.go .fx-b { animation: fx-blind 1.9s ease-in-out .1s both; }
+.fx-blinds.go .fx-a { animation: fx-blind 1.7s ease-in-out both; } .fx-blinds.go .fx-b { animation: fx-blind-b 1.7s ease-in-out .08s both; }
+/* 노란 띠는 폭이 좁아서 제 폭의 배수로 밀면 화면 밖까지 못 나간다(가운데에 걸린 채 남았다). 화면 폭으로 민다 */
+@keyframes fx-blind-b { 0% { transform: translateX(-40vw) skewX(-14deg); } 35%, 60% { transform: translateX(10vw) skewX(-14deg); } 100% { transform: translateX(130vw) skewX(-14deg); } }
 @keyframes fx-blind { 0% { transform: translateX(-160%) skewX(-14deg); } 35%, 60% { transform: translateX(20%) skewX(-14deg); } 100% { transform: translateX(260%) skewX(-14deg); } }
 .fx-blinds .fx-b { left: 0; } 
 /* 철수는 같은 효과를 반대 방향으로 */
@@ -1190,7 +1194,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.8.6</div>
+  <div class="boot-ver">7구역 알파 1.8.7</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1731,7 +1735,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.8.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.8.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1895,7 +1899,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.8.6";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.8.7";
 </script>
 <script>
 /*
@@ -1914,6 +1918,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.8.6";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.8.7', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '화면 효과와 원정 설명 손보기',
+      items: [
+        '화면 효과의 순서를 고쳤어요. 뒤 화면을 먼저 가리고 글자가 뜨고, 글자가 사라진 뒤에 걷혀요.',
+        '띠와 가림막이 화면이 다시 보인 뒤까지 남던 것을 고쳤어요.',
+        '원정 설명을 고쳤어요. "거점 밖으로 나가는 짧은 수색이에요."'
+      ] },
     { ver: '알파 1.8.6', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '화면 효과 가림',
       items: [
         '화면 효과가 나오는 동안 뒤 화면을 가려요. 글자와 뒤의 글이 겹쳐 보이지 않아요.',
@@ -1949,12 +1959,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.8.6";
     { ver: '알파 1.8.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '원정',
       items: [
         '원정이 생겼어요. 모험 창의 원정 탭에서 가요. 3구역에 닿으면 열려요.',
-        '원정은 본 게임과 따로 도는 짧은 판이에요. 스테이지마다 규칙, 목표, 제한 시간이 있어요.',
+        '원정은 거점 밖으로 나가는 짧은 수색이에요. 스테이지마다 규칙, 목표, 제한 시간이 있어요.',
         '첫 지역 "하류 마을"에 스테이지 5개와 보스 1개가 있어요.',
         '특성과 업적 없이 빈 거점에서 시작해요. 누구에게나 같은 난이도예요.',
         '스테이지마다 표시가 세 개예요. 클리어, 스피드, 하드. 처음 얻을 때 간식을 받아요.',
         '보스를 잡으면 지역 휘장을 받아요. 방어 성공 시 전리품이 10% 늘어요.',
-        '원정을 하는 동안 본 게임은 자리 비움처럼 계속 벌어요.',
+        '원정을 하는 동안 거점은 계속 수색 중이에요. 돌아오면 그동안 번 물자를 받아요.',
         '스테이지 도중에 창을 닫으면 그 스테이지는 사라져요.'
       ] },
     { ver: '알파 1.7.4', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '도전 보상과 손수 조정',
@@ -9239,7 +9249,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.8.6";
     tabBtn.disabled = false; setText(tabBtn, '원정');
     var all = C.stageMarkCount(state);
     setText($('stage-count'), open ? '표시 ' + all.have + ' / ' + all.all + ' · 지역 휘장 ' + C.badgeCount(state) + ' / ' + C.REGIONS.length : '');
-    setText($('stage-hint'), open ? '거점 밖으로 나가는 짧은 판이에요.\n맨손으로 시작하고, 거점은 그동안 계속 벌어요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
+    setText($('stage-hint'), open ? '거점 밖으로 나가는 짧은 수색이에요.\n맨손으로 시작해요. 거점은 그동안 계속 수색 중이에요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
     if (!rows.stages) buildStageMap();
     // 고른 스테이지가 없으면: 아직 클리어하지 않은 것 가운데 맨 앞
     if (!stagePick || !rows.stages[stagePick]) { stagePick = C.STAGES[0].id; C.STAGES.some(function (d) { if (!C.stageMarks(state, d.id).clear) { stagePick = d.id; return true; } return false; }); }

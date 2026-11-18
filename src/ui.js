@@ -1354,7 +1354,7 @@
     tabBtn.disabled = false; setText(tabBtn, '원정');
     var all = C.stageMarkCount(state);
     setText($('stage-count'), open ? '표시 ' + all.have + ' / ' + all.all + ' · 지역 휘장 ' + C.badgeCount(state) + ' / ' + C.REGIONS.length : '');
-    setText($('stage-hint'), open ? '거점 밖으로 나가는 짧은 판이에요.\n맨손으로 시작하고, 거점은 그동안 계속 벌어요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
+    setText($('stage-hint'), open ? '거점 밖으로 나가는 짧은 수색이에요.\n맨손으로 시작해요. 거점은 그동안 계속 수색 중이에요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
     if (!rows.stages) buildStageMap();
     // 고른 스테이지가 없으면: 아직 클리어하지 않은 것 가운데 맨 앞
     if (!stagePick || !rows.stages[stagePick]) { stagePick = C.STAGES[0].id; C.STAGES.some(function (d) { if (!C.stageMarks(state, d.id).clear) { stagePick = d.id; return true; } return false; }); }
