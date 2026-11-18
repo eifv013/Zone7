@@ -1368,8 +1368,8 @@
     // 라라: 고른 표지에 서 있다. 다른 표지를 고르면 사이의 표지들을 차례로 거쳐 걸어간다
     if (rows.stageAt !== idx) {
       var sw = [], sf = rows.stageAt >= 0 ? rows.stageAt : idx, sd = idx > sf ? 1 : -1;
-      for (var si = sf; si !== idx; si += sd) sw.push([STAGE_AT[si + sd][0] + 14, STAGE_AT[si + sd][1] + 2]);
-      if (rows.stageAt < 0 || !sw.length) rows.stageLara.at(STAGE_AT[idx][0] + 14, STAGE_AT[idx][1] + 2); else rows.stageLara.walk(sw);
+      for (var si = sf; si !== idx; si += sd) sw.push([STAGE_AT[si + sd][0] + 17, STAGE_AT[si + sd][1] + 4]);
+      if (rows.stageAt < 0 || !sw.length) rows.stageLara.at(STAGE_AT[idx][0] + 17, STAGE_AT[idx][1] + 4); else rows.stageLara.walk(sw);
       rows.stageAt = idx;
     }
     setText($('stage-d-no'), d.boss ? '지역 보스' : '스테이지 ' + C.REGIONS[0].no + '-' + (idx + 1));
@@ -1382,41 +1382,73 @@
    * 원정 지도(1.8.1): 지역 I 하류 마을. 구역 지도와 같은 도트 그림으로, 길을 따라 스테이지 표지가 놓이고 끝에 선착장(보스)이 있다.
    *   표지를 누르면 아래 칸에 그 스테이지의 규칙·목표·표시가 뜬다. 표지 아래 점 셋은 얻은 표시(클리어·스피드·하드).
    */
-  var stagePick = '', STAGE_AT = [[46, 214], [118, 188], [70, 142], [150, 118], [104, 66], [214, 52]];
+  var stagePick = '', STAGE_AT = [[58, 266], [130, 236], [78, 184], [162, 158], [104, 102], [210, 76]], STAGE_VB = [320, 320];
   function buildStageMap() {
-    var svg = svgEl('svg', { viewBox: '0 0 320 250', 'class': 'zmap-svg', role: 'group', 'aria-label': '원정 지도' });
+    var svg = svgEl('svg', { viewBox: '0 0 ' + STAGE_VB[0] + ' ' + STAGE_VB[1], 'class': 'zmap-svg st-svg', role: 'group', 'aria-label': '원정 지도' });
     function add(name, attrs, text) { var n = svgEl(name, attrs, text); svg.appendChild(n); return n; }
-    function px(x, y, w, h, cls) { add('rect', { x: x, y: y, width: w, height: h, 'class': cls }); }
-    var RIVER = 'M250 -10 L262 40 L246 90 L268 140 L280 200 L270 260';
-    function riverX(y) { var pts = [[250, -10], [262, 40], [246, 90], [268, 140], [280, 200], [270, 260]]; for (var k = 1; k < pts.length; k++) if (y <= pts[k][1]) { var a = pts[k - 1], b = pts[k]; return a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]); } return 270; }
-    px(0, 0, 320, 250, 'zm-land');
+    function px(x, y, w, h, cls) { return add('rect', { x: x, y: y, width: w, height: h, 'class': cls }); }
     var seed = 23; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
-    for (var gp = 0; gp < 70; gp++) px(Math.floor(rnd() * 316), Math.floor(rnd() * 246), 3 + Math.floor(rnd() * 6), 2, gp % 3 ? 'zm-grass' : 'zm-dirt');
-    add('path', { d: RIVER, 'class': 'zm-bank' }); add('path', { d: RIVER, 'class': 'zm-river' });
-    add('path', { d: RIVER, 'class': 'zm-river-glint' }); add('path', { d: RIVER, 'class': 'zm-river-glint zm-glint2' });
-    // 나무와 무너진 집: 강과 표지 자리를 피해서 흩뿌린다
-    function clear(x, y) { if (Math.abs(x - riverX(y)) < 26) return false; return !STAGE_AT.some(function (p) { return Math.abs(p[0] - x) < 24 && Math.abs(p[1] - y) < 26; }); }
-    for (var t = 0; t < 46; t++) {
-      var tx = 8 + Math.floor(rnd() * 300), ty = 12 + Math.floor(rnd() * 228);
-      if (!clear(tx, ty)) continue;
-      if (t % 4 === 0) { px(tx - 5, ty - 6, 10, 6, 'zm-ruin'); px(tx - 3, ty - 4, 2, 2, 'zm-win'); px(tx + 1, ty - 4, 2, 2, 'zm-win'); }
-      else { px(tx - 1, ty - 2, 2, 3, 'zm-trunk'); px(tx - 3, ty - 7, 6, 5, t % 2 ? 'zm-tree' : 'zm-tree2'); px(tx - 2, ty - 9, 4, 2, 'zm-leaf'); }
-    }
-    // 선착장: 강으로 뻗은 널빤지와 작은 배
-    for (var pl = 0; pl < 6; pl++) px(222 + pl * 5, 50, 4, 5, pl % 2 ? 'zm-plank' : 'zm-plank2');
-    px(254, 60, 14, 4, 'zm-plank2'); px(257, 56, 8, 4, 'zm-car'); px(260, 48, 1, 8, 'zm-ink');
-    add('text', { x: 10, y: 14, 'class': 'zm-compass' }, '지역 I · 하류 마을');
+    // 가장자리를 어둡게 누르는 그늘(지도가 화면에 떠 보이지 않게)
+    var defs = add('defs', {}), vg = svgEl('radialGradient', { id: 'st-vg', cx: '45%', cy: '55%', r: '75%' });
+    vg.appendChild(svgEl('stop', { offset: '55%', 'stop-color': '#000', 'stop-opacity': '0' })); vg.appendChild(svgEl('stop', { offset: '100%', 'stop-color': '#000', 'stop-opacity': '.55' })); defs.appendChild(vg);
+    /* 1. 물: 깊은 강. 잔물결이 천천히 흐른다 */
+    px(0, 0, 320, 320, 'st-water');
+    for (var wv = 0; wv < 46; wv++) { var wx = 200 + Math.floor(rnd() * 120), wy = Math.floor(rnd() * 320); add('rect', { x: wx, y: wy, width: 5 + Math.floor(rnd() * 7), height: 1, 'class': 'st-wave' + (wv % 3 ? '' : ' st-wave2') }); }
+    /* 2. 땅: 얕은 물 → 모래톱 → 풀밭 순서로 겹쳐서 물가가 살아 보이게 한다 */
+    var LAND = 'M-10 330 L-10 52 C24 26 78 16 128 30 C168 41 198 26 236 46 C262 60 248 96 260 130 C274 172 300 204 292 252 C287 290 298 316 300 330 Z';
+    add('path', { d: LAND, 'class': 'st-shallow' }); add('path', { d: LAND, 'class': 'st-sand' }); add('path', { d: LAND, 'class': 'st-land' });
+    // 풀밭의 얼룩: 밝은 풀, 짙은 풀, 마른 흙
+    function onLand(x, y) { return x > 4 && x < 226 + (y > 120 ? 30 : 0) + (y > 200 ? 26 : 0) - (y < 60 ? 110 - y * 1.6 : 0) && y > 40 && y < 316; }
+    for (var gp = 0; gp < 130; gp++) { var gx = Math.floor(rnd() * 290), gy = 30 + Math.floor(rnd() * 290); if (onLand(gx, gy)) px(gx, gy, 3 + Math.floor(rnd() * 7), 2, gp % 4 === 0 ? 'zm-dirt' : gp % 2 ? 'zm-grass' : 'st-grass2'); }
+    function near(x, y, d) { return STAGE_AT.some(function (p) { return Math.abs(p[0] - x) < d && Math.abs(p[1] - y) < d + 6; }); }
+    /* 3. 숲: 나무를 흩뿌리지 않고 무리 지어 심는다 */
+    function tree(x, y, big) { px(x - 1, y - 2, 2, 4, 'zm-trunk'); px(x - 4, y - 8, 8, 6, 'zm-tree2'); px(x - 3, y - 11, 6, 4, 'zm-tree'); px(x - 2, y - 12, 3, 2, 'zm-leaf'); if (big) px(x - 5, y - 5, 2, 3, 'zm-tree'); }
+    [[22, 80, 9], [196, 206, 8], [34, 214, 6], [232, 268, 7], [150, 300, 6], [176, 104, 5], [30, 140, 5]].forEach(function (f) {
+      for (var k = 0; k < f[2]; k++) { var fx = f[0] + Math.floor(rnd() * 44) - 22, fy = f[1] + Math.floor(rnd() * 34) - 17; if (onLand(fx, fy) && !near(fx, fy, 20)) tree(fx, fy, k % 3 === 0); }
+    });
+    /* 4. 표지 곁의 그림: 스테이지가 무엇을 하는 곳인지 그림으로 먼저 보인다 */
+    function house(x, y, roof) { px(x, y - 8, 12, 8, 'st-wall'); px(x - 1, y - 12, 14, 4, roof); px(x + 2, y - 5, 3, 5, 'zm-win'); px(x + 7, y - 6, 3, 3, 'st-lit'); }
+    // 1 첫 수색: 작은 집 몇 채와 잔해
+    house(20, 262, 'st-roof'); house(34, 274, 'st-roof2'); px(22, 280, 7, 3, 'zm-ruin'); px(26, 277, 4, 3, 'zm-ruin');
+    // 2 빈 골목: 다닥다닥 붙은 집과 가로등
+    house(146, 222, 'st-roof2'); house(159, 222, 'st-roof'); house(172, 222, 'st-roof2'); px(187, 208, 1, 14, 'zm-ink'); px(185, 207, 4, 2, 'st-lit');
+    // 3 급한 공사: 비계와 자재 더미
+    px(40, 160, 1, 22, 'zm-ink'); px(54, 160, 1, 22, 'zm-ink'); px(40, 166, 15, 1, 'zm-ink'); px(40, 174, 15, 1, 'zm-ink'); px(38, 158, 24, 2, 'st-crane'); px(60, 158, 1, 8, 'zm-ink'); px(58, 166, 5, 4, 'st-crate');
+    px(28, 190, 8, 4, 'st-crate'); px(31, 186, 6, 4, 'st-crate2');
+    // 4 긴 밤: 망루와 철조망, 모닥불
+    px(184, 130, 1, 24, 'zm-trunk'); px(192, 130, 1, 24, 'zm-trunk'); px(181, 124, 15, 7, 'st-wall'); px(180, 121, 17, 3, 'st-roof2'); px(186, 126, 4, 3, 'zm-win');
+    for (var fw = 0; fw < 7; fw++) { px(176 + fw * 6, 170, 1, 5, 'zm-ink'); } px(176, 171, 37, 1, 'zm-ink'); px(140, 176, 4, 2, 'zm-trunk'); px(141, 173, 2, 3, 'st-fire');
+    // 5 빠듯한 살림: 창고와 밭고랑
+    px(60, 78, 22, 12, 'st-wall'); px(58, 74, 26, 4, 'st-roof'); px(68, 82, 6, 8, 'zm-win'); px(84, 84, 5, 5, 'st-crate'); px(86, 80, 4, 4, 'st-crate2');
+    for (var fr = 0; fr < 5; fr++) px(124, 84 + fr * 5, 28, 2, fr % 2 ? 'st-field' : 'st-field2');
+    // 보스 선착장: 물 위로 뻗은 부두, 묶인 배, 깜박이는 등대
+    for (var pl = 0; pl < 9; pl++) px(226 + pl * 5, 74, 4, 6, pl % 2 ? 'zm-plank' : 'zm-plank2');
+    px(232, 80, 1, 6, 'zm-trunk'); px(252, 80, 1, 6, 'zm-trunk'); px(266, 80, 1, 6, 'zm-trunk');
+    px(272, 86, 18, 5, 'zm-plank2'); px(275, 82, 10, 4, 'zm-car'); px(280, 70, 1, 12, 'zm-ink'); px(281, 71, 6, 5, 'st-sail');
+    px(238, 30, 8, 22, 'st-tower'); px(238, 36, 8, 4, 'st-roof'); px(238, 44, 8, 4, 'st-roof'); px(236, 26, 12, 4, 'zm-ink'); px(239, 21, 6, 5, 'st-lamp');
+    add('path', { d: 'M245 23 L300 6 L300 40 Z', 'class': 'st-beam' });
+    /* 5. 지역 이름표와, 강 건너의 아직 열리지 않은 땅 */
+    add('rect', { x: 8, y: 8, width: 96, height: 30, rx: 4, 'class': 'st-plate' });
+    add('text', { x: 16, y: 20, 'class': 'st-plate-s' }, '지역 I');
+    add('text', { x: 16, y: 32, 'class': 'st-plate-b' }, '하류 마을');
+    add('text', { x: 306, y: 312, 'text-anchor': 'end', 'class': 'st-soon' }, '강 건너는 준비 중');
+    add('rect', { x: 0, y: 0, width: 320, height: 320, fill: 'url(#st-vg)', 'pointer-events': 'none' });
     rows.stages = {};
     // 길 먼저(표지 아래에 깔리게), 그다음 표지
+    C.STAGES.forEach(function (d, i) { if (i) add('line', { x1: STAGE_AT[i - 1][0], y1: STAGE_AT[i - 1][1], x2: STAGE_AT[i][0], y2: STAGE_AT[i][1], 'class': 'st-road-bed' }); });      // 길의 테두리
     var roads = C.STAGES.map(function (d, i) { return i ? add('line', { x1: STAGE_AT[i - 1][0], y1: STAGE_AT[i - 1][1], x2: STAGE_AT[i][0], y2: STAGE_AT[i][1], 'class': 'zm-road' }) : null; });
     C.STAGES.forEach(function (d, i) {
       var x = STAGE_AT[i][0], y = STAGE_AT[i][1], g = svgEl('g', { 'class': 'zm-node st-node', tabindex: '0', role: 'button', 'aria-label': d.name });
       function r(dx, dy, w, h, cls) { var n = svgEl('rect', { x: x + dx, y: y + dy, width: w, height: h, 'class': cls }); g.appendChild(n); return n; }
-      r(-24, -24, 48, 52, 'zm-hit');
-      if (d.boss) { r(-11, -11, 22, 22, 'st-pad boss'); r(-6, -7, 12, 9, 'st-skull'); r(-4, -4, 3, 3, 'zm-win'); r(1, -4, 3, 3, 'zm-win'); r(-4, 2, 8, 3, 'st-skull'); r(-2, 2, 1, 3, 'zm-win'); r(1, 2, 1, 3, 'zm-win'); }
-      else { r(-9, -9, 18, 18, 'st-pad'); g.appendChild(svgEl('text', { x: x, y: y + 4, 'text-anchor': 'middle', 'class': 'st-num' }, String(i + 1))); }
-      var dots = [0, 1, 2].map(function (n) { return r(-8 + n * 6, d.boss ? 14 : 12, 4, 4, 'st-dot'); });
-      g.appendChild(svgEl('text', { x: x, y: y + (d.boss ? 30 : 28), 'text-anchor': 'middle', 'class': 'zm-name' }, d.name));
+      r(-26, -26, 52, 60, 'zm-hit');
+      var rad = d.boss ? 14 : 11;
+      g.appendChild(svgEl('ellipse', { cx: x, cy: y + rad - 1, rx: rad + 2, ry: 4, 'class': 'st-shadow' }));
+      g.appendChild(svgEl('circle', { cx: x, cy: y, r: rad + 4, 'class': 'st-halo' }));
+      g.appendChild(svgEl('circle', { cx: x, cy: y, r: rad, 'class': 'st-pad' + (d.boss ? ' boss' : '') }));
+      if (d.boss) { r(-6, -8, 12, 9, 'st-skull'); r(-4, -5, 3, 3, 'st-eye'); r(1, -5, 3, 3, 'st-eye'); r(-4, 1, 8, 4, 'st-skull'); r(-2, 2, 1, 3, 'st-eye'); r(1, 2, 1, 3, 'st-eye'); }
+      else g.appendChild(svgEl('text', { x: x, y: y + 4.5, 'text-anchor': 'middle', 'class': 'st-num' }, String(i + 1)));
+      var dots = [0, 1, 2].map(function (n) { var c = svgEl('circle', { cx: x - 7 + n * 7, cy: y + rad + 7, r: 2.4, 'class': 'st-dot' }); g.appendChild(c); return c; });
+      g.appendChild(svgEl('text', { x: x, y: y + rad + 21, 'text-anchor': 'middle', 'class': 'zm-name st-name' }, d.name));
       function pick() { stagePick = d.id; sfx('tab'); renderStages(); }
       g.addEventListener('click', pick);
       g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
@@ -1424,7 +1456,7 @@
       rows.stages[d.id] = { g: g, dots: dots, road: roads[i] };
     });
     $('stage-map').appendChild(svg);
-    rows.stageLara = mapLara($('stage-map'), 320, 250); rows.stageAt = -1;
+    rows.stageLara = mapLara($('stage-map'), STAGE_VB[0], STAGE_VB[1]); rows.stageAt = -1;
     $('stage-go').addEventListener('click', function () { var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0]; if (d) askStage(d, false); });
     $('stage-hard').addEventListener('click', function () { var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0]; if (d) askStage(d, true); });
   }

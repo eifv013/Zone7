@@ -271,15 +271,40 @@ body { word-break: keep-all; }
 .story-card .stage-acts button { align-self: auto; padding: 8px; }
 .story-card .stage-acts .stage-hard { background: transparent; color: #e6e5db; border-color: #e6e5db; }
 .story-card .stage-acts button:disabled { opacity: .4; cursor: default; }
-.st-pad { fill: #33342a; stroke: #6d6d60; stroke-width: 2; } .st-pad.boss { stroke-width: 2.5; }
-.st-num { font: 700 11px/1 var(--font-mono); fill: #cfcebf; }
-.st-skull { fill: #cfcebf; }
-.st-dot { fill: #1b1c14; stroke: #6d6d60; stroke-width: 1; } .st-dot.on { fill: #f0b400; stroke: #f0b400; }
-.st-node.won .st-pad { fill: #f0b400; stroke: #17180f; } .st-node.won .st-num { fill: #17180f; } .st-node.won .st-skull { fill: #17180f; }
-.st-node.next .st-pad { stroke: #f0b400; animation: st-pulse 1.2s steps(2, start) infinite; }
-.st-node.locked { opacity: .55; }
-@keyframes st-pulse { 50% { stroke: #fff3c4; } }
-@media (prefers-reduced-motion: reduce) { .st-node.next .st-pad { animation: none; } }
+/* 원정 지도(1.8.3): 물 → 얕은 물 → 모래톱 → 풀밭으로 겹쳐 그린다 */
+.st-water { fill: #14303f; }
+.st-wave { fill: #2a5a74; animation: st-drift 5s linear infinite; } .st-wave2 { fill: #3d7896; animation-duration: 7s; }
+@keyframes st-drift { from { transform: translateX(0); } to { transform: translateX(-10px); } }
+.st-shallow { fill: none; stroke: #1f4a60; stroke-width: 22; stroke-linejoin: round; }
+.st-sand { fill: none; stroke: #8f8558; stroke-width: 7; stroke-linejoin: round; }
+.st-land { fill: #3a4a2c; stroke: #55653a; stroke-width: 2; }
+.st-grass2 { fill: #2f3d25; }
+.st-wall { fill: #8f8a78; } .st-roof { fill: #a8402e; } .st-roof2 { fill: #6b5a46; } .st-lit { fill: #ffe9a0; }
+.st-crane { fill: #f0b400; } .st-crate { fill: #8a6a44; } .st-crate2 { fill: #a88656; }
+.st-fire { fill: #ff9a3c; animation: st-flick .5s steps(2, start) infinite; } @keyframes st-flick { 50% { fill: #ffd27a; } }
+.st-field { fill: #5d6b34; } .st-field2 { fill: #4a4630; }
+.st-sail { fill: #d9d8cf; } .st-tower { fill: #d9d8cf; } .st-lamp { fill: #ffe9a0; }
+.st-beam { fill: #ffe9a0; opacity: .16; animation: st-beam 3s ease-in-out infinite; } @keyframes st-beam { 50% { opacity: .04; } }
+.st-plate { fill: rgba(23, 24, 15, .86); stroke: #f0b400; stroke-width: 1.5; }
+.st-plate-s { font: 700 8px/1 var(--font-mono); fill: #f0b400; letter-spacing: 1px; } .st-plate-b { font: 700 12px/1 var(--font-head); fill: #f1f0e6; }
+.st-soon { font: 500 8px/1 var(--font-body); fill: #7fa3b8; }
+.st-road-bed { stroke: #23261a; stroke-width: 10; stroke-linecap: round; }
+.st-svg .zm-road { stroke: #6a6650; stroke-width: 5; stroke-dasharray: 1 6; stroke-linecap: round; }
+.st-svg .zm-road-open { stroke: #d6c48f; stroke-dasharray: none; }
+.st-shadow { fill: rgba(0, 0, 0, .4); }
+.st-halo { fill: none; stroke: transparent; stroke-width: 2; }
+.st-pad { fill: #262820; stroke: #7a7a6a; stroke-width: 2.5; } .st-pad.boss { stroke-width: 3; }
+.st-num { font: 700 12px/1 var(--font-mono); fill: #cfcebf; }
+.st-skull { fill: #cfcebf; } .st-eye { fill: #262820; }
+.st-dot { fill: #1b1c14; stroke: #7a7a6a; stroke-width: 1; } .st-dot.on { fill: #f0b400; stroke: #17180f; }
+.st-name { font-size: 10.5px; }
+.st-node.won .st-pad { fill: #f0b400; stroke: #17180f; } .st-node.won .st-num { fill: #17180f; } .st-node.won .st-skull { fill: #17180f; } .st-node.won .st-eye { fill: #f0b400; }
+.st-node.next .st-pad { stroke: #f0b400; } .st-node.next .st-num { fill: #f0b400; }
+.st-node.next .st-halo { stroke: #f0b400; animation: st-pulse 1.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes st-pulse { from { transform: scale(.8); opacity: .9; } to { transform: scale(1.35); opacity: 0; } }
+.st-node.locked .st-pad, .st-node.locked .st-num, .st-node.locked .st-skull, .st-node.locked .st-dot { opacity: .55; } .st-node.locked .zm-name { fill: #a09f8e; }
+.st-node.pick .zm-hit { fill: rgba(240, 180, 0, .12); stroke: #f0b400; stroke-width: 1.5; stroke-dasharray: 3 3; rx: 6; }
+@media (prefers-reduced-motion: reduce) { .st-wave, .st-fire, .st-beam, .st-node.next .st-halo { animation: none; } }
 #stage-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 15; padding: 8px 12px 6px; background: #17180f; color: #e6e5db; border-bottom: 3px solid #f0b400; }
 #stage-bar[hidden] { display: none; }
 .stage-bar-row { display: flex; align-items: center; gap: 10px; }
@@ -1127,7 +1152,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.8.2</div>
+  <div class="boot-ver">7구역 알파 1.8.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1533,7 +1558,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.8.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.8.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
