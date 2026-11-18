@@ -1114,7 +1114,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.7.2</div>
+  <div class="boot-ver">7구역 알파 1.7.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1654,7 +1654,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.7.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.7.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1807,7 +1807,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.2";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.3";
 </script>
 <script>
 /*
@@ -1826,6 +1826,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.2";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.7.3', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '모험 탭 미리 보기',
+      items: [
+        '모험 탭이 처음부터 보여요.',
+        '아직 열리지 않은 도전은 잠긴 채로 보이고, 언제 열리는지 적혀 있어요.'
+      ] },
     { ver: '알파 1.7.2', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '맨몸 도전 고침',
       items: [
         '"맨몸" 도전 중에 개조를 세는 목표가 걸리면 채울 수 없던 것을 고쳤어요.',
@@ -8898,11 +8903,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.7.2";
   function renderChallenges() {
     var panel = $('hub-panel'); if (!panel) return;
     var any = C.CHALLENGES.some(function (d) { return C.challengeOpen(state, d.id); }) || !!state.challenge;
-    panel.hidden = !any; $('mnav-hub').hidden = !any;      // 고를 수 있는 도전이 생기면 모험 칸과 아래 탭이 나타난다
-    if (!any) { if (!$('hub').hidden) $('hub').hidden = true; return; }
+    panel.hidden = false; $('mnav-hub').hidden = false;      // 1.7.3: 모험 탭은 처음부터 보인다. 아직 못 고르는 도전은 잠긴 채로 보여서 앞으로 무엇이 있는지 알 수 있다
     var actNow = C.activeChallenge(state), mn = C.medalCount(state);
     setText($('hub-count'), '훈장 ' + mn + ' / ' + C.CHALLENGES.length);
-    setText($('hub-hint'), actNow ? '도전 중 · ' + actNow.name + ' · ' + actNow.rule : '도전을 고르면 조건을 걸고 목표 구역까지 가요.');
+    setText($('hub-hint'), actNow ? '도전 중 · ' + actNow.name + ' · ' + actNow.rule : any ? '도전을 고르면 조건을 걸고 목표 구역까지 가요.' : '첫 도전은 3구역에 닿으면 열려요.');
     if (!rows.chal) {
       rows.chal = {};
       C.CHALLENGES.forEach(function (d) {

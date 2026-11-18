@@ -1268,11 +1268,10 @@
   function renderChallenges() {
     var panel = $('hub-panel'); if (!panel) return;
     var any = C.CHALLENGES.some(function (d) { return C.challengeOpen(state, d.id); }) || !!state.challenge;
-    panel.hidden = !any; $('mnav-hub').hidden = !any;      // 고를 수 있는 도전이 생기면 모험 칸과 아래 탭이 나타난다
-    if (!any) { if (!$('hub').hidden) $('hub').hidden = true; return; }
+    panel.hidden = false; $('mnav-hub').hidden = false;      // 1.7.3: 모험 탭은 처음부터 보인다. 아직 못 고르는 도전은 잠긴 채로 보여서 앞으로 무엇이 있는지 알 수 있다
     var actNow = C.activeChallenge(state), mn = C.medalCount(state);
     setText($('hub-count'), '훈장 ' + mn + ' / ' + C.CHALLENGES.length);
-    setText($('hub-hint'), actNow ? '도전 중 · ' + actNow.name + ' · ' + actNow.rule : '도전을 고르면 조건을 걸고 목표 구역까지 가요.');
+    setText($('hub-hint'), actNow ? '도전 중 · ' + actNow.name + ' · ' + actNow.rule : any ? '도전을 고르면 조건을 걸고 목표 구역까지 가요.' : '첫 도전은 3구역에 닿으면 열려요.');
     if (!rows.chal) {
       rows.chal = {};
       C.CHALLENGES.forEach(function (d) {
