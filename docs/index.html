@@ -1785,7 +1785,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.4";
   return [
     { ver: '알파 1.6.4', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '문구 고침',
       items: [
-        '4구역 특별 화물의 단추를 "단골로 만든다"로 고쳤어요.'
+        '4구역 특별 화물의 단추를 "단골로 만든다"로 고쳤어요.',
+        '주문, 의뢰, 화물, 서류, 통행인으로 오르는 값에 최대치를 적었어요.'
       ] },
     { ver: '알파 1.6.3', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '다시 맞추기 환급과 표시 손보기',
       items: [
@@ -9511,7 +9512,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.4";
         $('order-fill').disabled = !enough;
         setText($('order-fill'), enough ? '단골에게 판다' : '상품이 ' + fmt(od.need - state.goods) + '개 모자라요');
       }
-      setText($('order-note'), '단골 ' + C.regularCount(state) + ' / ' + C.REGULARS.length + ' · 이번 회차 주문 ' + state.ordersRun + '번 · 상품 값 +' + Math.round((C.orderMult(state) - 1) * 100) + '%');
+      setText($('order-note'), '단골 ' + C.regularCount(state) + ' / ' + C.REGULARS.length + ' · 이번 회차 주문 ' + state.ordersRun + '번 · 상품 값 +' + Math.round((C.orderMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.ORDER_BONUS_MAX * 100) + '%)');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setMile(rows.stall, state.stalls, q2, sc <= state.supplies);
@@ -9565,7 +9566,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.4";
         setText($('truck-text'), '출하장에 ' + Math.floor(state.stockSec) + '초분이 쌓였어요.\n실으면 물자 +' + fmt(C.truckReward(state, false)));
       }
       setText($('stock-note'), '출하장 ' + Math.floor(state.stockSec) + ' / ' + C.TRUCK_STOCK_MAX + '초분 · 이번 회차 출하 ' + state.trucksRun + '번 · 정비 ' + state.repairsRun + '번');
-      setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 이번 회차 의뢰 ' + state.contractsRun + '번 · 완제품 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '%');
+      setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 이번 회차 의뢰 ' + state.contractsRun + '번 · 완제품 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.CONTRACT_BONUS_MAX * 100) + '%)');
       var line = C.lineInfo(state), top = 0, names = {};
       C.MACHINES.forEach(function (d) { top = Math.max(top, line.caps[d.id]); names[d.id] = d.name; });
       C.MACHINES.forEach(function (d) {
@@ -9615,7 +9616,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.4";
         $('salvage-fill').disabled = !sdone;
         setText($('salvage-fill'), sdone ? '끌어온다' : '열차를 기다리는 중 · ' + Math.floor(sv.need > 0 ? sv.have / sv.need * 100 : 0) + '%');
       }
-      setText($('salvage-note'), '화물 ' + C.cargoCount(state) + ' / ' + C.CARGOS.length + ' · 이번 회차 ' + state.salvagesRun + '번 · 화물 값 +' + Math.round((C.salvageMult(state) - 1) * 100) + '%');
+      setText($('salvage-note'), '화물 ' + C.cargoCount(state) + ' / ' + C.CARGOS.length + ' · 이번 회차 ' + state.salvagesRun + '번 · 화물 값 +' + Math.round((C.salvageMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.SALVAGE_BONUS_MAX * 100) + '%)');
       var plan = C.railPlan(state), cargo = C.cargoValue(state);
       C.ROUTES.forEach(function (d) {
         var v = rows.railRows[d.id], r = rows.routes[d.id], lv = state.routes[d.id], trip = C.tripSeconds(state, d.id), on = plan.riders[d.id];
@@ -9668,7 +9669,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.4";
       setText($('guard-safety'), '×' + safety.toFixed(2));
       setText($('guard-rate'), '통행 물자 초당 +' + fmt(gRate));
       $('guard-bar').style.width = Math.min(100, safety / safeMax * 100).toFixed(1) + '%';
-      setText($('guard-note'), '방어력이 오늘 밤 무리의 몇 배인지예요. 최대 ×' + safeMax.toFixed(1) + '까지 쳐 줘요.\n무리의 ' + C.SAFE_NIGHT + '배 방어력으로 막은 밤 ' + state.safeNights + '번\n통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length + ' · 이번 회차 ' + state.passersRun + '명 · 통행 물자 +' + Math.round((C.passerMult(state) - 1) * 100) + '%');
+      setText($('guard-note'), '방어력이 오늘 밤 무리의 몇 배인지예요. 최대 ×' + safeMax.toFixed(1) + '까지 쳐 줘요.\n무리의 ' + C.SAFE_NIGHT + '배 방어력으로 막은 밤 ' + state.safeNights + '번\n통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length + ' · 이번 회차 ' + state.passersRun + '명 · 통행 물자 +' + Math.round((C.passerMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.PASSER_BONUS_MAX * 100) + '%)');
       var pq = qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts), pcost = C.postCost(state, pq);
       setText(rows.post.count, state.posts + ' / ' + C.COUNT_MAX);
       setMile(rows.post, state.posts, pq, pcost <= state.supplies);
@@ -9701,7 +9702,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.6.4";
       rr.disabled = !(rc <= state.points) || !state.offers.length;
       setText(rr, '다른 과제 보기 · 점수 ' + fmt(rc));
       var doneList = C.PROJECTS.filter(function (p) { return state.research[p.id] > 0 && p.key !== 'drop'; }).map(function (p) { return p.name + ' ' + state.research[p.id]; });
-      setText($('lab-record'), '서류 ' + C.recordCount(state) + ' / ' + C.RECORDS.length + ' · 이번 회차 ' + state.recordsRun + '장 · 연구 속도 +' + Math.round((C.recordMult(state) - 1) * 100) + '%');
+      setText($('lab-record'), '서류 ' + C.recordCount(state) + ' / ' + C.RECORDS.length + ' · 이번 회차 ' + state.recordsRun + '장 · 연구 속도 +' + Math.round((C.recordMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.RECORD_BONUS_MAX * 100) + '%)');
       setText($('lab-done'), '끝낸 과제 ' + state.projectsDone + '개' + (doneList.length ? ' · ' + doneList.join(', ') : '') + ' · 과제를 끝낼수록 다음 과제가 비싸져요');
       var sq = qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff), scost = C.staffCost(state, sq);
       setText(rows.staff.count, state.staff + ' / ' + C.COUNT_MAX);
