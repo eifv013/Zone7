@@ -87,6 +87,9 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); ou
   padding: 18px 20px 14px; border-bottom: 3px solid var(--ink); max-width: 1280px; margin: 0 auto;
 }
 .mast h1 { margin: 0; font: 400 clamp(40px, 7vw, 64px)/1 var(--font-display); letter-spacing: -.01em; }
+/* 제목의 숫자 7(2.6.5): 이 글꼴은 숫자가 한글보다 키가 작아서 '7'만 낮아 보였다. 숫자만 1.2배로 키워 '구역'과 윗선을 맞춘다(아랫선은 그대로 맞는다) */
+/* 제목 글꼴(Black Han Sans)을 받아 왔을 때만 키운다(body.font-display-ok). 받지 못해 다른 글꼴로 보일 때는 숫자와 한글의 키가 이미 같다 */
+body.font-display-ok .seven { font-size: 1.2em; line-height: 0; }
 .mast-sub { margin: 6px 0 0; color: var(--ink-soft); font-size: 13px; letter-spacing: .08em; }
 .dplus { text-align: right; }
 .dplus-num { font: 600 clamp(40px, 8vw, 72px)/0.9 var(--font-mono); letter-spacing: -.04em; }
@@ -1201,14 +1204,14 @@ body { font-size: 15.5px; line-height: 1.55; }
 <div id="boot" role="status" aria-live="polite">
   <div class="boot-tape"></div>
   <div class="boot-mid">
-    <h1 class="boot-title">7구역</h1>
+    <h1 class="boot-title"><span class="seven">7</span>구역</h1>
     <p class="boot-sub">“생존자는 7구역으로 오라”</p>
     <div class="boot-run" aria-hidden="true"><i class="run-boy"></i><i></i><i></i><i></i></div>
     <div class="boot-track"><div id="boot-bar"></div></div>
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.6.4</div>
+  <div class="boot-ver">7구역 알파 2.6.5</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1263,7 +1266,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 <div id="stage-bar" hidden><div class="stage-bar-row"><b id="stage-bar-name"></b><span class="num" id="stage-bar-time"></span><button type="button" id="stage-quit">돌아가기</button></div><div class="stage-bar-goal" id="stage-bar-goal"></div><div class="stage-bar-track"><i id="stage-bar-fill"></i></div></div>
 <header class="mast">
   <div>
-    <h1>7구역</h1>
+    <h1><span class="seven">7</span>구역</h1>
     <p class="mast-sub">“생존자는 7구역으로 오라”</p>
     <ol class="route" id="route" aria-label="지나온 구역"></ol>
   </div>
@@ -1620,7 +1623,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.6.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.6.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

@@ -98,6 +98,12 @@
       var box = doc && doc.getElementById('boot');
       if (!box) return nothing;
       var bar = doc.getElementById('boot-bar'), text = doc.getElementById('boot-text'), tip = doc.getElementById('boot-tip');
+      // 제목 글꼴이 도착했는지 본다(2.6.5). 도착했을 때만 제목의 숫자 7을 키운다(.seven). 확인하지 못하는 브라우저에서는 그대로 둔다.
+      try {
+        var fontOk = function () { try { if (doc.fonts && doc.fonts.check && doc.fonts.check('40px "Black Han Sans"', '7구역')) doc.body.classList.add('font-display-ok'); } catch (e) { /* 그대로 둔다 */ } };
+        if (doc.fonts && doc.fonts.load) doc.fonts.load('40px "Black Han Sans"', '7구역').then(fontOk, function () {});
+        if (doc.fonts && doc.fonts.ready && doc.fonts.ready.then) doc.fonts.ready.then(fontOk, function () {});
+      } catch (e) { /* 글꼴은 없어도 된다 */ }
       var boot = createBoot({ now: Date.now() });
       var timer = null, closed = false;
       if (tip) tip.textContent = pickTip(Math.random);
