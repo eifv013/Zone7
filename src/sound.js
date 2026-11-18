@@ -265,10 +265,11 @@
     return Object.keys(tracks).length;
   }
   function hasTracks() { return Object.keys(tracks).length > 0; }
-  /** 그 곡 자리에 틀 음원의 이름. 그 곡이 없으면 낮의 곡, 그것도 없으면 있는 것 가운데 첫째. 하나도 없으면 ''. */
+  /** 그 곡 자리에 틀 음원의 이름. 그 곡이 없으면(변이체는 먼저 밤의 곡을 찾고) 낮의 곡, 그것도 없으면 있는 것 가운데 첫째. 하나도 없으면 ''. */
   function pickTrack(mood, have) {
     var h = have && typeof have === 'object' ? have : {}, ok = function (m) { return Object.prototype.hasOwnProperty.call(h, m) && !!h[m]; };
     if (ok(mood)) return mood;
+    if (mood === 'dread' && ok('night')) return 'night';      // 변이체의 곡이 없으면 밝은 낮 곡보다 밤 곡이 낫다(2.6.2)
     if (ok('day')) return 'day';
     var names = Object.keys(MUSIC).filter(ok);
     return names.length ? names[0] : '';

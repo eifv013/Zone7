@@ -14,6 +14,12 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 2.6.2', date: '2026-11-19', at: '2026-11-19 03:59:59', title: '밤의 음악',
+      items: [
+        '무리가 온 밤에 나오는 곡이 생겼어요. Echoes_of_Lumen의 곡이에요(Pixabay).',
+        '변이체가 온 밤과 위험 11단계부터도 현재는 이 곡이 나와요.',
+        '낮과 밤이 바뀔 때 두 곡이 겹치며 넘어가요.'
+      ] },
     { ver: '알파 2.6.1', date: '2026-11-19', at: '2026-11-19 03:59:59', title: '새 배경 음악',
       items: [
         '배경 음악이 녹음된 곡으로 바뀌었어요. Ivan_Luzan의 곡이에요(Pixabay).',

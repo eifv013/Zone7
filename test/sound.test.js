@@ -124,7 +124,8 @@ test('음원 파일: 등록은 아는 곡 이름의 글만 받고, 없는 곡은
   assert.equal(Sound.setTracks(null), 0); assert.equal(Sound.hasTracks(), false);
   assert.equal(Sound.setTracks({ day: 'x' }), 0, '너무 짧은 값은 음원이 아니다');
   assert.equal(Sound.pickTrack('night', { day: true, night: true }), 'night');
-  assert.equal(Sound.pickTrack('dread', { day: true, night: true }), 'day');
+  assert.equal(Sound.pickTrack('dread', { day: true, night: true }), 'night', '변이체의 곡이 없으면 밤의 곡');
+  assert.equal(Sound.pickTrack('dread', { day: true }), 'day'); assert.equal(Sound.pickTrack('night', { day: true, dread: true }), 'day');
   assert.equal(Sound.pickTrack('day', { night: true }), 'night');
   assert.equal(Sound.pickTrack('day', {}), ''); assert.equal(Sound.pickTrack('day', null), '');
   assert.equal(Sound.pump(), 0, '깨우기 전에는 음원도 틀지 않는다');
