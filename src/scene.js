@@ -521,33 +521,36 @@
    *   - 머리가 작고 앞머리·코가 있어 얼굴이 복잡했다 → 후드를 크고 둥글게, 얼굴은 눈 둘과 붉은 입만
    *   - 가방끈을 없애고 상자는 손에 든다(손은 살색). 장화는 예전처럼 붉은색, 살색은 예전의 밝은 색
    */
-  var LARA_BODY = ['..............', '..............', '..............',
-    '.....yyyyyy...', '....yyyyyyyy..', '...yyhhhhhhyY.', '...yysessesyY.', '...yyssssssyY.', '....yssmmssY..',
-    '.....yyyyyyY..', '....jjjjjjjjJ.', '....jJjjjjjJj.', '....jJjjjjjJj.', '....sJjjjjjJs.', '.....JJJJJJJ..'];
-  // (팔을 그리면서 가운데 지퍼 선은 뺐다: 세로 선이 셋이 되어 몸통이 창살처럼 보였다)
-  // 2.7.3: 앞머리(h, 아이콘처럼 갈색)를 다시 넣고 팔을 그렸다. 팔은 몸통 양옆의 한 칸이고, 어두운 선(J)이 팔과 몸통을 가른다. 손(s)은 팔 끝에 있다
-  // 다리(2.0.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
-  var LARA_STAND = ['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'];
-  var LARA_LEGS = [['.....pp.pp....', '.....pp.bbb...', '....bbb.......'], ['.....pp.pp....', '....bbb.pp....', '........bbb...']];
+  /*
+   * 2.7.4 예전 라라로 되돌렸다(1.4.2 의 그림 그대로). 2.0.0 뒤로 여러 번 고쳐 그렸지만 그때마다 더 어색해졌다.
+   *   위 두 줄은 후드의 귀·뿔 자리다. 그 아래 열여섯 줄이 예전 그림이다: 둥근 후드, 눈 둘과 붉은 입, 아래로 넓어지는 우비와 가운데 지퍼 선,
+   *   우비 양옆 안쪽의 손, 붉은 장화. 상자는 예전처럼 오른쪽 아래에서 우비 앞에 겹쳐 든다.
+   */
+  var LARA_BODY = ['..............', '..............',
+    '....yyyyyy....', '...yyyyyyyy...', '..yyyssssyyy..', '..yysesseyyy..', '..yyssssssyy..', '...yssmmssy...',
+    '..jjjjjjjjjj..', '.jjjjjJjjjjjj.', '.jjjjjJjjjjjj.', '.jsjjjJjjjjs..', '.jjjjjJjjjj...', '..jjjjjjjj....', '..jjjjjjjj....'];
+  var LARA_STAND = ['....pp.pp.....', '....pp.pp.....', '...bbb.bbb....'];
+  // 걸음: 한 발씩 번갈아 든다(두 발이 양옆으로 벌어지지 않게)
+  var LARA_LEGS = [['....pp.pp.....', '....pp.bbb....', '...bbb........'], ['....pp.pp.....', '...bbb.pp.....', '.......bbb....']];
   var LARA_HOODS = {
     none:   {},
-    cat:    { 1: '....y......y..', 2: '....yi....iy..' },
-    bear:   { 1: '....yy....yy..', 2: '....yy....yy..' },
-    rabbit: { 0: '......y..y....', 1: '......i..i....', 2: '......y..y....' },
-    horn:   { 1: '...w........w.', 2: '....w......w..' }
+    cat:    { 0: '...y......y...', 1: '...yi....iy...' },
+    bear:   { 0: '...yy....yy...', 1: '...yy....yy...' },
+    rabbit: { 0: '.....y..y.....', 1: '.....i..i.....' },
+    horn:   { 0: '..w........w..', 1: '...w......w...' }
   };
-  /* 가방: 줄 번호 → 왼쪽 네 칸. 색은 c(몸), C(밝은 곳), e(눈) */
+  /* 가방: 줄 번호 → 오른쪽 네 칸(10~13번 칸)에 덮어 그린다. '.' 은 아래 그림을 그대로 둔다. 색은 c(몸), C(밝은 곳), e(눈) */
   var LARA_BAGS = {
-    cooler: { c: '#3f7fb5', C: '#a6d4ff', rows: { 11: 'CCCC', 12: 'cccc', 13: 'cCcc', 14: 'cccc' } },      // 파란 냉장 상자(기본)
-    medkit: { c: '#c0392b', C: '#f1f0e6', rows: { 11: 'cccc', 12: 'cCCc', 13: 'cCCc', 14: 'cccc' } },      // 구급 상자
+    cooler: { c: '#3f6f8f', C: '#e6e5db', rows: { 11: '..c.', 12: 'cccc', 13: 'cCcc', 14: 'cccc' } },      // 파란 냉장 상자(기본, 예전 그림 그대로)
+    medkit: { c: '#c0392b', C: '#f1f0e6', rows: { 11: '..c.', 12: 'cccc', 13: 'cCCc', 14: 'cccc' } },      // 구급 상자
     ruck:   { c: '#6b6f45', C: '#9a9f68', rows: { 11: '.cc.', 12: 'cccc', 13: 'cCCc', 14: 'cccc' } },      // 낡은 배낭
-    teddy:  { c: '#a8733f', C: '#e0b98a', rows: { 10: 'c..c', 11: 'cccc', 12: 'cecc', 13: 'cCCc', 14: 'cccc' } }      // 곰 인형 가방(귀와 눈)
+    teddy:  { c: '#a8733f', C: '#e0b98a', rows: { 11: 'c..c', 12: 'cccc', 13: 'cecc', 14: 'cCCc' } }       // 곰 인형 가방(귀와 눈)
   };
   /** 무늬: 우비 칸 (x, y) 를 무늬 색으로 칠할지. */
   function laraPattern(pat, x, y) {
     if (pat === 'stripe') return y % 2 === 0;
     if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
-    if (pat === 'star') return (x === 6 && y === 10) || (x === 9 && y === 11) || (x === 7 && y === 13) || (x === 10 && y === 12);
+    if (pat === 'star') return (x === 3 && y === 9) || (x === 9 && y === 10) || (x === 4 && y === 13) || (x === 8 && y === 12);
     if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
     return false;
   }
@@ -556,8 +559,8 @@
   function laraRows(look, pose, step) {
     var rows = LARA_BODY.slice(), hood = LARA_HOODS[look && look.hood] || LARA_HOODS.none, bag = LARA_BAGS[look && look.bag] || LARA_BAGS.cooler, k;
     for (k in hood) if (Object.prototype.hasOwnProperty.call(hood, k)) rows[k] = hood[k];
-    for (k in bag.rows) if (Object.prototype.hasOwnProperty.call(bag.rows, k)) rows[k] = bag.rows[k] + rows[k].slice(4);
-    if (pose === 'search') return ['..............', '..............'].concat(rows).concat(['....bbb.bbb...']);      // 웅크린다: 몸을 두 칸 내리고 다리를 접는다
+    for (k in bag.rows) if (Object.prototype.hasOwnProperty.call(bag.rows, k)) rows[k] = rows[k].slice(0, 10) + bag.rows[k].split('').map(function (ch, bi) { return ch === '.' ? rows[k][10 + bi] : ch; }).join('');      // 오른쪽 네 칸에 덮어 그린다
+    if (pose === 'search') return ['..............', '..............'].concat(rows).concat(['...bbb.bbb....']);      // 웅크린다: 몸을 두 칸 내리고 다리를 접는다
     return rows.concat(pose === 'walk' ? LARA_LEGS[step ? 1 : 0] : LARA_STAND);
   }
   /** 라라를 그린다. flip 이면 왼쪽을 본다. scale 은 한 칸의 크기. */
@@ -566,7 +569,7 @@
     scale = scale || 1; look = look || {};
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
     var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
-    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#c0392b', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C };
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
