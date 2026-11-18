@@ -283,7 +283,7 @@ body { word-break: keep-all; }
 .story-card .chal { align-self: stretch; background: transparent; color: #e6e5db; border: 2px solid #6d6d60; padding: 10px 12px; font-weight: 500; }
 .story-card .chal[disabled] { border-style: dashed; }
 .story-card .chal.on { background: #f0b400; color: #17180f; border-color: #f0b400; }
-/* ── 위험 단계(1.11.0): 철수 칸에서 다음 회차의 단계를 고른다 ── */
+/* ── 위험 단계(2.1.0): 철수 칸에서 다음 회차의 단계를 고른다 ── */
 .danger-tag { position: absolute; top: 6px; right: 8px; padding: 2px 8px; background: #a8261b; color: #f4f2e6; font: 700 12px/1.5 var(--font-mono); border: 1px solid #17180f; }
 .danger-tag[hidden] { display: none; }
 #danger-row { margin: 6px 0 10px; padding: 8px 10px; border: 1px dashed var(--ink); }
@@ -1233,7 +1233,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.11.0</div>
+  <div class="boot-ver">7구역 알파 2.1.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1775,7 +1775,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.11.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.1.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1949,7 +1949,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
 </script>
 <script>
 /*
@@ -1968,41 +1968,42 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
-    { ver: '알파 1.11.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '위험 단계와 기록',
+    { ver: '알파 2.1.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '위험 단계와 기록',
       items: [
         '위험 단계가 생겼어요. 한 번 끝까지 간 뒤에 철수 칸에서 다음 회차의 단계를 고를 수 있어요.',
         '단계를 올리면 무리가 세지고 문 값이 올라요. 대신 철수 항체와 뽑기권을 더 받아요.',
         '어떤 단계를 처음 돌파하면 다음 단계가 열리고, 전체 생산이 25% 늘어요. 철수해도 남아요.',
         '구조한 생존자가 쌓여요. 끝까지 갈 때마다 그 회차에 모은 사람이 더해지고, 수가 늘면 전체 생산이 늘어요.',
         '기록이 생겼어요. 통계에 끝을 본 횟수, 가장 높은 위험 단계, 가장 빨리 끝낸 회차, 구조한 생존자가 나와요.',
-        '위험 단계로 하는 회차는 위쪽 그림 오른쪽 위에 붉은 딱지가 붙어요.'
+        '위험 단계로 하는 회차는 위쪽 그림 오른쪽 위에 붉은 딱지가 붙어요.',
+        '버전 번호를 바로잡았어요. 가운데 자리도 9까지만 써요. 1.10.0부터 1.11.0까지가 2.0.0부터 2.1.0으로 바뀌었어요.'
       ] },
-    { ver: '알파 1.10.4', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '야광 효과 다시 그림',
+    { ver: '알파 2.0.4', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '야광 효과 다시 그림',
       items: [
         '야광 효과를 다시 그렸어요. 몸의 테두리를 따라 빛나고, 우비에 야광 띠가 두 줄 생겨요.',
         '낮에는 옅게, 밤에는 진하게 빛나요.',
         '옷장에서 야광을 볼 때는 미리 보기가 밤 장면으로 바뀌어요.',
         '걷는 그림을 고쳤어요. 라라, 생존자, 원정대원, 좀비가 걸을 때 두 발이 양옆으로 벌어지지 않아요.'
       ] },
-    { ver: '알파 1.10.3', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '동물 친구의 옷',
+    { ver: '알파 2.0.3', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '동물 친구의 옷',
       items: [
         '동물 친구를 새로 그렸어요. 전보다 크고 눈과 코, 귀, 꼬리가 보여요.',
         '친구에게 옷을 입힐 수 있어요. 빨간 목도리, 방울 목걸이, 분홍 리본, 작은 우비, 고깔모자, 망토, 왕관.',
         '친구 옷은 뽑기에서 나와요. 뽑기 품목이 30가지가 됐어요.',
         '옷장의 미리 보기에 친구도 함께 나와요.'
       ] },
-    { ver: '알파 1.10.2', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '어디서나 같은 라라',
+    { ver: '알파 2.0.2', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '어디서나 같은 라라',
       items: [
         '입은 외형이 라라가 나오는 모든 곳에 보여요. 제목 옆, 구역 지도, 원정 지도, 이야기 창, 자리 비움 창.',
         '이 그림들도 새로 그린 라라로 바뀌었어요.'
       ] },
-    { ver: '알파 1.10.1', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '야광 깃발과 무지개 깃발',
+    { ver: '알파 2.0.1', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '야광 깃발과 무지개 깃발',
       items: [
         '야광 깃발이 생겼어요. 밤에도 어두워지지 않고 둘레가 빛나요. 원정 표시 12개를 모으면 받아요.',
         '무지개 깃발이 생겼어요. 네 가지 색이 천천히 흘러요. 이야기의 끝을 보면 받아요.',
         '거점의 깃발이 조금 커졌어요.'
       ] },
-    { ver: '알파 1.10.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '새로 그린 라라와 외형',
+    { ver: '알파 2.0.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '새로 그린 라라와 외형',
       items: [
         '라라를 새로 그렸어요. 전보다 크고, 얼굴과 옷깃, 파란 냉장 상자가 보여요.',
         '외형이 늘었어요. 후드 모양(고양이 귀, 곰 귀, 토끼 귀, 뿔), 우비 무늬(줄무늬, 물방울, 위장, 별), 가방(낡은 배낭, 구급 상자, 곰 인형 가방)이 생겼어요.',
@@ -3825,7 +3826,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     s.cosmetics = {}; COSMETICS.forEach(function (c) { if (!c.base && raw.cosmetics && typeof raw.cosmetics === 'object' && raw.cosmetics[c.id]) s.cosmetics[c.id] = true; });
     s.wear = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' };
     COS_SLOTS.forEach(function (slot) { var id = raw.wear && typeof raw.wear === 'object' ? raw.wear[slot] : '', c = typeof id === 'string' ? findById(COSMETICS, id) : null; if (c && c.slot === slot && (c.base || s.cosmetics[c.id])) s.wear[slot] = c.id; });
-    grantFlags(s);      // 조건을 이미 채운 깃발(1.10.0 전의 저장)
+    grantFlags(s);      // 조건을 이미 채운 깃발(2.0.0 전의 저장)
     s.stage = null;      // 스테이지 판은 저장하지 않는다(저장되는 것은 언제나 본 게임이다)
     s.nextChallenge = typeof raw.nextChallenge === 'string' && findById(CHALLENGES, raw.nextChallenge) ? raw.nextChallenge : '';
     s.challenge = raw.challenge && typeof raw.challenge === 'object' && findById(CHALLENGES, raw.challenge.id) ? { id: raw.challenge.id, failed: !!raw.challenge.failed, done: !!raw.challenge.done } : null;
@@ -5718,7 +5719,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
   function challengeOn(state, id) { var c = state.challenge; return (!!c && c.id === id && !c.failed && !c.done) || stageRule(state, id); }      // 원정 스테이지의 규칙도 같은 자리에서 걸린다
 
   /*
-   * ---------- 위험 단계 · 구조한 생존자 · 기록(1.11.0) ----------
+   * ---------- 위험 단계 · 구조한 생존자 · 기록(2.1.0) ----------
    * 이야기의 끝을 본 뒤에 할 일. 셋 다 "끝을 다시 볼 이유"다.
    *   위험 단계 : 다음 회차를 더 어렵게 건다. 단계 N 에서 무리는 DANGER_HORDE^N 배, 문 값과 혈청 값은 DANGER_COST^N 배.
    *               대신 철수 항체가 단계마다 +DANGER_ANTIBODY, 끝을 보면 뽑기권을 단계마다 DANGER_TICKETS 장 더 받는다.
@@ -5785,7 +5786,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     { id: 'coat-black',  slot: 'coat', name: '검은 우비',   rarity: 1, look: { y: '#3a3d45', j: '#2b2d33' } },
     { id: 'coat-night',  slot: 'coat', name: '밤하늘 우비', rarity: 2, look: { y: '#27336e', j: '#4a5fb8' } },
     { id: 'coat-neon',   slot: 'coat', name: '형광 우비',   rarity: 2, look: { y: '#c6ff4a', j: '#8fe01f' } },
-    // 1.10.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
+    // 2.0.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
     { id: 'hood-none',   slot: 'hood', name: '기본 후드',   rarity: 0, base: true, look: 'none' },
     { id: 'hood-cat',    slot: 'hood', name: '고양이 귀',   rarity: 1, look: 'cat' },
     { id: 'hood-bear',   slot: 'hood', name: '곰 귀',       rarity: 1, look: 'bear' },
@@ -5804,7 +5805,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     { id: 'fx-glow',     slot: 'fx',   name: '야광',        rarity: 2, look: 'glow' },
     { id: 'fx-sparkle',  slot: 'fx',   name: '반짝이 가루', rarity: 2, look: 'sparkle' },
     { id: 'fx-star',     slot: 'fx',   name: '머리 위 별',  rarity: 2, look: 'star' },
-    // 1.10.3: 동물 친구의 옷. 친구는 늘 라라 옆에 붙어 다닌다
+    // 2.0.3: 동물 친구의 옷. 친구는 늘 라라 옆에 붙어 다닌다
     { id: 'pet-none',    slot: 'pet',  name: '옷 없음',     rarity: 0, base: true, look: 'none' },
     { id: 'pet-scarf',   slot: 'pet',  name: '빨간 목도리', rarity: 0, look: 'scarf' },
     { id: 'pet-bell',    slot: 'pet',  name: '방울 목걸이', rarity: 0, look: 'bell' },
@@ -5813,7 +5814,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     { id: 'pet-hat',     slot: 'pet',  name: '고깔모자',    rarity: 1, look: 'hat' },
     { id: 'pet-cape',    slot: 'pet',  name: '망토',        rarity: 2, look: 'cape' },
     { id: 'pet-crown',   slot: 'pet',  name: '왕관',        rarity: 2, look: 'crown' },
-    // 깃발은 뽑기에서 뺐다(1.10.0: 화면에서 작아서 뽑아도 기쁘지 않았다). 도전·원정의 확정 보상으로 준다(FLAG_REWARDS). 조각으로도 얻을 수 있다
+    // 깃발은 뽑기에서 뺐다(2.0.0: 화면에서 작아서 뽑아도 기쁘지 않았다). 도전·원정의 확정 보상으로 준다(FLAG_REWARDS). 조각으로도 얻을 수 있다
     { id: 'flag-yellow', slot: 'flag', name: '노란 깃발',   rarity: 0, base: true, look: '#f0b400' },
     { id: 'flag-red',    slot: 'flag', name: '빨간 깃발',   rarity: 0, reward: true, look: '#c0392b' },
     { id: 'flag-blue',   slot: 'flag', name: '파란 깃발',   rarity: 0, reward: true, look: '#3f7fb5' },
@@ -7253,7 +7254,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
    *   look = { y 모자 색, j 몸 색 }. scale 은 한 칸의 크기(화면 픽셀).
    */
   /*
-   * 라라(1.10.0): 가로 14칸, 세로 18칸. 전에는 8×11칸이라 얼굴도 가방도 없었다.
+   * 라라(2.0.0): 가로 14칸, 세로 18칸. 전에는 8×11칸이라 얼굴도 가방도 없었다.
    *   위 세 줄은 후드의 귀·뿔 자리, 왼쪽 네 칸은 옆구리의 가방 자리다. 몸은 그 사이에 선다.
    *   글자 뜻: y 후드, Y 후드 그늘, j 우비, J 우비 그늘, s 살, e 눈, m 입, h 머리카락, k 가방끈, w 옷깃·단추·뿔, i 귀 안쪽, p 바지, b 장화, c 가방, C 가방의 밝은 곳
    *   겹: 후드 모양(LARA_HOODS)이 위 세 줄을, 가방(LARA_BAGS)이 왼쪽 네 칸을 갈아 끼운다. 무늬(laraPattern)는 우비 칸(j)을 골라 다른 색으로 칠한다.
@@ -7263,7 +7264,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
   var LARA_BODY = ['..............', '..............', '..............',
     '.....yyyyy....', '....yyyyyyy...', '....yhhhhhyY..', '...yysssssyY..', '...yysesesyY..', '....yssmssyY..',
     '.....jwwwjJ...', '....kjjjjjjJ..', '....kjwjjjJj..', '....jkjjjjJs..', '....jjjjjjJ...', '....JJJJJJJ...'];
-  // 다리(1.10.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
+  // 다리(2.0.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
   var LARA_STAND = ['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'];
   var LARA_LEGS = [['.....pp.pp....', '.....pp.bbb...', '....bbb.......'], ['.....pp.pp....', '....bbb.pp....', '........bbb...']];
   var LARA_HOODS = {
@@ -7325,7 +7326,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     scale = scale || 1; t = t || 0;
     function px(col, cx, cy, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? LARA_W - cx - (w || 1) : cx) * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
     if (fx === 'glow') {
-      // 야광(1.10.4): 몸의 테두리를 따라 한 칸 두께로 빛난다. 전에는 네모난 띠를 둘러서 몸과 어긋나 보였다.
+      // 야광(2.0.4): 몸의 테두리를 따라 한 칸 두께로 빛난다. 전에는 네모난 띠를 둘러서 몸과 어긋나 보였다.
       //   낮에는 옅게, 밤(dark)에는 진하게. 숨 쉬듯 천천히 밝아졌다 어두워진다.
       var rows = laraRows(look, pose === 'search' ? 'search' : pose, step), night = Math.max(0, Math.min(1, dark || 0));
       var a = (0.3 + 0.5 * night) + 0.15 * Math.sin(t * 2.4), col = 'rgba(206, 255, 96, ' + Math.max(0.12, Math.min(0.95, a)).toFixed(2) + ')';
@@ -7339,7 +7340,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
   }
   /*
-   * 동물 친구(1.10.3): 개는 가로 10칸, 고양이는 9칸, 둘 다 세로 8칸. 전에는 5×4칸쯤이라 옷을 입혀도 보이지 않았다.
+   * 동물 친구(2.0.3): 개는 가로 10칸, 고양이는 9칸, 둘 다 세로 8칸. 전에는 5×4칸쯤이라 옷을 입혀도 보이지 않았다.
    *   글자 뜻: o 몸, q 무늬(품종마다 다른 색), e 눈, n 코, t 꼬리(걸음마다 한 칸 오르내린다)
    *   옷(outfit)은 머리와 몸의 자리(PET_BOX)를 기준으로 얹는다: scarf 목도리, bell 방울, ribbon 리본, coat 우비, hat 고깔모자, cape 망토, crown 왕관
    */
@@ -7382,7 +7383,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     return true;
   }
   /*
-   * 거점의 깃발(1.10.1): 가로 5칸, 세로 4칸(전에는 4×3). 줄마다 색을 줄 수 있다.
+   * 거점의 깃발(2.0.1): 가로 5칸, 세로 4칸(전에는 4×3). 줄마다 색을 줄 수 있다.
    *   flag = '#rrggbb' 한 색 · 'rainbow' 네 줄 무지개(천천히 흐른다) · 'glow' 야광(밤에는 어두워지지 않고 둘레가 빛난다)
    *   dark 는 밤의 어두운 정도(0~1). 보통 깃발은 밤에 어두워진다.
    */
@@ -7948,7 +7949,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 9, GROUND - 6 - Math.floor(t * 6) % 2, 1, 5); }
     var pet = view.pet;
     if (pet) {
-      // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다(1.10.3: 라라에 맞춰 크게 다시 그렸다)
+      // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다(2.0.3: 라라에 맞춰 크게 다시 그렸다)
       var f = h.face > 0 ? 1 : -1, moving = h.state === 'out' || h.state === 'back', hop = moving ? Math.floor(t * 8) % 2 : 0;
       var pw = petRows(pet.kind, 0)[0].length;
       paintPet(ctx, f > 0 ? Math.round(h.x) - 10 - pw : Math.round(h.x) + 10, GROUND - PET_H - hop, 1, f < 0, pet, (view.look && view.look.pet) || 'none', t);
@@ -9904,14 +9905,14 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
   }
   /*
-   * 외형 그림(1.10.0): 게임 화면과 같은 라라(Scene.drawHero)를 그대로 쓴다. 옷장에서 본 모습과 게임 속 모습이 같다.
+   * 외형 그림(2.0.0): 게임 화면과 같은 라라(Scene.drawHero)를 그대로 쓴다. 옷장에서 본 모습과 게임 속 모습이 같다.
    *   lookWith  : 입은 모습에 외형 하나를 바꿔 입힌 모습
    *   drawThumb : 목록의 작은 그림(2배). 깃발은 깃대와 깃발만.
    *   drawLookScene : 위쪽의 큰 미리 보기. 거점 앞에 선 라라(3배)가 제자리걸음을 하고, 옥상의 깃발이 펄럭인다.
    */
   var lookPick = '', lookNow = null, lookFrame = 0, lookTimer = 0;
   /*
-   * 라라가 나오는 모든 곳에 입은 외형을 입힌다(1.10.2): 제목 옆, 지도 위, 이야기 창, 자리 비움 창, 시작 화면.
+   * 라라가 나오는 모든 곳에 입은 외형을 입힌다(2.0.2): 제목 옆, 지도 위, 이야기 창, 자리 비움 창, 시작 화면.
    *   이 그림들은 CSS 변수 --art-boy 하나를 같이 쓴다. 입은 모습을 작은 캔버스에 그려 그 변수에 넣으면 한꺼번에 바뀐다.
    *   같은 모습이면 다시 만들지 않는다. 캔버스를 못 쓰는 환경이면 원래 그림(노란 우비)이 그대로 남는다.
    */
@@ -10304,7 +10305,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
   var STAT_GROUPS = [
     ['이번 회차', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '방어 성공한 밤']]],
     ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비운 시간'], ['days', '시작한 지']]],
-    ['이야기의 끝', [['ended', '끝을 본 횟수'], ['bestDanger', '가장 높은 위험 단계'], ['fastest', '가장 빨리 끝낸 회차'], ['rescued', '구조한 생존자']]]      // 1.11.0
+    ['이야기의 끝', [['ended', '끝을 본 횟수'], ['bestDanger', '가장 높은 위험 단계'], ['fastest', '가장 빨리 끝낸 회차'], ['rescued', '구조한 생존자']]]      // 2.1.0
   ];
   function buildStats() {
     var root = $('stats-grid');
@@ -10621,7 +10622,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.11.0";
     setText($('retreat-hint'), can
       ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + (function (t) { return t + (C.hasBatchim(t) ? '을' : '를'); })(fmt(C.nextAntibodyAt(state))) + ' 넘기면 샘플 +' + fmt(gain + 1)
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차 누적 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
-    // 위험 단계(1.11.0): 끝을 본 뒤에 보인다. 다음 회차에 걸 단계를 − / + 로 고른다
+    // 위험 단계(2.1.0): 끝을 본 뒤에 보인다. 다음 회차에 걸 단계를 − / + 로 고른다
     var dMax = C.dangerMax(state), dRow = $('danger-row');
     dRow.hidden = !(dMax > 0);
     if (dMax > 0) {

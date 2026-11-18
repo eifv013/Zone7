@@ -715,7 +715,7 @@
     s.cosmetics = {}; COSMETICS.forEach(function (c) { if (!c.base && raw.cosmetics && typeof raw.cosmetics === 'object' && raw.cosmetics[c.id]) s.cosmetics[c.id] = true; });
     s.wear = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' };
     COS_SLOTS.forEach(function (slot) { var id = raw.wear && typeof raw.wear === 'object' ? raw.wear[slot] : '', c = typeof id === 'string' ? findById(COSMETICS, id) : null; if (c && c.slot === slot && (c.base || s.cosmetics[c.id])) s.wear[slot] = c.id; });
-    grantFlags(s);      // 조건을 이미 채운 깃발(1.10.0 전의 저장)
+    grantFlags(s);      // 조건을 이미 채운 깃발(2.0.0 전의 저장)
     s.stage = null;      // 스테이지 판은 저장하지 않는다(저장되는 것은 언제나 본 게임이다)
     s.nextChallenge = typeof raw.nextChallenge === 'string' && findById(CHALLENGES, raw.nextChallenge) ? raw.nextChallenge : '';
     s.challenge = raw.challenge && typeof raw.challenge === 'object' && findById(CHALLENGES, raw.challenge.id) ? { id: raw.challenge.id, failed: !!raw.challenge.failed, done: !!raw.challenge.done } : null;
@@ -2608,7 +2608,7 @@
   function challengeOn(state, id) { var c = state.challenge; return (!!c && c.id === id && !c.failed && !c.done) || stageRule(state, id); }      // 원정 스테이지의 규칙도 같은 자리에서 걸린다
 
   /*
-   * ---------- 위험 단계 · 구조한 생존자 · 기록(1.11.0) ----------
+   * ---------- 위험 단계 · 구조한 생존자 · 기록(2.1.0) ----------
    * 이야기의 끝을 본 뒤에 할 일. 셋 다 "끝을 다시 볼 이유"다.
    *   위험 단계 : 다음 회차를 더 어렵게 건다. 단계 N 에서 무리는 DANGER_HORDE^N 배, 문 값과 혈청 값은 DANGER_COST^N 배.
    *               대신 철수 항체가 단계마다 +DANGER_ANTIBODY, 끝을 보면 뽑기권을 단계마다 DANGER_TICKETS 장 더 받는다.
@@ -2675,7 +2675,7 @@
     { id: 'coat-black',  slot: 'coat', name: '검은 우비',   rarity: 1, look: { y: '#3a3d45', j: '#2b2d33' } },
     { id: 'coat-night',  slot: 'coat', name: '밤하늘 우비', rarity: 2, look: { y: '#27336e', j: '#4a5fb8' } },
     { id: 'coat-neon',   slot: 'coat', name: '형광 우비',   rarity: 2, look: { y: '#c6ff4a', j: '#8fe01f' } },
-    // 1.10.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
+    // 2.0.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
     { id: 'hood-none',   slot: 'hood', name: '기본 후드',   rarity: 0, base: true, look: 'none' },
     { id: 'hood-cat',    slot: 'hood', name: '고양이 귀',   rarity: 1, look: 'cat' },
     { id: 'hood-bear',   slot: 'hood', name: '곰 귀',       rarity: 1, look: 'bear' },
@@ -2694,7 +2694,7 @@
     { id: 'fx-glow',     slot: 'fx',   name: '야광',        rarity: 2, look: 'glow' },
     { id: 'fx-sparkle',  slot: 'fx',   name: '반짝이 가루', rarity: 2, look: 'sparkle' },
     { id: 'fx-star',     slot: 'fx',   name: '머리 위 별',  rarity: 2, look: 'star' },
-    // 1.10.3: 동물 친구의 옷. 친구는 늘 라라 옆에 붙어 다닌다
+    // 2.0.3: 동물 친구의 옷. 친구는 늘 라라 옆에 붙어 다닌다
     { id: 'pet-none',    slot: 'pet',  name: '옷 없음',     rarity: 0, base: true, look: 'none' },
     { id: 'pet-scarf',   slot: 'pet',  name: '빨간 목도리', rarity: 0, look: 'scarf' },
     { id: 'pet-bell',    slot: 'pet',  name: '방울 목걸이', rarity: 0, look: 'bell' },
@@ -2703,7 +2703,7 @@
     { id: 'pet-hat',     slot: 'pet',  name: '고깔모자',    rarity: 1, look: 'hat' },
     { id: 'pet-cape',    slot: 'pet',  name: '망토',        rarity: 2, look: 'cape' },
     { id: 'pet-crown',   slot: 'pet',  name: '왕관',        rarity: 2, look: 'crown' },
-    // 깃발은 뽑기에서 뺐다(1.10.0: 화면에서 작아서 뽑아도 기쁘지 않았다). 도전·원정의 확정 보상으로 준다(FLAG_REWARDS). 조각으로도 얻을 수 있다
+    // 깃발은 뽑기에서 뺐다(2.0.0: 화면에서 작아서 뽑아도 기쁘지 않았다). 도전·원정의 확정 보상으로 준다(FLAG_REWARDS). 조각으로도 얻을 수 있다
     { id: 'flag-yellow', slot: 'flag', name: '노란 깃발',   rarity: 0, base: true, look: '#f0b400' },
     { id: 'flag-red',    slot: 'flag', name: '빨간 깃발',   rarity: 0, reward: true, look: '#c0392b' },
     { id: 'flag-blue',   slot: 'flag', name: '파란 깃발',   rarity: 0, reward: true, look: '#3f7fb5' },

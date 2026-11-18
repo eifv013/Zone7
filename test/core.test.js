@@ -2997,7 +2997,7 @@ test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
   C.gachaTable().forEach(t => assert.ok(md.includes('| ' + C.RARITIES[t.rarity] + ' | ' + t.name + ' | ' + t.pct.toFixed(2) + '% |'), t.name));
 });
 
-test('1.10.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발은 없다. 깃발은 도전과 원정의 확정 보상이다', () => {
+test('2.0.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발은 없다. 깃발은 도전과 원정의 확정 보상이다', () => {
   const table = C.gachaTable();
   assert.equal(table.length, 30); assert.ok(!table.some(t => t.slot === 'flag'));
   ['hood', 'pat', 'bag', 'fx', 'pet'].forEach(slot => assert.ok(table.some(t => t.slot === slot), slot));
@@ -3018,7 +3018,7 @@ test('1.10.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발�
   assert.ok(C.wearCosmetic(f, 'flag-black').ok);
 });
 
-test('1.10.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기의 끝에서 받고, 그림은 줄마다 색이 다르다', () => {
+test('2.0.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기의 끝에서 받고, 그림은 줄마다 색이 다르다', () => {
   const S = require('../src/scene.js');
   assert.equal(new Set(S.flagRows('rainbow', 0)).size, 4); assert.notDeepEqual(S.flagRows('rainbow', 0), S.flagRows('rainbow', 1));
   assert.equal(S.flagRows('#c0392b', 0)[0], '#c0392b'); assert.equal(S.flagRows('zzz', 0)[0], '#f0b400', '모르는 값은 기본 색');
@@ -3029,7 +3029,7 @@ test('1.10.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기�
   assert.ok(!C.gachaTable().some(t => t.slot === 'flag'), '깃발은 뽑기에 없다');
 });
 
-test('1.10.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 개 10×8칸·고양이 9×8칸', () => {
+test('2.0.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 개 10×8칸·고양이 9×8칸', () => {
   const S = require('../src/scene.js');
   assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 7);
   ['dog', 'cat', 'zzz'].forEach(k => [0, 1].forEach(w => { const r = S.petRows(k, w); assert.equal(r.length, S.PET_H); r.forEach(row => assert.equal(row.length, k === 'cat' ? 9 : 10)); assert.ok(r.some(row => row[0] === 't'), '꼬리'); }));
@@ -3041,7 +3041,7 @@ test('1.10.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 개 10×8�
   C.COSMETICS.filter(c => c.slot === 'pet' && !c.base).forEach(c => assert.ok(calls(c.look).length > plain.length, c.name));
 });
 
-test('1.10.4 걷는 그림: 두 발이 양옆으로 벌어지지 않는다(다리를 찢는 것처럼 보였다)', () => {
+test('2.0.4 걷는 그림: 두 발이 양옆으로 벌어지지 않는다(다리를 찢는 것처럼 보였다)', () => {
   const S = require('../src/scene.js');
   const feet = (rows) => { const last = rows[rows.length - 1], a = last.search(/[^.]/), b = last.length - 1 - last.split('').reverse().join('').search(/[^.]/); return b - a + 1; };
   const stand = feet(S.laraRows({}, 'stand', 0));
@@ -3050,7 +3050,7 @@ test('1.10.4 걷는 그림: 두 발이 양옆으로 벌어지지 않는다(다�
   ['walker', 'hair'].forEach(k => { const f = S.zombieFrames(k); assert.ok(feet(f[1]) <= feet(f[0]) + 1, k); });
 });
 
-test('1.11.0 위험 단계: 끝을 본 뒤에 고르고, 무리와 문 값이 오르고, 돌파하면 다음 단계와 영구 생산이 열린다', () => {
+test('2.1.0 위험 단계: 끝을 본 뒤에 고르고, 무리와 문 값이 오르고, 돌파하면 다음 단계와 영구 생산이 열린다', () => {
   const s = C.createState(0);
   assert.equal(C.dangerMax(s), 0); assert.equal(C.setDangerNext(s, 1).reason, 'locked'); assert.ok(C.setDangerNext(s, 0).ok);
   s.ended = 1; assert.equal(C.dangerMax(s), 1); assert.ok(C.setDangerNext(s, 1).ok); assert.equal(C.setDangerNext(s, 2).reason, 'locked'); assert.equal(C.setDangerNext(s, -1).reason, 'unknown');

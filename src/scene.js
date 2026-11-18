@@ -488,7 +488,7 @@
    *   look = { y 모자 색, j 몸 색 }. scale 은 한 칸의 크기(화면 픽셀).
    */
   /*
-   * 라라(1.10.0): 가로 14칸, 세로 18칸. 전에는 8×11칸이라 얼굴도 가방도 없었다.
+   * 라라(2.0.0): 가로 14칸, 세로 18칸. 전에는 8×11칸이라 얼굴도 가방도 없었다.
    *   위 세 줄은 후드의 귀·뿔 자리, 왼쪽 네 칸은 옆구리의 가방 자리다. 몸은 그 사이에 선다.
    *   글자 뜻: y 후드, Y 후드 그늘, j 우비, J 우비 그늘, s 살, e 눈, m 입, h 머리카락, k 가방끈, w 옷깃·단추·뿔, i 귀 안쪽, p 바지, b 장화, c 가방, C 가방의 밝은 곳
    *   겹: 후드 모양(LARA_HOODS)이 위 세 줄을, 가방(LARA_BAGS)이 왼쪽 네 칸을 갈아 끼운다. 무늬(laraPattern)는 우비 칸(j)을 골라 다른 색으로 칠한다.
@@ -498,7 +498,7 @@
   var LARA_BODY = ['..............', '..............', '..............',
     '.....yyyyy....', '....yyyyyyy...', '....yhhhhhyY..', '...yysssssyY..', '...yysesesyY..', '....yssmssyY..',
     '.....jwwwjJ...', '....kjjjjjjJ..', '....kjwjjjJj..', '....jkjjjjJs..', '....jjjjjjJ...', '....JJJJJJJ...'];
-  // 다리(1.10.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
+  // 다리(2.0.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
   var LARA_STAND = ['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'];
   var LARA_LEGS = [['.....pp.pp....', '.....pp.bbb...', '....bbb.......'], ['.....pp.pp....', '....bbb.pp....', '........bbb...']];
   var LARA_HOODS = {
@@ -560,7 +560,7 @@
     scale = scale || 1; t = t || 0;
     function px(col, cx, cy, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? LARA_W - cx - (w || 1) : cx) * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
     if (fx === 'glow') {
-      // 야광(1.10.4): 몸의 테두리를 따라 한 칸 두께로 빛난다. 전에는 네모난 띠를 둘러서 몸과 어긋나 보였다.
+      // 야광(2.0.4): 몸의 테두리를 따라 한 칸 두께로 빛난다. 전에는 네모난 띠를 둘러서 몸과 어긋나 보였다.
       //   낮에는 옅게, 밤(dark)에는 진하게. 숨 쉬듯 천천히 밝아졌다 어두워진다.
       var rows = laraRows(look, pose === 'search' ? 'search' : pose, step), night = Math.max(0, Math.min(1, dark || 0));
       var a = (0.3 + 0.5 * night) + 0.15 * Math.sin(t * 2.4), col = 'rgba(206, 255, 96, ' + Math.max(0.12, Math.min(0.95, a)).toFixed(2) + ')';
@@ -574,7 +574,7 @@
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
   }
   /*
-   * 동물 친구(1.10.3): 개는 가로 10칸, 고양이는 9칸, 둘 다 세로 8칸. 전에는 5×4칸쯤이라 옷을 입혀도 보이지 않았다.
+   * 동물 친구(2.0.3): 개는 가로 10칸, 고양이는 9칸, 둘 다 세로 8칸. 전에는 5×4칸쯤이라 옷을 입혀도 보이지 않았다.
    *   글자 뜻: o 몸, q 무늬(품종마다 다른 색), e 눈, n 코, t 꼬리(걸음마다 한 칸 오르내린다)
    *   옷(outfit)은 머리와 몸의 자리(PET_BOX)를 기준으로 얹는다: scarf 목도리, bell 방울, ribbon 리본, coat 우비, hat 고깔모자, cape 망토, crown 왕관
    */
@@ -617,7 +617,7 @@
     return true;
   }
   /*
-   * 거점의 깃발(1.10.1): 가로 5칸, 세로 4칸(전에는 4×3). 줄마다 색을 줄 수 있다.
+   * 거점의 깃발(2.0.1): 가로 5칸, 세로 4칸(전에는 4×3). 줄마다 색을 줄 수 있다.
    *   flag = '#rrggbb' 한 색 · 'rainbow' 네 줄 무지개(천천히 흐른다) · 'glow' 야광(밤에는 어두워지지 않고 둘레가 빛난다)
    *   dark 는 밤의 어두운 정도(0~1). 보통 깃발은 밤에 어두워진다.
    */
@@ -1183,7 +1183,7 @@
     if (u.crowbar && h.state === 'search') { ctx.fillStyle = '#9a9a94'; ctx.fillRect(hx + 9, GROUND - 6 - Math.floor(t * 6) % 2, 1, 5); }
     var pet = view.pet;
     if (pet) {
-      // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다(1.10.3: 라라에 맞춰 크게 다시 그렸다)
+      // 동물 친구: 주인공 뒤를 따른다. 걸을 때는 깡충거리고, 꼬리는 늘 움직인다(2.0.3: 라라에 맞춰 크게 다시 그렸다)
       var f = h.face > 0 ? 1 : -1, moving = h.state === 'out' || h.state === 'back', hop = moving ? Math.floor(t * 8) % 2 : 0;
       var pw = petRows(pet.kind, 0)[0].length;
       paintPet(ctx, f > 0 ? Math.round(h.x) - 10 - pw : Math.round(h.x) + 10, GROUND - PET_H - hop, 1, f < 0, pet, (view.look && view.look.pet) || 'none', t);

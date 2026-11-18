@@ -1535,14 +1535,14 @@
     if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
   }
   /*
-   * 외형 그림(1.10.0): 게임 화면과 같은 라라(Scene.drawHero)를 그대로 쓴다. 옷장에서 본 모습과 게임 속 모습이 같다.
+   * 외형 그림(2.0.0): 게임 화면과 같은 라라(Scene.drawHero)를 그대로 쓴다. 옷장에서 본 모습과 게임 속 모습이 같다.
    *   lookWith  : 입은 모습에 외형 하나를 바꿔 입힌 모습
    *   drawThumb : 목록의 작은 그림(2배). 깃발은 깃대와 깃발만.
    *   drawLookScene : 위쪽의 큰 미리 보기. 거점 앞에 선 라라(3배)가 제자리걸음을 하고, 옥상의 깃발이 펄럭인다.
    */
   var lookPick = '', lookNow = null, lookFrame = 0, lookTimer = 0;
   /*
-   * 라라가 나오는 모든 곳에 입은 외형을 입힌다(1.10.2): 제목 옆, 지도 위, 이야기 창, 자리 비움 창, 시작 화면.
+   * 라라가 나오는 모든 곳에 입은 외형을 입힌다(2.0.2): 제목 옆, 지도 위, 이야기 창, 자리 비움 창, 시작 화면.
    *   이 그림들은 CSS 변수 --art-boy 하나를 같이 쓴다. 입은 모습을 작은 캔버스에 그려 그 변수에 넣으면 한꺼번에 바뀐다.
    *   같은 모습이면 다시 만들지 않는다. 캔버스를 못 쓰는 환경이면 원래 그림(노란 우비)이 그대로 남는다.
    */
@@ -1935,7 +1935,7 @@
   var STAT_GROUPS = [
     ['이번 회차', [['run', '걸린 시간'], ['runEarned', '모은 물자'], ['waves', '방어 성공한 밤']]],
     ['전체', [['lifetime', '모은 물자'], ['retreats', '철수'], ['clicks', '직접 수색'], ['play', '켜 둔 시간'], ['away', '자리 비운 시간'], ['days', '시작한 지']]],
-    ['이야기의 끝', [['ended', '끝을 본 횟수'], ['bestDanger', '가장 높은 위험 단계'], ['fastest', '가장 빨리 끝낸 회차'], ['rescued', '구조한 생존자']]]      // 1.11.0
+    ['이야기의 끝', [['ended', '끝을 본 횟수'], ['bestDanger', '가장 높은 위험 단계'], ['fastest', '가장 빨리 끝낸 회차'], ['rescued', '구조한 생존자']]]      // 2.1.0
   ];
   function buildStats() {
     var root = $('stats-grid');
@@ -2252,7 +2252,7 @@
     setText($('retreat-hint'), can
       ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + (function (t) { return t + (C.hasBatchim(t) ? '을' : '를'); })(fmt(C.nextAntibodyAt(state))) + ' 넘기면 샘플 +' + fmt(gain + 1)
       : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차 누적 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
-    // 위험 단계(1.11.0): 끝을 본 뒤에 보인다. 다음 회차에 걸 단계를 − / + 로 고른다
+    // 위험 단계(2.1.0): 끝을 본 뒤에 보인다. 다음 회차에 걸 단계를 − / + 로 고른다
     var dMax = C.dangerMax(state), dRow = $('danger-row');
     dRow.hidden = !(dMax > 0);
     if (dMax > 0) {
