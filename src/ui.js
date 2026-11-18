@@ -2846,8 +2846,10 @@
     tabs.textContent = ''; list.textContent = '';
     chapters.forEach(function (zone) {
       var got = byZone[zone].filter(function (b) { return state.story[b.id]; }).length;
-      if (zone === C.MOM_CHAPTER && !got) return;      // 엄마의 수첩: 한 쪽이라도 받기 전에는 장 자체를 보이지 않는다(있다는 것부터가 이야기다)
-      var btn = el('button', '', (zone === C.MOM_CHAPTER ? '' : zone + '장 ') + byZone[zone][0].zoneName + ' ' + got + '/' + byZone[zone].length);
+      // 끝을 본 뒤에 열리는 장(2.3.1): 첫 쪽을 받기 전에는 이름도 쪽 수도 가리고 '???' 로만 보인다. 이름부터가 이야기의 내용이라서다.
+      // 2.3.0 에서는 장을 아예 숨겼는데, 뭔가 더 있다는 것은 보여 주는 편이 낫다는 말이 있었다
+      var hiddenCh = zone === C.MOM_CHAPTER && !got;
+      var btn = el('button', '', hiddenCh ? '???' : (zone === C.MOM_CHAPTER ? '' : zone + '장 ') + byZone[zone][0].zoneName + ' ' + got + '/' + byZone[zone].length);
       btn.type = 'button'; btn.disabled = !got; btn.setAttribute('aria-pressed', zone === journalTab ? 'true' : 'false');
       btn.addEventListener('click', function () { journalTab = zone; renderJournal(); });
       tabs.appendChild(btn);
