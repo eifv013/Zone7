@@ -24,7 +24,18 @@ try {
       throw new Error(`패치노트 ${n.ver} 의 시각(at: ${n.at})이 형식에 맞지 않거나 날짜(${n.date})와 다릅니다.`);
     }
   }
-  const html = tpl.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)};`)
+  // 배경 음악의 음원(2.6.0): assets/bgm/ 에 day·night·dread 라는 이름의 파일이 있으면 게임 파일 안에 끼워 넣는다. 없으면 빈 채로 둔다.
+  const bgm = {}, bgmDir = path.join(__dirname, 'assets', 'bgm'), bgmTypes = { '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav' };
+  let bgmBytes = 0;
+  if (fs.existsSync(bgmDir)) for (const f of fs.readdirSync(bgmDir).sort()) {
+    const ext = path.extname(f).toLowerCase(), name = path.basename(f, path.extname(f));
+    if (!bgmTypes[ext] || !['day', 'night', 'dread'].includes(name) || bgm[name]) continue;
+    const bytes = fs.readFileSync(path.join(bgmDir, f));
+    if (bytes.length > 4 * 1024 * 1024) throw new Error(`음원 ${f} 이 4MB 를 넘습니다(${(bytes.length / 1048576).toFixed(1)}MB). 길이를 줄이거나 낮은 음질로 다시 뽑아 주세요.`);
+    bgm[name] = `data:${bgmTypes[ext]};base64,${bytes.toString('base64')}`; bgmBytes += bytes.length;
+  }
+  if (Object.keys(bgm).length) console.log(`음원 ${Object.keys(bgm).join(', ')} (${(bgmBytes / 1024).toFixed(0)} KB)`);
+  const html = tpl.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)};`)
     .replace('/*__BOOT__*/', () => read('boot.js'))
     .replace('/*__NOTES__*/', () => read('notes.js'))
     .replace('/*__FEEDBACK__*/', () => read('feedback.js'))

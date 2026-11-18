@@ -116,3 +116,16 @@ test('배경 음악: 모르는 곡과 범위를 벗어난 마디·칸, 잘못된
 test('배경 음악: 효과음보다 낮게 거르고, 음의 머리를 천천히 올린다', () => {
   assert.ok(Sound.MUSIC_CUT < Sound.SOFT_CUT); assert.ok(Sound.MUSIC_ATTACK >= 0.05);
 });
+
+test('음원 파일: 등록은 아는 곡 이름의 글만 받고, 없는 곡은 낮의 곡이나 있는 곡으로 대신한다', () => {
+  const url = 'data:audio/ogg;base64,' + 'A'.repeat(40);
+  assert.equal(Sound.setTracks({ day: url, night: url, boss: url, dread: 123 }), 2);
+  assert.equal(Sound.hasTracks(), true);
+  assert.equal(Sound.setTracks(null), 0); assert.equal(Sound.hasTracks(), false);
+  assert.equal(Sound.setTracks({ day: 'x' }), 0, '너무 짧은 값은 음원이 아니다');
+  assert.equal(Sound.pickTrack('night', { day: true, night: true }), 'night');
+  assert.equal(Sound.pickTrack('dread', { day: true, night: true }), 'day');
+  assert.equal(Sound.pickTrack('day', { night: true }), 'night');
+  assert.equal(Sound.pickTrack('day', {}), ''); assert.equal(Sound.pickTrack('day', null), '');
+  assert.equal(Sound.pump(), 0, '깨우기 전에는 음원도 틀지 않는다');
+});

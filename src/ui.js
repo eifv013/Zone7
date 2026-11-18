@@ -3446,7 +3446,11 @@
     wireSalvage();
     // 배경 음악(2.5.0): 켬/끔과 음량을 효과음과 따로 기억한다. 곡은 render 가 상황에 맞춰 고른다(pickMood)
     (function () {
-      var btn = $('bgm-toggle'), bar = $('bgm-volume'), label = $('bgm-volume-num'), on = recall('zone7-bgm') !== 'off';
+      // 기본값(2.6.0): 음원 파일이 실려 있으면 켬, 없으면(합성 음악뿐이면) 끔. 직접 고른 적이 있으면 그것을 따른다.
+      var files = 0;
+      try { if (window.Sound && window.ZONE7_BGM) files = window.Sound.setTracks(window.ZONE7_BGM); } catch (e) { files = 0; }
+      var saved = recall('zone7-bgm');
+      var btn = $('bgm-toggle'), bar = $('bgm-volume'), label = $('bgm-volume-num'), on = saved === 'on' || (saved !== 'off' && files > 0);
       function show() { btn.setAttribute('aria-pressed', String(on)); setText(btn, on ? '음악 켬' : '음악 끔'); }
       function vol(v, keep) {
         var n = 50;

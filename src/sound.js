@@ -247,22 +247,78 @@
     gain.connect(musicBus);
     src.start(start); src.stop(start + n.d + 0.03);
   }
+
+  /*
+   * ---------- 음원 파일(2.6.0) ----------
+   * 합성한 음악은 악기 소리도 공간감도 없어서 "동굴에서 듣는 것 같다"는 말을 들었다. 그래서 녹음된 음원을 실을 수 있게 한다.
+   *   넣는 법 : assets/bgm/ 에 day·night·dread 라는 이름의 파일(.ogg .mp3 .m4a .wav)을 둔다. 빌드가 게임 파일 안에 끼워 넣는다(build.js).
+   *            셋 다 없어도 되고 하나만 있어도 된다. 없는 곡은 day → 아무 곡 순서로 대신한다(pickTrack).
+   *   트는 법 : 곡이 필요해질 때 처음 한 번 풀어 두고(decode), 끊김 없이 되풀이한다. 곡이 바뀌면 TRACK_FADE 초 동안 겹쳐서 넘긴다.
+   *   음원이 하나라도 있으면 합성 음악은 쓰지 않는다. 풀지 못한 파일은 없는 것으로 친다.
+   */
+  var TRACK_FADE = 1.5, TRACK_GAIN = 0.5;      // TRACK_GAIN: 음량 50 에서 파일의 소리를 이만큼으로(100 이면 원래 크기)
+  var tracks = {}, trackBuf = {}, trackBusy = {}, trackBad = {}, playing = null;      // playing: { mood, src, gain }
+  /** 음원을 등록한다 { day: 'data:audio/…', … }. 글이 아닌 값과 모르는 곡 이름은 버린다. 등록한 곡의 수를 돌려준다. */
+  function setTracks(map) {
+    tracks = {}; trackBuf = {}; trackBusy = {}; trackBad = {};
+    if (map && typeof map === 'object') Object.keys(MUSIC).forEach(function (m) { if (typeof map[m] === 'string' && map[m].length > 16) tracks[m] = map[m]; });
+    return Object.keys(tracks).length;
+  }
+  function hasTracks() { return Object.keys(tracks).length > 0; }
+  /** 그 곡 자리에 틀 음원의 이름. 그 곡이 없으면 낮의 곡, 그것도 없으면 있는 것 가운데 첫째. 하나도 없으면 ''. */
+  function pickTrack(mood, have) {
+    var h = have && typeof have === 'object' ? have : {}, ok = function (m) { return Object.prototype.hasOwnProperty.call(h, m) && !!h[m]; };
+    if (ok(mood)) return mood;
+    if (ok('day')) return 'day';
+    var names = Object.keys(MUSIC).filter(ok);
+    return names.length ? names[0] : '';
+  }
+  function stopTrack(now) {
+    if (!playing) return;
+    var old = playing; playing = null;
+    try { old.gain.gain.cancelScheduledValues(now); old.gain.gain.setValueAtTime(Math.max(0.0001, old.gain.gain.value), now); old.gain.gain.exponentialRampToValueAtTime(0.0001, now + TRACK_FADE); old.src.stop(now + TRACK_FADE + 0.05); } catch (e) { /* 이미 멈췄다 */ }
+  }
+  function loadTrack(name) {
+    if (trackBuf[name] || trackBusy[name] || trackBad[name] || typeof fetch !== 'function') return;
+    trackBusy[name] = true;
+    fetch(tracks[name]).then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
+      return new Promise(function (res, rej) { var p = ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); });
+    }).then(function (buf) { trackBuf[name] = buf; trackBusy[name] = false; }, function () { trackBad[name] = true; trackBusy[name] = false; });
+  }
+  /** 음원 쪽의 한 걸음: 틀어야 할 곡을 고르고, 준비됐으면 겹쳐서 넘긴다. 새로 틀었으면 1, 아니면 0. */
+  function pumpTracks() {
+    var now = ctx.currentTime, usable = {};
+    Object.keys(tracks).forEach(function (m) { if (!trackBad[m]) usable[m] = true; });
+    var want = pickTrack(musicMood, usable);
+    if (!want) { stopTrack(now); return 0; }
+    if (playing && playing.mood === want) return 0;
+    if (!trackBuf[want]) { loadTrack(want); return 0; }
+    stopTrack(now);
+    var src = ctx.createBufferSource(), gain = ctx.createGain();
+    src.buffer = trackBuf[want]; src.loop = true;
+    gain.gain.setValueAtTime(0.0001, now); gain.gain.exponentialRampToValueAtTime(TRACK_GAIN, now + TRACK_FADE);
+    src.connect(gain); gain.connect(musicBus); src.start(now);
+    playing = { mood: want, src: src, gain: gain };
+    return 1;
+  }
   /** 조금 앞의 칸들을 예약한다. 꺼져 있거나, 깨우지 못했거나, 탭이 가려져 있으면 아무것도 하지 않는다. */
   function pump() {
-    if (!musicOn || !unlocked || !ctx || musicVolume <= 0) { musicNext = 0; return 0; }
-    if (typeof document !== 'undefined' && document.hidden) { musicNext = 0; return 0; }
+    var quiet = !musicOn || !unlocked || !ctx || musicVolume <= 0 || (typeof document !== 'undefined' && document.hidden);
+    if (quiet) { musicNext = 0; if (playing && ctx) { try { stopTrack(ctx.currentTime); } catch (e) { playing = null; } } return 0; }
     var made = 0;
     try {
       if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
       if (!musicBus) {
         musicBus = ctx.createGain(); musicBus.gain.value = musicVolume / MUSIC_VOLUME_DEFAULT;
         var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = MUSIC_CUT;
+        if (hasTracks()) soft.frequency.value = 20000;      // 음원은 이미 다듬어진 소리다: 거르지 않는다
         musicBus.connect(soft);
         // 2.5.2: 음악도 두 배로 키웠으므로(기본 50) 음량 100 에서 겹친 음이 찢어지지 않게 누름막을 거친다. 기기가 지원하지 않으면 그냥 내보낸다
         var mout = ctx.destination;
         try { if (ctx.createDynamicsCompressor) { var mc = ctx.createDynamicsCompressor(); mc.threshold.value = -14; mc.knee.value = 10; mc.ratio.value = 12;      /* 2.5.3: 음량 100 에서 최대 1.04 로 넘쳐서 더 세게 누른다(재 보니 0.87~0.91) */ mc.attack.value = 0.005; mc.release.value = 0.2; mc.connect(ctx.destination); mout = mc; } } catch (e) { mout = ctx.destination; }
         soft.connect(mout);
       }
+      if (hasTracks()) return pumpTracks();      // 음원이 있으면 합성 음악은 쓰지 않는다
       var now = ctx.currentTime;
       if (!(musicNext > now - 0.5)) { musicNext = now + 0.08; musicAt = 0; musicNow = musicMood; }      // 처음이거나 오래 쉬었다: 마디의 처음부터 다시
       while (musicNext < now + 0.45 && made < 64) {
@@ -283,5 +339,5 @@
   }
 
   return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, VOLUME_DEFAULT: VOLUME_DEFAULT, setVolume: setVolume, getVolume: getVolume, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled,
-           MUSIC: MUSIC, MUSIC_BARS: MUSIC_BARS, MUSIC_STEPS: MUSIC_STEPS, MUSIC_VOLUME_DEFAULT: MUSIC_VOLUME_DEFAULT, MUSIC_CUT: MUSIC_CUT, MUSIC_ATTACK: MUSIC_ATTACK, musicStep: musicStep, musicStepSeconds: musicStepSeconds, setMusicVolume: setMusicVolume, getMusicVolume: getMusicVolume, setMusicEnabled: setMusicEnabled, isMusicEnabled: isMusicEnabled, setMood: setMood, getMood: getMood, startMusic: startMusic, pump: pump, duration: duration, play: play };
+           MUSIC: MUSIC, MUSIC_BARS: MUSIC_BARS, MUSIC_STEPS: MUSIC_STEPS, MUSIC_VOLUME_DEFAULT: MUSIC_VOLUME_DEFAULT, MUSIC_CUT: MUSIC_CUT, MUSIC_ATTACK: MUSIC_ATTACK, musicStep: musicStep, musicStepSeconds: musicStepSeconds, setMusicVolume: setMusicVolume, getMusicVolume: getMusicVolume, setMusicEnabled: setMusicEnabled, isMusicEnabled: isMusicEnabled, setMood: setMood, getMood: getMood, startMusic: startMusic, pump: pump, setTracks: setTracks, hasTracks: hasTracks, nowPlaying: function () { return playing ? playing.mood : ''; }, pickTrack: pickTrack, TRACK_FADE: TRACK_FADE, duration: duration, play: play };
 });
