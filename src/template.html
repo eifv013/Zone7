@@ -89,7 +89,7 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--ink); ou
 .mast h1 { margin: 0; font: 400 clamp(40px, 7vw, 64px)/1 var(--font-display); letter-spacing: -.01em; }
 /* 제목의 숫자 7(2.6.5): 이 글꼴은 숫자가 한글보다 키가 작아서 '7'만 낮아 보였다. 숫자만 1.2배로 키워 '구역'과 윗선을 맞춘다(아랫선은 그대로 맞는다) */
 /* 제목 글꼴(Black Han Sans)을 받아 왔을 때만 키운다(body.font-display-ok). 받지 못해 다른 글꼴로 보일 때는 숫자와 한글의 키가 이미 같다 */
-body.font-display-ok .seven { font-size: 1.2em; line-height: 0; }
+body.font-display-ok .seven { font-size: 1.22em; line-height: 0; }      /* 받은 화면에서 재 보니 7은 179칸, 구·역은 216~219칸: 1.21~1.22배 */
 .mast-sub { margin: 6px 0 0; color: var(--ink-soft); font-size: 13px; letter-spacing: .08em; }
 .dplus { text-align: right; }
 .dplus-num { font: 600 clamp(40px, 8vw, 72px)/0.9 var(--font-mono); letter-spacing: -.04em; }
@@ -1211,7 +1211,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.6.6</div>
+  <div class="boot-ver">7구역 알파 2.6.7</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1623,7 +1623,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.6.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.6.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
