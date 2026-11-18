@@ -1113,6 +1113,7 @@
         if (!lv) return;
         // 열차: 운행 시계의 앞 절반은 가는 길, 뒤 절반은 오는 길. 여러 대는 조금씩 뒤따른다(세 대까지만 그린다).
         var trip = C.tripSeconds(state, d.id), p = Math.max(0, Math.min(1, state.routeClock[d.id] / trip));
+        if (!n && state.routeLoad[d.id] > 0) n = 1;      // 열차가 다른 노선으로 옮겨 갔어도, 싣고 돌아오는 마지막 한 대는 보인다
         for (var k = 0; k < Math.min(3, n); k++) {
           var q = Math.max(0, Math.min(1, p - k * 0.04)), pos = q < 0.5 ? q * 2 : 2 - q * 2, back = q >= 0.5;
           var x = Math.round(x0 + 4 + pos * (x1 - x0 - 16));
@@ -2617,7 +2618,7 @@
         var v = rows.railRows[d.id], r = rows.routes[d.id], lv = state.routes[d.id], trip = C.tripSeconds(state, d.id), on = plan.riders[d.id];
         v.row.classList.toggle('off', !lv);
         setText(v.small, clock(trip) + ' · 화물 ×' + d.mult);
-        setText(v.side, !lv ? '끊김' : on ? on + ' / ' + plan.slots[d.id] + '대 · ' + clock(trip - state.routeClock[d.id]) : '0 / ' + plan.slots[d.id] + '대');
+        setText(v.side, !lv ? '끊김' : on ? on + ' / ' + plan.slots[d.id] + '대 · ' + clock(trip - state.routeClock[d.id]) : state.routeLoad[d.id] > 0 ? '돌아오는 중 · ' + clock(trip - state.routeClock[d.id]) : '0 / ' + plan.slots[d.id] + '대');
         v.bar.style.width = (lv && (on || state.routeLoad[d.id] > 0) ? Math.min(100, state.routeClock[d.id] / trip * 100) : 0).toFixed(1) + '%';
         var cost = C.routeCost(state, d.id);
         setText(r.count, lv ? lv + ' / ' + C.ROUTE_MAX + '단계' : '끊김');

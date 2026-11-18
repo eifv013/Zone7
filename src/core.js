@@ -1619,9 +1619,12 @@
       if (state.routeClock[d.id] < trip) return;
       // dt 가 길어 여러 번 다녀왔을 수도 있다: 다녀온 횟수만큼의 몫을 내리고, 남은 시간의 몫은 실은 채로 둔다
       var trips = Math.floor(state.routeClock[d.id] / trip), share = trips * trip / state.routeClock[d.id];
+      // 2.3.3: 열차가 다른 노선으로 옮겨 가 0대가 된 노선은, 싣고 있던 것을 이번에 다 내리고 멈춘다.
+      // 전에는 남은 시간의 몫(1 - share)이 조금씩 남아 0이 되지 않았고, 그래서 열차 없는 노선이 끝없이 혼자 돌았다(막대만 차고 그림에는 열차가 없었다).
+      if (!n) share = 1;
       var gain = state.routeLoad[d.id] * share * d.mult * value;
       state.routeLoad[d.id] *= 1 - share;
-      state.routeClock[d.id] -= trips * trip;
+      state.routeClock[d.id] = n ? state.routeClock[d.id] - trips * trip : 0;
       earn(state, gain);
       state.railEarned += gain;
       if (state.salvage) state.salvage.have = Math.min(state.salvage.need, state.salvage.have + gain);      // 표류 화물: 돌아온 열차의 화물 값이 쌓인다

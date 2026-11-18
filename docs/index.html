@@ -1235,7 +1235,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.3.2</div>
+  <div class="boot-ver">7구역 알파 2.3.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1777,7 +1777,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.3.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.3.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1951,7 +1951,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.2";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.3";
 </script>
 <script>
 /*
@@ -1970,6 +1970,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.2";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 2.3.3', date: '2026-11-19', at: '2026-11-19 00:59:59', title: '열차 없는 노선',
+      items: [
+        '4구역에서 열차가 0대인 노선이 혼자 계속 돌던 것을 고쳤어요. 막대는 차는데 그림에는 열차가 없었어요.',
+        '열차가 다른 노선으로 옮겨 가면, 싣고 있던 화물을 한 번 내리고 멈춰요.',
+        '그동안에는 "돌아오는 중"이라고 적고, 노선도에도 돌아오는 열차가 보여요.'
+      ] },
     { ver: '알파 2.3.2', date: '2026-11-19', at: '2026-11-19 00:59:59', title: '전체 검수와 위험 단계 다시 맞춤',
       items: [
         '위험 단계를 다시 맞췄어요. 전에는 12단계부터 한 회차가 한 달을 넘었고, 16단계부터는 사실상 끝낼 수 없었어요.',
@@ -4773,9 +4779,12 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.2";
       if (state.routeClock[d.id] < trip) return;
       // dt 가 길어 여러 번 다녀왔을 수도 있다: 다녀온 횟수만큼의 몫을 내리고, 남은 시간의 몫은 실은 채로 둔다
       var trips = Math.floor(state.routeClock[d.id] / trip), share = trips * trip / state.routeClock[d.id];
+      // 2.3.3: 열차가 다른 노선으로 옮겨 가 0대가 된 노선은, 싣고 있던 것을 이번에 다 내리고 멈춘다.
+      // 전에는 남은 시간의 몫(1 - share)이 조금씩 남아 0이 되지 않았고, 그래서 열차 없는 노선이 끝없이 혼자 돌았다(막대만 차고 그림에는 열차가 없었다).
+      if (!n) share = 1;
       var gain = state.routeLoad[d.id] * share * d.mult * value;
       state.routeLoad[d.id] *= 1 - share;
-      state.routeClock[d.id] -= trips * trip;
+      state.routeClock[d.id] = n ? state.routeClock[d.id] - trips * trip : 0;
       earn(state, gain);
       state.railEarned += gain;
       if (state.salvage) state.salvage.have = Math.min(state.salvage.need, state.salvage.have + gain);      // 표류 화물: 돌아온 열차의 화물 값이 쌓인다
@@ -9732,6 +9741,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.2";
         if (!lv) return;
         // 열차: 운행 시계의 앞 절반은 가는 길, 뒤 절반은 오는 길. 여러 대는 조금씩 뒤따른다(세 대까지만 그린다).
         var trip = C.tripSeconds(state, d.id), p = Math.max(0, Math.min(1, state.routeClock[d.id] / trip));
+        if (!n && state.routeLoad[d.id] > 0) n = 1;      // 열차가 다른 노선으로 옮겨 갔어도, 싣고 돌아오는 마지막 한 대는 보인다
         for (var k = 0; k < Math.min(3, n); k++) {
           var q = Math.max(0, Math.min(1, p - k * 0.04)), pos = q < 0.5 ? q * 2 : 2 - q * 2, back = q >= 0.5;
           var x = Math.round(x0 + 4 + pos * (x1 - x0 - 16));
@@ -11236,7 +11246,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.3.2";
         var v = rows.railRows[d.id], r = rows.routes[d.id], lv = state.routes[d.id], trip = C.tripSeconds(state, d.id), on = plan.riders[d.id];
         v.row.classList.toggle('off', !lv);
         setText(v.small, clock(trip) + ' · 화물 ×' + d.mult);
-        setText(v.side, !lv ? '끊김' : on ? on + ' / ' + plan.slots[d.id] + '대 · ' + clock(trip - state.routeClock[d.id]) : '0 / ' + plan.slots[d.id] + '대');
+        setText(v.side, !lv ? '끊김' : on ? on + ' / ' + plan.slots[d.id] + '대 · ' + clock(trip - state.routeClock[d.id]) : state.routeLoad[d.id] > 0 ? '돌아오는 중 · ' + clock(trip - state.routeClock[d.id]) : '0 / ' + plan.slots[d.id] + '대');
         v.bar.style.width = (lv && (on || state.routeLoad[d.id] > 0) ? Math.min(100, state.routeClock[d.id] / trip * 100) : 0).toFixed(1) + '%';
         var cost = C.routeCost(state, d.id);
         setText(r.count, lv ? lv + ' / ' + C.ROUTE_MAX + '단계' : '끊김');

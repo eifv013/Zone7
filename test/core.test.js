@@ -3149,3 +3149,14 @@ test('위험 단계의 값: 문 값은 10단계까지 2.2배씩, 그 뒤로는 �
   }
   assert.ok(C.DANGER_COST_LATE < C.DANGER_COST && C.DANGER_COST_LATE > C.DANGER_PROD, '뒤쪽도 힘보다는 빨리 오른다(쉬워지지는 않는다)');
 });
+
+test('4구역: 열차가 0대가 된 노선은 싣고 있던 것을 한 번에 내리고 멈춘다(혼자 끝없이 돌지 않는다)', () => {
+  const s = inStation();
+  s.routes.loop = 1; s.routes.river = 1; s.trains = C.ROUTE_SLOTS;      // 열차는 배수가 높은 강변선으로 모두 간다
+  assert.equal(C.railPlan(s).riders.loop, 0);
+  s.routeLoad.loop = 50; s.routeClock.loop = 3;      // 순환선에는 옮겨 가기 전에 실은 것이 남아 있다
+  let trains = 0;
+  for (let i = 0; i < 400; i++) trains += C.tick(s, 0.7, half).filter(e => e.type === 'train' && e.route === 'loop').length;
+  assert.equal(trains, 1, '남은 화물은 한 번만 들어온다');
+  assert.equal(s.routeLoad.loop, 0); assert.equal(s.routeClock.loop, 0);
+});
