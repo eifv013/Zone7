@@ -2872,7 +2872,7 @@
     var b = { scouts: state.buildings.scouts, garden: state.buildings.garden, purifier: state.buildings.purifier, workshop: state.buildings.workshop,
       port: state.stalls, district: state.zone >= 1 ? state.stalls : 0 };   // 좌판은 하역장·자치구 방으로 보인다
     var wearNow = C.cosmeticLook(mainState());      // 외형은 본 게임의 것을 쓴다(원정 중에도 같은 옷)
-    return { look: wearNow, coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
+    return { danger: C.dangerOf(state), look: wearNow, coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
       safe: C.defensePower(state) >= C.nightStrength(state), boss: C.isBossWave(C.currentWave(state)), def: state.defenses, buildings: b,
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker', special: C.nightSpecials(state, state.day),
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },

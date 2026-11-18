@@ -1233,7 +1233,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.1.0</div>
+  <div class="boot-ver">7구역 알파 2.2.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1775,7 +1775,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.1.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.2.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1949,7 +1949,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.2.0";
 </script>
 <script>
 /*
@@ -1968,6 +1968,16 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 2.2.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '위험 단계의 풍경',
+      items: [
+        '위험 단계가 오를수록 위쪽 그림이 달라져요. 다섯 단계마다 한 번씩 바뀌어요.',
+        '1단계부터: 하늘이 녹빛으로 물들고 재가 날려요.',
+        '6단계부터: 달이 붉어지고 먼 건물 사이에서 불길과 연기가 올라요.',
+        '11단계부터: 불티가 날아오르고 좀비의 눈이 붉게 빛나요.',
+        '16단계부터: 붉은 보름달이 떠요.',
+        '달의 자리를 옮겼어요. 휴대폰에서는 그림 윗부분에 가려 달이 보이지 않았어요.',
+        '초승달의 모양을 다듬었어요.'
+      ] },
     { ver: '알파 2.1.0', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '위험 단계와 기록',
       items: [
         '위험 단계가 생겼어요. 한 번 끝까지 간 뒤에 철수 칸에서 다음 회차의 단계를 고를 수 있어요.',
@@ -6852,6 +6862,25 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
     return { top: SKY[4][1], bottom: SKY[4][2], dark: 1 };
   }
 
+  /**
+   * 위험 단계의 풍경(2.2.0): 단계가 오를수록 화면이 달라진다. 5단계마다 한 묶음(tier)씩 더해진다.
+   *   1묶음(1~5)   하늘이 녹빛으로 물들고 재가 날린다
+   *   2묶음(6~10)  달이 붉어지고 먼 건물 사이에서 불길과 연기가 오른다
+   *   3묶음(11~15) 불티가 날아오르고 좀비의 눈이 붉게 빛난다
+   *   4묶음(16~20) 붉은 보름달이 뜨고 하늘이 핏빛이 된다
+   * 숫자가 아니거나 0 이하면 0(평소 풍경), 20 을 넘으면 4.
+   */
+  function dangerTier(d) { return !(typeof d === 'number' && isFinite(d) && d > 0) ? 0 : Math.min(4, Math.ceil(d / 5)); }
+  /** 하늘 색을 위험 단계만큼 붉은 쪽으로 옮긴다. 단계가 0 이면 받은 값을 그대로 돌려준다(평소 화면은 한 점도 바뀌지 않는다). */
+  function dangerSky(sky, d) {
+    var tier = dangerTier(d);
+    if (!tier) return sky;
+    var k = 0.2 + 0.5 * Math.min(1, d / 20);
+    return { top: lerpColor(sky.top, lerpColor('#8a4a3a', '#2b0a10', sky.dark), k),
+             bottom: lerpColor(sky.bottom, lerpColor('#e0a070', '#5a1a1c', sky.dark), k),
+             dark: sky.dark, tier: tier };
+  }
+
   /* ---------- 모델 ---------- */
   function wallFor(W) { return W >= 300 ? WALL_WIDE : WALL_X; }
   /** 화면 폭 W 에 맞춰 잔해 더미 세 곳의 위치를 정한다(방벽 바깥, 화면 안). */
@@ -7427,14 +7456,25 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
       var star = seeded(77);
       ctx.fillStyle = '#e6e5db';
       for (i = 0; i < 30; i++) { var sx = Math.floor(star() * W), sy = Math.floor(star() * 40); if ((i + Math.floor(t * 2)) % 7) ctx.fillRect(sx, sy, 1, 1); }
-      ctx.fillRect(W - 62, 10, 6, 6);
-      ctx.fillStyle = sky.top; ctx.fillRect(W - 60, 9, 5, 5); // 초승달
+      // 달의 자리(2.2.0): 방벽 바로 위, 거점과 먼 건물 사이의 빈 하늘. 전에는 오른쪽 맨 위(W-62, 10)에 있어서
+      // 휴대폰에서는 그림의 윗부분이 잘려 달이 아예 보이지 않았고, 위험 단계 딱지와도 겹치는 자리였다.
+      var mx = model.wall - 8, my = 22;
+      if (sky.tier >= 4) {          // 붉은 보름달: 둘레에 붉은 빛이 번진다
+        glow(ctx, mx + 4, my + 4, 11, '216,69,47', 0.07);
+        ctx.fillStyle = '#d8452f'; ctx.fillRect(mx, my + 1, 8, 6); ctx.fillRect(mx + 1, my, 6, 8);
+        ctx.fillStyle = '#a32c22'; ctx.fillRect(mx + 2, my + 2, 2, 2); ctx.fillRect(mx + 5, my + 5, 1, 1);
+      } else {
+        if (sky.tier >= 2) ctx.fillStyle = '#d8452f';      // 붉은 초승달
+        // 초승달: 줄마다 [시작 칸, 너비]. 전에는 네모에서 네모를 파내 ㄴ자로 보였다
+        [[2, 3], [1, 2], [0, 2], [0, 2], [1, 2], [2, 3]].forEach(function (r, ri) { ctx.fillRect(mx + r[0], my + ri, r[1], 1); });
+      }
     } else {
       var k = Math.min(1, view.t / 0.78), sunX = Math.round(70 + (W - 110) * k), sunY = Math.round(8 + 44 * k * k);
       ctx.fillStyle = 'rgba(255,240,190,0.16)'; ctx.fillRect(sunX - 4, sunY - 4, 15, 15); ctx.fillRect(sunX - 2, sunY - 2, 11, 11); // 햇무리
       ctx.fillStyle = lerpColor('#fff6c9', '#f08a3c', sky.dark * 1.6); ctx.fillRect(sunX, sunY, 7, 7);
     }
     var cl = seeded(31), cloud = lerpColor('#f4f1e4', '#343a52', sky.dark);
+    if (sky.tier) cloud = lerpColor(cloud, lerpColor('#6b4a44', '#3a1418', sky.dark), 0.25 + sky.tier * 0.15);      // 위험 단계: 구름이 연기 빛으로 탁해진다
     ctx.globalAlpha = 0.8; ctx.fillStyle = cloud;
     for (i = 0; i < 5; i++) {
       var cw = 14 + Math.floor(cl() * 18), cy = 5 + Math.floor(cl() * 22);
@@ -7553,9 +7593,56 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
     }
   }
 
+  /**
+   * 위험 단계의 먼 불길(2묶음부터): 건물 사이에서 불빛이 일렁이고 연기 기둥이 바람에 기울어 오른다.
+   * 불의 수는 묶음마다 하나씩 는다. 자리는 구역마다 정해져 있어 매번 같은 곳에서 탄다.
+   */
+  function drawDangerFires(ctx, model, view, sky) {
+    if (!(sky.tier >= 2)) return;
+    var W = model.W, t = model.time, rnd = seeded(view.zone * 7 + 19), n = sky.tier - 1, i, j;
+    var span = Math.max(40, W - model.wall - 60);
+    for (i = 0; i < n; i++) {
+      var fx = Math.round(model.wall + 40 + (i + 0.2 + rnd() * 0.6) * span / n), fy = GROUND - 6 - Math.floor(rnd() * 8);
+      var flick = Math.floor(t * 7 + i * 3) % 3;
+      glow(ctx, fx, fy + 2, 9 + flick, '240,120,40', 0.10 + 0.05 * sky.dark, true);
+      ctx.fillStyle = '#f08a3c'; ctx.fillRect(fx - 2, fy - 1 - flick, 4, 3 + flick);
+      ctx.fillStyle = '#ffd36a'; ctx.fillRect(fx - 1, fy - (flick ? 1 : 0), 2, 2);
+      for (j = 0; j < 9; j++) {      // 연기: 위로 갈수록 넓고 옅다
+        var sy = fy - 5 - j * 4, lean = Math.round(j * j * 0.22 + Math.sin(t * 0.8 + j * 0.7 + i) * 1.5);
+        if (sy < 2) break;
+        ctx.fillStyle = 'rgba(' + (sky.dark > 0.5 ? '40,26,30' : '70,58,56') + ',' + (0.5 - j * 0.045).toFixed(3) + ')';
+        ctx.fillRect(fx - 1 - Math.floor(j / 2) + lean, sy, 3 + j, 4);
+      }
+    }
+  }
+  /**
+   * 위험 단계의 재와 불티: 재는 1묶음부터 비스듬히 내리고(묶음이 오를수록 많다), 불티는 3묶음부터 아래에서 위로 오른다.
+   * 날씨처럼 상태를 두지 않고 시간에서 자리를 계산한다. 흔들림을 끈 설정(still)이어도 그리되, 그때는 양을 반으로 줄인다.
+   */
+  function drawDangerAir(ctx, model, view, sky) {
+    if (!sky.tier) return;
+    var W = model.W, t = model.time, rnd = seeded(23), i, less = view.still ? 0.5 : 1;
+    var ash = Math.floor(W / 14 * sky.tier * less);
+    ctx.fillStyle = sky.dark > 0.5 ? 'rgba(150,140,140,0.55)' : 'rgba(70,64,60,0.5)';
+    for (i = 0; i < ash; i++) {
+      var ax = (rnd() * W + t * (5 + (i % 3) * 2) + Math.sin(t * 0.9 + i) * 2 + W) % W, ay = (rnd() * H + t * (6 + (i % 4))) % (GROUND + 4);
+      ctx.fillRect(Math.round(ax), Math.round(ay), 1, 1);
+    }
+    if (sky.tier >= 3) {
+      var emb = Math.floor(W / 22 * (sky.tier - 2) * less);
+      for (i = 0; i < emb; i++) {
+        var life = (rnd() + t * (0.10 + (i % 5) * 0.02)) % 1;      // 0 땅 ~ 1 하늘: 오를수록 사그라든다
+        var ex = (rnd() * W + life * 26 + Math.sin(t * 2 + i) * 2) % W, ey = GROUND + 4 - life * (GROUND - 6);
+        ctx.fillStyle = 'rgba(' + (i % 3 ? '255,150,60' : '255,210,110') + ',' + (0.9 * (1 - life)).toFixed(3) + ')';
+        ctx.fillRect(Math.round(ex), Math.round(ey), 1, 1);
+      }
+    }
+  }
+
   function drawBackdrop(ctx, model, view, sky) {
     drawSky(ctx, model, view, sky);
     drawSkyline(ctx, model, view, sky);
+    drawDangerFires(ctx, model, view, sky);
     drawGround(ctx, model, view, sky);
     drawProps(ctx, model, view, sky);
   }
@@ -8104,7 +8191,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
 
   function draw(ctx, model, view) {
     if (model.move && !model.move.turned && view.zone !== model.move.from) view = Object.assign({}, view, { zone: model.move.from });      // 떠나는 동안은 떠나는 구역의 배경
-    var sky = skyAt(view.t), h = model.hero, t = model.time, i;
+    var sky = dangerSky(skyAt(view.t), view.danger), h = model.hero, t = model.time, i;      // 위험 단계로 하는 회차는 하늘부터 달라진다
     drawBackdrop(ctx, model, view, sky);
     // 잔해 더미
     model.piles.forEach(function (px) {
@@ -8125,6 +8212,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
       var look = kind.look ? Object.assign({}, ZOMBIE_LOOKS[z.look || 0], kind.look) : ZOMBIE_LOOKS[z.look || 0];
       // 종류마다 그림이 다르다. 빠른 것은 다리도 빨리 움직인다
       if (z.pal) look = Object.assign({}, look, z.pal);
+      if (sky.tier >= 3) look = Object.assign({}, look, { x: Math.floor(t * 4 + z.phase) % 5 ? '#ff3b2b' : '#ffb09a' });      // 위험 11단계부터: 눈이 붉게 빛난다(가끔 번뜩인다)
       var frames = zombieFrames(z.big ? 'walker' : z.type), pace = z.type === 'runner' ? 7 : z.type === 'brute' ? 2 : 3;
       var frame = frames[Math.floor(t * pace * kind.speed + z.phase) % 2], tall = frame.length;
       // 방벽 앞에 선 맨 앞줄은, 못 막는 밤이면 방벽을 두드린다(앞뒤로 흔들린다)
@@ -8163,6 +8251,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
     model.particles.forEach(function (p) { ctx.fillStyle = p.color; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); });
     drawForeground(ctx, model, view, sky);
     drawWeather(ctx, model, view);
+    drawDangerAir(ctx, model, view, sky);
     if (model.flash > 0) { ctx.globalAlpha = Math.min(0.6, model.flash * 1.6); ctx.fillStyle = model.flashColor; ctx.fillRect(0, 0, model.W, H); ctx.globalAlpha = 1; }
   }
 
@@ -8208,7 +8297,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
   }
 
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
-           lerpColor: lerpColor, skyAt: skyAt, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
+           lerpColor: lerpColor, skyAt: skyAt, dangerTier: dangerTier, dangerSky: dangerSky, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            paintPet: paintPet, petRows: petRows, PET_H: PET_H,
            drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, paintLara: paintLara, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
@@ -11242,7 +11331,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "2.1.0";
     var b = { scouts: state.buildings.scouts, garden: state.buildings.garden, purifier: state.buildings.purifier, workshop: state.buildings.workshop,
       port: state.stalls, district: state.zone >= 1 ? state.stalls : 0 };   // 좌판은 하역장·자치구 방으로 보인다
     var wearNow = C.cosmeticLook(mainState());      // 외형은 본 게임의 것을 쓴다(원정 중에도 같은 옷)
-    return { look: wearNow, coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
+    return { danger: C.dangerOf(state), look: wearNow, coat: wearNow.coat, flag: wearNow.flag, t: state.dayClock / C.DAY_SECONDS, battle: C.dayPhase(state).phase === 'battle', day: state.day, zone: state.zone,
       safe: C.defensePower(state) >= C.nightStrength(state), boss: C.isBossWave(C.currentWave(state)), def: state.defenses, buildings: b,
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker', special: C.nightSpecials(state, state.day),
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },

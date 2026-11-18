@@ -674,3 +674,31 @@ test('1.6.0: 구역 이동 연출 — 라라가 나갔다가 반대쪽에서 들
   const d = S.create(256); S.travel(d, 'x', 0);
   assert.deepEqual([d.move.from, d.move.dir], [0, 1], '잘못된 값은 기본값으로');
 });
+
+test('위험 단계의 풍경: 5단계마다 한 묶음씩 오르고, 0단계의 하늘은 그대로다', () => {
+  assert.deepEqual([0, 1, 5, 6, 10, 11, 15, 16, 20, 99].map(S.dangerTier), [0, 1, 1, 2, 2, 3, 3, 4, 4, 4]);
+  for (const bad of [undefined, null, NaN, -3, '7', Infinity]) assert.equal(S.dangerTier(bad), 0, String(bad));
+  const night = S.skyAt(0.95), noon = S.skyAt(0.2);
+  assert.equal(S.dangerSky(night, 0), night, '평소 회차는 받은 값을 그대로 돌려준다');
+  assert.equal(S.dangerSky(noon, undefined), noon);
+  const red = (hex) => parseInt(hex.slice(1, 3), 16) - parseInt(hex.slice(5, 7), 16);      // 붉은 정도: 빨강 − 파랑
+  let prev = red(night.top);
+  for (const d of [1, 5, 10, 15, 20]) {
+    const s = S.dangerSky(night, d);
+    assert.ok(red(s.top) > prev, '단계가 오를수록 밤하늘이 더 붉다: ' + d); prev = red(s.top);
+    assert.equal(s.dark, night.dark, '어두운 정도는 바꾸지 않는다');
+    assert.equal(s.tier, S.dangerTier(d));
+    assert.match(S.dangerSky(noon, d).bottom, /^#[0-9a-f]{6}$/);
+  }
+});
+
+test('위험 단계의 풍경: 어느 단계·구역·시각·너비에서도 오류 없이 그린다', () => {
+  const calls = [];
+  const ctx = new Proxy({}, { get: (o, k) => (k in o ? o[k] : () => { calls.push(k); }), set: (o, k, v) => { o[k] = v; return true; } });
+  for (const W of [182, 320]) for (const zone of [0, 3, 6]) for (const d of [0, 3, 8, 13, 20]) for (const t of [0.2, 0.7, 0.95]) for (const still of [false, true]) {
+    const m = S.create(W); m.time = 12.3;
+    m.zombies.push({ x: W - 20, stop: 100, type: 'walker', phase: 0.3, look: 0 });
+    assert.doesNotThrow(() => S.draw(ctx, m, { t, day: 5, zone, danger: d, still, def: {}, buildings: {}, research: {}, upgrades: {}, gear: {}, horde: 'walker', special: [] }), [W, zone, d, t].join('/'));
+  }
+  assert.ok(calls.includes('fillRect'));
+});
