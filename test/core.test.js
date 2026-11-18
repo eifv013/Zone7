@@ -2817,3 +2817,35 @@ test('1.6.3: 기계를 다시 맞추고 남는 값은 물자로 돌려받는다.
   assert.ok(Math.abs(C.machineSpent(s) + refund - spent) <= spent * 1e-9, '기계 값 + 돌려받은 물자 = 쓴 물자');
   const few = inFactory(); few.machines = { sorter: 1, press: 0, assembler: 0 }; assert.equal(C.rebalanceRefund(few), 0);
 });
+
+test('1.6.5 도전(규칙만, 화면은 아직 없음): 고르기, 조건, 성공과 실패, 훈장', () => {
+  assert.equal(C.CHALLENGES.length, 8);
+  const s = C.createState(0);
+  assert.equal(C.setNextChallenge(s, 'frugal').reason, 'locked', '목표 구역에 닿아 본 적이 없으면 고를 수 없다');
+  assert.equal(C.setNextChallenge(s, 'nope').reason, 'unknown');
+  s.bestZone = 5;
+  assert.ok(C.setNextChallenge(s, 'frugal').ok); assert.equal(C.setNextChallenge(s, 'oneshot').reason, 'locked', '끝까지 가는 도전은 엔딩을 본 뒤');
+  // 철수하면 골라 둔 도전으로 시작한다
+  s.runEarned = 1e30;
+  const r = C.retreat(s, 0, () => 0.5); assert.ok(r.ok);
+  const n = r.state; assert.equal(n.challenge.id, 'frugal'); assert.equal(n.nextChallenge, '');
+  // 맨몸: 개조를 살 수 없다
+  n.supplies = 1e12; assert.equal(C.buyUpgrade(n, C.UPGRADES[0].id).reason, 'challenge');
+  // 성공: 3구역에 닿으면 훈장과 간식, 그 뒤로는 조건이 풀린다
+  n.zone = 2; const ev = []; const treats = n.treats; C.checkChallenge(n, ev);
+  assert.equal(ev[0].type, 'challenge-done'); assert.equal(ev[0].first, true); assert.ok(n.treats > treats);
+  assert.equal(C.medalCount(n), 1); assert.equal(C.medalMult(n), 1 + C.MEDAL_BONUS); assert.equal(C.activeChallenge(n), null);
+  assert.notEqual(C.buyUpgrade(n, C.UPGRADES[0].id).reason, 'challenge');
+  // 훈장은 철수해도, 저장을 거쳐도 남는다
+  const back = C.deserialize(C.serialize(n), 0); assert.equal(C.medalCount(back), 1);
+  // 외벽: 방벽은 한 종류만
+  const w = C.createState(0); w.challenge = { id: 'onewall', failed: false, done: false }; w.supplies = 1e9;
+  assert.ok(C.buyDefense(w, 'wire', 1).ok); assert.ok(C.buyDefense(w, 'wire', 1).ok); assert.equal(C.buyDefense(w, 'tower', 1).reason, 'challenge');
+  // 거센 무리: 무리 3배. 반쪽 보급: 생산 절반
+  const h = C.createState(0), base = C.nightStrength(h); h.challenge = { id: 'horde', failed: false, done: false };
+  assert.ok(Math.abs(C.nightStrength(h) - base * C.HORDE_MULT) <= 1);
+  const l = C.createState(0), g = C.globalMult(l); l.challenge = { id: 'lean', failed: false, done: false }; assert.equal(C.globalMult(l), g * 0.5);
+  // 질주: 시간을 넘기면 실패
+  const q = C.createState(0); q.challenge = { id: 'sprint', failed: false, done: false }; q.runSeconds = C.SPRINT_SECONDS + 1;
+  const ev2 = []; C.checkChallenge(q, ev2); assert.equal(ev2[0].type, 'challenge-failed'); assert.equal(C.activeChallenge(q), null);
+});
