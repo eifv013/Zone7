@@ -89,7 +89,9 @@ test('배경 음악: 칸마다 내는 음은 들을 수 있는 높이이고 작�
         for (const n of notes) {
           assert.ok(n.g > 0 && n.g <= 0.09, mood + ': 효과음보다 작다');
           assert.ok(n.d > 0.02 && n.d < 6, mood + ': 길이');
-          if (!n.noise) assert.ok(n.f >= 60 && n.f <= Sound.SOFT_CUT, mood + ': 높이 ' + n.f);
+          if (!n.noise) assert.ok(n.f >= 60 && n.f <= 800, mood + ': 높이 ' + n.f + ' (800Hz 를 넘는 음은 귀를 찌른다)');
+          if (n.noise) assert.ok(n.cut <= 900 && n.g <= 0.008, mood + ': 잡음 박자는 낮고 작게');
+          assert.ok(n.type !== 'square' && n.type !== 'sawtooth', '거친 파형은 쓰지 않는다');
         }
         inBar += notes.length;
       }
@@ -109,4 +111,8 @@ test('배경 음악: 모르는 곡과 범위를 벗어난 마디·칸, 잘못된
   assert.equal(Sound.setMusicVolume(250), 100); assert.equal(Sound.setMusicVolume(-5), 0); assert.equal(Sound.setMusicVolume('abc'), Sound.MUSIC_VOLUME_DEFAULT); assert.equal(Sound.setMusicVolume(null), Sound.MUSIC_VOLUME_DEFAULT);
   assert.equal(Sound.setMusicEnabled('yes'), false); assert.equal(Sound.setMusicEnabled(true), true);
   assert.equal(Sound.pump(), 0, '깨우기 전에는 아무것도 예약하지 않는다');
+});
+
+test('배경 음악: 효과음보다 낮게 거르고, 음의 머리를 천천히 올린다', () => {
+  assert.ok(Sound.MUSIC_CUT < Sound.SOFT_CUT); assert.ok(Sound.MUSIC_ATTACK >= 0.05);
 });

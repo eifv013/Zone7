@@ -173,7 +173,14 @@
       lead: [[[0, 75, 2], [2, 76, 10]], [[8, 72, 2], [10, 71, 6]], [[0, 77, 2], [2, 76, 6], [12, 73, 4]], [[4, 69, 12]],
              [[0, 75, 2], [2, 76, 6], [8, 79, 8]], [[0, 80, 4], [4, 79, 12]], [[8, 77, 2], [10, 76, 6]], [[0, 69, 16]]] }
   };
-  var MUSIC_BARS = 8, MUSIC_STEPS = 16, MUSIC_GAIN = 2.4, MUSIC_VOLUME_DEFAULT = 40;
+  /*
+   * 2.5.1 날카로운 소리를 다듬었다:
+   *   - 음악 전체를 MUSIC_CUT(1500Hz) 아래로 거른다(효과음은 2400Hz). 세모 파형의 쇳소리와 잡음 박자의 '칙' 소리가 여기서 깎인다
+   *   - 음이 올라오는 시간을 0.03초 → MUSIC_ATTACK(0.07초)로 늘렸다. 음의 머리가 '딱' 하고 튀지 않는다
+   *   - 밤과 변이체 곡의 가락을 한 옥타브 내렸다(880~1046Hz 의 사인파가 귀를 찔렀다). 낮의 가락은 세모에서 사인 파형으로
+   *   - 변이체 곡의 부딪히는 화음을 한 옥타브 내리고 줄였다. 잡음 박자는 더 낮고 작게
+   */
+  var MUSIC_BARS = 8, MUSIC_STEPS = 16, MUSIC_GAIN = 2.4, MUSIC_VOLUME_DEFAULT = 40, MUSIC_CUT = 1500, MUSIC_ATTACK = 0.07;
   function musicDef(mood) { return Object.prototype.hasOwnProperty.call(MUSIC, mood) ? MUSIC[mood] : MUSIC.day; }
   /** 한 칸의 길이(초). */
   function musicStepSeconds(mood) { return 60 / musicDef(mood).bpm / 4; }
@@ -189,19 +196,19 @@
     if (kind === 'day') {
       if (st === 0 || st === 8) add(chord[0] - 12, 5, 'triangle', 0.050);                     // 베이스: 근음
       if (st === 6 || st === 14) add(chord[2] - 12, 2, 'triangle', 0.036);                    // 베이스: 5음
-      if (st % 2 === 0) add(chord[[0, 1, 2, 1, 0, 2, 1, 2][st / 2]] + 12, 2, 'sine', 0.016);  // 반주: 화음을 한 음씩
-      if (st === 4 || st === 12) out.push({ noise: true, cut: 2200, d: 0.05, g: 0.010, f: 0 });      // 여린 박자
+      if (st % 2 === 0) add(chord[[0, 1, 2, 1, 0, 2, 1, 2][st / 2]] + 12, 2, 'sine', 0.012);  // 반주: 화음을 한 음씩
+      if (st === 4 || st === 12) out.push({ noise: true, cut: 900, d: 0.07, g: 0.006, f: 0 });      // 여린 박자
     } else if (kind === 'night') {
       if (st === 0 || st === 3) add(chord[0] - 12, 3, 'triangle', 0.075);                     // 심장 소리: 쿵, 쿵(휴대폰 스피커로도 들리게 한 옥타브만 내리고 세모 파형을 쓴다)
       if (st === 0) { add(chord[0], 16, 'sine', 0.014); add(chord[2], 16, 'sine', 0.011); }   // 길게 끄는 음
-      if (st === 8 || (b % 2 === 1 && st === 12)) add(chord[1] + 12, 4, 'sine', 0.012);
-      if (st === 10) out.push({ noise: true, cut: 900, d: 0.12, g: 0.008, f: 0 });
+      if (st === 8 || (b % 2 === 1 && st === 12)) add(chord[1], 4, 'sine', 0.012);
+      if (st === 10) out.push({ noise: true, cut: 500, d: 0.16, g: 0.006, f: 0 });
     } else {
       if (st === 0 || st === 2 || st === 8) add(chord[0], 3, 'triangle', 0.075);              // 낮게 깔리는 박
-      if (st === 0) { add(chord[0] + 12, 16, 'triangle', 0.014); add(chord[1] + 12, 16, 'sine', 0.012); add(chord[2] + 13, 16, 'sine', 0.007); }      // 반음이 부딪히는 화음
-      if (st % 4 === 2) out.push({ noise: true, cut: 500, d: 0.2, g: 0.012, f: 0 });
+      if (st === 0) { add(chord[0] + 12, 16, 'sine', 0.014); add(chord[1] + 12, 16, 'sine', 0.010); add(chord[2] + 1, 16, 'sine', 0.005); }      // 반음이 부딪히는 화음
+      if (st % 4 === 2) out.push({ noise: true, cut: 350, d: 0.24, g: 0.008, f: 0 });
     }
-    def.lead[b].forEach(function (n) { if (n[0] === st) add(n[1], n[2], kind === 'day' ? 'triangle' : 'sine', kind === 'day' ? 0.030 : 0.020); });
+    def.lead[b].forEach(function (n) { if (n[0] === st) add(n[1] - (kind === 'day' ? 0 : 12), n[2], 'sine', kind === 'day' ? 0.030 : 0.022); });      // 밤과 변이체의 가락은 한 옥타브 낮게
     return out;
   }
 
@@ -222,8 +229,8 @@
   function musicNote(n, start) {
     var gain = ctx.createGain(), peak = Math.max(0.0002, Math.min(0.5, n.g * MUSIC_GAIN)), src;
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(0.03, n.d / 3));
-    gain.gain.setValueAtTime(peak, start + n.d * 0.55);
+    gain.gain.exponentialRampToValueAtTime(peak, start + Math.min(MUSIC_ATTACK, n.d / 3));
+    gain.gain.setValueAtTime(peak, start + n.d * 0.5);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + n.d);
     if (n.noise) {
       var len = Math.max(1, Math.floor(ctx.sampleRate * n.d)), buf = ctx.createBuffer(1, len, ctx.sampleRate), data = buf.getChannelData(0);
@@ -247,7 +254,7 @@
       if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
       if (!musicBus) {
         musicBus = ctx.createGain(); musicBus.gain.value = musicVolume / MUSIC_VOLUME_DEFAULT;
-        var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = SOFT_CUT;
+        var soft = ctx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = MUSIC_CUT;
         musicBus.connect(soft); soft.connect(ctx.destination);
       }
       var now = ctx.currentTime;
@@ -270,5 +277,5 @@
   }
 
   return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, VOLUME_DEFAULT: VOLUME_DEFAULT, setVolume: setVolume, getVolume: getVolume, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled,
-           MUSIC: MUSIC, MUSIC_BARS: MUSIC_BARS, MUSIC_STEPS: MUSIC_STEPS, MUSIC_VOLUME_DEFAULT: MUSIC_VOLUME_DEFAULT, musicStep: musicStep, musicStepSeconds: musicStepSeconds, setMusicVolume: setMusicVolume, getMusicVolume: getMusicVolume, setMusicEnabled: setMusicEnabled, isMusicEnabled: isMusicEnabled, setMood: setMood, getMood: getMood, startMusic: startMusic, pump: pump, duration: duration, play: play };
+           MUSIC: MUSIC, MUSIC_BARS: MUSIC_BARS, MUSIC_STEPS: MUSIC_STEPS, MUSIC_VOLUME_DEFAULT: MUSIC_VOLUME_DEFAULT, MUSIC_CUT: MUSIC_CUT, MUSIC_ATTACK: MUSIC_ATTACK, musicStep: musicStep, musicStepSeconds: musicStepSeconds, setMusicVolume: setMusicVolume, getMusicVolume: getMusicVolume, setMusicEnabled: setMusicEnabled, isMusicEnabled: isMusicEnabled, setMood: setMood, getMood: getMood, startMusic: startMusic, pump: pump, duration: duration, play: play };
 });
