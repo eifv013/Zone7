@@ -1569,29 +1569,32 @@
     if (c.slot === 'pet') { if (window.Scene && window.Scene.paintPet) window.Scene.paintPet(ctx, 4, 16, 2, false, petLook(), c.look, 0); return; }      // 친구 옷: 데리고 있는 친구(없으면 누렁이)에게 입혀 보인다
     var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
     if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
-    if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 1.2);
+    if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 0.65, look.fx === 'glow' ? 1 : 0);
   }
   function drawLookScene(cv, look, frame) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     var W = cv.width, H = cv.height, G = H - 6, flag = look.flag || '#f0b400', t = frame * 0.13, S0 = window.Scene;
     function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+    // 밤에 빛나는 것(야광 효과, 야광 깃발)을 보고 있으면 밤 장면으로 그린다: 낮에는 빛이 잘 안 보인다
+    var night = look.fx === 'glow' || flag === 'glow';
     // 하늘과 먼 건물
-    r('#a9c4c2', 0, 0, W, 20); r('#c4cfb8', 0, 20, W, 16); r('#d8d0a8', 0, 36, W, G - 36);
-    [[92, 14, 14], [110, 6, 11], [126, 20, 16], [146, 12, 12]].forEach(function (b) { r('#8fa5a2', b[0], G - 46 + b[1], b[2], 46 - b[1]); r('#7d9491', b[0] + 2, G - 42 + b[1], 3, 3); });
+    if (night) { r('#141a30', 0, 0, W, 24); r('#1c2440', 0, 24, W, G - 24); [[20, 6], [58, 12], [88, 4], [120, 9], [150, 5], [40, 20], [104, 18]].forEach(function (s) { r('#e6e5db', s[0], s[1], 1, 1); }); r('#e6e5db', 140, 10, 5, 5); r('#141a30', 142, 10, 3, 3); }
+    else { r('#a9c4c2', 0, 0, W, 20); r('#c4cfb8', 0, 20, W, 16); r('#d8d0a8', 0, 36, W, G - 36); }
+    [[92, 14, 14], [110, 6, 11], [126, 20, 16], [146, 12, 12]].forEach(function (b) { r(night ? '#232b45' : '#8fa5a2', b[0], G - 46 + b[1], b[2], 46 - b[1]); r(night ? '#2d3757' : '#7d9491', b[0] + 2, G - 42 + b[1], 3, 3); });
     // 땅과 길
-    r('#6f6a55', 0, G, W, H - G); r('#5d5947', 0, G, W, 1); for (var d = 6; d < W; d += 18) r('#8f8a70', d, G + 3, 8, 1);
+    r(night ? '#2a2a24' : '#6f6a55', 0, G, W, H - G); r(night ? '#1f1f1a' : '#5d5947', 0, G, W, 1); for (var d = 6; d < W; d += 18) r(night ? '#45443a' : '#8f8a70', d, G + 3, 8, 1);
     // 거점: 콘크리트 본관, 창, 옥상 난간, 깃대와 깃발
-    r('#8f8a78', 6, G - 34, 48, 34); r('#7a7566', 6, G - 34, 48, 3); r('#6b6759', 51, G - 34, 3, 34);
+    r(night ? '#3f3d38' : '#8f8a78', 6, G - 34, 48, 34); r(night ? '#35332f' : '#7a7566', 6, G - 34, 48, 3); r(night ? '#2c2a27' : '#6b6759', 51, G - 34, 3, 34);
     for (var wx = 0; wx < 3; wx++) { r(wx === 1 ? '#ffe9a0' : '#3f4a50', 12 + wx * 13, G - 27, 8, 7); r('#3f4a50', 12 + wx * 13, G - 15, 8, 6); }
     r('#4a4035', 26, G - 11, 9, 11); for (var rl = 0; rl < 9; rl++) r('#3c3a34', 6 + rl * 6, G - 38, 1, 4); r('#3c3a34', 6, G - 38, 48, 1);
     r('#cfcebf', 14, G - 58, 2, 24);
-    if (S0 && S0.drawFlag) S0.drawFlag(ctx, flag, 16, G - 58, 3, 0, t);
+    if (S0 && S0.drawFlag) S0.drawFlag(ctx, flag, 16, G - 58, 3, night ? 0.9 : 0, t);
     // 모래주머니
-    r('#a39a78', 130, G - 6, 11, 6); r('#8f8767', 141, G - 6, 11, 6); r('#a39a78', 136, G - 12, 11, 6);
+    r(night ? '#4a4638' : '#a39a78', 130, G - 6, 11, 6); r(night ? '#403d31' : '#8f8767', 141, G - 6, 11, 6); r(night ? '#4a4638' : '#a39a78', 136, G - 12, 11, 6);
     // 라라: 3배 크기로, 제자리걸음
     var step = Math.floor(t * 4) % 2, S = window.Scene;
     r('rgba(0,0,0,.25)', 78, G, 30, 2);
-    if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t);
+    if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t, night ? 1 : 0);
     if (S && S.paintPet) S.paintPet(ctx, 114, G - S.PET_H * 3, 3, false, petLook(), look.pet || 'none', t);      // 친구는 라라 곁에
   }
   function clickCosmetic(c) {

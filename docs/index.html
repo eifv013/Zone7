@@ -1223,7 +1223,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.10.3</div>
+  <div class="boot-ver">7구역 알파 1.10.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1764,7 +1764,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.10.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.10.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1938,7 +1938,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.4";
 </script>
 <script>
 /*
@@ -1957,6 +1957,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 1.10.4', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '야광 효과 다시 그림',
+      items: [
+        '야광 효과를 다시 그렸어요. 몸의 테두리를 따라 빛나고, 우비에 야광 띠가 두 줄 생겨요.',
+        '낮에는 옅게, 밤에는 진하게 빛나요.',
+        '옷장에서 야광을 볼 때는 미리 보기가 밤 장면으로 바뀌어요.',
+        '걷는 그림을 고쳤어요. 라라, 생존자, 원정대원, 좀비가 걸을 때 두 발이 양옆으로 벌어지지 않아요.'
+      ] },
     { ver: '알파 1.10.3', date: '2026-11-18', at: '2026-11-18 23:59:59', title: '동물 친구의 옷',
       items: [
         '동물 친구를 새로 그렸어요. 전보다 크고 눈과 코, 귀, 꼬리가 보여요.',
@@ -7120,11 +7127,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
               g: '#7da35a', x: '#1b2414', c: '#6f6a60', d: '#3c3a34', e: '#c0392b' };
   // 주인공은 노란 우비의 모자(y)를 쓰고 있다. 원정대원은 같은 몸에 모자 대신 머리카락을 그린다(SQUAD_TOP)
   var HERO_TOP = ['..yyy...', '.yyyyy..', '.ysssy..', '.ysss...', 'kjjjj...', 'kjjjjs..', 'kjjjj...', '.jjjj...'];
-  var HERO_LEGS = [['.pp.pp..', '.pp.pp..', '.bb.bb..'], ['..ppp...', '.pp.pp..', 'bb...bb.']];
+  var HERO_LEGS = [['.pp.pp..', '.pp.pp..', '.bb.bb..'], ['.pp.pp..', '.pp.bb..', '.bb.....']];      // 둘째 장: 한 발을 든다(전에는 두 발이 양옆으로 벌어졌다)
   var HERO_SEARCH = ['........', '........', '..yyy...', '.yyyyy..', 'kjysss..', 'kjjjjss.', 'kjjjj...', '.jjjjj..', '.pp.pp..', '.bb.bb..', '........'];
   var ZOMBIE = [
     ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.ccccgg.', '.cccc...', '.cccc...', '.cccc...', '.dd.dd..', '.dd.dd..', '.dd.dd..'],
-    ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.cccc...', '.ccccgg.', '.cccc...', '.cccc...', '..ddd...', '.dd.dd..', 'dd...dd.']
+    ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.cccc...', '.ccccgg.', '.cccc...', '.cccc...', '.dd.dd..', '.dd..dd.', '.dd..dd.']      // 한 다리를 앞으로 끈다(전에는 두 발이 양옆으로 벌어졌다)
   ];
   // 머리가 긴 것: 머리카락(h)이 얼굴 옆으로 내려온다
   var ZOMBIE_HAIR = ZOMBIE.map(function (f) { return ['..hhh...', '.hhhhh..', '.hxgxh..', '.hggg...'].concat(f.slice(4)); });
@@ -7175,7 +7182,9 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
   var LARA_BODY = ['..............', '..............', '..............',
     '.....yyyyy....', '....yyyyyyy...', '....yhhhhhyY..', '...yysssssyY..', '...yysesesyY..', '....yssmssyY..',
     '.....jwwwjJ...', '....kjjjjjjJ..', '....kjwjjjJj..', '....jkjjjjJs..', '....jjjjjjJ...', '....JJJJJJJ...'];
-  var LARA_LEGS = [['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'], ['......ppp.....', '.....pp.pp....', '...bbb...bbb..']];
+  // 다리(1.10.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
+  var LARA_STAND = ['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'];
+  var LARA_LEGS = [['.....pp.pp....', '.....pp.bbb...', '....bbb.......'], ['.....pp.pp....', '....bbb.pp....', '........bbb...']];
   var LARA_HOODS = {
     none:   {},
     cat:    { 1: '....y.....y...', 2: '....yi...iy...' },
@@ -7205,7 +7214,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
     for (k in hood) if (Object.prototype.hasOwnProperty.call(hood, k)) rows[k] = hood[k];
     for (k in bag.rows) if (Object.prototype.hasOwnProperty.call(bag.rows, k)) rows[k] = bag.rows[k] + rows[k].slice(4);
     if (pose === 'search') return ['..............', '..............'].concat(rows).concat(['....bbb.bbb...']);      // 웅크린다: 몸을 두 칸 내리고 다리를 접는다
-    return rows.concat(LARA_LEGS[pose === 'walk' && step ? 1 : 0]);
+    return rows.concat(pose === 'walk' ? LARA_LEGS[step ? 1 : 0] : LARA_STAND);
   }
   /** 라라를 그린다. flip 이면 왼쪽을 본다. scale 은 한 칸의 크기. */
   function paintLara(ctx, x, y, scale, flip, look, pose, step) {
@@ -7214,12 +7223,13 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
     var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
     var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#e2b48c', e: '#2b241c', m: '#c98a6a', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#30343c', b: '#17180f', c: bag.c, C: bag.C };
-    var rows = laraRows(look, pose, step);
+    var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
       if (ch === '.') continue;
       var col = pal[ch];
       if (pat && pat !== 'none' && (ch === 'j' || (pat === 'camo' && ch === 'y')) && laraPattern(pat, c, r)) col = patCol;
+      if (look.fx === 'glow' && (ch === 'j' || ch === 'J') && (r === glowBand || r === glowBand + 3)) col = '#d8ff7a';      // 야광: 가슴과 옷자락의 야광 띠(낮에도 보인다)
       ctx.fillStyle = col;
       ctx.fillRect(Math.round(x + (flip ? LARA_W - 1 - c : c) * scale), Math.round(y + r * scale), scale, scale);
     }
@@ -7229,13 +7239,20 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
    * 전설 효과(look.fx)를 라라 둘레에 그린다. t 는 흐른 시간(초).
    *   glow 둘레가 은은하게 깜박인다 · sparkle 뒤로 반짝이 가루가 떨어진다 · star 머리 위에 작은 별이 떠 있다
    */
-  function paintLaraFx(ctx, x, y, scale, flip, look, t) {
+  function paintLaraFx(ctx, x, y, scale, flip, look, t, pose, step, dark) {
     var fx = look && look.fx; if (!ctx || !fx || fx === 'none') return;
     scale = scale || 1; t = t || 0;
     function px(col, cx, cy, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? LARA_W - cx - (w || 1) : cx) * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
     if (fx === 'glow') {
-      var a = 0.28 + 0.2 * Math.sin(t * 3), col = 'rgba(198, 255, 74, ' + a.toFixed(2) + ')';
-      px(col, 3, 3, 9, 1); px(col, 2, 4, 1, 11); px(col, 12, 4, 1, 11); px(col, 3, 15, 9, 1); px('rgba(198, 255, 74, ' + (a * 0.5).toFixed(2) + ')', 1, 6, 1, 7); px('rgba(198, 255, 74, ' + (a * 0.5).toFixed(2) + ')', 13, 6, 1, 7);
+      // 야광(1.10.4): 몸의 테두리를 따라 한 칸 두께로 빛난다. 전에는 네모난 띠를 둘러서 몸과 어긋나 보였다.
+      //   낮에는 옅게, 밤(dark)에는 진하게. 숨 쉬듯 천천히 밝아졌다 어두워진다.
+      var rows = laraRows(look, pose === 'search' ? 'search' : pose, step), night = Math.max(0, Math.min(1, dark || 0));
+      var a = (0.3 + 0.5 * night) + 0.15 * Math.sin(t * 2.4), col = 'rgba(206, 255, 96, ' + Math.max(0.12, Math.min(0.95, a)).toFixed(2) + ')';
+      for (var r = 0; r < rows.length - 1; r++) for (var c = 0; c < LARA_W; c++) {      // 발(맨 아랫줄)은 땅에 닿으니 두르지 않는다
+        if (rows[r][c] !== '.') continue;
+        var touch = (c > 0 && rows[r][c - 1] !== '.') || (c < LARA_W - 1 && rows[r][c + 1] !== '.') || (r > 0 && rows[r - 1][c] !== '.') || (rows[r + 1] && rows[r + 1][c] !== '.');
+        if (touch) px(col, c, r, 1, 1);
+      }
     }
     if (fx === 'sparkle') for (var k = 0; k < 4; k++) { var ph = (t * 1.6 + k * 0.25) % 1; px(k % 2 ? '#ffffff' : '#ffe9a0', 1 - (k % 2), 6 + Math.floor(ph * 11), 1, 1); if (ph < 0.5) px('rgba(255, 233, 160, .5)', 3 - k % 3, 5 + Math.floor(ph * 9), 1, 1); }
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
@@ -7277,10 +7294,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
     return true;
   }
   /** 옷장의 그림: 그 자리에 서 있는 라라를 그린다(scene 밖에서 쓴다). */
-  function drawHero(ctx, x, y, scale, look, step, t) {
+  function drawHero(ctx, x, y, scale, look, step, t, dark) {
     if (!ctx) return false;
     paintLara(ctx, x, y, scale || 1, false, look, step === undefined ? 'stand' : 'walk', step);
-    paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0);
+    paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0, step === undefined ? 'stand' : 'walk', step, dark);
     return true;
   }
   /*
@@ -8055,7 +8072,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
       var walking = h.state === 'out' || h.state === 'back';
       paintLara(ctx, lx, ly, 1, lflip, look, walking ? 'walk' : 'stand', walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0);
     }
-    paintLaraFx(ctx, lx, ly + (h.state === 'search' ? 2 : 0), 1, lflip && h.state !== 'search', look, t);
+    var lwalk = h.state === 'out' || h.state === 'back';
+    paintLaraFx(ctx, lx, ly + (h.state === 'search' ? (Math.floor(t * 6) % 2) : 0), 1, lflip && h.state !== 'search', look, t, h.state === 'search' ? 'search' : lwalk ? 'walk' : 'stand', lwalk ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0, sky.dark);
     if (h.carrying) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(lx + 5, ly - 2, 6, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(lx + 5, ly - 1, 6, 1); }      // 든 상자: 머리 위
     drawHeroKit(ctx, model, view, hx);
     // 거점에 쌓인 상자(최근에 나른 만큼, 최대 6개). 건물이 서면 상자는 건물 1층 창고에 쌓인다(drawBaseBuilding)
@@ -9839,29 +9857,32 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "1.10.3";
     if (c.slot === 'pet') { if (window.Scene && window.Scene.paintPet) window.Scene.paintPet(ctx, 4, 16, 2, false, petLook(), c.look, 0); return; }      // 친구 옷: 데리고 있는 친구(없으면 누렁이)에게 입혀 보인다
     var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
     if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
-    if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 1.2);
+    if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 0.65, look.fx === 'glow' ? 1 : 0);
   }
   function drawLookScene(cv, look, frame) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     var W = cv.width, H = cv.height, G = H - 6, flag = look.flag || '#f0b400', t = frame * 0.13, S0 = window.Scene;
     function r(col, x, y, w, h) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+    // 밤에 빛나는 것(야광 효과, 야광 깃발)을 보고 있으면 밤 장면으로 그린다: 낮에는 빛이 잘 안 보인다
+    var night = look.fx === 'glow' || flag === 'glow';
     // 하늘과 먼 건물
-    r('#a9c4c2', 0, 0, W, 20); r('#c4cfb8', 0, 20, W, 16); r('#d8d0a8', 0, 36, W, G - 36);
-    [[92, 14, 14], [110, 6, 11], [126, 20, 16], [146, 12, 12]].forEach(function (b) { r('#8fa5a2', b[0], G - 46 + b[1], b[2], 46 - b[1]); r('#7d9491', b[0] + 2, G - 42 + b[1], 3, 3); });
+    if (night) { r('#141a30', 0, 0, W, 24); r('#1c2440', 0, 24, W, G - 24); [[20, 6], [58, 12], [88, 4], [120, 9], [150, 5], [40, 20], [104, 18]].forEach(function (s) { r('#e6e5db', s[0], s[1], 1, 1); }); r('#e6e5db', 140, 10, 5, 5); r('#141a30', 142, 10, 3, 3); }
+    else { r('#a9c4c2', 0, 0, W, 20); r('#c4cfb8', 0, 20, W, 16); r('#d8d0a8', 0, 36, W, G - 36); }
+    [[92, 14, 14], [110, 6, 11], [126, 20, 16], [146, 12, 12]].forEach(function (b) { r(night ? '#232b45' : '#8fa5a2', b[0], G - 46 + b[1], b[2], 46 - b[1]); r(night ? '#2d3757' : '#7d9491', b[0] + 2, G - 42 + b[1], 3, 3); });
     // 땅과 길
-    r('#6f6a55', 0, G, W, H - G); r('#5d5947', 0, G, W, 1); for (var d = 6; d < W; d += 18) r('#8f8a70', d, G + 3, 8, 1);
+    r(night ? '#2a2a24' : '#6f6a55', 0, G, W, H - G); r(night ? '#1f1f1a' : '#5d5947', 0, G, W, 1); for (var d = 6; d < W; d += 18) r(night ? '#45443a' : '#8f8a70', d, G + 3, 8, 1);
     // 거점: 콘크리트 본관, 창, 옥상 난간, 깃대와 깃발
-    r('#8f8a78', 6, G - 34, 48, 34); r('#7a7566', 6, G - 34, 48, 3); r('#6b6759', 51, G - 34, 3, 34);
+    r(night ? '#3f3d38' : '#8f8a78', 6, G - 34, 48, 34); r(night ? '#35332f' : '#7a7566', 6, G - 34, 48, 3); r(night ? '#2c2a27' : '#6b6759', 51, G - 34, 3, 34);
     for (var wx = 0; wx < 3; wx++) { r(wx === 1 ? '#ffe9a0' : '#3f4a50', 12 + wx * 13, G - 27, 8, 7); r('#3f4a50', 12 + wx * 13, G - 15, 8, 6); }
     r('#4a4035', 26, G - 11, 9, 11); for (var rl = 0; rl < 9; rl++) r('#3c3a34', 6 + rl * 6, G - 38, 1, 4); r('#3c3a34', 6, G - 38, 48, 1);
     r('#cfcebf', 14, G - 58, 2, 24);
-    if (S0 && S0.drawFlag) S0.drawFlag(ctx, flag, 16, G - 58, 3, 0, t);
+    if (S0 && S0.drawFlag) S0.drawFlag(ctx, flag, 16, G - 58, 3, night ? 0.9 : 0, t);
     // 모래주머니
-    r('#a39a78', 130, G - 6, 11, 6); r('#8f8767', 141, G - 6, 11, 6); r('#a39a78', 136, G - 12, 11, 6);
+    r(night ? '#4a4638' : '#a39a78', 130, G - 6, 11, 6); r(night ? '#403d31' : '#8f8767', 141, G - 6, 11, 6); r(night ? '#4a4638' : '#a39a78', 136, G - 12, 11, 6);
     // 라라: 3배 크기로, 제자리걸음
     var step = Math.floor(t * 4) % 2, S = window.Scene;
     r('rgba(0,0,0,.25)', 78, G, 30, 2);
-    if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t);
+    if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t, night ? 1 : 0);
     if (S && S.paintPet) S.paintPet(ctx, 114, G - S.PET_H * 3, 3, false, petLook(), look.pet || 'none', t);      // 친구는 라라 곁에
   }
   function clickCosmetic(c) {

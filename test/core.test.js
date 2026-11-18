@@ -3040,3 +3040,12 @@ test('1.10.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 개 10×8�
   const plain = calls('none');
   C.COSMETICS.filter(c => c.slot === 'pet' && !c.base).forEach(c => assert.ok(calls(c.look).length > plain.length, c.name));
 });
+
+test('1.10.4 걷는 그림: 두 발이 양옆으로 벌어지지 않는다(다리를 찢는 것처럼 보였다)', () => {
+  const S = require('../src/scene.js');
+  const feet = (rows) => { const last = rows[rows.length - 1], a = last.search(/[^.]/), b = last.length - 1 - last.split('').reverse().join('').search(/[^.]/); return b - a + 1; };
+  const stand = feet(S.laraRows({}, 'stand', 0));
+  [0, 1].forEach(st => assert.ok(feet(S.laraRows({}, 'walk', st)) <= stand, '라라 걸음 ' + st));
+  assert.notDeepEqual(S.laraRows({}, 'walk', 0), S.laraRows({}, 'walk', 1), '두 걸음은 서로 다르다');
+  ['walker', 'hair'].forEach(k => { const f = S.zombieFrames(k); assert.ok(feet(f[1]) <= feet(f[0]) + 1, k); });
+});

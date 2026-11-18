@@ -443,11 +443,11 @@
               g: '#7da35a', x: '#1b2414', c: '#6f6a60', d: '#3c3a34', e: '#c0392b' };
   // 주인공은 노란 우비의 모자(y)를 쓰고 있다. 원정대원은 같은 몸에 모자 대신 머리카락을 그린다(SQUAD_TOP)
   var HERO_TOP = ['..yyy...', '.yyyyy..', '.ysssy..', '.ysss...', 'kjjjj...', 'kjjjjs..', 'kjjjj...', '.jjjj...'];
-  var HERO_LEGS = [['.pp.pp..', '.pp.pp..', '.bb.bb..'], ['..ppp...', '.pp.pp..', 'bb...bb.']];
+  var HERO_LEGS = [['.pp.pp..', '.pp.pp..', '.bb.bb..'], ['.pp.pp..', '.pp.bb..', '.bb.....']];      // 둘째 장: 한 발을 든다(전에는 두 발이 양옆으로 벌어졌다)
   var HERO_SEARCH = ['........', '........', '..yyy...', '.yyyyy..', 'kjysss..', 'kjjjjss.', 'kjjjj...', '.jjjjj..', '.pp.pp..', '.bb.bb..', '........'];
   var ZOMBIE = [
     ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.ccccgg.', '.cccc...', '.cccc...', '.cccc...', '.dd.dd..', '.dd.dd..', '.dd.dd..'],
-    ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.cccc...', '.ccccgg.', '.cccc...', '.cccc...', '..ddd...', '.dd.dd..', 'dd...dd.']
+    ['..ggg...', '.ggggg..', '.gxgxg..', '..ggg...', '.cccc...', '.ccccgg.', '.cccc...', '.cccc...', '.dd.dd..', '.dd..dd.', '.dd..dd.']      // 한 다리를 앞으로 끈다(전에는 두 발이 양옆으로 벌어졌다)
   ];
   // 머리가 긴 것: 머리카락(h)이 얼굴 옆으로 내려온다
   var ZOMBIE_HAIR = ZOMBIE.map(function (f) { return ['..hhh...', '.hhhhh..', '.hxgxh..', '.hggg...'].concat(f.slice(4)); });
@@ -498,7 +498,9 @@
   var LARA_BODY = ['..............', '..............', '..............',
     '.....yyyyy....', '....yyyyyyy...', '....yhhhhhyY..', '...yysssssyY..', '...yysesesyY..', '....yssmssyY..',
     '.....jwwwjJ...', '....kjjjjjjJ..', '....kjwjjjJj..', '....jkjjjjJs..', '....jjjjjjJ...', '....JJJJJJJ...'];
-  var LARA_LEGS = [['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'], ['......ppp.....', '.....pp.pp....', '...bbb...bbb..']];
+  // 다리(1.10.4): 서 있을 때는 두 발을 모으고, 걸을 때는 한 발씩 번갈아 든다. 전에는 걸을 때 두 발이 양옆으로 벌어져 다리를 찢는 것처럼 보였다
+  var LARA_STAND = ['.....pp.pp....', '.....pp.pp....', '....bbb.bbb...'];
+  var LARA_LEGS = [['.....pp.pp....', '.....pp.bbb...', '....bbb.......'], ['.....pp.pp....', '....bbb.pp....', '........bbb...']];
   var LARA_HOODS = {
     none:   {},
     cat:    { 1: '....y.....y...', 2: '....yi...iy...' },
@@ -528,7 +530,7 @@
     for (k in hood) if (Object.prototype.hasOwnProperty.call(hood, k)) rows[k] = hood[k];
     for (k in bag.rows) if (Object.prototype.hasOwnProperty.call(bag.rows, k)) rows[k] = bag.rows[k] + rows[k].slice(4);
     if (pose === 'search') return ['..............', '..............'].concat(rows).concat(['....bbb.bbb...']);      // 웅크린다: 몸을 두 칸 내리고 다리를 접는다
-    return rows.concat(LARA_LEGS[pose === 'walk' && step ? 1 : 0]);
+    return rows.concat(pose === 'walk' ? LARA_LEGS[step ? 1 : 0] : LARA_STAND);
   }
   /** 라라를 그린다. flip 이면 왼쪽을 본다. scale 은 한 칸의 크기. */
   function paintLara(ctx, x, y, scale, flip, look, pose, step) {
@@ -537,12 +539,13 @@
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
     var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
     var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#e2b48c', e: '#2b241c', m: '#c98a6a', h: '#2b241c', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#30343c', b: '#17180f', c: bag.c, C: bag.C };
-    var rows = laraRows(look, pose, step);
+    var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
       if (ch === '.') continue;
       var col = pal[ch];
       if (pat && pat !== 'none' && (ch === 'j' || (pat === 'camo' && ch === 'y')) && laraPattern(pat, c, r)) col = patCol;
+      if (look.fx === 'glow' && (ch === 'j' || ch === 'J') && (r === glowBand || r === glowBand + 3)) col = '#d8ff7a';      // 야광: 가슴과 옷자락의 야광 띠(낮에도 보인다)
       ctx.fillStyle = col;
       ctx.fillRect(Math.round(x + (flip ? LARA_W - 1 - c : c) * scale), Math.round(y + r * scale), scale, scale);
     }
@@ -552,13 +555,20 @@
    * 전설 효과(look.fx)를 라라 둘레에 그린다. t 는 흐른 시간(초).
    *   glow 둘레가 은은하게 깜박인다 · sparkle 뒤로 반짝이 가루가 떨어진다 · star 머리 위에 작은 별이 떠 있다
    */
-  function paintLaraFx(ctx, x, y, scale, flip, look, t) {
+  function paintLaraFx(ctx, x, y, scale, flip, look, t, pose, step, dark) {
     var fx = look && look.fx; if (!ctx || !fx || fx === 'none') return;
     scale = scale || 1; t = t || 0;
     function px(col, cx, cy, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? LARA_W - cx - (w || 1) : cx) * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
     if (fx === 'glow') {
-      var a = 0.28 + 0.2 * Math.sin(t * 3), col = 'rgba(198, 255, 74, ' + a.toFixed(2) + ')';
-      px(col, 3, 3, 9, 1); px(col, 2, 4, 1, 11); px(col, 12, 4, 1, 11); px(col, 3, 15, 9, 1); px('rgba(198, 255, 74, ' + (a * 0.5).toFixed(2) + ')', 1, 6, 1, 7); px('rgba(198, 255, 74, ' + (a * 0.5).toFixed(2) + ')', 13, 6, 1, 7);
+      // 야광(1.10.4): 몸의 테두리를 따라 한 칸 두께로 빛난다. 전에는 네모난 띠를 둘러서 몸과 어긋나 보였다.
+      //   낮에는 옅게, 밤(dark)에는 진하게. 숨 쉬듯 천천히 밝아졌다 어두워진다.
+      var rows = laraRows(look, pose === 'search' ? 'search' : pose, step), night = Math.max(0, Math.min(1, dark || 0));
+      var a = (0.3 + 0.5 * night) + 0.15 * Math.sin(t * 2.4), col = 'rgba(206, 255, 96, ' + Math.max(0.12, Math.min(0.95, a)).toFixed(2) + ')';
+      for (var r = 0; r < rows.length - 1; r++) for (var c = 0; c < LARA_W; c++) {      // 발(맨 아랫줄)은 땅에 닿으니 두르지 않는다
+        if (rows[r][c] !== '.') continue;
+        var touch = (c > 0 && rows[r][c - 1] !== '.') || (c < LARA_W - 1 && rows[r][c + 1] !== '.') || (r > 0 && rows[r - 1][c] !== '.') || (rows[r + 1] && rows[r + 1][c] !== '.');
+        if (touch) px(col, c, r, 1, 1);
+      }
     }
     if (fx === 'sparkle') for (var k = 0; k < 4; k++) { var ph = (t * 1.6 + k * 0.25) % 1; px(k % 2 ? '#ffffff' : '#ffe9a0', 1 - (k % 2), 6 + Math.floor(ph * 11), 1, 1); if (ph < 0.5) px('rgba(255, 233, 160, .5)', 3 - k % 3, 5 + Math.floor(ph * 9), 1, 1); }
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
@@ -600,10 +610,10 @@
     return true;
   }
   /** 옷장의 그림: 그 자리에 서 있는 라라를 그린다(scene 밖에서 쓴다). */
-  function drawHero(ctx, x, y, scale, look, step, t) {
+  function drawHero(ctx, x, y, scale, look, step, t, dark) {
     if (!ctx) return false;
     paintLara(ctx, x, y, scale || 1, false, look, step === undefined ? 'stand' : 'walk', step);
-    paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0);
+    paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0, step === undefined ? 'stand' : 'walk', step, dark);
     return true;
   }
   /*
@@ -1378,7 +1388,8 @@
       var walking = h.state === 'out' || h.state === 'back';
       paintLara(ctx, lx, ly, 1, lflip, look, walking ? 'walk' : 'stand', walking ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0);
     }
-    paintLaraFx(ctx, lx, ly + (h.state === 'search' ? 2 : 0), 1, lflip && h.state !== 'search', look, t);
+    var lwalk = h.state === 'out' || h.state === 'back';
+    paintLaraFx(ctx, lx, ly + (h.state === 'search' ? (Math.floor(t * 6) % 2) : 0), 1, lflip && h.state !== 'search', look, t, h.state === 'search' ? 'search' : lwalk ? 'walk' : 'stand', lwalk ? Math.floor(t * (h.boost > 0 ? 14 : 7)) % 2 : 0, sky.dark);
     if (h.carrying) { ctx.fillStyle = '#8a5a34'; ctx.fillRect(lx + 5, ly - 2, 6, 4); ctx.fillStyle = '#f0b400'; ctx.fillRect(lx + 5, ly - 1, 6, 1); }      // 든 상자: 머리 위
     drawHeroKit(ctx, model, view, hx);
     // 거점에 쌓인 상자(최근에 나른 만큼, 최대 6개). 건물이 서면 상자는 건물 1층 창고에 쌓인다(drawBaseBuilding)
