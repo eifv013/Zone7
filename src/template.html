@@ -256,6 +256,31 @@ body { word-break: keep-all; }
 .story-card .chal { align-self: stretch; background: transparent; color: #e6e5db; border: 2px solid #6d6d60; padding: 10px 12px; font-weight: 500; }
 .story-card .chal[disabled] { border-style: dashed; }
 .story-card .chal.on { background: #f0b400; color: #17180f; border-color: #f0b400; }
+/* ── 원정(1.8.0): 스테이지 목록과, 스테이지 중에 맨 위를 덮는 띠 ── */
+.hub-pane[hidden] { display: none; }
+.hub-pane { display: flex; flex-direction: column; gap: 8px; }
+.stage { padding: 10px 12px; border: 2px solid #6d6d60; display: grid; gap: 6px; }
+.stage.won { box-shadow: inset 4px 0 0 #7fc98a; }
+.stage.locked { opacity: .5; border-style: dashed; }
+.stage-head { display: flex; align-items: baseline; gap: 8px; }
+.stage-head b { font-size: 16px; font-weight: 800; }
+.stage-no { padding: 1px 7px; background: #f0b400; color: #17180f; font: 700 12px/1.5 var(--font-mono); }
+.stage-sub, .stage-marks { font-size: 13px; line-height: 1.5; color: #b9b8ab; white-space: pre-line; }
+.stage-marks { font-family: var(--font-mono); font-size: 12px; color: #e6e5db; }
+.stage-acts { display: grid; grid-template-columns: 2fr 1fr; gap: 6px; }
+.story-card .stage-acts button { align-self: auto; padding: 8px; }
+.story-card .stage-acts .stage-hard { background: transparent; color: #e6e5db; border-color: #e6e5db; }
+.story-card .stage-acts button:disabled { opacity: .4; cursor: default; }
+#stage-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 15; padding: 8px 12px 6px; background: #17180f; color: #e6e5db; border-bottom: 3px solid #f0b400; }
+#stage-bar[hidden] { display: none; }
+.stage-bar-row { display: flex; align-items: center; gap: 10px; }
+.stage-bar-row b { flex: 1; min-width: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#stage-bar-time { font: 700 20px/1 var(--font-mono); color: #f0b400; }
+#stage-bar-time.low { color: #ff7a6b; }
+#stage-quit { padding: 4px 10px; background: transparent; color: #e6e5db; border: 1px solid #e6e5db; font: 600 12px/1.4 var(--font-body); cursor: pointer; }
+.stage-bar-goal { margin-top: 3px; font: 500 13px/1.4 var(--font-mono); color: #b9b8ab; }
+.stage-bar-track { height: 5px; margin-top: 4px; background: #33342a; }
+.stage-bar-track i { display: block; height: 100%; width: 0; background: #f0b400; transition: width .3s; }
 /* ── 도전(1.7.0): 조건 하나를 걸고 목표 구역까지 ── */
 .chal { display: block; width: 100%; margin: 0 0 8px; padding: 10px 12px; text-align: left; background: transparent; color: var(--ink); border: 2px solid var(--ink); cursor: pointer; font: 500 14px/1.45 var(--font-body); }
 .chal b { font-weight: 800; font-size: 16px; }
@@ -1087,7 +1112,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 1.7.4</div>
+  <div class="boot-ver">7구역 알파 1.8.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1139,6 +1164,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </div>
 <div class="tape" aria-hidden="true"></div>
 <div id="move-fx" class="move-fx" hidden aria-hidden="true"><i class="fx-a"></i><i class="fx-b"></i><div class="fx-text"><b id="move-fx-big"></b><span id="move-fx-small"></span></div></div>
+<div id="stage-bar" hidden><div class="stage-bar-row"><b id="stage-bar-name"></b><span class="num" id="stage-bar-time"></span><button type="button" id="stage-quit">돌아가기</button></div><div class="stage-bar-goal" id="stage-bar-goal"></div><div class="stage-bar-track"><i id="stage-bar-fill"></i></div></div>
 <header class="mast">
   <div>
     <h1>7구역</h1>
@@ -1492,7 +1518,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 1.7.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 1.8.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1550,8 +1576,14 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="zmap-head"><div class="label" id="hub-title">모험</div><button type="button" class="feedback-close" id="hub-close">닫기</button></div>
     <div class="hub-tabs" role="tablist">
       <button type="button" data-hub="chal" aria-pressed="true">도전</button>
-      <button type="button" data-hub="exped" aria-pressed="false" disabled>원정 · 준비 중</button>
+      <button type="button" data-hub="exped" aria-pressed="false">원정</button>
       <button type="button" data-hub="shop" aria-pressed="false" disabled>상점 · 준비 중</button>
+    </div>
+    <div class="hub-pane" id="stage-panel" hidden>
+      <div class="hub-line num" id="stage-count"></div>
+      <div class="hub-line" id="stage-hint"></div>
+      <div class="label">지역 I · 하류 마을</div>
+      <div id="stage-list"></div>
     </div>
     <div class="hub-pane" id="chal-panel">
       <div class="hub-line num" id="chal-count"></div>

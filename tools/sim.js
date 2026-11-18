@@ -27,12 +27,24 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
   if (process.env.MEDALS) C.CHALLENGES.forEach(d => { s.medals[d.id] = 1; });
   // CHAL=id: 그 도전을 켠 채로 시작해서, 성공하거나 실패하면 결과를 찍고 끝낸다. 도전 중에는 철수하지 않는다.
   if (process.env.CHAL) { s.bestZone = 6; s.ended = 1; const r = C.startChallenge(s, process.env.CHAL); if (!r.ok) { console.log('도전을 켜지 못함', r.reason); process.exit(1); } }
+  // STAGE=id [HARD=1]: 원정 스테이지를 봇으로 돌린다. 1분마다 네 가지 수치를 찍고, 끝나면 결과를 찍고 끝낸다.
+  if (process.env.STAGE) {
+    if (process.env.BIG) C.STAGES.forEach(d => { d.need = 1e30; });      // BIG=1: 목표를 없애고 제한 시간까지의 곡선만 본다
+    const main = C.createState(0); main.bestZone = 6; C.STAGES.forEach(d => { main.stageMarks[d.id] = { clear: true, speed: false, hard: false, best: 0 }; });
+    s = C.createStage(main, process.env.STAGE, !!process.env.HARD, 0); if (!s) { console.log('스테이지를 만들지 못함'); process.exit(1); }
+  }
+  let stageBeat = 0;
   if (process.env.LIVE) { const push = marks.push.bind(marks); marks.push = (m) => { console.log(JSON.stringify(Object.assign({}, m, { hours: +m.hours.toFixed(1), pps: undefined }))); return push(m); }; }      // LIVE=1: 생기는 대로 찍는다(오래 도는 측정용)
   const traitOrder = ['immune', 'bulwark', 'immune', 'dealer', 'immune', 'pioneer', 'immune', 'thrift', 'legacy', 'immune', 'bulwark', 'dealer', 'engineer', 'railman', 'scholar'];
   const spendTraits = () => { for (let k = 0, bought = true; bought && k < 500; k++) { bought = false; for (const id of traitOrder) if ((id !== 'engineer' || s.bestZone >= 2) && (id !== 'railman' || s.bestZone >= 3) && (id !== 'scholar' || s.bestZone >= 4) && C.buyTrait(s, id).ok) bought = true; } };
   const step = () => {
     active += dt;
     const evs = C.tick(s, dt, rng);
+    if (process.env.STAGE) {
+      if (s.runSeconds >= stageBeat) { stageBeat += 60; if (process.env.CURVE) console.log(`  ${Math.round(s.runSeconds / 60)}분 누적 ${C.formatNumber(s.runEarned)} 시설 ${C.totalBuildings(s)} 밤 ${s.wavesCleared} 동네 ${s.sweeps} 뚫림 ${s.breaches}`); }
+      const st = C.stageStatus(s);
+      if (st.over) { console.log(`${process.env.STAGE}${process.env.HARD ? ' 하드' : ''}: ${st.won ? '클리어 ' + (st.seconds / 60).toFixed(1) + '분' + (st.seconds <= st.def.speed ? ' (스피드)' : '') : '실패 ' + C.formatNumber(st.value) + '/' + C.formatNumber(st.need)} · 제한 ${st.def.limit / 60}분 · 스피드 ${st.def.speed / 60}분`); process.exit(0); }
+    }
     if (s.zone >= 1 && s.goods > 0 && s.price >= C.peakPrice(s)) C.sellGoods(s, false);      // 고점이면 손으로 판다(흥정꾼이 없는 도전에서도 2구역 목표를 채우게)
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)

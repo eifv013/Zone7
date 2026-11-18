@@ -600,6 +600,8 @@
       challenge: null,       // 이번 회차의 도전 { id, failed, done }. 없으면 null
       nextChallenge: '',     // 다음 회차에 걸 도전(철수하면 쓰이고 지워진다)
       medals: {},            // 도전마다 성공한 횟수. 철수해도 남는다
+      stage: null,           // 원정 스테이지로 만든 상태에만 있다 { id, hard, won, lost, seconds }
+      stageMarks: {},        // 본 게임: 스테이지마다 얻은 표시 { clear, speed, hard, best }. 철수해도 남는다
       challengeStreak: 0,    // 도전을 연달아 성공한 횟수(실패·포기하면 0). 철수해도 남는다
       lastSeen: safeNum(now, 0)
     };
@@ -692,6 +694,8 @@
     s.endedRun = !!raw.endedRun && s.zone >= 6;
     s.medals = {}; CHALLENGES.forEach(function (d) { var n = raw.medals && typeof raw.medals === 'object' ? clamp(safeCount(raw.medals[d.id]), 0, 1e6) : 0; if (n > 0) s.medals[d.id] = n; });
     s.challengeStreak = clamp(safeCount(raw.challengeStreak), 0, 1e6);
+    s.stageMarks = {}; STAGES.forEach(function (d) { var m = raw.stageMarks && typeof raw.stageMarks === 'object' ? raw.stageMarks[d.id] : null; if (m && typeof m === 'object' && (m.clear || m.speed || m.hard)) s.stageMarks[d.id] = { clear: !!m.clear, speed: !!m.speed, hard: !!m.hard, best: clamp(safeCount(m.best), 0, 1e6) }; });
+    s.stage = null;      // 스테이지 판은 저장하지 않는다(저장되는 것은 언제나 본 게임이다)
     s.nextChallenge = typeof raw.nextChallenge === 'string' && findById(CHALLENGES, raw.nextChallenge) ? raw.nextChallenge : '';
     s.challenge = raw.challenge && typeof raw.challenge === 'object' && findById(CHALLENGES, raw.challenge.id) ? { id: raw.challenge.id, failed: !!raw.challenge.failed, done: !!raw.challenge.done } : null;
     s.ended = clamp(safeCount(raw.ended), 0, 1e6); s.endedAt = Math.max(0, safeNum(raw.endedAt, 0));
@@ -812,6 +816,7 @@
     apply(TRAITS, state.traits);
     // 도전 훈장의 고유 보상(1.7.0): 그 도전을 한 번이라도 성공했으면 붙는다(여러 번 성공해도 한 번만)
     m.autoshare = 0; m.scout = 1;
+    if (state.stageMarks) m.loot *= Math.pow(BOSS_BADGE_LOOT, badgeCount(state));      // 원정 지역 휘장
     if (state.medals) CHALLENGES.forEach(function (d) { if (state.medals[d.id] > 0 && d.perk) { if (d.perk.add) m[d.perk.key] += d.perk.add; else m[d.perk.key] *= d.perk.mult; } });
     var pe = petEffect(state); if (pe) m[pe.key] *= 1 + pe.bonus;      // 동물 친구
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
@@ -1938,7 +1943,7 @@
   function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + labRate(state) + guardRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
   function clickPower(state) { return 1 + Math.log(Math.max(1, mods(state).click)) / Math.LN2; }
-  function clickValue(state) { return (globalMult(state) + productionPerSec(state) * CLICK_SHARE) * clickPower(state); }
+  function clickValue(state) { return (globalMult(state) + productionPerSec(state) * CLICK_SHARE) * clickPower(state) * (stageRule(state, 'tap5') ? TAP5 : 1); }
   /*
    * 수색 지도: 직접 수색은 동네의 한 칸을 뒤지는 일이다. 칸마다 종류(빈집·가게·은닉처)가 있어 수익이 다르고,
    * 스무 칸을 다 뒤지면 보너스를 받고 다음 동네로 넘어간다. 시설이 있으면 몇 초마다 한 칸씩 알아서 뒤진다(자동 수색은 칸 수익 없이 진행만 시킨다).
@@ -2233,6 +2238,7 @@
       events.push({ type: 'ending', count: state.ended, day: state.day, retreats: state.retreats, seconds: state.playSeconds });
     }
     checkChallenge(state, events);      // 도전: 목표에 닿았는지, 시간을 넘겼는지
+    checkStage(state, events);          // 원정 스테이지: 목표를 채웠는지, 시간이 다 됐는지
   }
   /** 다음 구역의 상태 { index, zone, cost, ready(목표를 다 채웠는가), soon(아직 없는 구역인가) }. 마지막 구역이면 null. */
   /*
@@ -2540,7 +2546,7 @@
     for (var k = 0; k < 80; k++) { var mid = Math.sqrt(lo * hi); if (antibodiesFor(mid, mult) >= want) hi = mid; else lo = mid; }
     return hi;
   }
-  function canRetreat(state) { return antibodiesOnRetreat(state) >= 1 && !state.pendingPerks.length; }
+  function canRetreat(state) { return !state.stage && antibodiesOnRetreat(state) >= 1 && !state.pendingPerks.length; }      // 스테이지에서는 철수가 없다
   /**
    * 철수: 거점을 전부 버리고 1구역에서 다시 시작한다.
    *   사라지는 것 : 물자, 시설, 방벽, 구역 강화, 좌판과 상품, 기계, 열차와 노선, 연구원과 끝낸 과제, 연 구역, 특전, 막아낸 밤, 달성한 목표
@@ -2575,7 +2581,112 @@
     return def.goal === 'end' ? (state.ended || 0) >= 1 : Math.max(state.bestZone || 0, state.zone || 0) >= def.goal;
   }
   /** 지금 이 도전의 조건이 걸려 있는가(성공했거나 실패한 뒤에는 풀린다). */
-  function challengeOn(state, id) { var c = state.challenge; return !!c && c.id === id && !c.failed && !c.done; }
+  function challengeOn(state, id) { var c = state.challenge; return (!!c && c.id === id && !c.failed && !c.done) || stageRule(state, id); }      // 원정 스테이지의 규칙도 같은 자리에서 걸린다
+
+  /*
+   * ---------- 원정(1.8.0) ----------
+   * 본 게임과 따로 도는 짧은 판. 지역마다 스테이지가 이어지고, 스테이지마다 규칙·목표·제한 시간이 있다.
+   *   구조   : 스테이지는 "새 상태 하나"다. createStage 가 빈 거점을 만들고 state.stage = { id, hard } 를 단다.
+   *            화면은 이 상태를 평소처럼 굴리고(tick), 끝나면 finishStage 로 본 게임 상태에 결과만 적는다. 본 게임 상태는 그동안 건드리지 않는다.
+   *   규칙   : 도전과 같은 조건 이름을 쓴다(challengeOn 이 stage 도 본다). 그 밖에 tap5(직접 수색 5배).
+   *   공정함 : 특성·업적·훈장을 들고 가지 않는다. 누구에게나 같은 난이도다. 읽은 일지와 도감만 옮겨서 같은 알림이 다시 뜨지 않게 한다.
+   *   표시   : 클리어 / 스피드(speed 초 안에) / 하드(규칙 하나를 더 얹어서). 처음 얻을 때마다 간식을 받는다.
+   *   열림   : 본 게임에서 3구역에 닿은 뒤(STAGE_OPEN_ZONE). 스테이지는 앞의 것을 클리어해야 다음이 열린다.
+   *   시간   : 스테이지의 시간은 접속해 있을 때만 흐른다(자리 비움 정산을 하지 않는다).
+   */
+  var STAGE_OPEN_ZONE = 2, STAGE_TREATS = { clear: 5, speed: 5, hard: 10 }, TAP5 = 5, BOSS_BADGE_LOOT = 1.1;
+  var STAGE_GOALS = {
+    earn:   { text: function (n) { return '누적 물자 ' + formatNumber(n); },  value: function (s) { return s.runEarned; } },
+    build:  { text: function (n) { return '시설 ' + n + '채'; },              value: function (s) { return totalBuildings(s); } },
+    nights: { text: function (n) { return '밤 ' + n + '번 막기'; },           value: function (s) { return s.wavesCleared; } },
+    sweep:  { text: function (n) { return '동네 ' + n + '곳 다 수색'; },      value: function (s) { return s.sweeps; } }
+  };
+  var STAGE_RULES = {
+    tap5:    '직접 수색 5배',
+    frugal:  '개조 금지',
+    onewall: '방벽 한 종류만',
+    horde:   '무리 3배',
+    lean:    '전체 생산 절반'
+  };
+  var REGIONS = [ { id: 'r1', no: 1, name: '하류 마을' } ];
+  var STAGES = [
+    { id: 's1-1', region: 'r1', name: '첫 수색',      rules: ['tap5'],          goal: 'earn',   need: 5e6, limit: 480, speed: 300, hard: 'lean' },
+    { id: 's1-2', region: 'r1', name: '빈 골목',      rules: [],                goal: 'sweep',  need: 40,  limit: 480, speed: 300, hard: 'frugal' },
+    { id: 's1-3', region: 'r1', name: '급한 공사',    rules: ['frugal'],        goal: 'build',  need: 130, limit: 720, speed: 420, hard: 'lean' },
+    { id: 's1-4', region: 'r1', name: '긴 밤',        rules: ['horde'],         goal: 'nights', need: 9,   limit: 720, speed: 600, hard: 'onewall' },
+    { id: 's1-5', region: 'r1', name: '빠듯한 살림',  rules: ['lean'],          goal: 'earn',   need: 2e7, limit: 900, speed: 720, hard: 'horde' },
+    { id: 's1-b', region: 'r1', name: '선착장의 무리', rules: ['horde', 'lean'], goal: 'nights', need: 10,  limit: 900, speed: 780, hard: 'onewall', boss: true }
+  ];
+  /** 이 상태가 스테이지이고 그 규칙이 걸려 있는가(끝난 뒤에도 규칙은 그대로다: 결과 창이 뜰 때까지 화면이 바뀌지 않게). */
+  function stageRule(state, rule) {
+    var st = state.stage; if (!st) return false;
+    var def = findById(STAGES, st.id); if (!def) return false;
+    return def.rules.indexOf(rule) >= 0 || (st.hard && def.hard === rule);
+  }
+  function stageDef(state) { return state.stage ? findById(STAGES, state.stage.id) : null; }
+  function stageRuleTexts(def, hard) { var r = def.rules.map(function (k) { return STAGE_RULES[k]; }); if (hard) r.push(STAGE_RULES[def.hard]); return r; }
+  function stageGoalText(def) { return STAGE_GOALS[def.goal].text(def.need); }
+  /** 본 게임 상태에서: 원정이 열렸는가, 이 스테이지를 할 수 있는가. */
+  function stagesOpen(main) { return Math.max(main.bestZone || 0, main.zone || 0) >= STAGE_OPEN_ZONE; }
+  function stageMarks(main, id) { var m = main.stageMarks && main.stageMarks[id]; return { clear: !!(m && m.clear), speed: !!(m && m.speed), hard: !!(m && m.hard), best: m && m.best > 0 ? m.best : 0 }; }
+  function stageBlock(main, id, hard) {
+    var i = -1; STAGES.forEach(function (d, k) { if (d.id === id) i = k; });
+    if (i < 0) return 'unknown';
+    if (!stagesOpen(main)) return 'locked';
+    if (i > 0 && STAGES[i - 1].region === STAGES[i].region && !stageMarks(main, STAGES[i - 1].id).clear) return 'prev';
+    if (hard && !stageMarks(main, id).clear) return 'hard';      // 하드는 먼저 그냥 클리어한 뒤에
+    return '';
+  }
+  /** 스테이지용 새 상태를 만든다. 본 게임 상태(main)는 바꾸지 않는다. 할 수 없으면 null. */
+  function createStage(main, id, hard, now) {
+    if (stageBlock(main, id, hard)) return null;
+    var s = createState(now);
+    s.stage = { id: id, hard: !!hard, won: false, lost: false, seconds: 0 };
+    // 같은 알림이 다시 뜨지 않게 읽은 것만 옮긴다(복사본: 스테이지에서 바뀌어도 본 게임에 새지 않는다)
+    s.story = JSON.parse(JSON.stringify(main.story || {})); s.ach = JSON.parse(JSON.stringify(main.ach || {})); s.zdex = JSON.parse(JSON.stringify(main.zdex || {}));
+    s.heroName = main.heroName; s.heroGender = main.heroGender;
+    return s;
+  }
+  /** 스테이지의 지금 형편 { def, value, need, left, won, lost, over }. 스테이지가 아니면 null. */
+  function stageStatus(state) {
+    var def = stageDef(state); if (!def) return null;
+    var st = state.stage, v = STAGE_GOALS[def.goal].value(state);
+    return { def: def, hard: !!st.hard, value: Math.min(v, def.need), need: def.need, left: Math.max(0, Math.ceil(def.limit - state.runSeconds)), won: !!st.won, lost: !!st.lost, over: !!(st.won || st.lost), seconds: st.seconds || 0 };
+  }
+  /** 시간마다 부른다: 목표를 채웠는지, 시간이 다 됐는지. 한 번 정해지면 바뀌지 않는다. */
+  function checkStage(state, events) {
+    var def = stageDef(state), st = state.stage;
+    if (!def || st.won || st.lost) return;
+    if (STAGE_GOALS[def.goal].value(state) >= def.need) { st.won = true; st.seconds = Math.ceil(state.runSeconds); events.push({ type: 'stage-won', id: def.id, name: def.name, seconds: st.seconds, speed: st.seconds <= def.speed, hard: !!st.hard }); }
+    else if (state.runSeconds >= def.limit) { st.lost = true; st.seconds = def.limit; events.push({ type: 'stage-lost', id: def.id, name: def.name }); }
+  }
+  /**
+   * 끝난 스테이지의 결과를 본 게임 상태에 적는다. 새로 얻은 표시마다 간식을 준다.
+   * 돌려주는 값: { ok, won, got: ['clear'|'speed'|'hard'…] 새로 얻은 표시, treats, badge(보스를 처음 잡았는가) }
+   */
+  function finishStage(main, stage) {
+    var stt = stageStatus(stage);
+    if (!stt) return fail('none');
+    if (!stt.won) return { ok: true, won: false, got: [], treats: 0, badge: false };
+    if (!main.stageMarks) main.stageMarks = {};
+    var m = main.stageMarks[stt.def.id] || (main.stageMarks[stt.def.id] = { clear: false, speed: false, hard: false, best: 0 }), got = [], treats = 0;
+    function mark(k) { if (!m[k]) { m[k] = true; got.push(k); treats += STAGE_TREATS[k]; } }
+    var badge = !!stt.def.boss && !m.clear;
+    mark('clear');
+    if (stt.seconds <= stt.def.speed) mark('speed');
+    if (stt.hard) mark('hard');
+    if (!(m.best > 0) || stt.seconds < m.best) m.best = stt.seconds;
+    main.treats = Math.min(1e9, (main.treats || 0) + treats);
+    return { ok: true, won: true, got: got, treats: treats, badge: badge, seconds: stt.seconds };
+  }
+  /** 얻은 표시의 수와 전체 수(지역 하나 또는 전부). */
+  function stageMarkCount(main, region) {
+    var have = 0, all = 0;
+    STAGES.forEach(function (d) { if (region && d.region !== region) return; var m = stageMarks(main, d.id); all += 3; have += (m.clear ? 1 : 0) + (m.speed ? 1 : 0) + (m.hard ? 1 : 0); });
+    return { have: have, all: all };
+  }
+  /** 보스를 잡은 지역의 수: 지역 휘장. 하나마다 방어 성공 시 전리품이 BOSS_BADGE_LOOT 배. */
+  function badgeCount(main) { var n = 0; STAGES.forEach(function (d) { if (d.boss && stageMarks(main, d.id).clear) n++; }); return n; }
   function activeChallenge(state) { var c = state.challenge; return c && !c.failed && !c.done ? findById(CHALLENGES, c.id) : null; }
   function medalCount(state) { var n = 0; CHALLENGES.forEach(function (d) { if (state.medals && state.medals[d.id] > 0) n++; }); return n; }
   function medalMult(state) { return 1 + MEDAL_BONUS * medalCount(state); }
@@ -2646,6 +2757,7 @@
     var gained = antibodiesOnRetreat(state), next = createState(now);
     next.goalPick = rollGoalPick(state.goalPick, rng);      // 다음 회차의 목표는 이번과 다르게
     next.medals = state.medals || {};      // 훈장은 남는다
+    next.stageMarks = state.stageMarks || {};      // 원정에서 얻은 표시도 남는다
     next.challengeStreak = activeChallenge(state) ? 0 : (state.challengeStreak || 0);      // 도전을 달고 철수하면 포기한 것으로 친다
     next.bestZone = Math.max(state.bestZone, state.zone);
     if (state.nextChallenge && challengeOpen(next, state.nextChallenge)) next.challenge = { id: state.nextChallenge, failed: false, done: false };      // 골라 둔 도전으로 시작한다(한 번만)
@@ -2931,6 +3043,7 @@
   }
   /** 조건을 채운 업적을 달성으로 바꾸고 'achievement' 사건을 남긴다. */
   function checkAchievements(state, events, now) {
+    if (state.stage) return;      // 원정 스테이지에서는 업적을 세지 않는다(본 게임의 기록이 아니다)
     var at = typeof now === 'number' && isFinite(now) && now > 0 ? Math.floor(now) : Date.now();      // 달성한 시각을 적어 둔다
     ACHIEVEMENTS.forEach(function (a) {
       if (state.ach[a.id]) return;
@@ -3176,7 +3289,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,

@@ -2907,3 +2907,46 @@ test('1.7.4: 훈장은 생산 +2%, 손수 도전 중에는 자리 비움 효율�
   assert.ok(Math.abs(C.offlineRate(b) - C.offlineRate(a) * 0.5) < 1e-9);
   C.quitChallenge(b); assert.equal(C.offlineRate(b), C.offlineRate(a));
 });
+
+test('1.8.0 원정: 스테이지는 따로 만든 새 판이고, 본 게임에는 결과만 적힌다', () => {
+  assert.equal(C.STAGES.length, 6); assert.equal(C.STAGES.filter(d => d.boss).length, 1);
+  C.STAGES.forEach(d => { assert.ok(d.speed < d.limit && d.need > 0 && C.STAGE_RULES[d.hard], d.id); d.rules.forEach(r => assert.ok(C.STAGE_RULES[r], d.id + ' ' + r)); assert.ok(d.rules.indexOf(d.hard) < 0, d.id + ': 하드 규칙은 원래 규칙과 달라야 한다'); });
+  const main = C.createState(0); main.traits.immune = 10; main.supplies = 123; main.story = { 'z1-0': true };
+  assert.equal(C.stageBlock(main, 's1-1', false), 'locked'); assert.equal(C.createStage(main, 's1-1', false, 0), null);
+  main.bestZone = 2;
+  assert.equal(C.stageBlock(main, 's1-1', false), ''); assert.equal(C.stageBlock(main, 's1-2', false), 'prev'); assert.equal(C.stageBlock(main, 's1-1', true), 'hard'); assert.equal(C.stageBlock(main, 'zz', false), 'unknown');
+  const before = C.serialize(main);
+  const st = C.createStage(main, 's1-1', false, 0);
+  assert.ok(st.stage && st.supplies === 0 && !st.traits.immune, '특성 없이 빈 거점에서 시작한다');
+  assert.equal(st.story['z1-0'], true, '읽은 일지는 옮겨서 다시 뜨지 않는다');
+  assert.ok(C.stageRule(st, 'tap5') && !C.stageRule(st, 'lean') && !C.stageRule(main, 'tap5'));
+  assert.ok(Math.abs(C.clickValue(st) / C.clickValue(C.createState(0)) - 5) < 1e-9, '직접 수색 5배');
+  assert.equal(C.canRetreat(st), false);
+  // 스테이지를 굴려도 본 게임은 그대로다
+  for (let i = 0; i < 50; i++) { C.scavenge(st); C.tick(st, 1, () => 0.5); }
+  assert.equal(C.serialize(main), before);
+  assert.equal(Object.keys(st.ach).length, 0, '스테이지에서는 업적을 세지 않는다');
+  // 시간이 다 되면 실패, 결과를 적어도 표시는 없다
+  const lost = C.createStage(main, 's1-1', false, 0); lost.runSeconds = 480;
+  assert.ok(C.tick(lost, 0.1, () => 0.5).some(e => e.type === 'stage-lost')); assert.ok(C.stageStatus(lost).lost);
+  assert.equal(C.finishStage(main, lost).won, false); assert.equal(C.stageMarks(main, 's1-1').clear, false);
+  // 목표를 채우면 클리어. 빨랐으면 스피드도. 간식은 새 표시마다 한 번만
+  st.runEarned = 5e6; st.runSeconds = 200;
+  const ev = C.tick(st, 0.1, () => 0.5).find(e => e.type === 'stage-won'); assert.ok(ev && ev.speed);
+  st.runEarned = 0; C.tick(st, 0.1, () => 0.5); assert.ok(C.stageStatus(st).won, '한 번 정해진 결과는 바뀌지 않는다');
+  const t0 = main.treats, r = C.finishStage(main, st);
+  assert.deepEqual(r.got, ['clear', 'speed']); assert.equal(main.treats, t0 + C.STAGE_TREATS.clear + C.STAGE_TREATS.speed);
+  assert.deepEqual(C.finishStage(main, st).got, [], '같은 표시는 다시 받지 않는다');
+  assert.equal(C.stageBlock(main, 's1-2', false), ''); assert.equal(C.stageBlock(main, 's1-1', true), '');
+  // 하드: 규칙이 하나 더 걸리고 하드 표시를 준다
+  const hd = C.createStage(main, 's1-1', true, 0); assert.ok(C.stageRule(hd, 'lean')); hd.runEarned = 5e6; hd.runSeconds = 400; C.tick(hd, 0.1, () => 0.5);
+  assert.deepEqual(C.finishStage(main, hd).got, ['hard']); assert.equal(C.stageMarks(main, 's1-1').best, 201, '최고 기록은 더 빠른 쪽');
+  assert.deepEqual(C.stageMarkCount(main), { have: 3, all: 18 });
+  // 표시는 저장과 철수를 거쳐도 남고, 스테이지 판 자체는 저장되지 않는다
+  const back = C.deserialize(C.serialize(main), 0); assert.deepEqual(C.stageMarks(back, 's1-1'), C.stageMarks(main, 's1-1')); assert.equal(back.stage, null);
+  assert.equal(C.deserialize(C.serialize(st), 0).stage, null);
+  main.runEarned = 1e30; assert.equal(C.stageMarks(C.retreat(main, 0, () => 0.5).state, 's1-1').clear, true);
+  // 보스를 잡으면 지역 휘장: 전리품이 는다
+  const b = C.createState(0), loot0 = C.nightReward(b); b.stageMarks['s1-b'] = { clear: true, speed: false, hard: false, best: 700 };
+  assert.equal(C.badgeCount(b), 1); assert.ok(Math.abs(C.nightReward(b) / loot0 - 1.1) < 1e-9);
+});
