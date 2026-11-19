@@ -1241,7 +1241,7 @@
   var HINTS = {
     z0: '주택가 · 시설을 지으면 물자가 들어와요.',
     z1: '재래시장 · 시세가 좋을 때 팔수록 많이 벌어요.',
-    z2: '공단 · 기계 셋이 만든 것을 합쳐서 내보내요.',
+    z2: '공단 · 같은 상자 둘을 누르면 합쳐져요.',
     z3: '환승역 · 먼 노선일수록 많이 실어 와요.',
     z4: '대학 병원 · 과제를 끝내면 다른 구역이 강해져요.',
     z5: '강변 검문소 · 방어력이 무리보다 넉넉할수록 더 벌어요.',
@@ -2167,11 +2167,48 @@
       if (!C.counterAttack(state).ok) return;
       log('버틴 만큼 되갚는다. 오늘 밤 무리는 절반이다.', 'good'); sfx('defense'); buzz(30); Store.save(); render();
     });
+    // 3.3.0 합치기 판: 칸 스무 개를 만들고, 누르면 같은 단계의 가까운 상자와 합친다
+    var mb = $('mboard');
+    for (var bi = 0; bi < C.BOARD_SIZE; bi++) (function (i) {
+      var b = el('button'); b.type = 'button'; b.dataset.box = i; mb.appendChild(b);
+      b.addEventListener('click', function () {
+        var res = C.mergeBox(state, i);
+        if (!res.ok) return;
+        boardFx[i] = { pop: true, gain: res.gain }; if (res.best && res.level >= 4) log(C.boxName(res.level) + ' 상자가 처음 나왔다.', 'good');
+        sfx(res.best ? 'goal' : 'buy'); buzz(res.best ? 30 : 12); Store.save(); render();
+      });
+    })(bi);
     $('truck-load').addEventListener('click', function () {
       var res = C.loadTruck(state, false);
       if (!res.ok) return;
       log('트럭에 실어 보냈다. 물자 ' + fmt(res.gain) + ' 확보.', 'good'); sfx('train'); buzz(25); Store.save(); render();
     });
+  }
+  /*
+   * 3.3.0 합치기 판을 그린다. 칸마다 상자 이름과 그 상자가 초당 버는 양을 적고, 지금 합칠 수 있는 짝에는 노란 테두리를 친다.
+   * boardFx: 방금 일어난 일(합쳐짐 pop, 새로 들어옴 in, 덤 gain)을 칸 번호로 적어 두었다가 한 번 보여 주고 지운다.
+   */
+  var boardFx = {}, boardSeen = null;
+  function renderBoard() {
+    var mb = $('mboard'); if (!mb || !mb.children.length) return;
+    var board = state.board || [], can = {}; C.mergeable(state).forEach(function (i) { can[i] = true; });
+    for (var i = 0; i < mb.children.length; i++) {
+      var b = mb.children[i], lv = board[i] || 0, fx = boardFx[i];
+      if (boardSeen && !fx && lv >= 1 && boardSeen[i] !== lv) fx = lv === 1 && !(boardSeen[i] >= 1) ? { 'in': true } : { pop: true };      // 고철이 들어왔거나, 알아서 합쳐졌다
+      var sig = lv + (can[i] ? 'p' : '') + '|' + (lv ? fmt(C.boxRate(state, lv)) : '');
+      if (b._sig !== sig || fx) {
+        b._sig = sig;
+        b.className = lv ? 't' + (lv % 8) + (lv > 8 ? ' hi' : '') + (can[i] ? ' pair' : '') : '';
+        b.textContent = '';
+        if (lv) { b.appendChild(document.createTextNode(C.boxName(lv))); b.appendChild(el('small', '', '+' + fmt(C.boxRate(state, lv)))); }
+        b.setAttribute('aria-label', lv ? C.boxName(lv) + ' ' + lv + '단계' + (can[i] ? ', 합칠 수 있음' : '') : '빈칸');
+        if (fx && lv) {
+          void b.offsetWidth; b.classList.add(fx.pop ? 'pop' : 'in');
+          if (fx.gain > 0) b.appendChild(el('i', '', '+' + fmt(fx.gain)));
+        }
+      }
+    }
+    boardFx = {}; boardSeen = board.slice();
   }
   /** 4·6·7구역의 사건 칸과 5구역의 밤샘 연구. */
   var ZEV_TEXT = {
@@ -2781,7 +2818,7 @@
         setText($('truck-left'), clock(tk.left));
         setText($('truck-text'), '출하장에 ' + Math.floor(state.stockSec) + '초분이 쌓였어요.\n실으면 물자 +' + fmt(C.truckReward(state, false)));
       }
-      setText($('stock-note'), '출하장 ' + Math.floor(state.stockSec) + ' / ' + C.TRUCK_STOCK_MAX + '초분 · 이번 회차 출하 ' + state.trucksRun + '번 · 정비 ' + state.repairsRun + '번');
+      setText($('stock-note'), '출하장 ' + Math.floor(state.stockSec) + ' / ' + C.TRUCK_STOCK_MAX + '초분 · 이번 회차 출하 ' + state.trucksRun + '번');
       setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 이번 회차 의뢰 ' + state.contractsRun + '번 · 완제품 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.CONTRACT_BONUS_MAX * 100) + '%)');
       var line = C.lineInfo(state), top = 0, names = {};
       C.MACHINES.forEach(function (d) { top = Math.max(top, line.caps[d.id]); names[d.id] = d.name; });
@@ -2795,20 +2832,23 @@
         var q = qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - lv), cost = C.machineCost(state, d.id, q);
         setText(r.count, 'Lv ' + lv + ' / ' + C.COUNT_MAX);      // 다른 시설처럼 최대 레벨을 함께 적는다(끝이 없는 것처럼 보였다)
         // 이 기계가 지금 초당 몇 개를 처리하는지와, 한 레벨에 얼마나 느는지(1.4.0). 전에는 "레벨당 초당 3"뿐이라 무슨 수인지 알기 어려웠다
-        setText(r.info, '초당 ' + fmt(lv * C.machineRate(state, d.id)) + '개 · 레벨당 +' + C.machineRate(state, d.id));
+        setText(r.info, '초당 ' + fmt(lv * C.machineRate(state, d.id)) + ' · 레벨당 +' + C.machineRate(state, d.id) + ' · 상자 값을 올려요');
         // 별: 기계 레벨 합계의 2배 문턱(세 기계가 함께 채운다). 이 기계를 사서 문턱을 넘으면 "지금 2배"가 뜬다
         setMile(r, line.levels, q, cost <= state.supplies, C.LINE_MILESTONES);
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
       var ld = $('line-load');
-      setText(ld, '세 기계 합쳐 초당 ' + fmt(line.flow) + '개');
+      renderBoard();
+      setText(ld, '판이 버는 양 · 초당 ' + fmt(C.lineRate(state)));
       ld.className = 'num' + (line.steady ? ' steady' : '');
       var surgeShow = state.surgeLeft > 0 && !(state.retool > 0) && line.flow > 0;      // 3.0.1: 전력 투입 중에도 노란 딱지(5 · 6 · 7구역과 같게)
       $('line-note').classList.toggle('boosted', surgeShow);
       setText($('line-note'), (surgeShow ? '전력 투입 중 ×' + C.SURGE_MULT + ' · ' : '') + (state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
         ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '라인 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
-        : '기계를 사면 라인이 돌아요'));
+        : '기계를 사면 상자가 들어와요'));
+      setText($('line-note'), line.flow > 0 ? (C.mergeable(state).length ? '노란 테두리 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 이번 회차 ' + (state.mergesRun || 0) + '번 합침' : '기계를 사면 상자가 들어와요');
+      $('line-note').classList.remove('boosted');
       drawBelt(line);
       var sg = $('surge'), sOn = state.surgeLeft > 0;
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);

@@ -23,6 +23,8 @@ function inFactory() {
   const s = inMarket();
   C.GOALS[1].forEach(g => { s.goalsDone[g.id] = true; });
   s.zone = 2; s.bestZone = 2;
+  // 3.3.0: 합치기 판은 기준 상자(9단계) 하나만 두고 상자가 더 들어오지 않게 멈춰 둔다. 그러면 판 배수가 정확히 1이라 라인 셈을 따로 볼 수 있다
+  s.board = Array(C.BOARD_SIZE).fill(0); s.board[0] = 9; s.feed = -1e9;
   return s;
 }
 /** 4구역(환승역)까지 연 상태. */
@@ -729,7 +731,7 @@ test('라인: 자리를 비운 동안에도 돈다', () => {
 test('라인: 목표 셋과 일지, 그리고 철수하면 기계가 사라진다', () => {
   const s = inFactory();
   assert.equal(C.goals(s, 2).length, 3);
-  assert.equal(C.goals(s, 2)[1].unit, 'time');
+  assert.equal(C.goals(s, 2)[1].text, '상자 합치기 누적 40번');
   s.defenses.rail = 1e5; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
   let ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'story' && e.id === 'z3-0'), '들어서면 일지가 열린다');
@@ -1307,30 +1309,6 @@ test('시세판: 저장을 안전하게 읽고, 철수하면 비워진다', () =
 
 /* ================= 3구역: 전력 투입 ================= */
 
-test('전력 투입: 정해진 시간 동안 라인이 배로 돌고, 쉬는 시간이 있다', () => {
-  const s = inFactory(); s.defenses.rail = 1e9; s.signalIn = 1e9; s.autoSell = false;
-  assert.equal(C.surge(s).reason, 'stopped', '라인이 서 있으면 쓸 수 없다');
-  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
-  const rate = C.lineRate(s);
-  assert.ok(C.surge(s).ok);
-  assert.equal(C.surge(s).reason, 'cooldown');
-  near(C.lineNow(s), rate * C.SURGE_MULT);
-  near(C.productionPerSec(s), C.searchRate(s) + C.tradeRate(s) + rate, '평균 수입(밤 전리품 등의 기준)은 그대로다');
-  C.tick(s, 5, half);
-  near(s.lineEarned, rate * 5 * C.SURGE_MULT);
-  near(s.surgeLeft, C.SURGE_SECONDS - 5);
-  // 남은 투입 시간보다 긴 시간을 한 번에 진행해도 투입 시간만큼만 배로 친다
-  const before = s.lineEarned, r2 = C.lineRate(s);
-  const ev = C.tick(s, 20, half);
-  assert.ok(Math.abs((s.lineEarned - before) - r2 * (20 + (C.SURGE_SECONDS - 5) * (C.SURGE_MULT - 1))) / s.lineEarned < 0.02);
-  assert.ok(ev.some(e => e.type === 'surge-end'));
-  assert.equal(s.surgeLeft, 0);
-  near(C.lineNow(s), C.lineRate(s));
-  assert.equal(C.surge(s).reason, 'cooldown');
-  C.tick(s, C.SURGE_COOLDOWN, half);
-  assert.ok(C.surge(s).ok);
-});
-
 test('전력 투입: 잠긴 구역, 자리 비움, 저장', () => {
   assert.equal(C.surge(inMarket()).reason, 'locked');
   const s = inFactory(); s.defenses.rail = 1e5;      // 저장에서 읽을 수 있는 범위 안의 수
@@ -1383,25 +1361,6 @@ test('청신호: 잠긴 구역, 자리 비움, 저장', () => {
 });
 
 /* ================= 자동 보조 ================= */
-
-test('자동: 자동 제어반(개조)을 달면 전력 투입을 준비되는 대로 알아서 쓴다. 특성만으로는 안 된다', () => {
-  const off = inFactory(); off.defenses.rail = 1e9; off.signalIn = 1e9;
-  off.machines.sorter = 2; off.machines.press = 3; off.machines.assembler = 6;
-  off.traits.auto = 5;
-  assert.equal(C.autoOn(off, 2), false);
-  assert.ok(!C.tick(off, 5, half).some(e => e.type === 'surge'), '개조가 없으면 특성이 있어도 알아서 쓰지 않는다');
-  assert.ok(C.surge(off).ok, '직접 누르면 된다');
-  const s = inFactory(); s.upgrades.autoline = 1; s.defenses.rail = 1e9; s.signalIn = 1e9;
-  let ev = C.tick(s, 1, half);
-  assert.ok(!ev.some(e => e.type === 'surge'), '라인이 서 있으면 쓰지 않는다');
-  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
-  ev = C.tick(s, 1, half);
-  assert.ok(ev.some(e => e.type === 'surge'));
-  assert.equal(s.surgeLeft, C.SURGE_SECONDS);
-  let fired = 0;
-  for (let i = 0; i < 300; i++) fired += C.tick(s, 1, half).filter(e => e.type === 'surge').length;
-  assert.ok(fired >= 3 && fired <= 4, '90초마다 한 번: ' + fired);
-});
 
 test('자동: 자동 신호(개조)를 달면 청신호도 알아서 켜고, 그 덕에 도착한 열차를 알린다', () => {
   const s = inStation(); s.upgrades.autosig = 1; s.defenses.rail = 1e9; s.signalIn = 1e9;
@@ -1542,8 +1501,8 @@ test('자동화: 레벨이 오를수록 대기 시간이 줄고, 절반 아래�
   s.traits.auto = C.ASSIST_MAX;
   assert.equal(C.assistFactor(s), 0.5);
   s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6; s.trains = 1; s.routes.loop = 1;
-  C.surge(s); C.greenSignal(s);
-  near(s.surgeCool, C.surgeCooldown(s)); near(s.greenCool, C.greenCooldown(s));
+  C.greenSignal(s);
+  near(s.greenCool, C.greenCooldown(s));
   const t = C.TRAITS.find(x => x.id === 'auto');
   assert.equal(t.max, C.ASSIST_MAX);
   const b = fresh(); b.antibodies = 2;
@@ -2333,52 +2292,6 @@ test('흥정꾼의 고점 판매: 켜면 고점 아래에서는 팔지 않고 �
   assert.equal(C.sanitizeState({ version: 2, sellPeak: 'yes' }, 0).sellPeak, false); assert.equal(C.createState(0).sellPeak, false);
 });
 
-test('3구역 품목과 숙련: 덜 익힌 품목은 느리고, 만드는 동안 익는다. 기계의 처리량은 품목과 상관없다', () => {
-  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 1e6; s.truckIn = 1e6; s.contractIn = 1e6;
-  assert.equal(C.recipeOf(s).id, 'bolt'); assert.equal(C.mastery(s, 'bolt'), 1); assert.equal(C.lineFactor(s), 1, '볼트는 전과 같은 속도');
-  const caps = JSON.stringify(C.lineInfo(s).caps);
-  assert.equal(C.setRecipe(s, 'bolt').reason, 'same'); assert.equal(C.setRecipe(s, 'nope').reason, 'unknown');
-  const r = C.setRecipe(s, 'plate'); assert.ok(r.ok); assert.equal(s.retool, C.RETOOL_SECONDS);
-  assert.equal(JSON.stringify(C.lineInfo(s).caps), caps, '품목을 바꿔도 기계의 처리량과 병목은 그대로다'); assert.ok(C.lineInfo(s).steady, '정속 가동도 그대로다');
-  assert.equal(C.lineFactor(s), 0); assert.equal(C.lineNow(s), 0);
-  const before = s.lineEarned; C.tick(s, 1, () => 0.99); assert.equal(s.lineEarned, before, '바꾸는 동안은 벌지 못한다');
-  for (let i = 0; i < 6; i++) C.tick(s, 1, () => 0.99);
-  assert.equal(s.retool, 0); assert.ok(s.lineEarned > before);
-  assert.ok(C.mastery(s, 'plate') > 0 && C.mastery(s, 'plate') < 0.1);
-  near(C.recipeFactor(s, 'gear'), C.MASTERY_MIN);
-  // 다 익히면 볼트와 같은 속도, 셋을 다 익히면 조금 더 빠르다
-  let ev = []; for (let i = 0; i < C.MASTERY_SECONDS + 5; i++) ev = ev.concat(C.tick(s, 1, () => 0.99));
-  assert.equal(C.mastery(s, 'plate'), 1); assert.ok(ev.some((e) => e.type === 'mastered' && e.id === 'plate' && !e.all)); near(C.recipeFactor(s, 'plate'), 1);
-  C.setRecipe(s, 'gear'); ev = []; for (let i = 0; i < C.MASTERY_SECONDS + 12; i++) ev = ev.concat(C.tick(s, 1, () => 0.99));
-  assert.ok(C.masteredAll(s)); assert.ok(ev.some((e) => e.type === 'mastered' && e.all)); near(C.recipeFactor(s, 'bolt'), C.MASTERY_ALL);
-  const closed = inMarket(); assert.equal(C.setRecipe(closed, 'plate').reason, 'locked');
-  const bad = C.sanitizeState({ version: 2, zone: 2, recipe: 'xx', mastery: { plate: 9, gear: -1, bolt: 0.2, nope: 1 } }, 0);
-  assert.equal(bad.recipe, 'bolt'); assert.equal(bad.mastery.plate, 1); assert.equal(bad.mastery.gear, undefined); assert.equal(C.mastery(bad, 'bolt'), 1);
-  s.runEarned = 1e30; s.pendingPerks = []; const back = C.retreat(s, 1).state; assert.equal(back.recipe, 'bolt'); assert.deepEqual(back.mastery, {});
-});
-
-test('3구역 고장과 정비: 고장이면 느려지고, 고치면 잠깐 빨라진다. 내버려 두면 저절로 풀린다', () => {
-  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 0.5; s.truckIn = 1e6;
-  let ev = C.tick(s, 1, () => 0.5);
-  assert.ok(ev.some((e) => e.type === 'jam')); assert.ok(s.jam); assert.equal(C.lineFactor(s), C.JAM_SLOW);
-  const r = C.repairJam(s); assert.ok(r.ok); assert.equal(s.jam, null); assert.equal(C.lineFactor(s), C.TUNE_MULT); assert.equal(s.repairsRun, 1);
-  assert.equal(C.repairJam(s).reason, 'none');
-  for (let i = 0; i < C.TUNE_SECONDS + 1; i++) C.tick(s, 1, () => 0.99);
-  assert.equal(C.lineFactor(s), 1, '정비 효과는 끝난다');
-  // 내버려 두면 저절로
-  s.jam = { id: 'press', left: 2 }; ev = []; for (let i = 0; i < 3; i++) ev = ev.concat(C.tick(s, 1, () => 0.99));
-  assert.equal(s.jam, null); assert.ok(ev.some((e) => e.type === 'jam-fixed' && !e.auto)); assert.equal(C.lineFactor(s), 1, '보너스는 없다');
-  // 자동 제어반은 빨리 풀지만 보너스는 없다
-  const a = inFactory(); a.machines = { sorter: 10, press: 15, assembler: 30 }; a.upgrades.autoline = 1; a.truckIn = 1e6; a.jam = { id: 'press', left: C.JAM_SELF_FIX }; a.jamIn = 1e6;
-  let ev2 = []; for (let i = 0; i < C.JAM_AUTO_FIX + 1; i++) ev2 = ev2.concat(C.tick(a, 1, () => 0.99));
-  assert.equal(a.jam, null); assert.ok(ev2.some((e) => e.type === 'jam-fixed' && e.auto)); assert.equal(a.tuneLeft, 0);
-  // 고장은 정속 가동을 깨지 않는다(기계 처리량은 그대로다)
-  const b = inFactory(); b.machines = { sorter: 10, press: 15, assembler: 30 }; b.jam = { id: 'sorter', left: 20 };
-  assert.ok(C.lineInfo(b).steady);
-  // 라인이 없으면 고장도 없다
-  const e = inFactory(); e.jamIn = 0; assert.ok(!C.tick(e, 1, () => 0.5).some((x) => x.type === 'jam'));
-});
-
 test('3구역 출하 트럭: 도는 동안 쌓이고, 실으면 쌓인 만큼 더 받는다. 놓쳐도 쌓인 것은 남는다', () => {
   const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 1e6; s.truckIn = 30;
   for (let i = 0; i < 29; i++) C.tick(s, 1, () => 0.99);
@@ -2402,21 +2315,6 @@ test('3구역 출하 트럭: 도는 동안 쌓이고, 실으면 쌓인 만큼 �
   // 자리를 비우면 고장과 트럭은 정리된다
   const o = inFactory(); o.machines = { sorter: 10, press: 15, assembler: 30 }; o.jam = { id: 'press', left: 10 }; o.truck = { left: 10 }; o.tuneLeft = 5; o.retool = 3;
   C.applyOffline(o, 600); assert.equal(o.jam, null); assert.equal(o.truck, null); assert.equal(o.tuneLeft, 0); assert.equal(o.retool, 0);
-});
-
-test('3구역 납품 의뢰는 품목을 정해서 온다: 그 품목을 만드는 동안에만 차고, 필요한 양은 그 품목의 숙련에 맞춘다', () => {
-  const s = inFactory(); s.machines = { sorter: 10, press: 15, assembler: 30 }; s.jamIn = 1e6; s.truckIn = 1e6; s.contractIn = 0;
-  // rng 0.9 → 다른 품목
-  const seq = [0.1, 0.9, 0.1, 0.5]; let k = 0;
-  const ev = []; C.stepContracts(s, 1, 0, () => seq[k++ % seq.length], ev);
-  assert.ok(s.contract && s.contract.item && s.contract.item !== 'bolt', '다른 품목의 의뢰');
-  assert.equal(ev[0].item, s.contract.item); assert.ok(ev[0].itemName);
-  assert.equal(s.contract.need, Math.max(5, Math.ceil(C.productFlow(s) * C.MASTERY_MIN * 50)), '덜 익힌 품목은 그 속도에 맞는 양만 찾는다');
-  C.stepContracts(s, 1, 100, () => 0.5, []); assert.equal(s.contract.have, 0, '다른 품목을 만드는 동안은 차지 않는다');
-  s.recipe = s.contract.item; C.stepContracts(s, 1, 3, () => 0.5, []); assert.equal(s.contract.have, 3);
-  // 품목이 없는 옛 저장의 의뢰는 무엇을 만들어도 찬다
-  const old = C.sanitizeState(Object.assign(JSON.parse(JSON.stringify(s)), { contract: { who: C.CLIENTS[0].id, need: 10, have: 0, left: 60 } }), 0);
-  assert.equal(old.contract.item, ''); C.stepContracts(old, 1, 4, () => 0.5, []); assert.equal(old.contract.have, 4);
 });
 
 test('회차마다 달라지는 목표: 첫 회차는 원래 목표, 철수하면 자리별로 다시 뽑고 앞 회차와 셋이 모두 같지는 않다', () => {
@@ -2569,11 +2467,6 @@ test('지나온 구역의 자동은 온전히 받고, 지금 있는 구역의 �
   near(C.truckReward(here, true), C.truckReward(here, false) * C.AUTO_SHARE); assert.equal(C.autoShare(here, 2), C.AUTO_SHARE);
   const past = inStation(); past.machines = { sorter: 10, press: 15, assembler: 30 }; past.stockSec = 60;
   near(C.truckReward(past, true), C.truckReward(past, false)); assert.equal(C.autoShare(past, 2), 1);
-  // 지나온 3구역: 자동 제어반이 고장을 고치면 정비 효과까지 난다. 의뢰는 지금 만드는 품목으로만 온다
-  past.upgrades.autoline = 1; past.jam = { id: 'press', left: C.JAM_SELF_FIX }; past.jamIn = 1e6; past.truckIn = 1e6; past.contractIn = 1e6;
-  for (let i = 0; i < C.JAM_AUTO_FIX + 1; i++) C.tick(past, 1, () => 0.99);
-  assert.equal(past.jam, null); assert.ok(past.tuneLeft > 0);
-  for (let i = 0; i < 20; i++) { past.contract = null; past.contractIn = 0; C.stepContracts(past, 1, 0, () => 0.9, []); assert.equal(past.contract.item, 'bolt'); }
 });
 
 test('연속 방어: 연달아 막을수록 전리품이 커지고, 못 막으면 처음으로 돌아간다', () => {
@@ -2675,9 +2568,9 @@ test('구역마다 주문·사건 자동을 끌 수 있다: 꺼 두면 자동 �
   assert.ok(!got.some((e) => e.type === 'zev-auto' && e.id === 'guard')); assert.ok(!got.some((e) => e.type === 'auto-push' && e.id === 'guard')); assert.ok(off.zev.guard, '사건은 손을 기다린다');
   assert.ok(got.some((e) => e.type === 'tune' && e.auto), '다른 구역의 자동은 그대로 돈다');
   // 3구역: 꺼 두면 고장과 트럭도 손을 기다린다. 전력 투입 같은 늘 도는 자동은 그대로다
-  const l = mk(); l.machines = { sorter: 10, press: 15, assembler: 30 }; C.setAutoEvents(l, 2, false); l.jam = { id: 'press', left: C.JAM_SELF_FIX }; l.truck = { left: C.TRUCK_WAIT }; l.stockSec = 30;
+  const l = mk(); l.machines = { sorter: 10, press: 15, assembler: 30 }; C.setAutoEvents(l, 2, false); l.truck = { left: C.TRUCK_WAIT }; l.stockSec = 30;
   got = []; for (let i = 0; i < 8; i++) got = got.concat(C.tick(l, 1, () => 0.99));
-  assert.ok(l.jam && l.truck); assert.ok(got.some((e) => e.type === 'surge'), '전력 투입은 알아서 들어간다');
+  assert.ok(l.truck, '트럭은 손을 기다린다');
   // 다시 켜고, 저장과 철수를 거쳐도 설정이 남는다
   assert.ok(C.setAutoEvents(off, 5, true).ok); assert.ok(C.autoEvents(off, 5));
   C.setAutoEvents(off, 3, false); const round = C.sanitizeState(JSON.parse(JSON.stringify(off)), 0); assert.deepEqual(round.autoOff, { 3: true });
@@ -2750,16 +2643,6 @@ test('1.5.9: 구역 문 값은 뒤로 갈수록 커지고, 혈청 값은 7구역
   for (let i = 1; i < C.ZONES.length; i++) assert.ok(C.ZONES[i].cost > C.ZONES[i - 1].cost);
   assert.ok(C.SERUM_COSTS[0] > C.ZONES[6].cost);
   for (let i = 1; i < C.SERUM_COSTS.length; i++) assert.ok(C.SERUM_COSTS[i] > C.SERUM_COSTS[i - 1]);
-});
-
-test('1.6.1: 자동에 맡기면 의뢰가 바라는 품목으로 알아서 바꾼다. 자동이 아니면 그대로 둔다', () => {
-  const mk = (auto) => { const s = inFactory(); s.machines = { sorter: 20, press: 30, assembler: 60 }; s.recipe = 'bolt'; s.retool = 0; s.upgrades.autoline = auto ? 1 : 0; s.contract = { who: C.CLIENTS[0].id, item: 'gear', need: 1e9, have: 0, left: 60 }; return s; };
-  const a = mk(true); assert.ok(C.autoEvents(a, 2));
-  const ev = []; C.stepContracts(a, 1, 5, () => 0.5, ev);
-  assert.equal(a.recipe, 'gear'); assert.ok(a.retool > 0); assert.ok(ev.some(e => e.type === 'auto-recipe'));
-  const ev2 = []; C.stepContracts(a, 1, 5, () => 0.5, ev2); assert.equal(ev2.length, 0, '이미 맞췄으면 다시 바꾸지 않는다');
-  const m = mk(false); C.stepContracts(m, 1, 5, () => 0.5, []); assert.equal(m.recipe, 'bolt');
-  const off = mk(true); C.setAutoEvents(off, 2, false); C.stepContracts(off, 1, 5, () => 0.5, []); assert.equal(off.recipe, 'bolt', '구역 자동을 껐으면 바꾸지 않는다');
 });
 
 test('1.6.2 길 정찰: 구역마다 정해진 시간이 지나야 다음 문이 열리고, 뒤 구역일수록 조금씩 길다', () => {
@@ -3297,4 +3180,91 @@ test('3.2.0 옛 저장: 새 셈으로 처리량이 줄지 않게 선별기 레�
   // 고르게 올려 둔 저장은 그대로
   const even = inFactory(); even.machines.sorter = 40; even.machines.press = 40; even.machines.assembler = 40;
   const r2 = JSON.parse(C.serialize(even)); delete r2.lineV; assert.equal(C.deserialize(JSON.stringify(r2), 0).machines.sorter, 40);
+});
+
+/* ---------- 3.3.0 3구역 합치기 판 ---------- */
+function onBoard(levels) { const s = inFactory(); s.machines = { sorter: 5, press: 5, assembler: 5 }; s.board = Array(C.BOARD_SIZE).fill(0); (levels || []).forEach((lv, i) => { s.board[i] = lv; }); return s; }
+
+test('합치기 판: 상자 값은 단계마다 3배, 판의 합계가 라인 수입에 곱해진다', () => {
+  assert.equal(C.boxWorth(1), 1); assert.equal(C.boxWorth(2), 3); assert.equal(C.boxWorth(9), C.BOARD_NORM, '9단계 상자 하나가 기준');
+  for (const junk of [0, -1, NaN, 'x', C.BOX_MAX + 1, undefined]) assert.equal(C.boxWorth(junk), 0);
+  const empty = onBoard([]); assert.equal(C.lineRate(empty), 0, '판이 비면 버는 것이 없다');
+  const one = onBoard([9]), two = onBoard([9, 9]);
+  assert.ok(C.lineRate(one) > 0); near(C.lineRate(two), C.lineRate(one) * 2);
+  near(C.boxRate(one, 9), C.lineRate(one)); near(C.boxRate(one, 8) * 3, C.boxRate(one, 9));
+  // 판이 망가진 저장도 스무 칸으로 고쳐 읽는다
+  const bad = onBoard([]); bad.board = 'x'; assert.equal(C.boardSum(bad), 0); assert.equal(bad.board.length, C.BOARD_SIZE);
+});
+
+test('합치기 판: 같은 단계 둘을 누르면 윗단계 하나가 되고, 그 자리에서 덤을 받는다. 합치면 언제나 더 번다', () => {
+  const s = onBoard([1, 0, 1, 2, 3]);
+  assert.deepEqual(C.mergeable(s), [0, 2]);
+  const rate0 = C.lineRate(s), sup0 = s.supplies;
+  const r = C.mergeBox(s, 2);
+  assert.ok(r.ok); assert.equal(r.level, 2); assert.equal(r.at, 2); assert.equal(r.from, 0);
+  assert.deepEqual(s.board.slice(0, 5), [0, 0, 2, 2, 3]);
+  near(r.gain, C.boxRate(s, 2) * C.MERGE_SECONDS); near(s.supplies - sup0, r.gain); assert.equal(s.mergesRun, 1);
+  assert.ok(C.lineRate(s) > rate0, '둘(1+1)이 하나(3)가 되어 초당이 오른다');
+  // 이어서 합치기: 2+2 → 3, 3+3 → 4
+  assert.ok(C.mergeBox(s, 3).ok); assert.ok(C.mergeBox(s, 4).ok);
+  assert.deepEqual(s.board.slice(0, 5), [0, 0, 0, 0, 4]); assert.equal(s.boxBest, 4);
+  // 안 되는 경우: 짝이 없다, 빈칸, 판 밖, 잠긴 구역
+  assert.equal(C.mergeBox(s, 4).reason, 'alone'); assert.equal(C.mergeBox(s, 0).reason, 'empty');
+  for (const junk of [-1, 99, NaN, 'x', undefined]) assert.equal(C.mergeBox(s, junk).reason, 'empty');
+  assert.equal(C.mergeBox(inMarket(), 0).reason, 'locked');
+});
+
+test('합치기 판: 상자는 정해진 간격으로 들어오고, 가득 차면 가장 낮은 짝이 알아서 합쳐진다(막히지 않는다)', () => {
+  const s = onBoard([]); s.feed = 1;
+  let ev = []; C.stepBoard(s, 0, half, ev);
+  assert.equal(s.board.filter(x => x === 1).length, 1, '첫 상자는 바로 들어온다'); assert.ok(ev.some(e => e.type === 'box-in'));
+  C.stepBoard(s, C.FEED_SECONDS * 2, half, []); assert.equal(s.board.filter(x => x === 1).length, 3);
+  // 기계가 없으면 들어오지 않는다
+  const none = inFactory(); none.board = Array(C.BOARD_SIZE).fill(0); none.feed = 1; C.stepBoard(none, 60, half, []); assert.equal(C.boardSum(none), 0);
+  // 가득 찬 판: 덤 없이 가장 낮은 짝이 합쳐지고 새 상자가 들어온다
+  const full = onBoard(Array(C.BOARD_SIZE).fill(1)); full.board[5] = 3; full.board[6] = 3; full.feed = 1;
+  const sup = full.supplies; ev = []; C.stepBoard(full, 0, half, ev);
+  assert.ok(ev.some(e => e.type === 'box-merge' && e.level === 2 && !e.hand)); assert.equal(full.supplies, sup, '알아서 합쳐진 것에는 덤이 없다');
+  assert.equal(full.board.filter(x => x >= 1).length, C.BOARD_SIZE); assert.equal(full.board.filter(x => x === 2).length, 1); assert.equal(full.mergesRun, 0); assert.equal(full.mergesAll, 1, '목표는 알아서 합쳐진 것도 센다');
+  // 오래 둬도 멈추지 않고, 손으로 다 합친 판이 가만히 둔 판보다 많이 번다
+  const idle = onBoard([]), hand = onBoard([]); idle.feed = hand.feed = 1; let seed = 3; const rng = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  for (let t = 0; t < 1800; t++) { C.stepBoard(idle, 1, rng, []); C.stepBoard(hand, 1, rng, []); for (let m = C.mergeable(hand), g = 0; m.length && g < 50; m = C.mergeable(hand), g++) C.mergeBox(hand, m[0]); }
+  assert.ok(C.boardSum(idle) > 1000); assert.ok(C.boardSum(hand) > C.boardSum(idle));
+  // 자동 제어반: 들어오는 대로 합친다(짝이 남지 않는다)
+  const auto = onBoard([]); auto.feed = 1; auto.upgrades.autoline = 1;
+  for (let t = 0; t < 300; t++) C.stepBoard(auto, 1, rng, []);
+  assert.equal(C.mergeable(auto).length, 0); assert.equal(auto.mergesRun, 0);
+  for (const junk of [NaN, -5, 'x', undefined, 1e99]) assert.doesNotThrow(() => C.stepBoard(onBoard([1, 1]), junk, half, []));
+});
+
+test('합치기 판: 저장 · 자리 비움 · 철수', () => {
+  const s = onBoard([4, 4, 2]); s.feed = 0.5; s.mergesRun = 7; s.boxBest = 4;
+  const back = C.deserialize(C.serialize(s), 0);
+  assert.deepEqual(back.board, s.board); assert.equal(back.feed, 0.5); assert.equal(back.mergesRun, 7); assert.equal(back.boxBest, 4);
+  // 깨진 판
+  const raw = JSON.parse(C.serialize(s)); raw.board = [99, -3, 'x', 2.7, null]; raw.feed = 'x';
+  const fixed = C.deserialize(JSON.stringify(raw), 0);
+  assert.equal(fixed.board.length, C.BOARD_SIZE); assert.ok(fixed.board.every(x => Number.isInteger(x) && x >= 0 && x <= C.BOX_MAX)); assert.equal(fixed.feed, 1);
+  // 판이 없던 옛 저장(3구역 이상)은 기준 근처의 판으로 시작한다. 1 · 2구역 저장은 빈 판
+  delete raw.board; const old = C.deserialize(JSON.stringify(raw), 0);
+  assert.ok(C.boardFactor(old) > 0.5 && C.boardFactor(old) < 2, '판 배수 ' + C.boardFactor(old));
+  const early = JSON.parse(C.serialize(inMarket())); delete early.board; assert.equal(C.boardSum(C.deserialize(JSON.stringify(early), 0)), 0);
+  // 자리 비움: 수입은 나갈 때의 판으로 치고, 판은 그동안 자란다
+  const away = onBoard([9]); away.feed = 0; away.defenses.rail = 1e5;
+  const rate = C.lineRate(away); C.applyOffline(away, 3000);
+  near(away.lineEarned, rate * 3000 * C.OFFLINE_RATE); assert.ok(C.boardSum(away) > C.BOARD_NORM, '그동안 상자가 들어왔다');
+  // 철수하면 판은 빈다
+  away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state;
+  assert.equal(C.boardSum(next), 0); assert.equal(next.mergesRun, 0);
+});
+
+test('3.3.0 없앤 것: 품목 고르기 · 고장 · 전력 투입은 더 일어나지 않는다', () => {
+  const s = onBoard([9]); s.feed = -1e9; s.defenses.rail = 1e9; s.signalIn = 1e9; s.jam = { id: 'press', left: 30 }; s.retool = 5; s.jamIn = 0;
+  assert.equal(C.setRecipe(s, 'gear').reason, 'gone'); assert.equal(C.surge(s).reason, 'gone');
+  const rate = C.lineRate(s); let ev = [];
+  for (let i = 0; i < 400; i++) ev = ev.concat(C.tick(s, 1, half));
+  assert.equal(s.jam, null); assert.ok(!ev.some(e => e.type === 'jam' || e.type === 'surge' || e.type === 'mastered'));
+  near(C.lineNow(s), C.lineRate(s)); assert.ok(s.lineEarned >= rate * 399);
+  // 납품 의뢰는 품목을 가리지 않고 찬다
+  s.contract = { id: 'bike', item: 'gear', need: 100, have: 0, left: 60 }; C.stepContracts(s, 1, 40, half, []); assert.equal(s.contract.have, 40);
 });

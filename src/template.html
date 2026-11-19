@@ -643,6 +643,22 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .line-cell + .line-cell::before { content: '▶'; position: absolute; left: -9px; top: 50%; transform: translateY(-50%); font-size: 9px; line-height: 1; background: var(--paper); }
 .line-cell.slow { border-color: var(--blood); }
 /* 3구역: 품목 고르기, 고장, 출하 트럭 */
+/* 3.3.0 합치기 판. 예전 컨베이어 그림 · 기계 칸 · 품목 · 고장 · 전력 투입은 쓰지 않아 감춘다 */
+#belt, #line-flow, #recipes, #jam-fix, #line .line-acts { display: none !important; }
+.mboard { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; padding: 7px; margin-bottom: 8px; border: 2px solid var(--ink); border-radius: 8px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.mboard button { position: relative; aspect-ratio: 1.25; min-height: 0; padding: 0; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--ink) 9%, transparent); color: #17180f; font: 700 12px/1.15 var(--font-body, inherit); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: visible; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.mboard button small { display: block; font: 500 10px/1.2 var(--font-mono); opacity: .8; }
+.mboard button.t1 { background: #8f8f85; } .mboard button.t2 { background: #cfcdc0; } .mboard button.t3 { background: #6aaede; } .mboard button.t4 { background: #63b97f; }
+.mboard button.t5 { background: #f0b400; } .mboard button.t6 { background: #e98a3c; } .mboard button.t7 { background: #d8453a; color: #fff; } .mboard button.t0 { background: #a77bd8; color: #fff; }
+.mboard button.pair { outline: 3px solid var(--hazard); outline-offset: 1px; }
+.mboard button.hi { box-shadow: inset 0 0 0 2px #17180f, inset 0 0 0 4px rgba(255,255,255,.55); }      /* 9단계부터는 색이 한 바퀴 돌아오므로 안쪽 테두리로 구분한다 */
+.mboard button.pop { animation: box-pop .28s ease-out; }
+.mboard button.in { animation: box-in .25s ease-out; }
+.mboard button i { position: absolute; left: 50%; top: -4px; transform: translateX(-50%); font: 700 12px/1 var(--font-mono); font-style: normal; color: var(--hazard); white-space: nowrap; pointer-events: none; animation: box-gain .9s ease-out forwards; text-shadow: 0 1px 0 var(--paper), 0 -1px 0 var(--paper), 1px 0 0 var(--paper), -1px 0 0 var(--paper); z-index: 2; }
+@keyframes box-pop { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes box-in { 0% { transform: translateY(-8px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes box-gain { 0% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, -22px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .mboard button.pop, .mboard button.in { animation: none; } }
 .recipes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
 .recipes button { padding: 7px 4px; border: 2px solid var(--ink-soft); border-radius: 8px; background: transparent; color: var(--ink); font: 700 14px/1.2 var(--font-body); cursor: pointer; }
 .recipes button small { display: block; margin-top: 2px; font-weight: 400; font-size: 11px; color: var(--ink-soft); }
@@ -1300,7 +1316,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 3.2.1</div>
+  <div class="boot-ver">7구역 알파 3.3.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1502,6 +1518,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       </div>
       <div class="trade line" id="line" hidden>
         <!-- 컨베이어: 물건이 왼쪽에서 오른쪽으로 흐른다. 병목인 기계 앞에는 물건이 쌓인다. 그림은 ui.js 의 drawBelt 가 그린다. -->
+        <!-- 3.3.0 합치기 판: 같은 상자 둘을 누르면 윗단계 하나가 된다. 칸은 ui.js 가 스무 개 만든다 -->
+        <div class="mboard" id="mboard" role="group" aria-label="합치기 판"></div>
         <canvas class="belt" id="belt" width="320" height="64" aria-hidden="true"></canvas>
         <div class="line-flow" id="line-flow"></div>
         <!-- 품목: 무엇을 만들지 고른다. 품목마다 느린 기계가 다르다 -->
@@ -1732,7 +1750,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 3.2.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 3.3.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

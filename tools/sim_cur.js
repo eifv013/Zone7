@@ -56,7 +56,8 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
     const IDLE = !!process.env.IDLE;      // IDLE=1: 사기만 하고 사건·단추는 손대지 않는 사람(자동 개조가 대신 하는 것만 일어난다)
-    if (!IDLE) { if (s.jam) C.repairJam(s); if (s.truck) C.loadTruck(s, false); }      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
+    if (!IDLE) { if (s.truck) C.loadTruck(s, false); if (s.zone === 2) for (let m = C.mergeable(s), g = 0; m.length && g < 8; m = C.mergeable(s), g++) C.mergeBox(s, m[0]); }      // 3.3.0: 3구역에 있는 동안은 상자를 손으로 합친다(지나온 뒤에는 가만히 둔다)
+    if (false) {}      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
     // 4·6·7구역 사건: 배수를 먼저 다 쌓고, 그 뒤로는 바로 받는다. 5구역 밤샘 연구는 되는 대로 누른다
     if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
     if (!IDLE) { if (s.zone >= 4 && !(s.focusCool > 0)) C.focusLab(s); if (s.zone >= 5) C.pushZone(s, 'guard'); if (s.zone >= 6) C.pushZone(s, 'tower'); }
@@ -92,7 +93,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const toward = {
       z1a: () => C.buyBuilding(s, 'scouts', 1), z1a2: () => C.buyBuilding(s, 'garden', 1), z1b2: cheapestDef, z1c2: () => cheapestUp(0),
       z2a: () => C.buyStall(s, 1), z2a2: cheapestHand, z2c2: () => cheapestUp(1),
-      z3a: () => C.tuneLine(s, 1), z3a2: () => cheapestUp(2), z3b: () => (C.recipeOf(s).id === 'bolt' && !C.lineInfo(s).steady ? C.tuneLine(s, 1) : { ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
+      z3a: () => C.tuneLine(s, 1), z3a2: () => cheapestUp(2), z3b: () => ({ ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
       z4a: () => C.buyTrain(s, 1), z4a2: cheapestRoute, z4c2: () => cheapestUp(3),
       z5a: () => C.buyStaff(s, 1), z5a2: () => cheapestUp(4),
       z6a: () => C.buyPost(s, 1), z6a2: cheapestDef, z6b: () => cheapestUp(5), z6b2: () => C.buyUpgrade(s, 'booth'),
@@ -100,7 +101,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     };
     for (let zi = 0; zi <= s.zone; zi++) for (const g of C.goals(s, zi)) { const act = toward[g.id]; for (let k = 0; act && !g.done && k < 5 && C.goals(s, zi).find(x => x.id === g.id).value < g.need && act().ok; k++); }
     // 3구역: 의뢰가 다른 품목을 찾으면 그 품목으로 바꾼다(의뢰가 없으면 볼트로 돌아온다)
-    if (!IDLE && s.zone >= 2) { const want = s.contract && s.contract.item ? s.contract.item : 'bolt'; if (C.recipeOf(s).id !== want && !(s.retool > 0)) C.setRecipe(s, want); }
+    if (false && s.zone >= 2) { const want = s.contract && s.contract.item ? s.contract.item : 'bolt'; if (C.recipeOf(s).id !== want && !(s.retool > 0)) C.setRecipe(s, want); }
     const n = C.nextZone(s);
     if (n && n.ready && n.enough) C.openZone(s);
     // 7구역의 마지막 목표가 혈청뿐이고 3시간 안에 모을 수 있으면, 다른 것을 사지 않고 모은다(사람도 그렇게 한다)
