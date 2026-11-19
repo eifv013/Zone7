@@ -2944,15 +2944,19 @@ test('1.7.4: 훈장은 생산 +2%, 손수 도전 중에는 자리 비움 효율�
   C.quitChallenge(b); assert.equal(C.offlineRate(b), C.offlineRate(a));
 });
 
+// 원정 시험용: 목표는 다녀올 때마다 바뀌므로(3.0.6) 첫 후보로 고정해서 만든다. NEED 는 그 판의 목표 수치
+const mk = (main, id, hard) => { main.stageGoal = main.stageGoal || {}; main.stageGoal[id] = 0; return C.createStage(main, id, hard, 0); };
+const NEED = (st) => C.stageStatus(st).need;
+
 test('1.8.0 원정: 스테이지는 따로 만든 새 판이고, 본 게임에는 결과만 적힌다', () => {
   assert.equal(C.STAGES.length, 6); assert.equal(C.STAGES.filter(d => d.boss).length, 1);
   C.STAGES.forEach(d => { assert.ok(d.speed < d.limit && d.need > 0 && C.STAGE_RULES[d.hard], d.id); d.rules.forEach(r => assert.ok(C.STAGE_RULES[r], d.id + ' ' + r)); assert.ok(d.rules.indexOf(d.hard) < 0, d.id + ': 하드 규칙은 원래 규칙과 달라야 한다'); });
   const main = C.createState(0); main.traits.immune = 10; main.supplies = 123; main.story = { 'z1-0': true };
-  assert.equal(C.stageBlock(main, 's1-1', false), 'locked'); assert.equal(C.createStage(main, 's1-1', false, 0), null);
+  assert.equal(C.stageBlock(main, 's1-1', false), 'locked'); assert.equal(mk(main, 's1-1', false), null);
   main.bestZone = 2;
   assert.equal(C.stageBlock(main, 's1-1', false), ''); assert.equal(C.stageBlock(main, 's1-2', false), 'prev'); assert.equal(C.stageBlock(main, 's1-1', true), 'hard'); assert.equal(C.stageBlock(main, 'zz', false), 'unknown');
   const before = C.serialize(main);
-  const st = C.createStage(main, 's1-1', false, 0);
+  const st = mk(main, 's1-1', false);
   assert.ok(st.stage && st.supplies === 0 && !st.traits.immune, '특성 없이 빈 거점에서 시작한다');
   assert.equal(st.story['z1-0'], true, '읽은 일지는 옮겨서 다시 뜨지 않는다');
   assert.ok(C.stageRule(st, 'tap5') && !C.stageRule(st, 'lean') && !C.stageRule(main, 'tap5'));
@@ -2963,11 +2967,11 @@ test('1.8.0 원정: 스테이지는 따로 만든 새 판이고, 본 게임에�
   assert.equal(C.serialize(main), before);
   assert.equal(Object.keys(st.ach).length, 0, '스테이지에서는 업적을 세지 않는다');
   // 시간이 다 되면 실패, 결과를 적어도 표시는 없다
-  const lost = C.createStage(main, 's1-1', false, 0); lost.runSeconds = 480;
+  const lost = mk(main, 's1-1', false); lost.runSeconds = 480;
   assert.ok(C.tick(lost, 0.1, () => 0.5).some(e => e.type === 'stage-lost')); assert.ok(C.stageStatus(lost).lost);
   assert.equal(C.finishStage(main, lost).won, false); assert.equal(C.stageMarks(main, 's1-1').clear, false);
   // 목표를 채우면 클리어. 빨랐으면 스피드도. 간식은 새 표시마다 한 번만
-  st.runEarned = 5e6; st.runSeconds = 200;
+  st.runEarned = NEED(st); st.runSeconds = 200;
   const ev = C.tick(st, 0.1, () => 0.5).find(e => e.type === 'stage-won'); assert.ok(ev && ev.speed);
   st.runEarned = 0; C.tick(st, 0.1, () => 0.5); assert.ok(C.stageStatus(st).won, '한 번 정해진 결과는 바뀌지 않는다');
   const t0 = main.treats, r = C.finishStage(main, st);
@@ -2975,7 +2979,7 @@ test('1.8.0 원정: 스테이지는 따로 만든 새 판이고, 본 게임에�
   assert.deepEqual(C.finishStage(main, st).got, [], '같은 표시는 다시 받지 않는다');
   assert.equal(C.stageBlock(main, 's1-2', false), ''); assert.equal(C.stageBlock(main, 's1-1', true), '');
   // 하드: 규칙이 하나 더 걸리고 하드 표시를 준다
-  const hd = C.createStage(main, 's1-1', true, 0); assert.ok(C.stageRule(hd, 'lean')); hd.runEarned = 5e6; hd.runSeconds = 400; C.tick(hd, 0.1, () => 0.5);
+  const hd = mk(main, 's1-1', true); assert.ok(C.stageRule(hd, 'lean')); hd.runEarned = NEED(hd); hd.runSeconds = 400; C.tick(hd, 0.1, () => 0.5);
   assert.deepEqual(C.finishStage(main, hd).got, ['hard', 'hardSafe']); assert.equal(C.stageMarks(main, 's1-1').best, 201, '최고 기록은 더 빠른 쪽');
   assert.deepEqual(C.stageMarkCount(main), { have: 5, all: 36 });
   // 표시는 저장과 철수를 거쳐도 남고, 스테이지 판 자체는 저장되지 않는다
@@ -2991,23 +2995,23 @@ test('3.0.2 원정의 흔적: 최고 기록, 구간 간식, 다시 도전 물자
   const main = C.createState(0); main.bestZone = 6; main.zone = 3;
   const id = C.STAGES[0].id, def = C.STAGES[0];
   // 시간이 다 돼 실패: 간 만큼 기록이 남고, 넘은 구간만큼 간식을 받는다
-  const a = C.createStage(main, id, false, 0); a.runEarned = def.need * 0.6; a.runSeconds = def.limit + 1; C.tick(a, 0.1, () => 0.5);
+  const a = mk(main, id, false); a.runEarned = NEED(a) * 0.6; a.runSeconds = def.limit + 1; C.tick(a, 0.1, () => 0.5);
   const t0 = main.treats, r1 = C.finishStage(main, a);
   assert.equal(r1.won, false); assert.equal(r1.why, 'time'); assert.ok(r1.record); assert.ok(Math.abs(r1.pct - 0.6) < 0.01);
   assert.equal(main.treats, t0 + 2 * C.STAGE_STEP_TREATS, '25%와 50%를 넘었다');
   assert.equal(C.stageMarks(main, id).fails, 1); assert.equal(C.stageRetryBonus(main, id, false), C.STAGE_RETRY_SUPPLIES); assert.equal(C.stageRetryBonus(main, id, true), 0, '하드에는 얹지 않는다');
-  assert.equal(C.createStage(main, id, false, 0).supplies, C.STAGE_RETRY_SUPPLIES); assert.equal(C.createStage(main, id, false, 0).runEarned, 0);
+  assert.equal(mk(main, id, false).supplies, C.STAGE_RETRY_SUPPLIES); assert.equal(mk(main, id, false).runEarned, 0);
   // 같은 구간은 다시 주지 않고, 더 못 가면 기록도 그대로
-  const b = C.createStage(main, id, false, 0); b.runEarned = def.need * 0.3; b.runSeconds = def.limit + 1; C.tick(b, 0.1, () => 0.5);
+  const b = mk(main, id, false); b.runEarned = NEED(b) * 0.3; b.runSeconds = def.limit + 1; C.tick(b, 0.1, () => 0.5);
   const t1 = main.treats, r2 = C.finishStage(main, b);
   assert.equal(main.treats, t1); assert.equal(r2.record, false); assert.ok(Math.abs(C.stageMarks(main, id).pct - 0.6) < 0.01); assert.equal(C.stageMarks(main, id).fails, 2);
   // 포기는 실패로 세지 않는다
-  const q = C.createStage(main, id, false, 0); q.runEarned = def.need * 0.1; assert.equal(C.finishStage(main, q).why, 'quit'); assert.equal(C.stageMarks(main, id).fails, 2);
+  const q = mk(main, id, false); q.runEarned = NEED(q) * 0.1; assert.equal(C.finishStage(main, q).why, 'quit'); assert.equal(C.stageMarks(main, id).fails, 2);
   // 클리어하면 남은 구간 간식을 마저 받고 실패 횟수는 0
-  const c = C.createStage(main, id, false, 0); c.runEarned = def.need; c.runSeconds = def.speed + 50; C.tick(c, 0.1, () => 0.5);
+  const c = mk(main, id, false); c.runEarned = NEED(c); c.runSeconds = C.stageSpeed(def, false, 0) + 50; C.tick(c, 0.1, () => 0.5);
   c.breaches = 1; const r3 = C.finishStage(main, c); assert.deepEqual(r3.got, ['clear'], '방어 실패가 있으면 무결은 못 받는다'); assert.equal(r3.stepTreats, C.STAGE_STEP_TREATS); assert.equal(C.stageMarks(main, id).fails, 0); assert.equal(C.stageMarks(main, id).pct, 1);
   // 하드 별 둘: 하드 클리어, 하드를 스피드 기준 안에
-  const h = C.createStage(main, id, true, 0); h.runEarned = def.need; h.runSeconds = def.speed - 10; C.tick(h, 0.1, () => 0.5);
+  const h = mk(main, id, true); h.runEarned = NEED(h); h.runSeconds = C.stageSpeed(def, true, 0) - 10; C.tick(h, 0.1, () => 0.5);
   assert.deepEqual(C.finishStage(main, h).got, ['speed', 'hard', 'safe', 'hardSpeed', 'hardSafe']);
   const back = C.deserialize(C.serialize(main), 0); assert.deepEqual(C.stageMarks(back, id), C.stageMarks(main, id));
   // 실패 기록만 있는 원정도 저장을 거쳐 남는다
@@ -3051,7 +3055,7 @@ test('1.9.0 뽑기: 화면의 확률표와 실제 추첨이 같고, 보장·중�
 
 test('1.9.0 뽑기권: 원정의 새 표시, 도전 성공, 변이체를 막은 밤에 받는다', () => {
   const main = C.createState(0); main.bestZone = 2;
-  const st = C.createStage(main, 's1-1', false, 0); st.runEarned = 5e6; st.runSeconds = 100; C.tick(st, 0.1, () => 0.5);
+  const st = mk(main, 's1-1', false); st.runEarned = NEED(st); st.runSeconds = 100; C.tick(st, 0.1, () => 0.5);
   const r = C.finishStage(main, st); assert.equal(r.tickets, 3); assert.equal(main.tickets, 3);      // 클리어 · 스피드 · 무결
   const c = C.createState(0); c.bestZone = 6; C.startChallenge(c, 'frugal'); c.zone = C.CHALLENGES.find(d => d.id === 'frugal').goal; C.tick(c, 0.1, () => 0.5); assert.equal(c.tickets, 3);
 });
@@ -3257,4 +3261,28 @@ test('4구역 배차: 복구한 노선에는 먼저 한 대씩 가고, 남은 �
   s.routes.loop = 0; s.trains = 22; assert.equal(C.railPlan(s).riders.loop, 0);
   s.routes = { loop: 1, river: 0, outer: 0, express: 0 }; s.trains = 5;
   const q = C.railPlan(s); assert.equal(q.riders.loop, Math.min(5, q.slots.loop)); assert.equal(q.idle, 5 - q.riders.loop);
+});
+
+test('3.0.6 원정 목표는 다녀올 때마다 다른 것으로 바뀐다', () => {
+  const main = C.createState(0); main.bestZone = 6; main.zone = 3;
+  const id = 's1-1', def = C.STAGES[0];
+  assert.ok(def.goals.length >= 3);
+  C.STAGES.forEach(d => { assert.ok(d.goals.length >= 3, d.id); d.goals.forEach(g => { assert.ok(g.need > 0 && g.hardNeed > 0 && g.speed > 0 && g.speed < d.limit && g.hardSpeed < d.limit, d.id + ' ' + g.goal); }); assert.equal(d.goals[0].goal, d.goal); });
+  assert.equal(C.stageGoalIndex(main, id), 0);
+  // 한 발짝도 못 가고 돌아온 포기는 목표를 바꾸지 않는다
+  const q = C.createStage(main, id, false, 0); C.finishStage(main, q, () => 0.5); assert.equal(C.stageGoalIndex(main, id), 0);
+  // 다녀오면 바뀐다: 언제나 다른 후보로, 범위 안에서
+  const seen = new Set();
+  for (let i = 0; i < 40; i++) {
+    const before = C.stageGoalIndex(main, id), s = C.createStage(main, id, false, 0);
+    assert.equal(s.stage.goal, before); assert.equal(C.stageStatus(s).goal, def.goals[before].goal);
+    s.runSeconds = def.limit + 1; C.tick(s, 0.1, () => 0.5); C.finishStage(main, s, () => (i * 0.37) % 1);
+    const after = C.stageGoalIndex(main, id); assert.notEqual(after, before); assert.ok(after >= 0 && after < def.goals.length); seen.add(after);
+  }
+  assert.equal(seen.size, def.goals.length, '모든 후보가 나온다');
+  // 저장과 철수를 거쳐도 남는다. 엉뚱한 값은 0으로
+  main.stageGoal[id] = 2; assert.equal(C.stageGoalIndex(C.deserialize(C.serialize(main), 0), id), 2);
+  main.stageGoal[id] = 99; assert.equal(C.stageGoalIndex(main, id), 0); assert.equal(C.stageGoalIndex(C.deserialize(C.serialize(main), 0), id), 0);
+  // 목표 글과 수치는 후보를 따른다
+  assert.notEqual(C.stageGoalText(def, false, 0), C.stageGoalText(def, false, 1)); assert.equal(C.stageNeed(def, true, 1), def.goals[1].hardNeed);
 });

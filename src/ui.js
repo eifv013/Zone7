@@ -113,7 +113,7 @@
       var saved = JSON.parse(raw), sg = saved && saved.stage, def = sg && C.STAGES.filter(function (d) { return d.id === sg.id; })[0];
       if (!def || sg.won || sg.lost) { localStorage.removeItem(STAGE_KEY); return false; }
       var st = C.deserialize(saved.text, now);
-      st.stage = { id: def.id, hard: !!sg.hard, won: false, lost: false, seconds: Math.max(0, Number(sg.seconds) || 0) };
+      st.stage = { id: def.id, hard: !!sg.hard, won: false, lost: false, seconds: Math.max(0, Number(sg.seconds) || 0), goal: Math.max(0, Math.floor(Number(sg.goal) || 0)) };
       st.lastSeen = now;      // 닫혀 있던 동안 원정의 시간은 흐르지 않는다
       home = state; stageEnter = now; state = st;      // 본 게임은 방금 정산했으므로, 원정을 끝낼 때는 지금부터의 시간만 더 정산한다
       tab = 'z0'; pane = 'play'; perkShown = '';
@@ -1443,7 +1443,7 @@
     tabBtn.disabled = false; setText(tabBtn, '원정');
     var all = C.stageMarkCount(state);
     setText($('stage-count'), open ? '별 ' + all.have + ' / ' + all.all + ' · 지역 휘장 ' + C.badgeCount(state) + ' / ' + C.REGIONS.length : '');
-    setText($('stage-hint'), open ? '거점 밖으로 나가는 짧은 수색이에요.\n맨손으로 시작해요. 거점은 그동안 계속 수색 중이에요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
+    setText($('stage-hint'), open ? '맨손으로 시작하는 짧은 수색이에요.\n목표는 다녀올 때마다 바뀌어요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
     if (!rows.stages) buildStageMap();
     // 고른 스테이지가 없으면: 아직 클리어하지 않은 것 가운데 맨 앞
     if (!stagePick || !rows.stages[stagePick]) { stagePick = C.STAGES[0].id; C.STAGES.some(function (d) { if (!C.stageMarks(state, d.id).clear) { stagePick = d.id; return true; } return false; }); }
@@ -1466,7 +1466,7 @@
     // 3.0.3: 일반 · 하드 칸. 고른 쪽의 규칙과 별 셋, 기록만 보인다. 하드를 아직 못 여는 원정에서는 일반으로 되돌린다
     var whyHard = C.stageBlock(state, d.id, true);
     if (stageHard && whyHard && !why) stageHard = false;
-    var hardOn = stageHard, keys = C.STAGE_STARS[hardOn ? 'hard' : 'normal'], block = hardOn ? whyHard : why;
+    var hardOn = stageHard, keys = C.STAGE_STARS[hardOn ? 'hard' : 'normal'], block = hardOn ? whyHard : why, gi = C.stageGoalIndex(state, d.id);
     $('stage-normal').setAttribute('aria-pressed', String(!hardOn)); $('stage-hard').setAttribute('aria-pressed', String(hardOn));
     $('stage-hard').disabled = !!whyHard && !hardOn;
     $('stage-go').parentElement.classList.toggle('hard', hardOn);
@@ -1474,14 +1474,14 @@
     setText($('stage-go'), hardOn ? '하드 출발' : bonus > 0 ? '출발 · 시작 물자 +' + fmt(bonus) : '출발');
     // 위: 이 원정이 무엇인지(일반 규칙이 없으면 그 줄은 적지 않는다). 아래 두 줄: 일반과 하드. 누르면 그쪽으로 고른다
     var baseRules = C.stageRuleTexts(d, false).join(', ');
-    setText($('stage-d-sub'), (baseRules ? baseRules + '\n' : '') + C.stageGoalText(d, hardOn) + ' · 제한 ' + clock(d.limit)
+    setText($('stage-d-sub'), (baseRules ? baseRules + '\n' : '') + C.stageGoalText(d, hardOn, gi) + ' · 제한 ' + clock(d.limit)
       + (d.boss ? '\n보상 · 지역 휘장 · 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
     setText($('stage-n-info'), m.best ? '최고 ' + clock(m.best) : m.pct > 0 ? '가장 멀리 ' + Math.floor(m.pct * 100) + '%' : '');
     setText($('stage-h-info'), whyHard && !why ? '일반을 클리어하면 열려요' : C.STAGE_RULES[d.hard] + ' · 닫으면 처음부터');
     setText($('stage-n-stars'), starOf(C.STAGE_STARS.normal)); setText($('stage-h-stars'), starOf(C.STAGE_STARS.hard));
     // 별마다 조건을 붙여 적는다(고른 줄에서만 펼쳐진다)
     var safeText = function (n) { return n > 0 ? '방어 실패 ' + n + '번까지' : '방어 실패 없이'; };
-    var STAR_HOW = { clear: '클리어', speed: clock(C.stageSpeed(d, false)) + ' 안에', safe: safeText(C.stageSafe(d, false)), hard: '클리어', hardSpeed: clock(C.stageSpeed(d, true)) + ' 안에', hardSafe: safeText(C.stageSafe(d, true)) };
+    var STAR_HOW = { clear: '클리어', speed: clock(C.stageSpeed(d, false, gi)) + ' 안에', safe: safeText(C.stageSafe(d, false)), hard: '클리어', hardSpeed: clock(C.stageSpeed(d, true, gi)) + ' 안에', hardSafe: safeText(C.stageSafe(d, true)) };
     [['stage-n-how', C.STAGE_STARS.normal], ['stage-h-how', C.STAGE_STARS.hard]].forEach(function (pair) {
       var box = $(pair[0]), key = pair[1].map(function (k) { return k + (m[k] ? 1 : 0) + STAR_HOW[k]; }).join('|');
       if (box.getAttribute('data-key') === key) return;      // 바뀔 때만 다시 그린다
@@ -1725,7 +1725,7 @@
   }
   function askStage(d, hard) {
     if (home || C.stageBlock(state, d.id, hard)) return;
-    confirmBox((d.boss ? '보스 · ' : '원정 · ') + d.name + (hard ? ' · 하드' : ''), '규칙 · ' + (C.stageRuleTexts(d, hard).join(', ') || '없음') + '\n목표 · ' + C.stageGoalText(d, hard) + '\n제한 시간 · ' + clock(d.limit) + '\n\n도중에 창을 닫으면 원정은 사라져요.', '그만둔다', '출발한다', function () { enterStage(d, hard); });
+    confirmBox((d.boss ? '보스 · ' : '원정 · ') + d.name + (hard ? ' · 하드' : ''), '규칙 · ' + (C.stageRuleTexts(d, hard).join(', ') || '없음') + '\n목표 · ' + C.stageGoalText(d, hard, C.stageGoalIndex(state, d.id)) + '\n제한 시간 · ' + clock(d.limit) + '\n\n도중에 창을 닫으면 원정은 사라져요.', '그만둔다', '출발한다', function () { enterStage(d, hard); });
   }
   function enterStage(d, hard) {
     if (home) return;
@@ -1734,7 +1734,7 @@
     Store.save();      // 본 게임을 지금 시각으로 저장해 둔다: 도중에 창이 닫혀도 여기서부터 정산된다
     home = state; stageEnter = Date.now(); state = st;
     $('hub').hidden = true; tab = 'z0'; pane = 'play'; perkShown = '';
-    log('원정 〈' + d.name + '〉에 나섰다. ' + C.stageGoalText(d, hard) + '.', 'good');
+    log('원정 〈' + d.name + '〉에 나섰다. ' + C.stageGoalText(d, hard, C.stageGoalIndex(home, d.id)) + '.', 'good');
     sfx('relocate'); if (fxShow) fxShow('원정', d.name + (hard ? ' · 하드' : ''), 1, 0, -1);
     goTo('manage'); render();
   }
@@ -1775,8 +1775,8 @@
     bar.hidden = !stt; document.body.classList.toggle('in-stage', !!stt);
     if (!stt) return;
     setText($('stage-bar-name'), stt.def.name + (stt.hard ? ' · 하드' : ''));
-    var goalWord = { earn: '물자', build: '시설', nights: '막은 밤', sweep: '수색' }[stt.def.goal] || '';      // 한 줄에 들어가게 목표는 낱말 하나로
-    setText($('stage-bar-goal'), goalWord + ' ' + (stt.def.goal === 'earn' ? fmt(stt.value) : Math.floor(stt.value)) + ' / ' + (stt.def.goal === 'earn' ? fmt(stt.need) : stt.need));
+    var goalWord = { earn: '물자', build: '시설', nights: '막은 밤', sweep: '수색' }[stt.goal] || '';      // 한 줄에 들어가게 목표는 낱말 하나로
+    setText($('stage-bar-goal'), goalWord + ' ' + (stt.goal === 'earn' ? fmt(stt.value) : Math.floor(stt.value)) + ' / ' + (stt.goal === 'earn' ? fmt(stt.need) : stt.need));
     setText($('stage-bar-time'), clock(stt.left));
     $('stage-bar-time').classList.toggle('low', stt.left <= 60);
     $('stage-bar-fill').style.width = Math.min(100, stt.value / stt.need * 100).toFixed(1) + '%';

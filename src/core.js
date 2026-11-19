@@ -618,6 +618,7 @@
       gachaPity: 0,          // 전설이 나온 뒤로 뽑은 횟수(보장 계산)
       gachaPulls: 0,         // 지금까지 뽑은 횟수
       stage: null,           // 원정 스테이지로 만든 상태에만 있다 { id, hard, won, lost, seconds }
+      stageGoal: {},         // 본 게임: 원정마다 지금 걸린 목표의 번호(3.0.6). 철수해도 남는다
       stageMarks: {},        // 본 게임: 스테이지마다 얻은 표시 { clear, speed, hard, best }. 철수해도 남는다
       challengeStreak: 0,    // 도전을 연달아 성공한 횟수(실패·포기하면 0). 철수해도 남는다
       lastSeen: safeNum(now, 0)
@@ -721,6 +722,7 @@
     s.wear = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' };
     COS_SLOTS.forEach(function (slot) { var id = raw.wear && typeof raw.wear === 'object' ? raw.wear[slot] : '', c = typeof id === 'string' ? findById(COSMETICS, id) : null; if (c && c.slot === slot && (c.base || s.cosmetics[c.id])) s.wear[slot] = c.id; });
     grantFlags(s);      // 조건을 이미 채운 깃발(2.0.0 전의 저장)
+    s.stageGoal = {}; STAGES.forEach(function (d) { var gi = raw.stageGoal && typeof raw.stageGoal === 'object' ? safeCount(raw.stageGoal[d.id]) : 0; if (gi > 0 && d.goals && gi < d.goals.length) s.stageGoal[d.id] = gi; });
     s.stage = null;      // 스테이지 판은 저장하지 않는다(저장되는 것은 언제나 본 게임이다)
     s.nextChallenge = typeof raw.nextChallenge === 'string' && findById(CHALLENGES, raw.nextChallenge) ? raw.nextChallenge : '';
     s.challenge = raw.challenge && typeof raw.challenge === 'object' && findById(CHALLENGES, raw.challenge.id) ? { id: raw.challenge.id, failed: !!raw.challenge.failed, done: !!raw.challenge.done } : null;
@@ -2898,12 +2900,18 @@
    *   보스는 '무리 ×' 하나만 건다. '무리 × + 전체 생산 절반'은 봇이 15분에 한 밤도 못 막아서 될지 안 될지 잴 수 없었다.
    */
   var STAGES = [
-    { id: 's1-1', region: 'r1', name: '첫 수색',      rules: ['tap5'],          goal: 'earn',   need: 5e6, hardNeed: 1.2e5, limit: 480, speed: 300, hardSpeed: 390, hard: 'lean' },
-    { id: 's1-2', region: 'r1', name: '빈 골목',      rules: [],                goal: 'sweep',  need: 40,  limit: 480, speed: 270, hard: 'frugal' },
-    { id: 's1-3', region: 'r1', name: '급한 공사',    rules: ['frugal'],        goal: 'build',  need: 130, hardNeed: 60, limit: 720, speed: 420, hardSpeed: 570, hardSafe: 1, hard: 'lean' },
-    { id: 's1-4', region: 'r1', name: '긴 밤',        rules: ['horde'],         goal: 'nights', need: 7,   limit: 720, speed: 600, hardSpeed: 660, safe: 1, hardSafe: 1, hard: 'onewall' },
-    { id: 's1-5', region: 'r1', name: '빠듯한 살림',  rules: ['lean'],          goal: 'earn',   need: 5e5, hardNeed: 7e4, limit: 900, speed: 750, hardSpeed: 780, safe: 1, hardSafe: 1, hard: 'horde' },
-    { id: 's1-b', region: 'r1', name: '선착장의 무리', rules: ['horde'],         goal: 'nights', need: 10,  limit: 900, speed: 780, hardSpeed: 840, safe: 1, hardSafe: 1, hard: 'onewall', boss: true }
+    { id: 's1-1', region: 'r1', name: '첫 수색',      rules: ['tap5'],          goal: 'earn', need: 6.3e+07, hardNeed: 63000, limit: 480, speed: 360, hardSpeed: 360, hard: 'lean',
+      goals: [{ goal: 'earn', need: 6.3e+07, hardNeed: 63000, speed: 360, hardSpeed: 360 }, { goal: 'build', need: 227, hardNeed: 66, speed: 360, hardSpeed: 360 }, { goal: 'nights', need: 6, hardNeed: 6, speed: 360, hardSpeed: 360 }, { goal: 'sweep', need: 40, hardNeed: 54, speed: 300, hardSpeed: 300 }] },
+    { id: 's1-2', region: 'r1', name: '빈 골목',      rules: [],                goal: 'sweep', need: 39, hardNeed: 54, limit: 480, speed: 300, hardSpeed: 300, hard: 'frugal',
+      goals: [{ goal: 'sweep', need: 39, hardNeed: 54, speed: 300, hardSpeed: 300 }, { goal: 'earn', need: 2.3e+07, hardNeed: 1.8e+06, speed: 360, hardSpeed: 360 }, { goal: 'build', need: 194, hardNeed: 142, speed: 360, hardSpeed: 360 }, { goal: 'nights', need: 6, hardNeed: 6, speed: 360, hardSpeed: 360 }] },
+    { id: 's1-3', region: 'r1', name: '급한 공사',    rules: ['frugal'],        goal: 'build', need: 189, hardNeed: 53, limit: 720, speed: 540, hardSpeed: 540, hardSafe: 1, hard: 'lean',
+      goals: [{ goal: 'build', need: 189, hardNeed: 53, speed: 540, hardSpeed: 540 }, { goal: 'earn', need: 8.9e+06, hardNeed: 24000, speed: 540, hardSpeed: 540 }, { goal: 'nights', need: 9, hardNeed: 7, speed: 540, hardSpeed: 480 }, { goal: 'sweep', need: 54, hardNeed: 81, speed: 360, hardSpeed: 420 }] },
+    { id: 's1-4', region: 'r1', name: '긴 밤',        rules: ['horde'],         goal: 'nights', need: 5, hardNeed: 5, limit: 720, speed: 480, hardSpeed: 540, safe: 1, hardSafe: 1, hard: 'onewall',
+      goals: [{ goal: 'nights', need: 5, hardNeed: 5, speed: 480, hardSpeed: 540 }, { goal: 'earn', need: 1.1e+08, hardNeed: 8.3e+07, speed: 540, hardSpeed: 540 }, { goal: 'build', need: 248, hardNeed: 243, speed: 540, hardSpeed: 540 }, { goal: 'sweep', need: 60, hardNeed: 88, speed: 420, hardSpeed: 420 }] },
+    { id: 's1-5', region: 'r1', name: '빠듯한 살림',  rules: ['lean'],          goal: 'earn', need: 66000, hardNeed: 35000, limit: 900, speed: 660, hardSpeed: 600, safe: 1, hardSafe: 1, hard: 'horde',
+      goals: [{ goal: 'earn', need: 66000, hardNeed: 35000, speed: 660, hardSpeed: 600 }, { goal: 'build', need: 66, hardNeed: 59, speed: 600, hardSpeed: 660 }, { goal: 'sweep', need: 67, hardNeed: 99, speed: 480, hardSpeed: 540 }] },
+    { id: 's1-b', region: 'r1', name: '선착장의 무리', rules: ['horde'],         goal: 'nights', need: 7, hardNeed: 7, limit: 900, speed: 600, hardSpeed: 660, safe: 1, hardSafe: 1, hard: 'onewall', boss: true,
+      goals: [{ goal: 'nights', need: 7, hardNeed: 7, speed: 600, hardSpeed: 660 }, { goal: 'earn', need: 1.9e+08, hardNeed: 1.6e+08, speed: 660, hardSpeed: 660 }, { goal: 'build', need: 269, hardNeed: 261, speed: 660, hardSpeed: 660 }, { goal: 'sweep', need: 75, hardNeed: 109, speed: 480, hardSpeed: 540 }] }
   ];
   /** 이 상태가 스테이지이고 그 규칙이 걸려 있는가(끝난 뒤에도 규칙은 그대로다: 결과 창이 뜰 때까지 화면이 바뀌지 않게). */
   function stageRule(state, rule) {
@@ -2914,10 +2922,18 @@
   function stageDef(state) { return state.stage ? findById(STAGES, state.stage.id) : null; }
   function stageRuleTexts(def, hard) { var r = def.rules.map(function (k) { return STAGE_RULES[k]; }); if (hard) r.push(STAGE_RULES[def.hard]); return r; }
   /** 그 난이도의 목표 수치(하드는 hardNeed 가 있으면 그것). */
-  function stageNeed(def, hard) { return hard && def.hardNeed > 0 ? def.hardNeed : def.need; }
-  function stageSpeed(def, hard) { return hard && def.hardSpeed > 0 ? def.hardSpeed : def.speed; }
+  /*
+   * 3.0.6: 원정의 목표는 도전할 때마다 바뀐다. 원정마다 목표 후보(goals)가 서넛 있고, 한 번 다녀오면(이기든 지든) 다음 목표가 다른 것으로 바뀐다.
+   *   규칙과 제한 시간은 그 원정의 것 그대로다. 후보마다 목표 수치 · 하드 수치 · 스피드 시간을 봇으로 재서 정했다
+   *   (일반: 초당 2번 봇이 제한 시간의 75% 지점에 닿는 값, 세 시드 중 가장 낮은 것. 하드: 초당 3번 봇).
+   *   지금 걸린 목표는 본 게임의 stageGoal[id] 에, 다녀오는 중인 판의 목표는 stage.goal 에 적는다.
+   */
+  function stageVar(def, gi) { return (def.goals && def.goals[gi]) || (def.goals && def.goals[0]) || def; }
+  function stageGoalIndex(main, id) { var def = findById(STAGES, id), n = def && def.goals ? def.goals.length : 1, i = main.stageGoal && main.stageGoal[id]; return i > 0 && i < n ? Math.floor(i) : 0; }
+  function stageNeed(def, hard, gi) { var v = stageVar(def, gi); return hard && v.hardNeed > 0 ? v.hardNeed : v.need; }
+  function stageSpeed(def, hard, gi) { var v = stageVar(def, gi); return hard && v.hardSpeed > 0 ? v.hardSpeed : v.speed; }
   function stageSafe(def, hard) { return (hard ? def.hardSafe : def.safe) || 0; }
-  function stageGoalText(def, hard) { return STAGE_GOALS[def.goal].text(stageNeed(def, hard)); }
+  function stageGoalText(def, hard, gi) { return STAGE_GOALS[stageVar(def, gi).goal].text(stageNeed(def, hard, gi)); }
   /** 본 게임 상태에서: 원정이 열렸는가, 이 스테이지를 할 수 있는가. */
   function stagesOpen(main) { return Math.max(main.bestZone || 0, main.zone || 0) >= STAGE_OPEN_ZONE; }
   /*
@@ -2942,7 +2958,7 @@
   function createStage(main, id, hard, now) {
     if (stageBlock(main, id, hard)) return null;
     var s = createState(now);
-    s.stage = { id: id, hard: !!hard, won: false, lost: false, seconds: 0 };
+    s.stage = { id: id, hard: !!hard, won: false, lost: false, seconds: 0, goal: stageGoalIndex(main, id) };
     // 같은 알림이 다시 뜨지 않게 읽은 것만 옮긴다(복사본: 스테이지에서 바뀌어도 본 게임에 새지 않는다)
     s.story = JSON.parse(JSON.stringify(main.story || {})); s.ach = JSON.parse(JSON.stringify(main.ach || {})); s.zdex = JSON.parse(JSON.stringify(main.zdex || {}));
     s.heroName = main.heroName; s.heroGender = main.heroGender;
@@ -2952,24 +2968,27 @@
   /** 스테이지의 지금 형편 { def, value, need, left, won, lost, over }. 스테이지가 아니면 null. */
   function stageStatus(state) {
     var def = stageDef(state); if (!def) return null;
-    var st = state.stage, v = STAGE_GOALS[def.goal].value(state);
-    var need = stageNeed(def, st.hard);
-    return { def: def, hard: !!st.hard, value: Math.min(v, need), need: need, left: Math.max(0, Math.ceil(def.limit - state.runSeconds)), won: !!st.won, lost: !!st.lost, over: !!(st.won || st.lost), seconds: st.seconds || 0 };
+    var st = state.stage, kind = stageVar(def, st.goal).goal, v = STAGE_GOALS[kind].value(state);
+    var need = stageNeed(def, st.hard, st.goal);
+    return { def: def, goal: kind, goalIndex: st.goal || 0, speed: stageSpeed(def, st.hard, st.goal), hard: !!st.hard, value: Math.min(v, need), need: need, left: Math.max(0, Math.ceil(def.limit - state.runSeconds)), won: !!st.won, lost: !!st.lost, over: !!(st.won || st.lost), seconds: st.seconds || 0 };
   }
   /** 시간마다 부른다: 목표를 채웠는지, 시간이 다 됐는지. 한 번 정해지면 바뀌지 않는다. */
   function checkStage(state, events) {
     var def = stageDef(state), st = state.stage;
     if (!def || st.won || st.lost) return;
-    if (STAGE_GOALS[def.goal].value(state) >= stageNeed(def, st.hard)) { st.won = true; st.seconds = Math.ceil(state.runSeconds); events.push({ type: 'stage-won', id: def.id, name: def.name, seconds: st.seconds, speed: st.seconds <= def.speed, hard: !!st.hard }); }
+    if (STAGE_GOALS[stageVar(def, st.goal).goal].value(state) >= stageNeed(def, st.hard, st.goal)) { st.won = true; st.seconds = Math.ceil(state.runSeconds); events.push({ type: 'stage-won', id: def.id, name: def.name, seconds: st.seconds, speed: st.seconds <= stageSpeed(def, st.hard, st.goal), hard: !!st.hard }); }
     else if (state.runSeconds >= def.limit) { st.lost = true; st.seconds = def.limit; events.push({ type: 'stage-lost', id: def.id, name: def.name }); }
   }
   /**
    * 끝난 스테이지의 결과를 본 게임 상태에 적는다. 새로 얻은 표시마다 간식을 준다.
    * 돌려주는 값: { ok, won, got: ['clear'|'speed'|'hard'…] 새로 얻은 표시, treats, badge(보스를 처음 잡았는가) }
    */
-  function finishStage(main, stage) {
+  function finishStage(main, stage, rng) {
     var stt = stageStatus(stage);
     if (!stt) return fail('none');
+    // 다녀왔으면(이기든 지든 포기하든) 다음 목표를 다른 것으로 바꾼다. 다만 한 발짝도 못 가고 바로 돌아온 포기는 바꾸지 않는다(마음에 드는 목표가 나올 때까지 들락거리지 못하게)
+    var gN = stt.def.goals ? stt.def.goals.length : 1;
+    if (gN > 1 && (stt.won || stt.lost || stt.value > 0)) { if (!main.stageGoal) main.stageGoal = {}; main.stageGoal[stt.def.id] = (stt.goalIndex + 1 + Math.floor((typeof rng === 'function' ? rng() : Math.random()) * (gN - 1)) % (gN - 1)) % gN; }
     if (!main.stageMarks) main.stageMarks = {};
     var m = main.stageMarks[stt.def.id] || (main.stageMarks[stt.def.id] = { clear: false, speed: false, safe: false, hard: false, hardSpeed: false, hardSafe: false, best: 0, pct: 0, steps: 0, fails: 0 }), got = [], treats = 0;
     // 흔적: 가장 멀리 간 정도와 구간 간식(이기든 지든 적는다)
@@ -2988,10 +3007,10 @@
     function mark(k) { if (!m[k]) { m[k] = true; got.push(k); treats += STAGE_TREATS[k]; } }      // 새 표시 하나마다 간식과 뽑기권 한 장
     var badge = !!stt.def.boss && !m.clear;
     mark('clear');
-    if (stt.seconds <= stt.def.speed) mark('speed');
+    if (stt.seconds <= stageSpeed(stt.def, false, stt.goalIndex)) mark('speed');
     if (stt.hard) mark('hard');
     if ((stage.breaches || 0) <= stageSafe(stt.def, false)) mark('safe');      // 무결: 방어 실패가 봐 주는 횟수 안
-    if (stt.hard && stt.seconds <= stageSpeed(stt.def, true)) mark('hardSpeed');
+    if (stt.hard && stt.seconds <= stageSpeed(stt.def, true, stt.goalIndex)) mark('hardSpeed');
     if (stt.hard && (stage.breaches || 0) <= stageSafe(stt.def, true)) mark('hardSafe');
     if (!(m.best > 0) || stt.seconds < m.best) m.best = stt.seconds;
     main.treats = Math.min(1e9, (main.treats || 0) + treats);
@@ -3078,6 +3097,7 @@
     var gained = antibodiesOnRetreat(state), next = createState(now);
     next.goalPick = rollGoalPick(state.goalPick, rng);      // 다음 회차의 목표는 이번과 다르게
     next.medals = state.medals || {};      // 훈장은 남는다
+    next.stageGoal = state.stageGoal || {};
     next.stageMarks = state.stageMarks || {};      // 원정에서 얻은 표시도 남는다
     next.bestDanger = state.bestDanger || 0; next.rescued = state.rescued || 0; next.bests = state.bests || next.bests; next.endLog = state.endLog || [];
     next.ended = state.ended;      // dangerMax 가 본다
@@ -3714,7 +3734,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
+    stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,

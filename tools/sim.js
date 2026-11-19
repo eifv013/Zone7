@@ -35,6 +35,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
   if (process.env.STAGE) {
     if (process.env.BIG) C.STAGES.forEach(d => { d.need = 1e30; });      // BIG=1: 목표를 없애고 제한 시간까지의 곡선만 본다
     const main = C.createState(0); main.bestZone = 6; C.STAGES.forEach(d => { main.stageMarks[d.id] = { clear: true, speed: false, hard: false, best: 0 }; });
+    if (process.env.GOAL) main.stageGoal[process.env.STAGE] = Number(process.env.GOAL);      // GOAL=n: 그 원정의 n번째 목표 후보로
     s = C.createStage(main, process.env.STAGE, !!process.env.HARD, 0); if (!s) { console.log('스테이지를 만들지 못함'); process.exit(1); }
   }
   let stageBeat = 0;
@@ -47,9 +48,9 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     // PROBE=분: 접속 시간으로 그만큼마다 한 줄씩 찍는다(어디서 막혔는지 본다)
     if (process.env.PROBE && active % (Number(process.env.PROBE) * 60) < dt) console.log(`  @${(active / 3600).toFixed(1)}h ${s.zone + 1}구역 물자 ${C.formatNumber(s.supplies)} 초당 ${C.formatNumber(C.productionPerSec(s))} 혈청 ${s.serumStage}(${isFinite(C.serumCost(s)) ? C.formatNumber(C.serumCost(s)) : '-'}) 방어 ${C.formatNumber(C.defensePower(s))}/${C.formatNumber(C.nightStrength(s))} 농성 ${s.siege ? 1 : 0} 뚫림 ${s.breaches || 0} 목표 ${C.goals(s, s.zone).map(g => g.id + (g.done ? '✓' : ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need))).join(' ')}`);
     if (process.env.STAGE) {
-      if (s.runSeconds >= stageBeat) { stageBeat += 60; if (process.env.CURVE) console.log(`  ${Math.round(s.runSeconds / 60)}분 누적 ${C.formatNumber(s.runEarned)} 시설 ${C.totalBuildings(s)} 밤 ${s.wavesCleared} 동네 ${s.sweeps} 뚫림 ${s.breaches}`); }
+      if (s.runSeconds >= stageBeat) { stageBeat += 60; if (process.env.RAW) console.log(`RAW ${Math.round(s.runSeconds / 60)} ${s.runEarned} ${C.totalBuildings(s)} ${s.wavesCleared} ${s.sweeps} ${s.breaches}`); if (process.env.CURVE) console.log(`  ${Math.round(s.runSeconds / 60)}분 누적 ${C.formatNumber(s.runEarned)} 시설 ${C.totalBuildings(s)} 밤 ${s.wavesCleared} 동네 ${s.sweeps} 뚫림 ${s.breaches}`); }
       const st = C.stageStatus(s);
-      if (st.over) { console.log(`${process.env.STAGE}${process.env.HARD ? ' 하드' : ''}: ${st.won ? '클리어 ' + (st.seconds / 60).toFixed(1) + '분' + (st.seconds <= C.stageSpeed(st.def, st.hard) ? ' (스피드)' : '') + ((s.breaches || 0) <= C.stageSafe(st.def, st.hard) ? ' (무결)' : '') + ' 뚫림 ' + (s.breaches || 0) : '실패 ' + C.formatNumber(st.value) + '/' + C.formatNumber(st.need)} · 제한 ${st.def.limit / 60}분 · 스피드 ${st.def.speed / 60}분`); process.exit(0); }
+      if (st.over && !(process.env.NOEND && s.runSeconds < st.def.limit)) { console.log(`${process.env.STAGE}${process.env.HARD ? ' 하드' : ''}: ${st.won ? '클리어 ' + (st.seconds / 60).toFixed(1) + '분' + (st.seconds <= C.stageSpeed(st.def, st.hard) ? ' (스피드)' : '') + ((s.breaches || 0) <= C.stageSafe(st.def, st.hard) ? ' (무결)' : '') + ' 뚫림 ' + (s.breaches || 0) : '실패 ' + C.formatNumber(st.value) + '/' + C.formatNumber(st.need)} · 제한 ${st.def.limit / 60}분 · 스피드 ${st.def.speed / 60}분`); process.exit(0); }
     }
     if (s.zone >= 1 && s.goods > 0 && s.price >= C.peakPrice(s)) C.sellGoods(s, false);      // 고점이면 손으로 판다(흥정꾼이 없는 도전에서도 2구역 목표를 채우게)
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
