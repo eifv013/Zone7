@@ -1169,7 +1169,7 @@
    *   - 무리는 오른쪽 끝에서 열차 꼬리까지, 남은 시간에 맞춰 다가온다.
    *   - 열차가 떠나면(platAnim) 0.9초 동안 왼쪽으로 빠져나간다. 무리에 닿아 떼어 낸 칸은 그 자리에 남았다가 사라진다.
    */
-  var platBack = null, platAnim = null, platRaf = 0;
+  var platBack = null, platAnim = null, platRaf = 0, platSprint = 0;
   function platBackdrop() {
     if (platBack) return platBack;
     var cv = document.createElement('canvas'); cv.width = 184; cv.height = 84; var g = cv.getContext('2d');
@@ -1249,10 +1249,11 @@
       g.globalAlpha = 0.55 + 0.45 * (1 - far); platCar(g, nx, ti.cars); g.globalAlpha = 1;
     }
     // 무리: 오른쪽 끝에서 열차 꼬리까지
-    var hp = ti.hordeAt > 0 ? Math.max(0, Math.min(1, ti.horde / ti.hordeAt)) : 1, hx = Math.round(tail + CAR_W + 2 + hp * (200 - tail - CAR_W));
+    var hp = Math.max(0, Math.min(1, ti.near)), hx = Math.round(tail + CAR_W + 2 + hp * (200 - tail - CAR_W));
     for (var q = 0; q < 3; q++) spr(g, hx + q * 7, 62 + q % 2 + (Math.floor(now / 300 + q) % 2), PLAT_Z[q], { g: '#7fb85a', k: BK, c: ['#6b4a3a', '#3f5f7a', '#8a8a52'][q], d: '#3a3a36', r: '#b8402e' });
+    if (now - platSprint < 500) { g.fillStyle = 'rgba(255,90,74,' + (0.28 * (1 - (now - platSprint) / 500)).toFixed(3) + ')'; g.fillRect(0, 57, 184, 27); }      // 달려드는 순간 선로가 붉게 번쩍인다
     // 경고등: 무리가 가까우면 깜빡인다
-    px(g, 178, 36, 3, 3, BK); var lit = ti.horde <= 10 && Math.floor(now / 250) % 2 === 0;
+    px(g, 178, 36, 3, 3, BK); var lit = ti.near <= 0.3 && Math.floor(now / 250) % 2 === 0;
     px(g, 179, 37, 1, 1, lit ? '#ff5a4a' : '#6a2a24'); if (lit) { g.fillStyle = 'rgba(255,90,74,.25)'; g.fillRect(175, 33, 9, 9); }
   }
   function drawRail(plan) {
@@ -1384,7 +1385,7 @@
       rows.machines[d.id] = r; $('rows-z2').appendChild(r.btn);
     });
     // 4구역: 노선 현황(위쪽)과 열차·노선 구매 줄(아래쪽)
-    rows.train = buildRow({ id: 'train', name: '열차', desc: '화물을 싣고 다닌다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '대마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains)), 'train'); });
+    rows.train = buildRow({ id: 'train', name: '기관차', desc: '화물을 더 싣는다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '레벨마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains)), 'train'); });
     $('rows-z3').appendChild(rows.train.btn);
     C.ROUTES.forEach(function (d) {
       var row = el('div', 'rail-row'), name = el('div', 'rail-name', d.name), small = el('small'), side = el('div', 'rail-side'), track = el('div', 'track'), bar = el('i');
@@ -2985,25 +2986,30 @@
         setText($('salvage-fill'), sdone ? '끌어온다' : '열차 화물 ' + fmt(sv.have) + ' / ' + fmt(sv.need) + ' · ' + Math.floor(sv.need > 0 ? sv.have / sv.need * 100 : 0) + '%');
       }
       setText($('salvage-note'), '화물 ' + C.cargoCount(state) + ' / ' + C.CARGOS.length + ' · 이번 회차 ' + state.salvagesRun + '번 · 화물 값 +' + Math.round((C.salvageMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.SALVAGE_BONUS_MAX * 100) + '%)');
-      // 3.4.0 승강장의 열차
+      // 3.7.0 승강장의 열차
       var cargo = C.cargoValue(state), ti = C.trainInfo(state), unit = C.RAIL_SCALE * cargo, autoT = C.autoOn(state, 3) && C.autoEvents(state, 3);
       setText($('plat-cars'), ti.running ? '화물칸 ' + ti.cars + ' / ' + ti.max + (ti.cars ? ' · ×' + ti.mult.toFixed(2) : '') : '');
       var pips = $('plat-pips');
-      if (!pips.children.length) for (var pi = 0; pi < C.CAR_MAX; pi++) pips.appendChild(el('i'));
+      if (pips.children.length !== ti.max) { pips.textContent = ''; pips.style.gridTemplateColumns = 'repeat(' + ti.max + ', minmax(0, 1fr))'; for (var pi = 0; pi < ti.max; pi++) pips.appendChild(el('i')); }
       for (var pk = 0; pk < pips.children.length; pk++) {
         var pe = pips.children[pk], cls = pk < ti.cars ? 'on' : pk === ti.cars && ti.running ? 'next' : '';
         if (pe.className !== cls) pe.className = cls;
         if (cls === 'next') pe.style.setProperty('--p', Math.round((1 - ti.next / C.carSeconds(state)) * 100) + '%');
       }
-      $('plat-horde-bar').style.width = (ti.running ? Math.max(0, Math.min(100, ti.horde / ti.hordeAt * 100)) : 0).toFixed(1) + '%';
-      setText($('plat-horde-left'), ti.running ? Math.ceil(ti.horde) + '초' : '');
-      $('plat-horde-bar').parentNode.parentNode.classList.toggle('near', ti.running && ti.horde <= 5);
-      var go = $('train-go');
+      // 무리와의 거리: 막대만 보여 준다(숫자는 없다). 걸음이 고르지 않고 가끔 달려들어서, 언제 닿을지는 눈으로 가늠해야 한다
+      var nearPct = ti.running ? Math.max(0, Math.min(100, ti.near * 100)) : 100, danger = ti.running && ti.near <= 0.3;
+      $('plat-horde-bar').style.width = nearPct.toFixed(1) + '%';
+      setText($('plat-horde-left'), !ti.running ? '' : ti.near > 0.6 ? '멀어요' : ti.near > 0.3 ? '다가와요' : '코앞이에요');
+      $('plat-horde-bar').parentNode.parentNode.classList.toggle('near', danger);
+      var go = $('train-go'), nextMult = ti.cars < ti.max ? C.carMult(ti.cars + 1) : 0;
       go.disabled = !(ti.running && ti.cars >= 1);
-      if (go._t !== (ti.cars >= 1 ? fmt(ti.gain) : '-')) { go._t = ti.cars >= 1 ? fmt(ti.gain) : '-'; go.textContent = ''; go.appendChild(el('span', '', '지금 출발')); go.appendChild(el('span', '', ti.cars >= 1 ? '+' + fmt(ti.gain) : ti.running ? '첫 칸을 붙이는 중' : '열차가 없어요')); }
-      setText($('plat-note'), !ti.running ? '열차를 사거나 노선을 복구하면 승강장에 열차가 서요.'
-        : (autoT ? '역무원이 ' + C.AUTO_CARS + '칸에서 보내요. 더 길게 보내려면 구역 자동을 끄세요.\n' : '길수록 한 칸의 값이 뛰어요. 무리가 먼저 닿으면 뒤쪽 절반을 떼고 떠나요.\n')
-          + '초당 물자 ' + fmt(C.railRate(state)) + ' · 보낸 열차 ' + (state.trainsSent || 0) + '번 · 만차 ' + (state.expressRuns || 0) + '번');
+      var goKey = (ti.cars >= 1 ? fmt(ti.gain) : '-') + (ti.full ? 'F' : '');
+      if (go._t !== goKey) { go._t = goKey; go.textContent = ''; go.appendChild(el('span', '', ti.full ? '꽉 찼어요 · 출발' : '지금 출발')); go.appendChild(el('span', '', ti.cars >= 1 ? '+' + fmt(ti.gain) : ti.running ? '첫 칸을 붙이는 중' : '열차가 없어요')); }
+      go.classList.toggle('full', ti.running && ti.full);
+      setText($('plat-note'), !ti.running ? '기관차를 사거나 노선을 복구하면 승강장에 열차가 서요.'
+        : (ti.full ? '더 실을 수 없어요. 보내야 다음 열차가 와요.' : ti.cars >= 1 ? '한 칸 더 붙으면 ×' + nextMult.toFixed(2) + (ti.cars + 1 > 8 ? ' · 8칸을 넘기면 크게 뛰어요' : '') : '칸이 붙을수록 한 칸의 값이 뛰어요.')
+          + '\n무리가 닿으면 뒤쪽 절반을 떼고 떠나요. 가끔 달려들어요.' + (autoT ? '\n역무원이 꽉 차면, 또는 무리가 가까워지면 보내요. 더 아슬아슬하게 끌려면 직접 누르세요.' : '')
+          + '\n보낸 열차 ' + (state.trainsSent || 0) + '번 · 10칸 이상 ' + (state.longRuns || 0) + '번 · 만차 ' + (state.expressRuns || 0) + '번 · 떼인 적 ' + (state.hordeHits || 0) + '번');
       drawPlatform(ti);
       C.ROUTES.forEach(function (d) {
         var r = rows.routes[d.id], lv = state.routes[d.id], cost = C.routeCost(state, d.id), add = C.ROUTE_SLOTS * d.mult;
@@ -3015,7 +3021,7 @@
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
       setText(rows.train.count, state.trains + ' / ' + C.TRAIN_MAX);
       setMile(rows.train, state.trains, tq, tcost <= state.supplies, C.FLEET_MILESTONES);
-      setText(rows.train.info, (state.trains ? '초당 ' + fmt(state.trains * unit) + ' · ' : '') + '대당 +' + fmt(unit));
+      setText(rows.train.info, (state.trains ? '초당 ' + fmt(state.trains * unit) + ' · ' : '') + '레벨당 +' + fmt(unit));
       setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + fmt(tcost) : '최대');
       rows.train.btn.disabled = !(tcost <= state.supplies); afford(rows.train.cost, tcost);
     }
@@ -3335,9 +3341,12 @@
           break;
         case 'train':      // 3.4.0: 승강장의 열차가 떠났다(why: hand 손으로 · auto 역무원 · full 만차 · horde 무리에 닿음)
           platAnim = { at: Date.now(), kept: ev.kept, cut: ev.cars - ev.kept, why: ev.why };
-          if (ev.why === 'horde') { if (state.zone === 3) log('무리가 승강장에 닿았다. 뒤쪽 ' + (ev.cars - ev.kept) + '칸을 떼고 떠났다.', 'bad'); if (tab === 'z3' && pane === 'play') sfx('breached'); }
+          if (ev.why === 'horde') { if (state.zone === 3) log('무리가 승강장에 닿았다. 뒤쪽 ' + (ev.cars - ev.kept) + '칸을 떼고 떠났다.', 'bad'); if (tab === 'z3' && pane === 'play') { sfx('breached'); buzz(60); } }
           else if (ev.full) { if (state.zone === 3) log('12칸 만차를 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.', 'good'); if (tab === 'z3' && pane === 'play') sfx('goal'); }
           else if (tab === 'z3' && pane === 'play') sfx('train');
+          break;
+        case 'horde-sprint':      // 무리가 달려든다: 4구역을 보고 있을 때만 알린다
+          if (tab === 'z3' && pane === 'play') { platSprint = Date.now(); sfx('click'); buzz(15); }
           break;
         case 'ending':
           pendingEnding = ev;      // 일지 창과 특전 창이 닫힌 뒤에 끝 화면을 띄운다(render 가 본다)
@@ -3599,8 +3608,8 @@
       var res = C.sendTrain(state);
       if (!res.ok) return;
       platAnim = { at: Date.now(), kept: res.kept, cut: 0, why: 'hand' };
-      log(res.kept + '칸 열차를 보냈다. 물자 ' + fmt(res.gain) + ' 확보.', res.full ? 'good' : '');
-      sfx(res.full ? 'goal' : 'train'); buzz(res.full ? 40 : 20); Store.save(); render();
+      log(res.kept + '칸 열차를 보냈다. 물자 ' + fmt(res.gain) + ' 확보.' + (res.full ? ' 만차다.' : ''), res.kept >= C.LONG_CARS ? 'good' : '');
+      sfx(res.kept >= C.LONG_CARS ? 'goal' : 'train'); buzz(res.kept >= C.LONG_CARS ? 40 : 20); Store.save(); render();
     });
     $('green').addEventListener('click', function () {
       var r = C.greenSignal(state);
