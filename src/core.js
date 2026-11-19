@@ -476,7 +476,7 @@
     { id: 'aide',    name: '조교',      desc: '연구 속도 +40%',  key: 'lab',     per: 0.4, zone: 4, retired: true },
     // 대신 어느 구역에서나 듣는 둘: 현재 있는 구역을 따라다니는 생산, 그리고 철수 항체
     { id: 'local',   name: '현장 일손', desc: '현재 구역 생산 +20%', key: 'here', per: 0.2 },
-    { id: 'sample',  name: '채혈',      desc: '철수 항체 샘플 +10%', key: 'antibody', per: 0.1 },
+    { id: 'sample',  name: '채혈',      desc: '철수 항체 샘플 +10%', key: 'antibody', per: 0.1, max: 3 },      // 2.8.6: 3레벨까지만. 다시 뽑기로 이것만 쌓으면 샘플이 끝없이 불었다
     { id: 'spoils',  name: '전리품 수거', desc: '밤 전리품 +60%', key: 'loot',    per: 0.6 },
     { id: 'frugal',  name: '알뜰함',    desc: '모든 구매 비용 -6%',     key: 'cost',    per: -0.06 }
   ];
@@ -2541,7 +2541,8 @@
   /** 특전 PERK_CHOICES 장을 겹치지 않게 뽑는다. state 를 주면 아직 열지 않은 구역의 특전은 뺀다. */
   function drawPerks(rng, state) {
     var reach = state && typeof state.zone === 'number' ? state.zone : Infinity;
-    var pool = PERKS.filter(function (p) { return !p.retired && !(p.zone > reach); }).map(function (p) { return p.id; }), out = [];
+    // max 가 있는 특전은 다 올리면 후보에서 빠진다
+    var pool = PERKS.filter(function (p) { return !p.retired && !(p.zone > reach) && !(p.max > 0 && state && state.perks && state.perks[p.id] >= p.max); }).map(function (p) { return p.id; }), out = [];
     rng = typeof rng === 'function' ? rng : Math.random;
     while (out.length < PERK_CHOICES && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length) % pool.length, 1)[0]);
     return out;
@@ -2558,6 +2559,8 @@
   }
   function choosePerk(state, id) {
     if (state.pendingPerks.indexOf(id) < 0) return fail('unknown');
+    var def = findById(PERKS, id);
+    if (def && def.max > 0 && state.perks[id] >= def.max) return fail('max');      // 후보에 남아 있던 옛 저장이라도 한도를 넘기지 않는다
     state.perks[id]++;
     state.pendingPerks = [];
     return { ok: true, id: id, level: state.perks[id] };

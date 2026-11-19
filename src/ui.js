@@ -3452,7 +3452,7 @@
      * 끝에서는 더 넘어가지 않는다(처음으로 돌아가지 않는다).
      */
     (function () {
-      var sx = 0, sy = 0, st = 0, ok = false;
+      var sx = 0, sy = 0, st = 0, ok = false, strip = null, stripAt = 0;
       function vis(el) { return !!el && !el.hidden && el.getClientRects().length > 0; }
       function group() {
         if (vis($('hub'))) return Array.prototype.slice.call(document.querySelectorAll('#hub [data-hub]'));
@@ -3464,10 +3464,13 @@
       }
       /** 누른 곳이 옆으로 미는 줄이나 막대 안인가. */
       function blocked(el) {
+        strip = null;
         for (var p = el; p && p !== document.body; p = p.parentElement) {
           var tag = p.tagName;
           if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-          if (p.scrollWidth > p.clientWidth + 4) { var ox = getComputedStyle(p).overflowX; if (ox === 'auto' || ox === 'scroll') return true; }
+          // 2.8.6: 옆으로 미는 줄(일지의 장 목록 같은 것) 위에서는 그 줄이 먼저 움직인다. 전에는 여기서 아예 막아서,
+          // 줄이 끝까지 가 있어 더 움직이지 않을 때도 탭이 넘어가지 않았다. 이제 줄을 기억해 두었다가, 손을 뗐을 때 줄이 그대로면 탭을 넘긴다.
+          if (!strip && p.scrollWidth > p.clientWidth + 4) { var ox = getComputedStyle(p).overflowX; if (ox === 'auto' || ox === 'scroll') { strip = p; stripAt = p.scrollLeft; } }
         }
         return false;
       }
@@ -3494,7 +3497,7 @@
         var t = e.touches && e.touches.length === 1 ? e.touches[0] : null;
         if (!ok || !t) return;
         var dx = Math.abs(t.clientX - sx), dy = Math.abs(t.clientY - sy);
-        if (dx > 12 && dx > dy * 1.5 && e.cancelable) e.preventDefault();
+        if (!strip && dx > 12 && dx > dy * 1.5 && e.cancelable) e.preventDefault();      // 옆으로 미는 줄 위에서는 줄이 움직이게 둔다
       }, { passive: false });
       document.addEventListener('touchend', function (e) {
         var t = e.changedTouches && e.changedTouches[0];
@@ -3502,6 +3505,7 @@
         ok = false;
         var dx = t.clientX - sx, dy = t.clientY - sy;
         if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 2 || Date.now() - st > 600) return;
+        if (strip && Math.abs(strip.scrollLeft - stripAt) > 2) return;      // 줄이 움직였다: 줄을 민 것이지 탭을 넘긴 것이 아니다
         turn(dx < 0 ? 1 : -1);
       }, { passive: true });
     })();

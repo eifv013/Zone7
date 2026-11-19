@@ -130,3 +130,18 @@ test('음원 파일: 등록은 아는 곡 이름의 글만 받고, 없는 곡은
   assert.equal(Sound.pickTrack('day', {}), ''); assert.equal(Sound.pickTrack('day', null), '');
   assert.equal(Sound.pump(), 0, '깨우기 전에는 음원도 틀지 않는다');
 });
+
+test('겹침 정리: 같은 소리는 앞의 것을 끊고, 동시에 울리는 소리는 VOICE_MAX 개까지', () => {
+  const S = require('../src/sound.js');
+  const v = (name, end) => ({ name, end });
+  // 같은 이름이 울리는 중이면 그것을 줄인다
+  assert.deepEqual(S.voiceCuts([v('buy', 5)], 'buy', 1).map(x => x.name), ['buy']);
+  // 이미 끝난 소리는 건드리지 않는다
+  assert.equal(S.voiceCuts([v('buy', 0.5)], 'buy', 1).length, 0);
+  // 다른 이름은 하나까지 함께 울린다
+  assert.equal(S.voiceCuts([v('goal', 5)], 'buy', 1).length, 0);
+  // 넘치면 가장 오래된 것부터 줄인다
+  assert.deepEqual(S.voiceCuts([v('goal', 5), v('tab', 5)], 'buy', 1).map(x => x.name), ['goal']);
+  assert.equal(S.VOICE_MAX, 2);
+  assert.equal(S.voiceCuts(null, 'buy', 1).length, 0, '목록이 없어도 죽지 않는다');
+});

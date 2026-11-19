@@ -96,7 +96,24 @@
     return end;
   }
 
-  function playNote(n, t0) {
+  /*
+   * ---------- 겹침 정리(2.8.6) ----------
+   * 단추를 빠르게 누르면 같은 소리가 여러 겹으로 쌓여 뭉개져 들렸다(음량을 두 배로 올린 뒤 더 잘 들렸다).
+   *   1) 같은 이름의 소리가 아직 울리는 중이면 앞의 것을 짧게 줄이고 새로 낸다(쌓이지 않고 다시 시작한다)
+   *   2) 이름이 달라도 동시에 울리는 소리는 VOICE_MAX 개까지: 넘치면 가장 오래된 것부터 줄인다
+   * voiceCuts 는 계산만 한다(테스트가 본다): 지금 울리는 목록에서 줄여야 할 것들을 돌려준다.
+   */
+  var VOICE_MAX = 2, VOICE_FADE = 0.012, voices = [];
+  function soundLength(notes) { var end = 0; (notes || []).forEach(function (n) { end = Math.max(end, (n.at || 0) + (n.d || 0)); }); return end; }
+  function voiceCuts(list, name, now) {
+    var live = (list || []).filter(function (v) { return v && !v.cut && v.end > now; });
+    var cuts = live.filter(function (v) { return v.name === name; });
+    var rest = live.filter(function (v) { return v.name !== name; });
+    while (rest.length > VOICE_MAX - 1) cuts.push(rest.shift());      // 새 소리 하나가 들어갈 자리를 남긴다
+    return cuts;
+  }
+
+  function playNote(n, t0, bus) {
     var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.max(0.0002, Math.min(MAX_GAIN, (n.g || 0.05) * VOLUME * volume / VOLUME_DEFAULT)), src;
     // 딸깍거리는 잡음을 막으려고 음량을 짧게 올렸다가 서서히 내린다
     gain.gain.setValueAtTime(0.0001, start);
@@ -126,7 +143,8 @@
       }
       if (ctx.__zone7Comp) out = ctx.__zone7Comp;
     } catch (e) { out = ctx.destination; }
-    soft.connect(out);
+    // 2.8.6: 한 번의 play 로 나는 음들은 그 소리만의 묶음(bus)을 거친다. 뒤에 오는 소리가 앞 소리를 줄일 수 있게
+    if (bus) { soft.connect(bus); bus.__out = out; } else soft.connect(out);
     src.start(start); src.stop(start + n.d + 0.02);
   }
 
@@ -140,8 +158,19 @@
     if (typeof document !== 'undefined' && document.hidden) return false; // 안 보는 탭에서 혼자 울리지 않는다
     try {
       if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
-      var t0 = ctx.currentTime + 0.01;
-      notes.forEach(function (n) { playNote(n, t0); });
+      var t0 = ctx.currentTime + 0.01, bus = null;
+      try {
+        // 겹침 정리: 같은 소리가 아직 울리는 중이면 앞의 것을 끊고, 동시에 울리는 소리는 VOICE_MAX 개까지만 둔다
+        voiceCuts(voices, name, ctx.currentTime).forEach(function (v) {
+          try { v.node.gain.cancelScheduledValues(ctx.currentTime); v.node.gain.setTargetAtTime(0.0001, ctx.currentTime, VOICE_FADE); } catch (e) { /* 못 줄여도 소리는 제 길이에서 끝난다 */ }
+          v.cut = true;
+        });
+        voices = voices.filter(function (v) { return !v.cut && v.end > ctx.currentTime; });
+        bus = ctx.createGain(); bus.gain.setValueAtTime(1, ctx.currentTime);
+        voices.push({ name: name, node: bus, end: t0 + soundLength(notes) });
+      } catch (e) { bus = null; }      // 묶음을 못 만들면 예전처럼 그냥 낸다
+      notes.forEach(function (n) { playNote(n, t0, bus); });
+      if (bus && bus.__out) bus.connect(bus.__out);
       return true;
     } catch (e) { return false; }
   }
@@ -339,6 +368,6 @@
     return true;
   }
 
-  return { SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, VOLUME_DEFAULT: VOLUME_DEFAULT, setVolume: setVolume, getVolume: getVolume, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled,
+  return { voiceCuts: voiceCuts, VOICE_MAX: VOICE_MAX, SOUNDS: SOUNDS, MAX_GAIN: MAX_GAIN, VOLUME: VOLUME, VOLUME_DEFAULT: VOLUME_DEFAULT, setVolume: setVolume, getVolume: getVolume, SOFT_CUT: SOFT_CUT, unlock: unlock, setEnabled: setEnabled, isEnabled: isEnabled,
            MUSIC: MUSIC, MUSIC_BARS: MUSIC_BARS, MUSIC_STEPS: MUSIC_STEPS, MUSIC_VOLUME_DEFAULT: MUSIC_VOLUME_DEFAULT, MUSIC_CUT: MUSIC_CUT, MUSIC_ATTACK: MUSIC_ATTACK, musicStep: musicStep, musicStepSeconds: musicStepSeconds, setMusicVolume: setMusicVolume, getMusicVolume: getMusicVolume, setMusicEnabled: setMusicEnabled, isMusicEnabled: isMusicEnabled, setMood: setMood, getMood: getMood, startMusic: startMusic, pump: pump, setTracks: setTracks, hasTracks: hasTracks, nowPlaying: function () { return playing ? playing.mood : ''; }, pickTrack: pickTrack, TRACK_FADE: TRACK_FADE, duration: duration, play: play };
 });
