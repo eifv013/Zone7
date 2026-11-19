@@ -305,6 +305,10 @@
   function wireMultiTouch() {
     var starts = {}, multi = false, lastEnd = 0, synth = { btn: null, at: 0 };
     try {
+      // 3.8.2 화면 키우기 막기: 아이폰은 viewport 의 user-scalable=no 를 듣지 않는 판이 있어서, 벌리기 몸짓(gesture*)과 두 손가락 밀기를 직접 막는다
+      ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (type) { document.addEventListener(type, function (e) { if (e.cancelable) e.preventDefault(); }, { passive: false }); });
+      document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive: false });
+      document.addEventListener('wheel', function (e) { if (e.ctrlKey && e.cancelable) e.preventDefault(); }, { passive: false });      // 노트북 터치패드로 벌리기
       // 직접 눌러 준 단추에 브라우저의 누르기가 뒤따라오면 버린다(한 번 눌렀는데 두 번 사지 않게)
       document.addEventListener('click', function (e) {
         if (e.isTrusted && synth.btn && Date.now() - synth.at < 100 &&      /* 같은 손가락에서 곧바로 뒤따라온 것만 버린다. 창이 길면(전에는 0.45초) 조금 느리게 이어 누른 것까지 버려졌다 */ synth.btn.contains(e.target)) { e.stopImmediatePropagation(); e.preventDefault(); }

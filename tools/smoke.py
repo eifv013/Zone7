@@ -254,6 +254,15 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
         if '[object' in page.inner_text('body'): problems.append('화면에 [object …] 가 찍혀 있다')
+        # 화면 키우기 막기(3.8.2): viewport 와 touch-action 이 벌리기를 막고 있어야 하고, 두 손가락 밀기는 게임이 막아야 한다
+        vp = page.evaluate("document.querySelector('meta[name=viewport]').content")
+        if 'user-scalable=no' not in vp or 'maximum-scale=1' not in vp: problems.append('viewport 가 화면 키우기를 막지 않는다: ' + vp)
+        ta = page.evaluate("[getComputedStyle(document.documentElement).touchAction, getComputedStyle(document.body).touchAction]")
+        if any('pinch' in t or t in ('auto', 'manipulation') for t in ta): problems.append('touch-action 이 벌리기를 허락한다: %s' % ta)
+        pinch = page.evaluate("""() => { const el = document.body, mk = (id, x) => new Touch({ identifier: id, target: el, clientX: x, clientY: 300 });
+          const a = mk(1, 100), b = mk(2, 200), ev = new TouchEvent('touchmove', { bubbles: true, cancelable: true, touches: [a, b], targetTouches: [a, b], changedTouches: [a, b] });
+          el.dispatchEvent(ev); return ev.defaultPrevented; }""")
+        if not pinch: problems.append('두 손가락으로 미는 몸짓을 막지 않는다')
         # '+0.5', '+0.6' 처럼 소수로 시작하는 값은 0 이 아니다(0.6 을 0 으로 잘못 읽던 것을 고침)
         if text('pps').strip().endswith('초당 +0'): problems.append('수색조를 샀는데 생산이 0이다: ' + text('pps'))
         page.wait_for_timeout(6000)
