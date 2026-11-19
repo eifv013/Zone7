@@ -602,6 +602,8 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .surge:disabled { background: linear-gradient(to right, color-mix(in srgb, var(--hazard) 45%, transparent) calc(var(--p, 0) * 100%), transparent 0); color: var(--ink); cursor: default; }
 .autobar { height: 3px; margin-top: 4px; background: linear-gradient(to right, var(--ink) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--ink) 18%, transparent) 0); }
 .surge.on { background: var(--ink); color: var(--hazard); }
+/* 단추 효과가 걸려 있는 동안의 숫자(2.9.8): 노란 딱지로 띄운다 */
+.boosted { background: var(--hazard); color: var(--on-hazard) !important; padding: 1px 8px; border-radius: 3px; font-weight: 700; }
 .surge.green { width: 100%; margin-bottom: 8px; }
 .line-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
 .line-cell { position: relative; padding: 6px 8px; border: 2px solid var(--ink); background: var(--panel, transparent); }
@@ -1234,7 +1236,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.9.7</div>
+  <div class="boot-ver">7구역 알파 2.9.8</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1646,7 +1648,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.9.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.9.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

@@ -2736,7 +2736,10 @@
       // 7구역: 모인 생존자와 전체 배수, 혈청, 안테나
       var sRate = C.survivorRate(state), stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state);
       setText($('tower-people'), fmt(Math.floor(state.survivors)) + '명');
-      setText($('tower-rate'), sRate > 0 ? '초당 +' + fmt(sRate) + '명' : '안테나를 세우면 사람이 모여요');
+      // 2.9.8: 직접 방송 중에는 숫자가 실제로 두 배로 보이고 노란 딱지가 붙는다. 전에는 눌러도 화면에 달라지는 것이 없어서 무엇을 하는 단추인지 알 수 없었다
+      var tOn = state.push.tower.left > 0;
+      setText($('tower-rate'), sRate > 0 ? '초당 +' + fmt(sRate * (tOn ? C.PUSH_MULT : 1)) + '명' + (tOn ? ' · 방송 중 ×' + C.PUSH_MULT : '') : '안테나를 세우면 사람이 모여요');
+      $('tower-rate').classList.toggle('boosted', tOn && sRate > 0);
       setText($('tower-mult'), '모든 구역의 생산 ×' + C.towerMult(state).toFixed(2));
       setText($('serum'), stage >= sMax ? '혈청을 완성했다' : '혈청 ' + (stage + 1) + '단계 · 물자 ' + fmt(sCost));
       $('serum').disabled = stage >= sMax || !(sCost <= state.supplies);
@@ -2754,7 +2757,9 @@
       // 6구역: 다리 안전도(방어력 ÷ 무리)와 초소
       var safety = C.bridgeSafety(state), safeMax = C.SAFETY_MAX + m.margin, gRate = C.guardRate(state);
       setText($('guard-safety'), '×' + safety.toFixed(2));
-      setText($('guard-rate'), '통행 물자 초당 +' + fmt(gRate));
+      var gOn = state.push.guard.left > 0;      // 순찰 중에도 같은 식으로 보인다
+      setText($('guard-rate'), '통행 물자 초당 +' + fmt(gRate * (gOn ? C.PUSH_MULT : 1)) + (gOn ? ' · 순찰 중 ×' + C.PUSH_MULT : ''));
+      $('guard-rate').classList.toggle('boosted', gOn && gRate > 0);
       $('guard-bar').style.width = Math.min(100, safety / safeMax * 100).toFixed(1) + '%';
       setText($('guard-note'), '방어력이 오늘 밤 무리의 몇 배인지예요. 최대 ×' + safeMax.toFixed(1) + '까지 쳐 줘요.\n무리의 ' + C.SAFE_NIGHT + '배 방어력으로 막은 밤 ' + state.safeNights + '번\n통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length + ' · 이번 회차 ' + state.passersRun + '명 · 통행 물자 +' + Math.round((C.passerMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.PASSER_BONUS_MAX * 100) + '%)');
       var pq = qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts), pcost = C.postCost(state, pq);
