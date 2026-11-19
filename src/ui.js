@@ -1397,6 +1397,8 @@
       var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), d.max - (state.machines[d.id] || 0))), 'machine'); });
       rows.machines[d.id] = r; $('rows-z2').appendChild(r.btn);
     });
+    // 3.8.8 줄 순서: 4구역(기관차 → 화물 등급 → 연결 작업반)과 같게, 값 → 단계 → 빠르기. 전에는 금방 끝까지 올리는 투입구가 맨 위에 '최대'로 남아 있었다
+    ['paint', 'forge', 'feed'].forEach(function (id) { if (rows.machines[id]) $('rows-z2').appendChild(rows.machines[id].btn); });
     // 4구역: 노선 현황(위쪽)과 열차·노선 구매 줄(아래쪽)
     rows.train = buildRow({ id: 'train', name: '기관차', desc: '화물을 더 싣는다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '레벨마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains)), 'train'); });
     $('rows-z3').appendChild(rows.train.btn);
@@ -3045,8 +3047,8 @@
         var r = rows.routes[d.id], lv = state.routes[d.id] || 0, cost = C.routeCost(state, d.id);
         setText(r.count, 'Lv ' + lv + ' / ' + d.max);
         // 줄마다 "지금 어떤가 → 사면 어떻게 되나"
-        setText(r.info, d.id === 'grade' ? '화물 값 ×' + fmt(Math.pow(C.GRADE_STEP, lv)) + (lv < d.max ? ' → ×' + fmt(Math.pow(C.GRADE_STEP, lv + 1)) : '')
-          : '칸이 ' + C.carSeconds(state).toFixed(2) + '초마다 붙어요' + (lv < d.max ? ' → ' + (C.carSeconds(state) * C.CREW_STEP).toFixed(2) + '초' : ''));
+        setText(r.info, d.id === 'grade' ? '×' + fmt(Math.pow(C.GRADE_STEP, lv)) + (lv < d.max ? ' → ×' + fmt(Math.pow(C.GRADE_STEP, lv + 1)) : '')
+          : lv < d.max ? C.carSeconds(state).toFixed(2) + '초 → ' + (C.carSeconds(state) * C.CREW_STEP).toFixed(2) + '초' : C.carSeconds(state).toFixed(2) + '초마다');      // 3.8.8: 3구역 줄과 같은 꼴(현재 → 다음)
         setText(r.cost, isFinite(cost) ? '×1 ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
@@ -3083,7 +3085,7 @@
       setText($('guard-rate'), '통행 물자 초당 +' + fmt(gRate * (gOn ? C.PUSH_MULT : 1)) + (gOn ? ' · 순찰 중 ×' + C.PUSH_MULT : ''));
       $('guard-rate').classList.toggle('boosted', gOn && gRate > 0);
       $('guard-bar').style.width = Math.min(100, safety / safeMax * 100).toFixed(1) + '%';
-      setText($('guard-note'), '방어력이 오늘 밤 무리의 몇 배인지예요. 최대 ×' + safeMax.toFixed(1) + '까지 쳐 줘요.\n무리의 ' + C.SAFE_NIGHT + '배 방어력으로 막은 밤 ' + state.safeNights + '번\n통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length + ' · 이번 회차 ' + state.passersRun + '명 · 통행 물자 +' + Math.round((C.passerMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.PASSER_BONUS_MAX * 100) + '%)');
+      setText($('guard-note'), '최대 ×' + safeMax.toFixed(1) + ' · ' + C.SAFE_NIGHT + '배로 막은 밤 ' + state.safeNights + '번\n통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length + ' · 통행 물자 +' + Math.round((C.passerMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.PASSER_BONUS_MAX * 100) + '%)');
       var pq = qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts), pcost = C.postCost(state, pq);
       setText(rows.post.count, state.posts + ' / ' + C.COUNT_MAX);
       setMile(rows.post, state.posts, pq, pcost <= state.supplies);
