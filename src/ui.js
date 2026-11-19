@@ -1451,7 +1451,8 @@
       if (!(slot >= 0 && slot < n)) return;
       var r = C.harvestTube(state, slot);
       if (!r.ok) return;
-      tubeFx[slot] = { at: Date.now(), kind: r.peak ? 'peak' : r.burnt ? 'burnt' : 'pop' };
+      tubeFx[slot] = { at: Date.now(), kind: r.fan ? 'fan' : r.peak ? 'peak' : r.burnt ? 'burnt' : 'pop' };
+      if (r.fan) { sfx('click'); buzz(8); render(); return; }      // 불 올리기: 가볍게
       if (r.gain > 0) popNumber('+' + fmt(r.gain));
       sfx(r.peak ? 'signal' : r.burnt ? 'click' : 'buy'); buzz(r.peak ? 25 : 10); Store.save(); render();
     });
@@ -2381,10 +2382,11 @@
       }
       R(x + 2, top + 3, 1, 1, '#e8f2fa'); R(x + 2, top + 5, 1, 1, '#e8f2fa');
       R(x + 3, 78, 4, 3, '#30343c');      // 버너
-      if (st >= 1 && st <= 5) { var fl = Math.floor(now / 120 + i) % 2; R(x + 4, 76 - fl, 1, 1 + fl, '#6aaede'); R(x + 5, 75 + fl, 1, 2 - fl, '#9ad0e8'); R(x + 4, 77, 2, 1, '#3f7fb8'); }
+      if (fx && fx.kind === 'fan' && now - fx.at < 220) { R(x + 3, 72, 4, 5, '#9ad0e8'); R(x + 4, 70, 2, 3, '#e8f6ff'); R(x + 2, 75, 1, 2, '#6aaede'); R(x + 7, 75, 1, 2, '#6aaede'); }      // 불을 올린 순간: 불꽃이 크게 인다
+      else if (st >= 1 && st <= 5) { var fl = Math.floor(now / 120 + i) % 2; R(x + 4, 76 - fl, 1, 1 + fl, '#6aaede'); R(x + 5, 75 + fl, 1, 2 - fl, '#9ad0e8'); R(x + 4, 77, 2, 1, '#3f7fb8'); }
       for (var p5 = 0; p5 < 5; p5++) R(x + p5 * 2, 88, 1, 3, burnt ? '#55564e' : p5 < st ? (peak ? '#ffd95a' : '#e98a3c') : '#22343a');      // 단계 눈금
-      if (fx && now - fx.at < 500) { var up = Math.round((now - fx.at) / 500 * 14); spr(g, x + 3, top - 6 - up, ['.#.', '###', '.#.'], { '#': fx.kind === 'burnt' ? '#8a8a82' : '#ffd95a' }); R(x + 1, top + 2 - up, 1, 1, '#fff2c0'); R(x + 8, top + 6 - up, 1, 1, '#fff2c0'); }      // 거둔 것이 위로 솟는다
-      if (fx && now - fx.at < 260) { g.fillStyle = 'rgba(' + (fx.kind === 'peak' ? '255,217,90' : fx.kind === 'burnt' ? '160,160,150' : '255,255,255') + ',' + (0.55 * (1 - (now - fx.at) / 260)).toFixed(2) + ')'; g.fillRect(x - 1, top - 2, 12, h + 4); }      // 거둔 순간의 번쩍임
+      if (fx && fx.kind !== 'fan' && now - fx.at < 500) { var up = Math.round((now - fx.at) / 500 * 14); spr(g, x + 3, top - 6 - up, ['.#.', '###', '.#.'], { '#': fx.kind === 'burnt' ? '#8a8a82' : '#ffd95a' }); R(x + 1, top + 2 - up, 1, 1, '#fff2c0'); R(x + 8, top + 6 - up, 1, 1, '#fff2c0'); }      // 거둔 것이 위로 솟는다
+      if (fx && fx.kind !== 'fan' && now - fx.at < 260) { g.fillStyle = 'rgba(' + (fx.kind === 'peak' ? '255,217,90' : fx.kind === 'burnt' ? '160,160,150' : '255,255,255') + ',' + (0.55 * (1 - (now - fx.at) / 260)).toFixed(2) + ')'; g.fillRect(x - 1, top - 2, 12, h + 4); }      // 거둔 순간의 번쩍임
     }
   }  /*
    * 3.3.1 합치기 판의 도트 그림. 칸 하나는 32×27 도트: 어두운 바닥 + 품목 그림(14×14).
@@ -3197,7 +3199,7 @@
       drawLab();
       $('labscene').setAttribute('data-stages', tubeList.map(function (t) { return state.staff > 0 ? C.tubeStage(state, t) : 0; }).join(','));
       $('labscene').classList.toggle('tappable', state.staff > 0);
-      setText($('lab-note'), state.staff > 0 && (state.harvestsRun || 0) < 5 ? '시험관을 누르면 거둬요 · 금빛(절정)일 때가 가장 많아요' : '');
+      setText($('lab-note'), state.staff > 0 && (state.harvestsRun || 0) < 5 ? '시험관을 누르면 불이 세져 빨리 달여져요 · 금빛이 되면 눌러서 거둬요' : '');
       // 갈림길: 연구 점수가 차면 둘 가운데 하나를 고른다
       setText($('fork-cost'), fmt(Math.floor(state.points)) + ' / ' + fmt(pc));
       fill($('fork-bar'), pc > 0 ? state.points / pc : 0);
@@ -3215,7 +3217,7 @@
         o.btn.disabled = !(pc <= state.points);
       });
       setText($('lab-record'), '서류 ' + C.recordCount(state) + ' / ' + C.RECORDS.length + ' · 연구 속도 +' + Math.round((C.recordMult(state) - 1) * 100) + '%');
-      $('lab').setAttribute('data-harvests', state.harvestsRun || 0); $('lab').setAttribute('data-peaks', state.peaksRun || 0); $('lab').setAttribute('data-forks', state.projectsDone || 0);      // 화면 테스트가 읽는다
+      $('lab').setAttribute('data-harvests', state.harvestsRun || 0); $('lab').setAttribute('data-fans', state.fansRun || 0); $('lab').setAttribute('data-peaks', state.peaksRun || 0); $('lab').setAttribute('data-forks', state.projectsDone || 0);      // 화면 테스트가 읽는다
       // 줄: 시험관 · 시약 등급
       var rkc = C.rackCost(state), rgc = C.reagentCost(state), rgl = state.reagent || 0;
       setText(rows.rack.count, nT + ' / ' + C.TUBE_MAX); setText(rows.rack.info, isFinite(rkc) ? nT + '개 → ' + (nT + 1) + '개' : nT + '개');

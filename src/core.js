@@ -577,7 +577,7 @@
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
-      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, tubes: [], labEarned: 0, peaksRun: 0, burntRun: 0, harvestsRun: 0, labV: 2,
+      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, tubes: [], labEarned: 0, peaksRun: 0, burntRun: 0, harvestsRun: 0, fansRun: 0, labV: 2,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
@@ -721,7 +721,7 @@
     // 3.9.0 시험관
     s.racks = clamp(safeCount(raw.racks), 0, TUBE_MAX - TUBE_BASE); s.reagent = clamp(safeCount(raw.reagent), 0, REAGENT_MAX);
     s.tubes = []; (Array.isArray(raw.tubes) ? raw.tubes : []).slice(0, TUBE_MAX).forEach(function (t) { t = t && typeof t === 'object' ? t : {}; s.tubes.push({ t: clamp(safeNum(t.t, 0), 0, 600), age: clamp(safeNum(t.age, 0), 0, 600), r: clamp(safeNum(t.r, 1), 0.5, 1.5) }); });
-    s.labEarned = clamp(safeNum(raw.labEarned, 0), 0, 1e300); s.peaksRun = clamp(safeCount(raw.peaksRun), 0, 1e12); s.burntRun = clamp(safeCount(raw.burntRun), 0, 1e12); s.harvestsRun = clamp(safeCount(raw.harvestsRun), 0, 1e12);
+    s.labEarned = clamp(safeNum(raw.labEarned, 0), 0, 1e300); s.peaksRun = clamp(safeCount(raw.peaksRun), 0, 1e12); s.burntRun = clamp(safeCount(raw.burntRun), 0, 1e12); s.harvestsRun = clamp(safeCount(raw.harvestsRun), 0, 1e12); s.fansRun = clamp(safeCount(raw.fansRun), 0, 1e12);
     /* 옛 저장(labV 2 미만): 없앤 개조 '현미경'에 쓴 물자만큼 시약 등급과 시험관을 사 준 것으로 한다(시약 먼저, 그보다 훨씬 싼 동안은 시험관도). 내민 과제는 둘로 줄인다 */
     if (raw.labV !== 2 && s.zone >= 4) {
       var rup5 = raw.upgrades && typeof raw.upgrades === 'object' ? raw.upgrades : {}, n5 = clamp(safeCount(rup5.scope), 0, 40), bud5 = n5 > 0 ? seriesCost(1e23, 2.4, 0, n5) : 0;
@@ -1993,7 +1993,7 @@
    *   기준은 "간단하다 · 누르는 재미 · 보는 재미 · 선택의 긴장감", 그리고 "모든 구역에서 손이 쉬지 않는다".
    * 판:   실험대에 시험관이 tubeCount 개 놓여 있고, 불 위에서 혈청이 달여진다. 시험관마다 익는 빠르기가 달라서 제각각 익는다.
    *       색이 단계마다 변한다: 1 붉음 → 2 주홍 → 3 주황 → 4 노랑 → 5 금빛(절정). 절정은 peakSeconds 동안이고, 넘기면 타 버린다.
-   * 손:   시험관을 누르면 불을 끄고 거둔다. 그 관이 달여진 시간만큼의 약품(물자)과 연구 점수를 받는데, 단계가 높을수록 곱이 크다(TUBE_MULTS).
+   * 손(3.9.7 에 바뀜: 덜 익은 관은 누르면 불을 올리고, 절정 · 탄 관만 거둔다. 아래는 처음 설계):   시험관을 누르면 불을 끄고 거둔다. 그 관이 달여진 시간만큼의 약품(물자)과 연구 점수를 받는데, 단계가 높을수록 곱이 크다(TUBE_MULTS).
    *       절정에 거두면 2배, 3단계에서 거두면 1배(화면의 '초당'과 같다), 타 버린 관은 닦으면서 조금만 건진다(TUBE_BURNT).
    *       여러 관이 따로 익어가니 계속 볼 것이 있고, "지금 딸까, 절정까지 기다릴까"를 관마다 고른다.
    * 갈림길: 연구 점수가 차면 과제 둘 가운데 하나를 고른다(전에는 셋이었고 다시 뽑기가 있었다). 고르면 다음 갈림길이 열린다.
@@ -2002,7 +2002,7 @@
    * 자동(3.9.4): 연구 조교는 절정이 거의 끝날 때(TUBE_AUTO_LATE) 타기 직전에 거둔다. 서툴러서 TUBE_AUTO_MULT 배만 받는다(손으로 절정에 거두면 2배).
    *   3.9.2 에서는 3단계에서 거뒀는데, 그러면 시험관이 금빛이 되기 전에 다 비워져서 조교를 사고 나면 손이 할 일이 없었다. 가만히 둠 < 조교 < 손.
    */
-  var TUBE_BASE = 4, TUBE_MAX = 12, TUBE_STAGE_SECONDS = 4, TUBE_PEAK_SECONDS = 4, TUBE_BURNT_SECONDS = 10, TUBE_MULTS = [0, 0.4, 0.7, 1, 1.4, 2], TUBE_BURNT = 0.25, TUBE_AUTO_STAGE = 3, TUBE_AUTO_MULT = 1.25, TUBE_AUTO_LATE = 0.75, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
+  var TUBE_BASE = 4, TUBE_MAX = 12, TUBE_STAGE_SECONDS = 4, TUBE_PEAK_SECONDS = 4, TUBE_BURNT_SECONDS = 10, TUBE_MULTS = [0, 0.4, 0.7, 1, 1.4, 2], TUBE_BURNT = 0.25, TUBE_AUTO_STAGE = 3, TUBE_AUTO_MULT = 1.25, TUBE_AUTO_LATE = 0.75, TUBE_FAN = 0.8, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
   var RACK_COST = 2e23, RACK_GROWTH = 6, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
   function tubeCount(state) { return clamp(TUBE_BASE + Math.floor(safeNum(state.racks, 0)), TUBE_BASE, TUBE_MAX); }
   function peakSeconds(state) { return TUBE_PEAK_SECONDS + mods(state).peak; }
@@ -2038,6 +2038,13 @@
     i = Math.floor(safeNum(i, -1));
     var tubes = tubesOf(state), tube = tubes[i];
     if (!tube) return fail('empty');
+    /* 3.9.7 불 올리기: 아직 덜 익은 관(1~4단계)을 손으로 누르면 거두지 않고 불을 올린다(TUBE_FAN 초만큼 더 달여진다).
+       전에는 덜 익은 관을 눌러도 거둬졌는데, 덜 익었을 때 거둘 까닭이 없으니 절정을 기다리는 동안 손이 놀았다. 이제는 기다리는 대신 불을 올린다 */
+    if (!auto && tubeStage(state, tube) <= 4) {
+      var grow0 = TUBE_STAGE_SECONDS * 4, add = Math.min(TUBE_FAN, grow0 - tube.t);
+      tube.t += add; tube.age += add; state.fansRun = (state.fansRun || 0) + 1;
+      return { ok: true, at: i, fan: true, stage: tubeStage(state, tube), peak: false, burnt: false, gain: 0, points: 0 };
+    }
     var y = tubeYield(state, i);
     if (auto === 'aide') { var am = TUBE_AUTO_MULT / (y.mult || 1); y = { stage: y.stage, mult: TUBE_AUTO_MULT, gain: y.gain * am, points: y.points * am }; }      // 조교가 거둔 것: 단계와 상관없이 조교의 몫
     if (y.gain > 0) { earn(state, y.gain); state.labEarned = (state.labEarned || 0) + y.gain; }
@@ -4062,7 +4069,7 @@
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
-    TUBE_BASE: TUBE_BASE, TUBE_MAX: TUBE_MAX, TUBE_STAGE_SECONDS: TUBE_STAGE_SECONDS, TUBE_PEAK_SECONDS: TUBE_PEAK_SECONDS, TUBE_BURNT_SECONDS: TUBE_BURNT_SECONDS, TUBE_MULTS: TUBE_MULTS, TUBE_BURNT: TUBE_BURNT, TUBE_AUTO_STAGE: TUBE_AUTO_STAGE, TUBE_AUTO_MULT: TUBE_AUTO_MULT, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
+    TUBE_BASE: TUBE_BASE, TUBE_MAX: TUBE_MAX, TUBE_STAGE_SECONDS: TUBE_STAGE_SECONDS, TUBE_PEAK_SECONDS: TUBE_PEAK_SECONDS, TUBE_BURNT_SECONDS: TUBE_BURNT_SECONDS, TUBE_MULTS: TUBE_MULTS, TUBE_BURNT: TUBE_BURNT, TUBE_AUTO_STAGE: TUBE_AUTO_STAGE, TUBE_AUTO_MULT: TUBE_AUTO_MULT, TUBE_FAN: TUBE_FAN, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
     tubeCount: tubeCount, peakSeconds: peakSeconds, tubesOf: tubesOf, tubeStage: tubeStage, tubeYield: tubeYield, harvestTube: harvestTube, stepTubes: stepTubes, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,

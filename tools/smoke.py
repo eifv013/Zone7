@@ -396,13 +396,13 @@ def run_case(browser, name, size, state, mode):
             mk('touchstart'); mk('touchend'); el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y })); if (++k < 2) setTimeout(one, 70); else done(); };
           one(); })""", pts)
         page.wait_for_timeout(300)
-        if int(page.get_attribute('#lab', 'data-harvests') or 0) < 2: problems.append('시험관 둘을 눌렀는데 %s번만 거둬졌다' % page.get_attribute('#lab', 'data-harvests'))
-        if text('lab-points') == pts0: problems.append('거뒀는데 연구 점수가 그대로다: ' + pts0)
+        if int(page.get_attribute('#lab', 'data-fans') or 0) < 2: problems.append('덜 익은 시험관 둘을 눌렀는데 불이 %s번만 올랐다' % page.get_attribute('#lab', 'data-fans'))
         got_peak = False
         for _ in range(140):
             if 5 in stages(): x5, y5 = tube_xy(stages().index(5)); page.mouse.click(x5, y5); got_peak = True; break
             page.wait_for_timeout(200)
         page.wait_for_timeout(200)
+        if text('lab-points') == pts0: problems.append('절정을 거뒀는데 연구 점수가 그대로다: ' + pts0)
         if not got_peak or int(page.get_attribute('#lab', 'data-peaks') or 0) < 1: problems.append('절정을 잡지 못했다(절정 표시 %s, 횟수 %s)' % (got_peak, page.get_attribute('#lab', 'data-peaks')))
         if not tap('#row-rack'): problems.append('시험관을 살 수 없다')
         if len(stages()) != 5: problems.append('시험관을 샀는데 다섯이 아니다: %s' % stages())

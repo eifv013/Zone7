@@ -3026,6 +3026,9 @@ test('5구역 시험관: 단계마다 익고, 절정을 넘기면 탄다. 누르
   assert.ok(r.ok && r.peak); near(f.supplies - sup, y.gain); near(f.points - pts, y.points); assert.equal(f.peaksRun, 1); assert.equal(f.harvestsRun, 1);
   assert.equal(f.tubes[0].t, 0); assert.equal(f.tubes[0].age, 0); near(f.tubes[0].r, 1, '굴림 0.5 → 빠르기 1');
   const y2 = C.tubeYield(f, 1); assert.equal(y2.stage, 3); assert.equal(y2.mult, 1);
+  // 3.9.7 불 올리기: 덜 익은 관을 누르면 거두지 않고 더 달여진다
+  const t1 = f.tubes[1].t, a1 = f.tubes[1].age, s1 = f.supplies, fr = C.harvestTube(f, 1, calm); assert.ok(fr.ok && fr.fan); near(f.tubes[1].t - t1, C.TUBE_FAN); near(f.tubes[1].age - a1, C.TUBE_FAN); assert.equal(f.supplies, s1); assert.equal(f.fansRun, 1); assert.equal(f.harvestsRun, 1, '불 올리기는 거둔 횟수에 안 든다');
+  const nearPk = onBench(4); nearPk.tubes[0].t = C.TUBE_STAGE_SECONDS * 4 - 0.1; nearPk.tubes[0].age = nearPk.tubes[0].t; C.harvestTube(nearPk, 0, calm); near(nearPk.tubes[0].t, C.TUBE_STAGE_SECONDS * 4, '절정까지만 올린다'); assert.equal(C.tubeStage(nearPk, nearPk.tubes[0]), 5);
   // 탄 관: 조금만 건진다. 살균기가 더 건져 준다. 내버려 두면 저절로 비워진다
   const b = onBench(4); b.tubes[0].t = S * 4 + C.TUBE_PEAK_SECONDS + 1; b.tubes[0].age = S * 4;
   assert.equal(C.tubeYield(b, 0).mult, C.TUBE_BURNT); b.upgrades.sterile = 2; near(C.tubeYield(b, 0).mult, C.TUBE_BURNT + 0.3); b.upgrades.sterile = 0;
@@ -3057,9 +3060,10 @@ test('5구역 연구 조교: 타기 직전에 거둔다(손보다 적게). 가�
   near(a.supplies - sup, C.labRate(a) * C.TUBE_STAGE_SECONDS * 4 * C.TUBE_AUTO_MULT, '조교의 몫');
   const h2 = onBench(4); h2.upgrades.autolab = 1; C.stepTubes(h2, C.TUBE_STAGE_SECONDS * 4 + 1, calm, []); const hr = C.harvestTube(h2, 0, calm); assert.ok(hr.peak && C.TUBE_MULTS[5] > C.TUBE_AUTO_MULT, '조교가 있어도 손으로 절정을 잡으면 더 받는다'); assert.equal(h2.peaksRun, 1);
   const off = onBench(4); off.upgrades.autolab = 1; C.setAutoEvents(off, 4, false); C.stepTubes(off, C.TUBE_STAGE_SECONDS * 4 + C.TUBE_PEAK_SECONDS - 0.5, calm, []); assert.equal(off.labEarned, 0, '구역 자동을 끄면 손을 기다린다');
-  const run = (up, policy, seed) => { const z = onBench(4); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.labRate(z); for (let t = 0; t < 3600; t++) { C.stepTubes(z, 1, r, []); if (policy) for (let i = 0; i < 4; i++) if (policy(C.tubeStage(z, z.tubes[i]))) { C.harvestTube(z, i, r); break; } } return z.labEarned / 3600 / rate; };
+  const run = (up, policy, seed) => { const z = onBench(4); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.labRate(z); for (let t = 0; t < 3600; t++) { C.stepTubes(z, 1, r, []); if (policy) { let did = false; for (let i = 0; i < 4 && !did; i++) if (policy(C.tubeStage(z, z.tubes[i]))) { C.harvestTube(z, i, r); did = true; } if (!did && policy.fan) { let lo = 0; for (let i = 1; i < 4; i++) if (z.tubes[i].t < z.tubes[lo].t) lo = i; C.harvestTube(z, lo, r); } } } return z.labEarned / 3600 / rate; };
   const idle = run({}, null, 3), auto = run({ autolab: 1 }, null, 3), hand = run({}, (st) => st === 5, 3);
   assert.ok(idle < 0.3, '가만히 ' + idle.toFixed(2)); assert.ok(auto > 0.85 && auto < 1.15, '조교 ' + auto.toFixed(2)); assert.ok(hand > 1.6, '손 ' + hand.toFixed(2));
+  const fanner = (st) => st === 5; fanner.fan = true; const fan = run({}, fanner, 3); assert.ok(fan > hand * 1.05, '기다리는 동안 불을 올리면 더 번다: ' + fan.toFixed(2) + ' / ' + hand.toFixed(2));
   const both = run({ autolab: 1 }, (st) => st === 5, 3); assert.ok(both > auto * 1.5, '조교를 두고도 손으로 잡으면 더 번다: ' + both.toFixed(2));
 });
 
