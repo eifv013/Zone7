@@ -848,14 +848,8 @@ canvas.plat.tappable { cursor: pointer; } canvas.plat.tappable:active { filter: 
 @media (prefers-reduced-motion: reduce) { .settle-grid .built { animation: none; } }
 .settle-serum { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--edge, var(--ink-soft)); }
 .serum-steps { display: flex; gap: 5px; margin: 6px 0 8px; } .serum-steps i { flex: 1; height: 8px; border-radius: 4px; background: var(--soft, rgba(127,127,127,.2)); } .serum-steps i.on { background: var(--safe); }
-/* 3.9.2 시험관 */
-.tubes { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 6px; padding: 8px; margin-bottom: 8px; background: #23252d; border: 2px solid var(--ink); border-radius: 10px; }
-.tube { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 3px; background: #2c2f39; border: 2px solid transparent; border-radius: 8px; cursor: pointer; color: #cfd6e0; touch-action: manipulation; }
-.tube canvas { width: 100%; max-width: 56px; height: auto; image-rendering: pixelated; display: block; }
-.tube small { font: 600 11px/1.2 var(--font-mono); min-height: 13px; white-space: nowrap; }
-.tube.peak { border-color: #ffd95a; } .tube.peak small { color: #ffd95a; }
-.tube.burnt { border-color: #6a3a34; } .tube.burnt small { color: #b8807a; }
-.tube:disabled { opacity: .5; cursor: default; } .tube[hidden] { display: none; }
+/* 3.9.5 실험대 그림 */
+canvas.labcv { background: #1c2a2e; }
 #fork { margin-top: 6px; } #fork.ready { border-color: var(--hazard); } #fork .lab-offers { margin: 8px 0 0; grid-template-columns: 1fr 1fr; }
 .lab-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .lab-top #lab-rate { text-align: right; }
@@ -1358,7 +1352,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 3.9.4</div>
+  <div class="boot-ver">7구역 알파 3.9.5</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1620,7 +1614,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="trade lab" id="lab" hidden>
         <!-- 3.9.2 5구역 혈청 달이기: 머리줄 → 시험관(누르면 거둔다) → 갈림길 카드 → 기록 -->
         <div class="search-head"><span class="num" id="lab-points"></span><span class="label" id="lab-rate"></span></div>
-        <div class="tubes" id="tubes" role="group" aria-label="시험관"></div>
+        <canvas class="belt plat labcv" id="labscene" width="184" height="96" role="button" tabindex="0" data-tap aria-label="실험대의 시험관. 누르면 그 시험관을 거둔다"></canvas>
         <div class="label" id="lab-note"></div>
         <div class="order" id="fork">
           <div class="order-head"><span class="label" id="fork-title">갈림길</span><span class="num" id="fork-cost"></span></div>
@@ -1809,7 +1803,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 3.9.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 3.9.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

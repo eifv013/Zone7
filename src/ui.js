@@ -1442,19 +1442,19 @@
     rows.rack = buildRow({ id: 'rack', name: '시험관', desc: '실험대에 시험관을 하나 더 놓는다' }, function () { buy(C.buyRack(state), 'staff'); });
     rows.reagent = buildRow({ id: 'reagent', name: '시약 등급', desc: '거두는 약품이 2배가 된다' }, function () { buy(C.buyReagent(state), 'staff'); });
     $('rows-z4').appendChild(rows.rack.btn); $('rows-z4').appendChild(rows.reagent.btn);
-    // 시험관 칸: 가장 많을 때의 수만큼 만들어 두고, 가진 수만 보인다. 누르면 거둔다
-    for (var tk = 0; tk < C.TUBE_MAX; tk++) (function (slot) {
-      var tb = el('button', 'tube'), cv = document.createElement('canvas'), sm = el('small');
-      tb.type = 'button'; cv.width = 16; cv.height = 34; tb.appendChild(cv); tb.appendChild(sm); tb._cv = cv; tb._sm = sm;
-      tb.addEventListener('click', function () {
-        var r = C.harvestTube(state, slot);
-        if (!r.ok) return;
-        tubeFx[slot] = r.peak ? 'peak' : r.burnt ? 'burnt' : 'pop';
-        if (r.gain > 0) popNumber('+' + fmt(r.gain));
-        sfx(r.peak ? 'signal' : r.burnt ? 'click' : 'buy'); buzz(r.peak ? 25 : 10); Store.save(); render();
-      });
-      $('tubes').appendChild(tb);
-    })(tk);
+    /* 3.9.5 실험대 그림: 처음 보여 드린 시안(벽 · 천장등 · 긴 받침대 · 키 큰 시험관)을 그대로 한 장의 그림으로 그린다.
+       3.9.2 에서는 시험관마다 작은 단추로 쪼개 그려서 시안보다 한참 못했다. 누른 자리(가로)로 어느 관인지 가린다 */
+    $('labscene').addEventListener('click', function (e) {
+      var cv = $('labscene'), rc = cv.getBoundingClientRect(), n = C.tubeCount(state);
+      var x = (e.clientX - rc.left) / rc.width * 184, slot = Math.floor((x - 8) / (168 / n));
+      if (!(e.clientX > 0) && !(e.clientY > 0)) slot = labPick();      // 자판(엔터)으로 누르면 가장 익은 관
+      if (!(slot >= 0 && slot < n)) return;
+      var r = C.harvestTube(state, slot);
+      if (!r.ok) return;
+      tubeFx[slot] = { at: Date.now(), kind: r.peak ? 'peak' : r.burnt ? 'burnt' : 'pop' };
+      if (r.gain > 0) popNumber('+' + fmt(r.gain));
+      sfx(r.peak ? 'signal' : r.burnt ? 'click' : 'buy'); buzz(r.peak ? 25 : 10); Store.save(); render();
+    });
     // 6구역: 초소
     rows.post = buildRow({ id: 'post', name: '초소', desc: '다리를 건너오는 사람들에게서 통행 물자를 받는다. 10·25·50곳마다 2배' }, function () { buy(C.buyPost(state, qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts)), 'defense'); });
     $('rows-z5').appendChild(rows.post.btn);
@@ -2329,27 +2329,48 @@
    * 5구역 시험관 그림(3.9.2). 칸 하나에 16×30 도트: 유리관, 단계에 따라 차오르고 색이 변하는 약, 아래의 불꽃.
    *   1 붉음 → 2 주홍 → 3 주황 → 4 노랑 → 5 금빛(절정, 반짝임) → 6 탔다(검은 찌꺼기와 연기, 불은 꺼져 있다).
    */
-  var tubeFx = {}, TUBE_COL = ['#3a3d47', '#b8402e', '#d8663a', '#e0903c', '#e8c44a', '#ffd95a', '#3a3a36'], TUBE_DARK = ['#2a2c34', '#7a2a1e', '#96422a', '#a0642a', '#a88a2e', '#c89a2a', '#1f1f1c'];
-  function drawTube(cv, stage, tube) {
-    var g = cv.getContext('2d'), now = Date.now(), grow = C.TUBE_STAGE_SECONDS * 4;
-    g.clearRect(0, 0, 16, 34);
-    for (var pp = 0; pp < 4; pp++) px(g, 2 + pp * 3, 31, 2, 2, stage === 6 ? '#4a3a38' : stage === 5 ? '#ffd95a' : pp < stage ? TUBE_COL[Math.min(4, pp + 1)] : '#3a3d47');      // 단계 네 칸
-    var frac = stage === 0 ? 0 : Math.min(1, (tube.t || 0) / grow), h = stage === 0 ? 0 : 4 + Math.round(frac * 12), top = 21 - h;
-    px(g, 4, 1, 8, 1, '#cfd6e0'); px(g, 3, 2, 1, 1, '#cfd6e0'); px(g, 12, 2, 1, 1, '#cfd6e0');      // 주둥이
-    px(g, 4, 2, 1, 19, '#9aa3b2'); px(g, 11, 2, 1, 19, '#9aa3b2'); px(g, 5, 21, 6, 1, '#9aa3b2');      // 유리벽과 바닥
-    px(g, 5, 2, 6, 19, 'rgba(160,180,210,.10)');
-    if (h > 0) {
-      px(g, 5, top, 6, h, TUBE_COL[stage]); px(g, 9, top, 2, h, TUBE_DARK[stage]); px(g, 5, top, 6, 1, stage === 6 ? '#4a4a44' : '#fff2c0');
-      if (stage >= 1 && stage <= 5) { var bub = Math.floor(now / (stage === 5 ? 120 : 260) + (tube.r || 1) * 7) % 5; px(g, 6 + bub % 3, top + 2 + (bub * 3) % Math.max(1, h - 3), 1, 1, '#fff2c0'); }      // 끓는 방울
-      if (stage === 5 && Math.floor(now / 160) % 2) { px(g, 2, top - 2, 1, 1, '#fff2c0'); px(g, 13, top + 3, 1, 1, '#fff2c0'); px(g, 7, top - 4, 1, 1, '#ffd95a'); }      // 절정의 반짝임
-      if (stage === 6) { var sm = Math.floor(now / 200) % 3; px(g, 6 + sm, top - 3 - sm, 2, 1, '#6a6a64'); px(g, 8 - sm, top - 6 - sm, 2, 1, '#4a4a44'); }      // 연기
-    }
-    px(g, 6, 3, 1, 12, 'rgba(255,255,255,.25)');      // 유리의 빛
-    px(g, 1, 23, 14, 1, '#6b4a3a'); px(g, 2, 24, 1, 5, '#4a3428'); px(g, 13, 24, 1, 5, '#4a3428');      // 받침대
-    if (stage >= 1 && stage <= 5) { var fl = Math.floor(now / 110) % 2; px(g, 6, 26 - fl, 4, 3 + fl, '#e0703c'); px(g, 7, 27 - fl, 2, 2 + fl, '#ffd95a'); px(g, 7 + fl, 24, 1, 1, '#e0703c'); }      // 불꽃
-    else px(g, 6, 28, 4, 1, '#3a3a36');
+  var tubeFx = {}, labBack = null, LAB_COL = ['#22343a', '#b8402e', '#d8644e', '#e98a3c', '#f0b400', '#ffd95a', '#3a3a36'];
+  /** 가장 익은 관(절정 > 높은 단계). 자판으로 누를 때 쓴다. */
+  function labPick() { var best = -1, bt = -1; C.tubesOf(state).forEach(function (t, i) { var st = C.tubeStage(state, t), score = st === 6 ? 0 : st * 100 + t.t; if (score > bt) { bt = score; best = i; } }); return best; }
+  function labBackdrop() {
+    if (labBack) return labBack;
+    var cv = document.createElement('canvas'); cv.width = 184; cv.height = 96; var g = cv.getContext('2d');
+    var R = function (x, y, w, h, c) { px(g, x, y, w, h, c); };
+    R(0, 0, 184, 96, '#1c2a2e'); for (var y = 0; y < 84; y += 8) for (var x = 0; x < 184; x += 8) { R(x, y, 7, 7, '#22343a'); R(x, y, 1, 1, '#2a4048'); }      // 타일 벽
+    [26, 118].forEach(function (lx) { R(lx, 1, 40, 2, '#d8f0f0'); R(lx, 3, 40, 1, '#8ab0b4'); g.fillStyle = 'rgba(200,240,240,.07)'; g.fillRect(lx - 8, 4, 56, 26); });      // 천장등
+    R(0, 84, 184, 12, '#3a4a50'); R(0, 84, 184, 2, '#5a6e76'); R(0, 86, 184, 1, '#2a383c');      // 실험대 앞판
+    R(8, 74, 168, 3, '#8a8a82'); R(8, 74, 168, 1, '#b0b0a8'); R(8, 77, 168, 8, '#55564e');      // 버너 받침(긴 랙)
+    return (labBack = cv);
   }
   /*
+   * 5구역 실험대(3.9.5). 184×96 도트 한 장. 시험관은 가진 수만큼 받침대 위에 고르게 선다.
+   *   약은 달여진 만큼 차오르고 단계마다 색이 변한다(붉음 → 주홍 → 주황 → 노랑 → 금빛). 절정은 뒤가 금빛으로 빛나고 십자 반짝임이 뜬다.
+   *   탄 관은 검은 찌꺼기와 연기, 불이 꺼져 있다. 관 아래 다섯 칸이 단계다.
+   */
+  function drawLab() {
+    var cv = $('labscene'); if (!cv) return;
+    var g = cv.getContext('2d'), now = Date.now(), tubes = C.tubesOf(state), n = tubes.length, sp = 168 / n, on = state.staff > 0, grow = C.TUBE_STAGE_SECONDS * 4, top = 28, h = 46;
+    var R = function (x, y, w, hh, c) { px(g, x, y, w, hh, c); };
+    g.drawImage(labBackdrop(), 0, 0);
+    for (var s0 = 0; s0 < n; s0++) R(Math.round(8 + sp * s0 + sp / 2) - 1, 77, 2, 8, '#30343c');      // 받침 다리
+    for (var i = 0; i < n; i++) {
+      var t = tubes[i], st = on ? C.tubeStage(state, t) : 0, x = Math.round(8 + sp * i + (sp - 10) / 2), fx = tubeFx[i], peak = st === 5, burnt = st === 6;
+      if (peak) { g.fillStyle = 'rgba(255,217,90,' + (0.16 + 0.08 * (Math.floor(now / 200) % 2)).toFixed(2) + ')'; g.fillRect(x - 2, top - 4, 14, h + 10); }
+      R(x, top, 10, h, '#0e1618'); R(x + 1, top, 8, h - 1, '#22343a'); R(x, top - 1, 10, 2, '#8ab0b4'); R(x + 1, top + h - 1, 8, 1, '#8ab0b4'); R(x + 1, top, 1, h - 1, '#8ab0b4'); R(x + 8, top, 1, h - 1, '#5a7e84');      // 유리관
+      if (st > 0) {
+        var lv = burnt ? 10 : 6 + Math.round(Math.min(1, (t.t || 0) / grow) * 37);
+        R(x + 2, top + h - 1 - lv, 6, lv, LAB_COL[st]); R(x + 2, top + h - 1 - lv, 6, 1, burnt ? '#55564e' : '#fff2c0');
+        if (!burnt) for (var k = 0; k < st; k++) { var by = top + h - 4 - ((k * 9 + Math.floor(now / (peak ? 90 : 220)) * 2) % Math.max(2, lv - 3)); R(x + 3 + (k * 3) % 5, by, 1, 1, '#fff2c0'); }      // 올라가는 방울
+        if (peak) spr(g, x + 3, top - 8 - Math.floor(now / 300) % 2, ['.#.', '###', '.#.'], { '#': '#fff2c0' });
+        if (burnt) { var sm = Math.floor(now / 220) % 3; [[2, -4], [5, -8], [3, -12], [6, -15]].forEach(function (p) { R(x + p[0] + (sm + p[1]) % 2, top + p[1] - sm, 1, 1, '#6a6a64'); }); R(x + 2, top + 8, 6, h - 20, '#2a2a28'); }
+      }
+      R(x + 2, top + 3, 1, 1, '#e8f2fa'); R(x + 2, top + 5, 1, 1, '#e8f2fa');
+      R(x + 3, 78, 4, 3, '#30343c');      // 버너
+      if (st >= 1 && st <= 5) { var fl = Math.floor(now / 120 + i) % 2; R(x + 4, 76 - fl, 1, 1 + fl, '#6aaede'); R(x + 5, 75 + fl, 1, 2 - fl, '#9ad0e8'); R(x + 4, 77, 2, 1, '#3f7fb8'); }
+      for (var p5 = 0; p5 < 5; p5++) R(x + p5 * 2, 88, 1, 3, burnt ? '#55564e' : p5 < st ? (peak ? '#ffd95a' : '#e98a3c') : '#22343a');      // 단계 눈금
+      if (fx && now - fx.at < 260) { g.fillStyle = 'rgba(' + (fx.kind === 'peak' ? '255,217,90' : fx.kind === 'burnt' ? '160,160,150' : '255,255,255') + ',' + (0.55 * (1 - (now - fx.at) / 260)).toFixed(2) + ')'; g.fillRect(x - 1, top - 2, 12, h + 4); }      // 거둔 순간의 번쩍임
+    }
+  }  /*
    * 3.3.1 합치기 판의 도트 그림. 칸 하나는 32×27 도트: 어두운 바닥 + 품목 그림(14×14).
    *   왜: 색 네모에 글자만 적힌 판은 "보는 재미"가 없었다. 품목이 눈으로 구분되고, 합칠수록 물건이 그럴듯해져야 한다.
    *   품목 그림은 BOX_ART[단계 - 1](g, x, y) 가 그린다. 아홉 가지를 돌려 쓰고, 한 바퀴 돌 때마다 모서리에 별이 하나 붙는다(이름의 ★과 같다).
@@ -3154,21 +3175,12 @@
     }
     if (tab === 'z4' && open) {
       /* 3.9.2 5구역 혈청 달이기. 차림은 1구역과 같다: 머리줄(왼쪽 숫자 · 오른쪽 자동 안내) → 누르는 칸 → 카드(갈림길) → 기록 한 줄 */
-      var pc = C.projectCost(state), rate = C.researchRate(state), autoL = C.autoOn(state, 4), autoLOn = autoL && C.autoEvents(state, 4), tubeList = C.tubesOf(state), nT = tubeList.length, tb = $('tubes');
+      var pc = C.projectCost(state), rate = C.researchRate(state), autoL = C.autoOn(state, 4), autoLOn = autoL && C.autoEvents(state, 4), tubeList = C.tubesOf(state), nT = tubeList.length;
       setText($('lab-points'), '연구 점수 ' + fmt(Math.floor(state.points)));
       setText($('lab-rate'), !(state.staff > 0) ? '연구원을 뽑으면 불이 붙어요' : !autoL ? '개조에서 연구 조교를 사요' : autoLOn ? '연구 조교 · 타기 전에 거둬요' : '연구 조교가 쉬고 있어요');
-      tb.style.setProperty('--n', nT <= 6 ? nT : Math.ceil(nT / 2));      // 일곱 개부터는 두 줄로 고르게 나눈다
-      for (var ti5 = 0; ti5 < tb.children.length; ti5++) {
-        var tbn = tb.children[ti5], on5 = ti5 < nT;
-        if (tbn.hidden !== !on5) tbn.hidden = !on5;
-        if (!on5) continue;
-        var tu = tubeList[ti5], st5 = state.staff > 0 ? C.tubeStage(state, tu) : 0, y5 = C.tubeYield(state, ti5), cls5 = 'tube' + (st5 === 5 ? ' peak' : st5 === 6 ? ' burnt' : '') + (tubeFx[ti5] ? ' mb-pop' : '');
-        if (tbn.className !== cls5) tbn.className = cls5;
-        drawTube(tbn._cv, st5, tu);
-        setText(tbn._sm, st5 === 5 ? '절정' : st5 === 6 ? '탔어요' : '');      // 3.9.4: 관마다 숫자를 적지 않는다(열두 개가 숫자로 빽빽했다). 단계는 그림 아래 네 칸으로 보인다
-        tbn.disabled = !(state.staff > 0);
-      }
-      tubeFx = {};
+      drawLab();
+      $('labscene').setAttribute('data-stages', tubeList.map(function (t) { return state.staff > 0 ? C.tubeStage(state, t) : 0; }).join(','));
+      $('labscene').classList.toggle('tappable', state.staff > 0);
       setText($('lab-note'), state.staff > 0 && (state.harvestsRun || 0) < 5 ? '시험관을 누르면 거둬요 · 금빛(절정)일 때가 가장 많아요' : '');
       // 갈림길: 연구 점수가 차면 둘 가운데 하나를 고른다
       setText($('fork-cost'), fmt(Math.floor(state.points)) + ' / ' + fmt(pc));

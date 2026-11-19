@@ -367,7 +367,12 @@ def run_case(browser, name, size, state, mode):
         if not page.locator('#lab').is_visible(): problems.append('5구역 탭에 실험대가 없다')
         if page.locator('.lab-offer:visible').count() != 2: problems.append('갈림길이 둘이 아니다: %d' % page.locator('.lab-offer:visible').count())
         if '연구원을 뽑으면' not in text('lab-rate'): problems.append('연구원이 없을 때의 안내가 없다: ' + text('lab-rate'))
-        if page.locator('#tubes .tube:visible').count() != 4: problems.append('시험관이 넷이 아니다: %d' % page.locator('#tubes .tube:visible').count())
+        stages = lambda: [int(x) for x in (page.get_attribute('#labscene', 'data-stages') or '').split(',') if x != '']
+        def tube_xy(i):      # 실험대 그림에서 i번째 시험관의 화면 자리
+            n = len(stages()); bx = page.locator('#labscene').bounding_box()
+            return bx['x'] + bx['width'] * (8 + 168 / n * (i + 0.5)) / 184, bx['y'] + bx['height'] * 0.5
+        if len(stages()) != 4: problems.append('시험관이 넷이 아니다: %s' % stages())
+        if not page.evaluate("(() => { const c = document.getElementById('labscene'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size >= 10; })()"): problems.append('실험대 그림이 비어 있다')
         for old in ['#lab-reroll', '#lab-focus', '#row-scope', '#lab-done']:
             if page.locator(old).count(): problems.append('옛 단추나 개조가 남아 있다: ' + old)
         for up in ['#row-cooler', '#row-sterile', '#row-autolab', '#row-rack', '#row-reagent']:
@@ -377,29 +382,30 @@ def run_case(browser, name, size, state, mode):
         if not page.is_disabled('#offer-0'): problems.append('점수가 모자란데 갈림길 단추가 켜져 있다')
         if not tap('#row-staff'): problems.append('연구원을 뽑을 수 없다')
         tap('[data-qty="10"]'); tap('#row-staff'); tap('[data-qty="1"]')
-        if page.is_disabled('#tubes .tube'): problems.append('연구원을 뽑았는데 시험관을 누를 수 없다')
         if not fits(): problems.append('한 화면에 들어오지 않는다(5구역)')
         page.wait_for_timeout(3000)
-        small = page.evaluate("[...document.querySelectorAll('#tubes .tube')].filter(b => !b.hidden).map(b => { const r = b.getBoundingClientRect(), c = b.querySelector('canvas').getBoundingClientRect(); return [Math.round(r.width), Math.round(c.height), getComputedStyle(b).opacity]; })")
-        if any(w < 30 or h < 30 or float(o) < 0.9 for w, h, o in small): problems.append('시험관이 너무 작거나 흐리다: %s' % small)
+        if not any(st >= 1 for st in stages()): problems.append('연구원을 뽑았는데 시험관이 달여지지 않는다: %s' % stages())
+        lb = page.locator('#labscene').bounding_box()
+        if lb['height'] < 120 or lb['width'] < 250: problems.append('실험대 그림이 너무 작다: %s' % lb)
         pts0 = text('lab-points')
         # 손가락으로 빠르게 두 번(다른 시험관): 둘 다 거둬져야 한다
-        page.evaluate("""() => new Promise((done) => { const bs = [...document.querySelectorAll('#tubes .tube')].slice(0, 2); let k = 0;
-          const one = () => { const el = bs[k], r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+        pts = [tube_xy(0), tube_xy(1)]
+        page.evaluate("""(pts) => new Promise((done) => { const el = document.getElementById('labscene'); let k = 0;
+          const one = () => { const x = pts[k][0], y = pts[k][1];
             const mk = (type) => { const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y }); el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [t], changedTouches: [t] })); };
-            mk('touchstart'); mk('touchend'); el.click(); if (++k < 2) setTimeout(one, 70); else done(); };
-          one(); })""")
+            mk('touchstart'); mk('touchend'); el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y })); if (++k < 2) setTimeout(one, 70); else done(); };
+          one(); })""", pts)
         page.wait_for_timeout(300)
         if int(page.get_attribute('#lab', 'data-harvests') or 0) < 2: problems.append('시험관 둘을 눌렀는데 %s번만 거둬졌다' % page.get_attribute('#lab', 'data-harvests'))
         if text('lab-points') == pts0: problems.append('거뒀는데 연구 점수가 그대로다: ' + pts0)
         got_peak = False
         for _ in range(140):
-            if page.locator('#tubes .tube.peak').count(): page.locator('#tubes .tube.peak').first.click(); got_peak = True; break
+            if 5 in stages(): x5, y5 = tube_xy(stages().index(5)); page.mouse.click(x5, y5); got_peak = True; break
             page.wait_for_timeout(200)
         page.wait_for_timeout(200)
         if not got_peak or int(page.get_attribute('#lab', 'data-peaks') or 0) < 1: problems.append('절정을 잡지 못했다(절정 표시 %s, 횟수 %s)' % (got_peak, page.get_attribute('#lab', 'data-peaks')))
         if not tap('#row-rack'): problems.append('시험관을 살 수 없다')
-        if page.locator('#tubes .tube:visible').count() != 5: problems.append('시험관을 샀는데 다섯이 아니다: %d' % page.locator('#tubes .tube:visible').count())
+        if len(stages()) != 5: problems.append('시험관을 샀는데 다섯이 아니다: %s' % stages())
         rg0 = text('row-reagent')
         if not tap('#row-reagent') or text('row-reagent') == rg0 or '×2 →' not in text('row-reagent'): problems.append('시약 등급을 샀는데 그대로다: ' + text('row-reagent'))
         tap('[data-tab=z5]')
