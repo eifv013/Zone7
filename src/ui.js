@@ -1256,9 +1256,14 @@
     }
     // 무리: 오른쪽 끝에서 열차 꼬리까지
     var hp = Math.max(0, Math.min(1, ti.near)), hx = Math.round(tail + CAR_W + 2 + hp * (200 - tail - CAR_W));
-    for (var q = 0; q < 3; q++) spr(g, hx + q * 7, 62 + q % 2 + (Math.floor(now / 300 + q) % 2), PLAT_Z[q], { g: '#7fb85a', k: BK, c: ['#6b4a3a', '#3f5f7a', '#8a8a52'][q], d: '#3a3a36', r: '#b8402e' });
+    for (var q = 0; q < 3; q++) spr(g, hx + q * 7, 62 + q % 2 + (Math.floor(now / (ti.rush ? 90 : 300) + q) % 2), PLAT_Z[q], { g: '#7fb85a', k: BK, c: ['#6b4a3a', '#3f5f7a', '#8a8a52'][q], d: '#3a3a36', r: '#b8402e' });
     if (now - platPull < 160 && ti.cars < ti.max) { px(g, tail - 2, 60, 2, 2, '#fff2c0'); px(g, tail, 57, 1, 2, '#ffd95a'); px(g, tail + 2, 62, 2, 1, '#ffd95a'); px(g, tail - 4, 63, 1, 1, '#fff2c0'); }      // 칸을 당길 때 연결기에서 불꽃
     if (now - platHorn < 600) { var hw = Math.round((now - platHorn) / 600 * 60); g.fillStyle = 'rgba(255,242,192,' + (0.5 * (1 - (now - platHorn) / 600)).toFixed(3) + ')'; g.fillRect(tail + hw, 50, 3, 22); g.fillRect(tail + hw + 8, 52, 2, 18); }      // 경적: 소리가 무리 쪽으로 퍼진다
+    if (ti.rush) {      // 3.8.6 돌진: 선로가 붉게 깜빡이고, 무리 위에 느낌표가 뜨고, 달려오는 동안에는 먼지가 인다
+      if (Math.floor(now / 160) % 2) { g.fillStyle = 'rgba(255,90,74,.22)'; g.fillRect(0, 57, 184, 27); }
+      px(g, hx + 8, 52, 2, 5, '#ff5a4a'); px(g, hx + 8, 58, 2, 2, '#ff5a4a');
+      if (ti.rush === 'run') for (var du = 0; du < 4; du++) px(g, hx + 22 + du * 5 + Math.floor(now / 80) % 3, 70 - du % 2, 2, 1, '#8a8478');
+    }
     if (now - platSprint < 500) { g.fillStyle = 'rgba(255,90,74,' + (0.28 * (1 - (now - platSprint) / 500)).toFixed(3) + ')'; g.fillRect(0, 57, 184, 27); }      // 달려드는 순간 선로가 붉게 번쩍인다
     // 경고등: 무리가 가까우면 깜빡인다
     px(g, 178, 36, 3, 3, BK); var lit = ti.near <= 0.3 && Math.floor(now / 250) % 2 === 0;
@@ -3014,8 +3019,14 @@
       // 무리와의 거리: 막대만 보여 준다(숫자는 없다). 걸음이 고르지 않고 가끔 달려들어서, 언제 닿을지는 눈으로 가늠해야 한다
       var nearPct = ti.running ? Math.max(0, Math.min(100, ti.near * 100)) : 100, danger = ti.running && ti.near <= 0.3;
       $('plat-horde-bar').style.width = nearPct.toFixed(1) + '%';
-      setText($('plat-horde-left'), !ti.running ? '' : ti.near > 0.6 ? '멀어요' : ti.near > 0.3 ? '다가와요' : '코앞이에요');
-      $('plat-horde-bar').parentNode.parentNode.classList.toggle('near', danger);
+      setText($('plat-horde-left'), !ti.running ? '' : ti.rush ? '달려와요!' : ti.near > 0.6 ? '멀어요' : ti.near > 0.3 ? '다가와요' : '코앞이에요');
+      $('plat-horde-bar').parentNode.parentNode.classList.toggle('near', danger || !!ti.rush);
+      // 3.8.6 돌진: 줄 전체가 경고로 바뀐다(이름표 · 막대 · 경적 단추). 경적이 남아 있으면 경적이, 없으면 출발 단추가 깜빡인다
+      var hordeRow = $('plat-horde-bar').parentNode.parentNode;
+      hordeRow.classList.toggle('rush', !!ti.rush);
+      setText($('plat-horde-label'), ti.rush ? '무리 돌진!' : '무리와의 거리');
+      $('train-horn').classList.toggle('alert', !!ti.rush && ti.horn > 0);
+      $('train-go').classList.toggle('alert', !!ti.rush && !(ti.horn > 0));
       var go = $('train-go'), nextMult = ti.cars < ti.max ? C.carMult(ti.cars + 1) : 0;
       go.disabled = !(ti.running && ti.cars >= 1);
       var goKey = (ti.cars >= 1 ? fmt(ti.gain) : '-') + (ti.full ? 'F' : '');
@@ -3024,6 +3035,7 @@
       var hb = $('train-horn'); hb.disabled = !(ti.running && ti.horn > 0); setText(hb, '경적 ' + (ti.running ? ti.horn : 0));
       $('platform').classList.toggle('tappable', ti.running && !ti.full);
       setText($('plat-note'), !ti.running ? '기관차를 사면 승강장에 열차가 서요.'
+        : ti.rush ? (ti.horn > 0 ? '경적으로 돌진을 끊으세요' : '경적이 없어요 · 바로 보내세요')
         : ti.full ? '보내야 다음 열차가 와요'
         : (state.trainsSent || 0) < 5 ? '그림을 누르면 칸이 빨리 붙어요 · 무리가 닿기 전에 보내세요'      // 3.8.4: 누르는 법은 처음 몇 대만. 횟수 기록은 목표와 업적에 있어서 뺐다
         : ti.cars >= 1 ? '한 칸 더 붙으면 ×' + nextMult.toFixed(2) : '');
@@ -3371,7 +3383,7 @@
           else if (tab === 'z3' && pane === 'play') sfx('train');
           break;
         case 'horde-sprint':      // 무리가 달려든다: 4구역을 보고 있을 때만 알린다
-          if (tab === 'z3' && pane === 'play') { platSprint = Date.now(); sfx('click'); buzz(15); }
+          if (tab === 'z3' && pane === 'play') { platSprint = Date.now(); sfx('rush'); buzz([40, 60, 40]); }
           break;
         case 'ending':
           pendingEnding = ev;      // 일지 창과 특전 창이 닫힌 뒤에 끝 화면을 띄운다(render 가 본다)
@@ -3642,7 +3654,7 @@
     $('train-horn').addEventListener('click', function () {
       var res = C.blowHorn(state);
       if (!res.ok) return;
-      platHorn = Date.now(); log('경적을 울렸다. 무리가 물러선다.', ''); sfx('signal'); buzz(35); Store.save(); render();
+      platHorn = Date.now(); log(res.broke ? '경적에 무리의 돌진이 끊겼다.' : '경적을 울렸다. 무리가 물러선다.', ''); if (res.broke) toast('돌진을 끊었다'); sfx('signal'); buzz(35); Store.save(); render();
     });
     $('train-go').addEventListener('click', function () {
       var res = C.sendTrain(state);

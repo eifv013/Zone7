@@ -54,6 +54,7 @@
     dusk:       [{ f: 294, d: 0.35, type: 'triangle', g: 0.03 }, { f: 233, d: 0.5, at: 0.3, type: 'triangle', g: 0.03 }],
     defended:   [{ f: 392, d: 0.1, type: 'sine', g: 0.05 }, { f: 494, d: 0.1, at: 0.1, type: 'sine', g: 0.05 }, { f: 587, d: 0.24, at: 0.2, type: 'sine', g: 0.05 }],
     breached:   [{ noise: true, cut: 260, d: 0.55, g: 0.12 }, { f: 82, d: 0.55, type: 'triangle', g: 0.07 }],
+    rush:       [{ f: 392, d: 0.1, type: 'triangle', g: 0.06 }, { f: 262, d: 0.1, at: 0.13, type: 'triangle', g: 0.06 }, { f: 392, d: 0.1, at: 0.26, type: 'triangle', g: 0.06 }, { f: 262, d: 0.14, at: 0.39, type: 'triangle', g: 0.06 }],      // 3.8.6 돌진 경보(높낮이를 오가는 네 음)
     signal:     [{ f: 784, d: 0.07, type: 'sine', g: 0.035 }, { f: 988, d: 0.07, at: 0.1, type: 'sine', g: 0.035 }, { f: 784, d: 0.09, at: 0.2, type: 'sine', g: 0.035 }],
     expedition: [{ f: 349, d: 0.1, type: 'sine', g: 0.045 }, { f: 466, d: 0.16, at: 0.1, type: 'sine', g: 0.045 }],
     story:      [{ f: 294, d: 0.55, type: 'sine', g: 0.05 }, { f: 220, d: 0.85, at: 0.3, type: 'sine', g: 0.045 }],

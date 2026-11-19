@@ -716,6 +716,10 @@ canvas.plat.tappable { cursor: pointer; } canvas.plat.tappable:active { filter: 
 .plat-go.full:not(:disabled) { animation: plat-full 1s steps(2) infinite; }
 @keyframes plat-full { 50% { filter: brightness(1.25); } }
 .plat-horde.near b { animation: jam-shake .4s steps(2) infinite; }
+/* 3.8.6 돌진 경고 */
+.plat-horde.rush .label { color: var(--blood); font-weight: 700; }
+.plat-horde.rush .track { animation: plat-full .3s steps(2) infinite; }
+.plat-horn.alert:not(:disabled), .plat-go.alert:not(:disabled) { background: var(--blood); color: #fff; animation: plat-full .3s steps(2) infinite; }
 .plat-go:not(:disabled) { background: var(--hazard); color: var(--on-hazard); border-color: var(--ink); box-shadow: 0 3px 0 var(--ink); }
 .plat-go { width: 100%; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; padding: 13px 14px; }
 @media (prefers-reduced-motion: reduce) { .plat-horde.near b { animation: none; } }
@@ -1340,7 +1344,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 3.8.5</div>
+  <div class="boot-ver">7구역 알파 3.8.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1577,7 +1581,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="order-head plat-head"><span class="label">승강장의 열차</span><span class="num" id="plat-cars"></span></div>
         <canvas class="belt plat" id="platform" width="184" height="84" role="button" tabindex="0" data-tap aria-label="승강장에 선 화물 열차. 누르면 화물칸이 빨리 붙는다"></canvas>
         <div class="plat-pips" id="plat-pips" aria-hidden="true"></div>
-        <div class="plat-horde"><span class="label">무리와의 거리</span><div class="track"><i id="plat-horde-bar"></i></div><b class="num" id="plat-horde-left"></b><button type="button" class="plat-horn" id="train-horn">경적</button></div>
+        <div class="plat-horde"><span class="label" id="plat-horde-label">무리와의 거리</span><div class="track"><i id="plat-horde-bar"></i></div><b class="num" id="plat-horde-left"></b><button type="button" class="plat-horn" id="train-horn">경적</button></div>
         <button type="button" class="fortify sell plat-go" id="train-go"></button>
         <div class="label" id="plat-note"></div>
         <canvas class="belt" id="railmap" width="320" height="92" aria-hidden="true"></canvas>
@@ -1785,7 +1789,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 3.8.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 3.8.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

@@ -442,7 +442,7 @@
     { id: 'yard',    zone: 3, name: '정비창',    desc: '4구역 시설 값 -4%',      key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
     { id: 'longplat', zone: 3, name: '긴 승강장', desc: '화물칸을 2칸 더 붙일 수 있다', key: 'platlen', per: 2, baseCost: 2e19, growth: 500, max: 2 },
     { id: 'fence',   zone: 3, name: '철조망',    desc: '무리가 다가오는 걸음 -8%', key: 'hordespeed', per: -0.08, baseCost: 2e18, growth: 4, max: 5 },
-    { id: 'horn',    zone: 3, name: '경적',      desc: '열차마다 경적을 한 번 더 울릴 수 있다', key: 'horn', per: 1, baseCost: 8e18, growth: 300, max: 2 },
+    { id: 'horn',    zone: 3, name: '경적',      desc: '열차마다 경적을 한 번 더 울릴 수 있다(돌진을 끊는다)', key: 'horn', per: 1, baseCost: 8e18, growth: 300, max: 2 },
     { id: 'coupler', zone: 3, name: '튼튼한 연결기', desc: '무리에 닿아도 뒤쪽 3분의 1만 떼인다', key: 'keepmore', per: 1, baseCost: 5e20, growth: 1, max: 1 },
     { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e23, growth: 2.4, max: 40 },
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
@@ -573,7 +573,7 @@
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
-      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
+      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
@@ -792,7 +792,7 @@
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
     // 3.4.0 승강장의 열차. 깨진 값이나 옛 저장은 새 열차로 시작한다
     var rp = raw.plat && typeof raw.plat === 'object' ? raw.plat : {};
-    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9), rush: typeof rp.rush === 'number' && isFinite(rp.rush) ? clamp(rp.rush, -1, 1) : 0 };
+    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9), rush: rp.rush === 1 || rp.rush === -1 ? rp.rush : 0, warn: clamp(safeNum(rp.warn, 0), 0, 5) };
     s.pullsRun = clamp(safeCount(raw.pullsRun), 0, 1e12); s.hornsRun = clamp(safeCount(raw.hornsRun), 0, 1e12);
     s.longRuns = clamp(safeCount(raw.longRuns), 0, 1e12); s.hordeHits = clamp(safeCount(raw.hordeHits), 0, 1e12);
     s.trainsSent = clamp(safeCount(raw.trainsSent), 0, 1e12);
@@ -1791,7 +1791,7 @@
    */
   var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
   var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
-  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.06, HORDE_JUMP_MIN = 0.3, HORDE_JUMP_MAX = 0.55, HORDE_RUSH_SPEED = 0.5, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
+  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.1, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
   var CAR_MULTS = [0, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.95, 2.25, 2.6, 3];
   function carMult(n) { n = clamp(Math.floor(safeNum(n, 0)), 0, CAR_MAX); return CAR_MULTS[n]; }
@@ -1805,7 +1805,7 @@
   }
   /** 4구역이 초당 싣는 물자. 역무원에게 맡겨 8칸에서 보낼 때 실제로 버는 속도와 같다. */
   function railRate(state) { return railUnits(state) * RAIL_SCALE * cargoValue(state); }
-  function newPlat() { return { t: 0, bank: 0, pos: 1, horn: 0, rush: 0 }; }      // rush: 달려오는 중이면 남은 거리(양수), 이 열차에서 이미 한 번 달려왔으면 -1
+  function newPlat() { return { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0 }; }      // rush: 달려오는 중이면 남은 거리(양수), 이 열차에서 이미 한 번 달려왔으면 -1
   /** 열차 하나에 쓸 수 있는 경적 횟수. */
   function hornMax(state) { return HORN_BASE + Math.round(mods(state).horn); }
   function platOf(state) {
@@ -1818,7 +1818,7 @@
   function trainInfo(state) {
     var p = platOf(state), cs = carSeconds(state), max = carMax(state), cars = Math.min(max, Math.floor(p.t / cs + 1e-9));
     return { cars: cars, max: max, full: cars >= max, next: cars >= max ? 0 : cs - (p.t - cars * cs), near: p.pos,
-      mult: carMult(cars), gain: trainGain(state, cars, cars), bank: p.bank, running: railUnits(state) > 0, horn: Math.max(0, hornMax(state) - (p.horn || 0)) };
+      mult: carMult(cars), gain: trainGain(state, cars, cars), bank: p.bank, running: railUnits(state) > 0, horn: Math.max(0, hornMax(state) - (p.horn || 0)), rush: p.rush > 0 ? (p.warn > 0 ? 'warn' : 'run') : '', warn: p.rush > 0 ? p.warn || 0 : 0 };
   }
   /** cars 칸이 붙은 열차를 kept 칸만 달고 보낼 때 받는 물자. */
   function trainGain(state, cars, kept) { var p = platOf(state); return cars >= 1 && kept >= 1 ? p.bank * (kept / cars) * carMult(kept) / CAR_NORM : 0; }
@@ -1855,9 +1855,11 @@
     if (!(railUnits(state) > 0)) return fail('stopped');
     var p = platOf(state);
     if ((p.horn || 0) >= hornMax(state)) return fail('empty');
+    var broke = p.rush > 0;      // 3.8.6: 달려오는 무리(예고 중이어도)를 경적이 끊는다
+    if (broke) { p.rush = -1; p.warn = 0; }
     p.horn = (p.horn || 0) + 1; p.pos = Math.min(1, p.pos + HORN_PUSH);
     state.hornsRun = (state.hornsRun || 0) + 1;
-    return { ok: true, near: p.pos, left: hornMax(state) - p.horn };
+    return { ok: true, near: p.pos, left: hornMax(state) - p.horn, broke: broke };
   }
   /** 손으로 보낸다. 한 칸이라도 붙어 있어야 한다. */
   function sendTrain(state) {
@@ -1869,7 +1871,7 @@
   }
   /**
    * 승강장의 시간을 dt 초 흘린다. 1초 이하로 나눠서 본다(무리가 닿는 때를 지나치지 않게).
-   *   무리의 걸음: 1초에 1 / HORDE_SECONDS 씩이 기준이고, 그때그때 0.5~1.5배로 흔들린다. 1초에 HORDE_SPRINT 의 확률로 달려든다(3.8.4: 거리의 30~55%를 1초쯤에 걸쳐).
+   *   무리의 걸음: 1초에 1 / HORDE_SECONDS 씩이 기준이고, 그때그때 0.5~1.5배로 흔들린다. 돌진은 stepRail 안의 설명을 본다(3.8.6).
    *   철조망(hordespeed)이 걸음을 늦춘다. 달려드는 거리는 그대로다.
    *   너무 긴 dt 는 900걸음까지만 따라가고, 남는 시간은 역무원이 보낸 것으로 친다(평균 속도).
    */
@@ -1883,10 +1885,12 @@
       var p = platOf(state), before = trainInfo(state);
       p.t += h; if (!before.full) p.bank += railRate(state) * h;      // 꽉 찬 열차는 더 싣지 못한다
       p.pos -= h / HORDE_SECONDS * (0.5 + roll()) * slow;
-      /* 3.8.4 돌진: 전에는 그 자리에서 거리의 8~30%를 건너뛰었다. 한 번에 사라져 "확 온다"는 느낌이 없었고, 양도 작았다.
-         이제는 30~55%를 초당 HORDE_RUSH_SPEED 로 달려온다(1초쯤). 달려오는 동안 경적을 울리거나 바로 보낼 틈이 있다. 철조망은 돌진을 늦추지 못한다 */
-      if (!p.rush && roll() < HORDE_SPRINT * h) { /* 열차 한 대에 한 번만 달려온다(연달아 달려와 첫 칸도 못 붙이고 쫓겨나는 일이 없게) */ p.rush = HORDE_JUMP_MIN + (HORDE_JUMP_MAX - HORDE_JUMP_MIN) * roll(); if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
-      if (p.rush > 0) { var run = Math.min(p.rush, HORDE_RUSH_SPEED * h); p.pos -= run; p.rush -= run; if (!(p.rush > 1e-9)) p.rush = -1; }
+      /* 3.8.6 돌진을 다시 만들었다. 3.8.4 의 돌진은 예고도 없이 거리만 조금 줄고 끝나서, 할 일도 없고 위험하지도 않았다.
+         이제: 칸이 HORDE_RUSH_CARS 칸 이상 붙은 열차에(잃을 것이 있을 때) 1초에 HORDE_SPRINT 의 확률로 온다. 열차 한 대에 한 번.
+           1) 예고 HORDE_WARN 초: 화면이 경고한다. 2) 그 뒤로는 초당 HORDE_RUSH_SPEED 로 닿을 때까지 달려온다(철조망도 못 늦춘다).
+         막는 길은 둘: 경적을 울려 돌진을 끊거나(blowHorn), 그 자리에서 보낸다. 그래서 경적을 미리 써 버릴지 아껴 둘지가 선택이 된다 */
+      if (!p.rush && before.cars >= HORDE_RUSH_CARS && roll() < HORDE_SPRINT * h) { p.rush = 1; p.warn = HORDE_WARN; if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
+      else if (p.rush > 0) { if (p.warn > 0) p.warn = Math.max(0, p.warn - h); else p.pos -= HORDE_RUSH_SPEED * h; }
       var info = trainInfo(state);
       if (auto && info.cars >= 1 && (info.full || p.pos <= AUTO_NEAR)) departTrain(state, 'auto', events);      // 역무원이 먼저 본다(긴 dt 한 걸음에 돌진이 끝까지 닿아도 떼이지 않게)
       else if (p.pos <= 0) departTrain(state, 'horde', events);
@@ -3972,7 +3976,7 @@
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
     BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, boardFull: boardFull, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
     boxWorth: boxWorth, boardSum: boardSum, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
-    CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, HORDE_SECONDS: HORDE_SECONDS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, GRADE_STEP: GRADE_STEP, CREW_STEP: CREW_STEP, PULL_SECONDS: PULL_SECONDS, HORN_PUSH: HORN_PUSH, pullCar: pullCar, blowHorn: blowHorn, hornMax: hornMax, carMax: carMax,
+    CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, HORDE_SECONDS: HORDE_SECONDS, HORDE_WARN: HORDE_WARN, HORDE_RUSH_SPEED: HORDE_RUSH_SPEED, HORDE_RUSH_CARS: HORDE_RUSH_CARS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, GRADE_STEP: GRADE_STEP, CREW_STEP: CREW_STEP, PULL_SECONDS: PULL_SECONDS, HORN_PUSH: HORN_PUSH, pullCar: pullCar, blowHorn: blowHorn, hornMax: hornMax, carMax: carMax,
     stepRail: stepRail, carMult: carMult, carSeconds: carSeconds, railUnits: railUnits, trainInfo: trainInfo, sendTrain: sendTrain, trainGain: trainGain,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, JAM_SELF_FIX: JAM_SELF_FIX, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, recipeOf: recipeOf, setRecipe: setRecipe, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, ROUTE_MAX: ROUTE_MAX, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,

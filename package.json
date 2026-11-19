@@ -1,7 +1,7 @@
 {
   "name": "beyond-the-barricade",
   "productName": "7구역",
-  "version": "3.8.5",
+  "version": "3.8.6",
   "description": "좀비 세계관 idle 게임",
   "main": "main.js",
   "private": true,

@@ -45,7 +45,7 @@ const near = (a, b, msg) => assert.ok(Math.abs(a - b) <= Math.max(1e-9, Math.abs
 
 /* ================= 상태와 저장 ================= */
 
-function onPlatform() { const s = inStation(); s.trains = 4; s.routes.grade = 1; s.plat = { t: 0, bank: 0, pos: 1, horn: 0, rush: 0 }; s.defenses.rail = 1e9; s.signalIn = 1e9; s.salvageIn = 1e9; return s; }
+function onPlatform() { const s = inStation(); s.trains = 4; s.routes.grade = 1; s.plat = { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0 }; s.defenses.rail = 1e9; s.signalIn = 1e9; s.salvageIn = 1e9; return s; }
 const calm = () => 0.5;      // 무리가 기준 걸음으로만 걷고 달려들지 않는다
 function onBoard(levels) { const s = inFactory(); (levels || []).forEach((lv, i) => { s.board[i] = lv; }); return s; }
 
@@ -2945,12 +2945,16 @@ test('4구역 무리: 닿으면 뒤쪽 절반을 떼고 떠난다. 가끔 달려
   const h = ev.find(e => e.type === 'train'); assert.ok(h); assert.equal(h.why, 'horde'); assert.equal(h.cars, C.CAR_BASE); assert.equal(h.kept, C.CAR_BASE / 2); assert.equal(cut.hordeHits, 1); assert.equal(cut.longRuns, 0);
   near(h.gain, C.railRate(cut) * C.CAR_SECONDS * C.CAR_BASE * 0.5 * C.carMult(4) / C.CAR_NORM, '8칸에서 멈춘 화물의 절반 × 4칸 배수');
   const hand = onPlatform(); C.stepRail(hand, C.HORDE_SECONDS - 2, [], calm); assert.ok(C.sendTrain(hand).gain > h.gain * 2);
-  const sp = onPlatform(); ev = []; C.stepRail(sp, 1, ev, () => 0.001);
-  assert.ok(ev.some(e => e.type === 'horde-sprint')); assert.ok(sp.plat.pos < 1 - 0.07, '달려든다');
-  // 3.8.4 돌진: 거리의 30~55%를 1초쯤에 걸쳐 달려온다. 열차 한 대에 한 번뿐이다
-  const ru = onPlatform(); ev = []; C.stepRail(ru, 0.1, ev, () => 0.001); assert.ok(ru.plat.rush > 0.2, '달려오는 중'); assert.ok(ru.plat.pos > 0.9, '한 번에 건너뛰지 않는다');
-  for (let i = 0; i < 20; i++) C.stepRail(ru, 0.1, ev, () => 0.001); assert.equal(ru.plat.rush, -1); assert.ok(ru.plat.pos < 0.7 && ru.plat.pos > 0.3, 'pos ' + ru.plat.pos); assert.equal(ev.filter(e => e.type === 'horde-sprint').length, 1, '한 대에 한 번');
-  assert.equal(C.deserialize(C.serialize(ru), 0).plat.rush, -1);
+  // 3.8.6 돌진: 칸이 붙은 열차에 온다. 예고 → 닿을 때까지 달려온다. 경적이 끊는다. 열차 한 대에 한 번
+  const early = onPlatform(); ev = []; C.stepRail(early, 1, ev, () => 0.001); assert.ok(!ev.some(e => e.type === 'horde-sprint'), '잃을 칸이 없으면 오지 않는다');
+  const ru = onPlatform(); ru.plat.t = C.CAR_SECONDS * 3; ru.plat.bank = 9; ev = []; C.stepRail(ru, 0.1, ev, () => 0.001);
+  assert.ok(ev.some(e => e.type === 'horde-sprint')); assert.equal(C.trainInfo(ru).rush, 'warn'); const p0 = ru.plat.pos;
+  for (let i = 0; i < 10; i++) C.stepRail(ru, 0.1, ev, calm); assert.ok(ru.plat.pos > p0 - 0.05, '예고 동안은 달려오지 않는다');
+  for (let i = 0; i < 10; i++) C.stepRail(ru, 0.1, ev, calm); assert.equal(C.trainInfo(ru).rush, 'run'); assert.ok(ru.plat.pos < p0 - 0.2, 'pos ' + ru.plat.pos);
+  assert.equal(C.deserialize(C.serialize(ru), 0).plat.rush, 1);
+  const stop = JSON.parse(JSON.stringify(ru)), hr = C.blowHorn(stop); assert.ok(hr.ok && hr.broke); assert.equal(stop.plat.rush, -1); assert.equal(C.trainInfo(stop).rush, '');
+  const p1 = stop.plat.pos; for (let i = 0; i < 20; i++) C.stepRail(stop, 0.1, ev, () => 0.001); assert.ok(stop.plat.pos > p1 - 0.05, '끊긴 돌진은 다시 오지 않는다'); assert.equal(ev.filter(e => e.type === 'horde-sprint').length, 1);
+  for (let i = 0; i < 30 && !ru.hordeHits; i++) C.stepRail(ru, 0.1, ev, calm); assert.equal(ru.hordeHits, 1, '내버려 두면 끝까지 달려와 닿는다');
   // 굴림에 따라 닿는 때가 달라진다(정확히 알 수 없다)
   const when = (seed) => { const z = onPlatform(), r = lcg(seed); for (let t = 1; t < 400; t++) { C.stepRail(z, 1, [], r); if (z.hordeHits) return t; } return 400; };
   const times = [1, 2, 3, 4, 5, 6, 7, 8].map(when); assert.ok(Math.max(...times) - Math.min(...times) >= 8, times.join(',')); assert.ok(times.every(t => t > 8 && t < 200), times.join(','));
@@ -2963,7 +2967,7 @@ test('4구역 역무원: 꽉 차면, 또는 무리가 가까워지면 보낸다.
   const e = onPlatform(); e.upgrades.autosig = 1; e.plat.pos = C.AUTO_NEAR + 0.01; e.plat.t = 11; e.plat.bank = 5; ev = []; C.stepRail(e, 2, ev, calm);
   const b = ev.find(x => x.type === 'train'); assert.equal(b.why, 'auto'); assert.equal(b.kept, 2, '무리가 가까워지면 그 전에 보낸다');
   const off = onPlatform(); off.upgrades.autosig = 1; off.upgrades.fence = 5; C.setAutoEvents(off, 3, false); ev = []; C.stepRail(off, C.CAR_SECONDS * C.CAR_BASE + 1, ev, calm); assert.ok(!ev.some(x => x.type === 'train'), '구역 자동을 끄면 손을 기다린다');
-  const run = (up, policy, seed) => { const z = onPlatform(); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.railRate(z), e0 = z.railEarned; for (let t = 0; t < 7200; t++) { C.stepRail(z, 1, [], r); if (policy) { C.pullCar(z); C.pullCar(z); } const i = C.trainInfo(z); if (policy && i.cars >= 1 && policy(i)) C.sendTrain(z); } return { speed: (z.railEarned - e0) / 7200 / rate, hits: z.hordeHits, long: z.longRuns }; };
+  const run = (up, policy, seed) => { const z = onPlatform(); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.railRate(z), e0 = z.railEarned; for (let t = 0; t < 7200; t++) { C.stepRail(z, 1, [], r); if (policy) { C.pullCar(z); C.pullCar(z); } let i = C.trainInfo(z); if (policy && i.rush && i.horn > 0) { C.blowHorn(z); i = C.trainInfo(z); } if (policy && i.cars >= 1 && (i.rush || policy(i))) C.sendTrain(z); }      /* 손: 돌진은 경적으로 끊고, 경적이 없으면 바로 보낸다 */ return { speed: (z.railEarned - e0) / 7200 / rate, hits: z.hordeHits, long: z.longRuns }; };
   const idle = run({}, null, 5), auto = run({ autosig: 1 }, null, 5), hand = run({ longplat: 2 }, (i) => i.full || i.near < 0.25, 5);
   assert.ok(idle.speed < auto.speed * 0.6, '가만히 ' + idle.speed.toFixed(2) + ' / 역무원 ' + auto.speed.toFixed(2)); assert.equal(auto.hits, 0, '역무원은 떼이지 않는다');
   const autoLong = run({ autosig: 1, longplat: 2 }, null, 5);
@@ -2978,7 +2982,7 @@ test('4구역: 긴 시간 · 이상한 값 · 저장 · 자리 비움 · 철수 
   const p = onPlatform(); C.stepRail(p, 17, [], calm); p.trainsSent = 9; p.longRuns = 2; p.hordeHits = 1;
   const back = C.deserialize(C.serialize(p), 0); assert.deepEqual(back.plat, p.plat); assert.equal(back.trainsSent, 9); assert.equal(back.longRuns, 2); assert.equal(back.hordeHits, 1);
   const raw = JSON.parse(C.serialize(p)); raw.plat = { t: 'x', bank: -5, pos: 7 }; const fixed = C.deserialize(JSON.stringify(raw), 0);
-  assert.deepEqual(fixed.plat, { t: 0, bank: 0, pos: 1, horn: 0, rush: 0 }); delete raw.plat; assert.equal(C.deserialize(JSON.stringify(raw), 0).plat.pos, 1);
+  assert.deepEqual(fixed.plat, { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0 }); delete raw.plat; assert.equal(C.deserialize(JSON.stringify(raw), 0).plat.pos, 1);
   raw.plat = { t: 20, bank: 9, horde: 52 }; assert.equal(C.deserialize(JSON.stringify(raw), 0).plat.pos, 1, '3.4.0 의 저장(닿는 시간)은 무리를 멀리서 다시 오게 한다');
   const away = onPlatform(); away.defenses.rail = 1e5; const rate = C.railRate(away), before = away.railEarned; C.applyOffline(away, 1000);
   near(away.railEarned - before, rate * 1000 * C.OFFLINE_RATE, '자리를 비운 동안은 역무원이 보낸 것으로 친다'); assert.equal(away.plat.t, 0);
