@@ -261,12 +261,16 @@ def run_case(browser, name, size, state, mode):
         # 3구역: 기계가 없을 때의 안내 → 병목 올리기 → 직접 사서 병목이 바뀌는지 → 한 화면에 들어오는지
         tap('[data-mview-set=manage]'); tap('[data-tab=z2]')
         if not page.locator('#line').is_visible(): problems.append('3구역 탭에 생산 라인 칸이 없다')
-        if '모두 있어야' not in text('line-note'): problems.append('기계가 없을 때의 안내가 없다: ' + text('line-note'))
+        if '기계를 사면' not in text('line-note'): problems.append('기계가 없을 때의 안내가 없다: ' + text('line-note'))
         for _ in range(11):
             if not tap('#tune'): problems.append('병목 올리기를 누를 수 없다'); break
         levels = [text('row-%s' % m) for m in ['sorter', 'press', 'assembler']]
-        if not ('Lv 2' in levels[0] and 'Lv 3' in levels[1] and 'Lv 6' in levels[2]): problems.append('병목 올리기 11번 뒤 레벨이 2·3·6 이 아니다: ' + ' | '.join(levels))
-        if not text('line-load').startswith('가동률 100%'): problems.append('맞물렸는데 가동률이 100%가 아니다: ' + text('line-load'))
+        # 3.2.0: 기계는 각자 만들고 합친다. 열한 번 사면 레벨 합이 11이고, 합친 초당 개수가 보인다
+        import re as _re
+        lv = [int(m.group(1)) if m else 0 for m in [_re.search(r'Lv (\d+)', t) for t in levels]]
+        if sum(lv) != 11 or min(lv) < 1: problems.append('한 번에 올리기 11번 뒤 레벨 합이 11이 아니거나 안 산 기계가 있다: ' + ' | '.join(levels))
+        want = lv[0] * 1 + lv[1] * 2 + lv[2] * 4
+        if ('초당 %d개' % want) not in text('line-load'): problems.append('합친 초당 개수가 %d 이 아니다: ' % want + text('line-load'))
         # 품목 바꾸기 → 고장 고치기 → 트럭 싣기(1.4.1). 고장과 트럭은 저장에 심어 둔 것이 떠 있다
         if page.locator('#recipes button').count() != 3: problems.append('품목 단추가 셋이 아니다')
         if not page.locator('#jam-fix').is_visible(): problems.append('고장이 났는데 고치는 단추가 없다')
@@ -283,10 +287,12 @@ def run_case(browser, name, size, state, mode):
         if not page.evaluate("(() => { const c = document.getElementById('belt'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n > 500; })()"): problems.append('컨베이어 그림이 비어 있다')
         if not tap('#surge'): problems.append('전력 투입을 누를 수 없다')
         if '투입 중' not in text('surge') or not page.is_disabled('#surge'): problems.append('전력 투입 표시가 이상하다: ' + text('surge'))
-        if '정속 가동' not in text('line-note') or '초당 물자' not in text('line-note'): problems.append('정속 가동 표시가 없다: ' + text('line-note'))
+        if '라인 가동' not in text('line-note') or '초당 물자' not in text('line-note'): problems.append('라인 가동 표시가 없다: ' + text('line-note'))
+        load0 = text('line-load')
         if not tap('#row-sorter'): problems.append('선별기를 살 수 없다')
-        if page.locator('.line-cell.slow').count() != 1: problems.append('병목 표시가 정확히 하나가 아니다')
-        if text('line-load').startswith('가동률 100%'): problems.append('선별기만 올렸는데 가동률이 그대로다')
+        if page.locator('.line-cell.slow').count() != 0: problems.append('없어진 병목 표시가 남아 있다')
+        if text('line-load') == load0: problems.append('선별기를 샀는데 초당 개수가 그대로다: ' + load0)
+        if page.locator('#rebalance').count() and page.locator('#rebalance').is_visible(): problems.append('없어진 다시 맞추기 단추가 보인다')
         tap('[data-qty="max"]'); tap('#tune'); tap('[data-qty="1"]')
         tap('#row-lube'); tap('#row-belt')
         if not fits(): problems.append('한 화면에 들어오지 않는다(3구역)')

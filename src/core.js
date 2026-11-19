@@ -69,6 +69,7 @@
   var PEAK_PRICE = 1.8;            // '고점 판매'로 치는 시세
   // 3구역 생산 라인
   var PRODUCT_VALUE = 2e8;          // 완제품 하나의 기준 값(물자)
+  var LINE_SCALE = 1 / 10.5;       // 3.2.0: 완제품 값에 곱한다. 기계 셋의 합(레벨당 1 + 2 + 4)이 예전의 '한 줄'보다 많이 만들고 언제나 다 돌아서, 버는 속도를 예전과 같게 맞추는 수(재서 정했다)
   var STEADY_AT = 0.9;             // 가동률이 이 이상이면 '정속 가동'
   var STEADY_BONUS = 0.5;          // 정속 가동일 때 라인 산출에 더하는 비율(+50%)
   var SURGE_MULT = 2;              // 전력 투입 중의 라인 산출 배수
@@ -76,7 +77,7 @@
   var SURGE_COOLDOWN = 90;         // 다시 쓸 수 있을 때까지의 시간(투입을 누른 때부터)
   var ASSIST_MAX = 9;              // 영구 특성 '자동화'의 최대 레벨
   var ASSIST_STEP = 0.06;          // 자동화 2레벨부터 레벨마다 줄어드는 대기 시간의 비율
-  var LINE_MILESTONES = [15, 30, 60, 100, 150, 220, 300, 400, 520, 660, 820, 1000]; // 기계 레벨 합계가 이 수에 닿을 때마다 라인 산출 2배
+  var LINE_MILESTONES = [25, 50, 100, 165, 245, 360, 490, 655, 850, 1080, 1300, 1500];      // 3.2.0: 같은 처리량에 드는 레벨 합계가 1.64배가 되어(셋을 고르게 올린다) 그만큼 늘렸다 // 기계 레벨 합계가 이 수에 닿을 때마다 라인 산출 2배
   // 4구역 노선
   var TRAIN_VALUE = 1e14;          // 열차 한 대가 운행 1초마다 싣는 화물의 기준 값(물자)
   var TRAIN_GROWTH = 1.4;          // 열차를 한 대 더 살 때마다 값이 오르는 배수
@@ -371,9 +372,9 @@
    * 라인 전체는 셋 중 가장 느린 기계(병목)의 속도로만 나온다.
    */
   var MACHINES = [
-    { id: 'sorter',    name: '선별기', desc: '고철을 골라 원료로 만든다',   baseCost: 2e10,  rate: 3 },
+    { id: 'sorter',    name: '선별기', desc: '고철을 골라 원료로 만든다',   baseCost: 2e10,  rate: 1 },
     { id: 'press',     name: '가공기', desc: '원료를 눌러 부품으로 찍는다', baseCost: 4e10,  rate: 2 },
-    { id: 'assembler', name: '조립기', desc: '부품을 맞춰 완제품을 낸다',   baseCost: 8e10,  rate: 1 }
+    { id: 'assembler', name: '조립기', desc: '부품을 맞춰 완제품을 낸다',   baseCost: 8e10,  rate: 4 }
   ];
   /*
    * 4구역의 노선: 멀리 가는 노선일수록 운행이 오래 걸리지만 같은 시간에 더 많이 싣는다(mult).
@@ -426,8 +427,8 @@
     { id: 'scale',   zone: 1, name: '좋은 저울', desc: '상품 값 +25%',           key: 'z2',      per: 0.25, baseCost: 3e5,  growth: 2.4, max: 40 },
     { id: 'lube',    zone: 2, name: '윤활유',    desc: '완제품 값 +25%',         key: 'z3',      per: 0.25, baseCost: 1.5e11, growth: 2.4, max: 40 },
     { id: 'manual',  zone: 2, name: '정비 교범', desc: '기계 값 -4%',            key: 'z3cost',  per: -0.04, baseCost: 3e11, growth: 3,  max: 12 },
-    { id: 'belt',    zone: 2, name: '컨베이어',  desc: '정속 가동 보너스 +10%p', key: 'steady',  per: 0.1,  baseCost: 6e11, growth: 3.5, max: 10 },
-    { id: 'spare',   zone: 2, name: '예비 부품', desc: '정속 가동으로 치는 가동률 -3%p', key: 'slack', per: 0.03, baseCost: 3e11, growth: 4, max: 5 },
+    { id: 'belt',    zone: 2, name: '컨베이어',  desc: '라인 가동 보너스 +10%p', key: 'steady',  per: 0.1,  baseCost: 6e11, growth: 3.5, max: 10 },
+    { id: 'spare',   zone: 2, name: '예비 부품', desc: '완제품 값 +4%', key: 'z3', per: 0.04,      /* 3.2.0: 예전에는 정속 가동 기준을 낮췄다. 맞출 비율이 없어져 값을 올리는 것으로 바꿨다 */ baseCost: 3e11, growth: 4, max: 5 },
     { id: 'signal',  zone: 3, name: '신호기',    desc: '화물 값 +25%',           key: 'z4',      per: 0.25, baseCost: 1e18, growth: 2.4, max: 40 },
     { id: 'timetable', zone: 3, name: '시간표',  desc: '운행 시간 -5%',          key: 'trip',    per: -0.05, baseCost: 3e18, growth: 4,  max: 8 },
     { id: 'tracks',  zone: 3, name: '선로 정비', desc: '노선 값 -6%',            key: 'routecost', per: -0.06, baseCost: 3e18, growth: 3, max: 12 },
@@ -512,8 +513,8 @@
     [ { id: 'z2a', text: '좌판 50곳', need: 50, value: function (s) { return s.stalls; } },
       { id: 'z2b', text: '고점 시세에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
       { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
-    [ { id: 'z3a', text: '기계 레벨 합계 85', need: 85, value: function (s) { return machineLevels(s); } },
-      { id: 'z3b', text: '정속 가동 누적 2분', need: 120, unit: 'time', value: function (s) { return s.steadySeconds; } },
+    [ { id: 'z3a', text: '기계 레벨 합계 140', need: 140, value: function (s) { return machineLevels(s); } },
+      { id: 'z3b', text: '라인 가동 누적 2분', need: 120, unit: 'time', value: function (s) { return s.steadySeconds; } },
       { id: 'z3c', text: '완제품으로 번 물자 누적 10경', need: 1e17, value: function (s) { return s.lineEarned; } } ],
     [ { id: 'z4a', text: '열차 11대', need: 11, value: function (s) { return s.trains; } },
       { id: 'z4b', text: '심야 급행 2번 도착', need: 2, value: function (s) { return s.expressRuns; } },
@@ -557,7 +558,7 @@
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
-      machines: {}, lineEarned: 0, steadySeconds: 0,
+      machines: {}, lineEarned: 0, steadySeconds: 0, lineV: 2,
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
@@ -739,6 +740,13 @@
       s.routeClock[d.id] = clamp(safeNum(rc, 0), 0, d.seconds);
       s.routeLoad[d.id] = clamp(safeNum(rl, 0), 0, TRAIN_MAX * d.seconds);      // 한 번의 운행에 실릴 수 있는 양을 넘지 않는다
     });
+    // 3.2.0 옛 저장: 예전에는 가장 느린 기계만큼(선별 3 · 가공 2 · 조립 1) 나왔다. 새 셈(합)으로 처리량이 줄지 않게, 모자라는 만큼 선별기(가장 싼 기계) 레벨을 얹어 준다
+    if (raw.lineV !== 2 && s.zone >= 2) {
+      var om = s.machines, oldFlow = Math.min(3 * (om.sorter || 0), 2 * (om.press || 0), om.assembler || 0), newSum = (om.sorter || 0) + 2 * (om.press || 0) + 4 * (om.assembler || 0);
+      var short = oldFlow * 10.5 / 1.5 - newSum;      // 예전 한 줄(정속 보너스 전) = 지금의 합 ÷ 7
+      if (short > 0) om.sorter = Math.min(COUNT_MAX, (om.sorter || 0) + Math.ceil(short));
+    }
+    s.lineV = 2;
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
     s.perks = counts(PERKS, raw.perks, 999);
@@ -1414,14 +1422,18 @@
    *   levels 레벨 합계, milestone 레벨 합계 배수, nextMilestone 다음 2배가 되는 합계(없으면 null)
    */
   function lineInfo(state) {
-    var m = mods(state), caps = {}, lo = Infinity, hi = 0, bottleneck = null, open = zoneOpen(state, 2);
+    /*
+     * 3.2.0: 기계 셋은 각자 만들고, 만든 것을 합친다. 전에는 "가장 느린 기계만큼만" 나와서(병목), 사도 숫자가 안 오를 때가 많았고
+     *   마지막 기계(조립기)가 레벨도 값도 가장 많이 들었다. 이제 어느 기계를 사든 그만큼 바로 오르고, 뒤 기계일수록 많이 만든다(레벨당 1 · 2 · 4).
+     *   bottleneck 은 이제 "지금 사면 값에 견줘 가장 많이 오르는 기계"다(한 번에 올리는 단추가 이것을 산다). 맞춰야 할 비율이 없으므로 가동률은 언제나 100%다.
+     */
+    var m = mods(state), caps = {}, sum = 0, bottleneck = null, bestGain = -1, open = zoneOpen(state, 2);
     MACHINES.forEach(function (d) {
-      var c = open ? machineRate(state, d.id) * (state.machines[d.id] || 0) : 0;
-      caps[d.id] = c;
-      if (c < lo) { lo = c; bottleneck = d.id; }
-      if (c > hi) hi = c;
+      var c = open ? machineRate(state, d.id) * (state.machines[d.id] || 0) : 0, gain = machineRate(state, d.id) / machineCost(state, d.id, 1);
+      caps[d.id] = c; sum += c;
+      if (open && gain > bestGain) { bestGain = gain; bottleneck = d.id; }
     });
-    var load = hi > 0 ? lo / hi : 0, steadyAt = Math.max(0.5, STEADY_AT - m.slack), steady = lo > 0 && load >= steadyAt - 1e-9;
+    var lo = sum, load = sum > 0 ? 1 : 0, steadyAt = Math.max(0.5, STEADY_AT - m.slack), steady = sum > 0;
     var levels = machineLevels(state), next = null;
     for (var i = 0; i < LINE_MILESTONES.length; i++) if (levels < LINE_MILESTONES[i]) { next = LINE_MILESTONES[i]; break; }
     return { caps: caps, flow: lo, bottleneck: bottleneck, load: load, steadyAt: steadyAt, steady: steady,
@@ -1495,7 +1507,7 @@
     state.contract = null;
     return { ok: true, gain: gain, treats: CONTRACT_TREATS, first: first, who: who ? who.id : '', name: who ? who.name : '' };
   }
-  function productValue(state) { return PRODUCT_VALUE * mods(state).z3 * globalMult(state) * contractMult(state); }
+  function productValue(state) { return PRODUCT_VALUE * LINE_SCALE * mods(state).z3 * globalMult(state) * contractMult(state); }
   /** 3구역이 초당 버는 물자. */
   function lineRate(state) {
     if (!zoneOpen(state, 2)) return 0;
@@ -3534,7 +3546,7 @@
     // 3구역 공단
     { id: 'z3level', group: 'z3', name: '기계공', needs: [10, 50, 150, 300], value: function (s) { return sumOf(s.machines); }, text: function (n) { return '기계 레벨의 합계 ' + n + ' 채우기'; } },
     { id: 'z3earn', group: 'z3', name: '공장장', needs: [1e13, 1e16, 1e19], value: function (s) { return s.lineEarned; }, text: function (n) { return '한 회차에 라인으로 물자 ' + formatNumber(n) + ' 벌기'; } },
-    { id: 'z3steady', group: 'z3', name: '정속 가동', needs: [60, 3600, 36000], value: function (s) { return s.steadySeconds; }, text: function (n) { return '한 회차에 정속 가동 ' + formatDuration(n) + ' 채우기'; } },
+    { id: 'z3steady', group: 'z3', name: '쉬지 않는 라인', needs: [60, 3600, 36000], value: function (s) { return s.steadySeconds; }, text: function (n) { return '한 회차에 라인 가동 ' + formatDuration(n) + ' 채우기'; } },
     { id: 'z3up', group: 'z3', name: '정비반', needs: [10, 40], value: function (s) { return zoneUpgrades(s, 2); }, text: function (n) { return '3구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z3auto', group: 'z3', name: '손을 뗀 공장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autoline; }, text: function () { return '자동 제어반 달기'; } },
     { id: 'z3even', group: 'z3', name: '세 박자', tier: 3, needs: [50], value: function (s) { return minMachine(s); }, text: function (n) { return '기계 셋을 모두 ' + n + '레벨 이상으로 올리기'; } },

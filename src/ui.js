@@ -1108,21 +1108,22 @@
       for (var seg = 0; seg <= 3 && top > 0; seg++) {
         var x0 = seg === 0 ? 0 : xs[seg - 1] + 14, x1 = seg === 3 ? W : xs[seg] - 14;
         // 이 구간을 지나는 양: 맨 앞 구간은 넉넉히, 그 뒤는 앞 기계들 가운데 가장 느린 것만큼
-        var through = top; for (var k = 0; k < seg; k++) through = Math.min(through, line.caps[ids[k]]);
+        // 3.2.0: 기계를 지날 때마다 그 기계가 만든 만큼 상자가 늘어난다(맨 앞은 들어오는 고철 조금)
+        var total = line.flow, through = seg === 0 ? total / 5 : 0; for (var k = 0; k < seg; k++) through += line.caps[ids[k]];
         if (!(through > 0)) continue;
-        var gap = Math.max(7, Math.round(10 * top / through)), done = seg === 3;
+        var gap = Math.max(7, Math.round(8 * total / through)), done = seg === 3;
         g.fillStyle = done ? hazard : soft;
         for (var px = x0 + (running || seg <= bi ? Math.floor(t) % gap : 0); px < x1 - 4; px += gap) { g.fillRect(px, beltY - 7, 6, 6); if (done) { g.fillStyle = ink; g.fillRect(px, beltY - 7, 6, 1); g.fillStyle = hazard; } }
       }
       // 병목 앞에 쌓인 물건
-      if (top > 0 && bi >= 0 && line.load < 0.95) {
+      if (false && top > 0 && bi >= 0 && line.load < 0.95) {      // 3.2.0: 병목이 없으므로 쌓이는 물건도 없다
         var pile = Math.min(9, Math.max(1, Math.round((1 - line.load) * 9)));
         g.fillStyle = soft;
         for (var n = 0; n < pile; n++) g.fillRect(xs[bi] - 22 - (n % 3) * 7, beltY - 7 - Math.floor(n / 3) * 7, 6, 6);
       }
       // 기계 셋
       ids.forEach(function (id, i) {
-        var has = line.caps[id] > 0, slow = id === line.bottleneck && top > 0, shake = surge && has && !still ? (Math.floor(Date.now() / 80) % 2) : 0;
+        var has = line.caps[id] > 0, slow = false, shake = surge && has && !still ? (Math.floor(Date.now() / 80) % 2) : 0;
         g.fillStyle = has ? (slow ? blood : ink) : soft;
         g.fillRect(xs[i] - 13, 14 + shake, 26, 34 - shake);
         g.fillStyle = css.getPropertyValue('--concrete').trim() || '#cfcfc4';
@@ -1240,7 +1241,7 @@
   var HINTS = {
     z0: '주택가 · 시설을 지으면 물자가 들어와요.',
     z1: '재래시장 · 시세가 좋을 때 팔수록 많이 벌어요.',
-    z2: '공단 · 가장 느린 기계만큼만 나와요.',
+    z2: '공단 · 기계 셋이 만든 것을 합쳐서 내보내요.',
     z3: '환승역 · 먼 노선일수록 많이 실어 와요.',
     z4: '대학 병원 · 과제를 끝내면 다른 구역이 강해져요.',
     z5: '강변 검문소 · 방어력이 무리보다 넉넉할수록 더 벌어요.',
@@ -2767,7 +2768,7 @@
       });
       // 기계 다시 맞추기: 가동률이 정속 기준 아래로 무너졌을 때만 보인다
       var rbLine = C.lineInfo(state), rb = $('rebalance');
-      rb.hidden = !(rbLine.flow > 0 && !rbLine.steady) || state.retool > 0;
+      rb.hidden = true;      // 3.2.0: 맞출 비율이 없으므로 '다시 맞추기'는 쓰지 않는다
       if (!rb.hidden) { var rp = C.rebalancePlan(state); var rf = C.rebalanceRefund(state); setText(rb, '기계 다시 맞추기 · Lv ' + rp.sorter + ' / ' + rp.press + ' / ' + rp.assembler + '로' + (rf > 0 ? ' · 물자 +' + fmt(rf) : '')); }
       // 고장: 고치면 잠깐 라인이 빨라진다
       var jf = $('jam-fix'), jamName = '';
@@ -2788,25 +2789,25 @@
         var c = rows.cells[d.id], r = rows.machines[d.id], lv = state.machines[d.id];
         setText(c.cap, '초당 ' + fmt(line.caps[d.id]));
         c.bar.style.width = (top > 0 ? line.caps[d.id] / top * 100 : 0).toFixed(1) + '%';
-        c.cell.classList.toggle('slow', d.id === line.bottleneck);
+        c.cell.classList.toggle('slow', false);
         c.cell.classList.toggle('jam', !!state.jam && state.jam.id === d.id);      // 가장 느린 기계: 이것을 올려야 라인이 빨라진다
         var q = qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - lv), cost = C.machineCost(state, d.id, q);
         setText(r.count, 'Lv ' + lv + ' / ' + C.COUNT_MAX);      // 다른 시설처럼 최대 레벨을 함께 적는다(끝이 없는 것처럼 보였다)
         // 이 기계가 지금 초당 몇 개를 처리하는지와, 한 레벨에 얼마나 느는지(1.4.0). 전에는 "레벨당 초당 3"뿐이라 무슨 수인지 알기 어려웠다
-        setText(r.info, '초당 ' + fmt(lv * C.machineRate(state, d.id)) + '개 처리 · 레벨당 +' + C.machineRate(state, d.id) + (d.id === line.bottleneck ? ' · 현재 병목' : ''));
+        setText(r.info, '초당 ' + fmt(lv * C.machineRate(state, d.id)) + '개 · 레벨당 +' + C.machineRate(state, d.id));
         // 별: 기계 레벨 합계의 2배 문턱(세 기계가 함께 채운다). 이 기계를 사서 문턱을 넘으면 "지금 2배"가 뜬다
         setMile(r, line.levels, q, cost <= state.supplies, C.LINE_MILESTONES);
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
       var ld = $('line-load');
-      setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '% · 정속 ' + Math.round(line.steadyAt * 100) + '% 이상');
+      setText(ld, '세 기계 합쳐 초당 ' + fmt(line.flow) + '개');
       ld.className = 'num' + (line.steady ? ' steady' : '');
       var surgeShow = state.surgeLeft > 0 && !(state.retool > 0) && line.flow > 0;      // 3.0.1: 전력 투입 중에도 노란 딱지(5 · 6 · 7구역과 같게)
       $('line-note').classList.toggle('boosted', surgeShow);
       setText($('line-note'), (surgeShow ? '전력 투입 중 ×' + C.SURGE_MULT + ' · ' : '') + (state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
-        ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
-        : '기계 셋이 모두 있어야 라인이 돌아요'));
+        ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '라인 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
+        : '기계를 사면 라인이 돌아요'));
       drawBelt(line);
       var sg = $('surge'), sOn = state.surgeLeft > 0;
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
@@ -2817,7 +2818,7 @@
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.disabled = !(tc <= state.supplies); afford(tb, tc);
-      setText(tb, isFinite(tc) ? '병목 올리기 · ' + names[line.bottleneck] + ' · 물자 ' + fmt(tc) + (qtyMode === 1 ? '' : qtyMode === 'max' ? ' · 되는 만큼' : ' · ' + qtyMode + '번') : '기계가 모두 최대다');
+      setText(tb, isFinite(tc) ? '한 번에 올리기 · ' + names[line.bottleneck] + ' · 물자 ' + fmt(tc) + (qtyMode === 1 ? '' : qtyMode === 'max' ? ' · 되는 만큼' : ' · ' + qtyMode + '번') : '기계가 모두 최대다');
     }
     if (tab === 'z3' && open) {
       renderZoneEvent('rail');

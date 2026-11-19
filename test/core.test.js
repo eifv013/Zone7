@@ -624,45 +624,31 @@ test('라인: 3구역을 열기 전에는 기계도 산출도 없다', () => {
   assert.equal(C.lineInfo(s).flow, 0);
 });
 
-test('라인: 가장 느린 기계의 속도로만 나온다', () => {
+test('라인: 기계 셋은 각자 만들고, 만든 것을 합친다(3.2.0)', () => {
   const s = inFactory();
   assert.equal(C.lineRate(s), 0, '기계가 없으면 0');
-  s.machines.sorter = 10; s.machines.press = 10;
-  assert.equal(C.lineRate(s), 0, '하나라도 없으면 라인은 서 있다');
-  s.machines.assembler = 4;
+  s.machines.sorter = 10;
+  assert.ok(C.lineRate(s) > 0, '하나만 있어도 그만큼 돈다');
+  s.machines.sorter = 5; s.machines.press = 5; s.machines.assembler = 4;
   let l = C.lineInfo(s);
-  assert.deepEqual(l.caps, { sorter: 30, press: 20, assembler: 4 });
-  assert.equal(l.flow, 4);
-  assert.equal(l.bottleneck, 'assembler');
-  near(l.load, 4 / 30);
+  assert.deepEqual(l.caps, { sorter: 5, press: 10, assembler: 16 }, '레벨당 1 · 2 · 4');
+  assert.equal(l.flow, 31); assert.equal(l.load, 1); assert.equal(l.steady, true);
+  // 어느 기계를 올려도 그만큼 바로 는다(같은 2배 구간 안에서)
   const before = C.lineRate(s);
-  s.machines.sorter = 14;                         // 합계 28: 2배 구간(15) 안에서 병목이 아닌 기계를 올린다
-  assert.equal(C.lineRate(s), before, '병목이 아닌 기계를 올려도 늘지 않는다');
-  s.machines.assembler = 5;
-  near(C.lineRate(s), before * 5 / 4, '병목을 올리면 그만큼 는다');
+  s.machines.sorter = 6; near(C.lineRate(s), before * 32 / 31);
+  s.machines.sorter = 5; s.machines.assembler = 5; near(C.lineRate(s), before * 35 / 31);
+  // 한 번에 올리는 단추는 값에 견줘 가장 많이 오르는 기계를 고른다
+  const t = inFactory(); t.machines.sorter = 30; assert.notEqual(C.lineInfo(t).bottleneck, 'sorter');
 });
 
-test('라인: 가동률이 기준 이상이면 정속 가동 보너스가 붙는다', () => {
+test('라인: 맞출 비율이 없으므로 돌기만 하면 가동 보너스가 붙는다(3.2.0)', () => {
   const s = inFactory();
-  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;      // 6, 6, 6: 완전히 맞물림
+  assert.equal(C.lineInfo(s).steady, false); assert.equal(C.lineInfo(s).bonus, 1);
+  s.machines.sorter = 3;
   let l = C.lineInfo(s);
-  assert.equal(l.load, 1);
-  assert.equal(l.steady, true);
-  near(l.bonus, 1 + C.STEADY_BONUS);
-  near(C.lineRate(s), 6 * l.milestone * (1 + C.STEADY_BONUS) * C.productValue(s));
-  s.machines.sorter = 3;                                                       // 9, 6, 6 → 가동률 0.67
-  l = C.lineInfo(s);
-  assert.equal(l.steady, false);
-  assert.equal(l.bonus, 1);
-  // 강화: 컨베이어는 보너스를 키우고, 예비 부품은 기준을 낮춘다(바닥 0.5)
-  s.upgrades.belt = 2;
-  s.machines.sorter = 2;
-  near(C.lineInfo(s).bonus, 1 + C.STEADY_BONUS + 0.2);
-  s.machines.sorter = 3; s.upgrades.spare = 5;                                 // 기준 0.75. 가동률 0.67 은 아직 모자란다
-  near(C.lineInfo(s).steadyAt, 0.75);
-  assert.equal(C.lineInfo(s).steady, false);
-  s.machines.press = 4; s.machines.assembler = 8;                              // 9, 8, 8 → 0.89
-  assert.equal(C.lineInfo(s).steady, true);
+  assert.equal(l.load, 1); assert.equal(l.steady, true); near(l.bonus, 1 + C.STEADY_BONUS);
+  near(C.lineRate(s), 3 * l.milestone * (1 + C.STEADY_BONUS) * C.productValue(s));
+  s.upgrades.belt = 2; near(C.lineInfo(s).bonus, 1 + C.STEADY_BONUS + 0.2, '컨베이어는 보너스를 키운다');
 });
 
 test('라인: 기계 레벨 합계가 구간에 닿을 때마다 2배', () => {
@@ -674,7 +660,7 @@ test('라인: 기계 레벨 합계가 구간에 닿을 때마다 2배', () => {
   const s = inFactory();
   s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
   assert.equal(C.lineInfo(s).levels, 11);
-  assert.equal(C.lineInfo(s).nextMilestone, 15);
+  assert.equal(C.lineInfo(s).nextMilestone, C.LINE_MILESTONES[0]);
   s.machines.sorter = 500; s.machines.press = 500; s.machines.assembler = 500;
   assert.equal(C.lineInfo(s).nextMilestone, null);
 });
@@ -700,14 +686,12 @@ test('라인: 기계를 사고, 값은 오르고, 할인이 적용된다', () =>
   assert.equal(C.buyMachine(s, 'press', 1).reason, 'max');
 });
 
-test('라인: 병목 올리기는 그때그때 가장 느린 기계를 올린다', () => {
+test('라인: 한 번에 올리기는 값에 견줘 가장 많이 오르는 기계를 산다(3.2.0)', () => {
   const s = inFactory(); s.supplies = 1e14;      // 너무 큰 수에서 빼면 쓴 값이 반올림에 묻힌다
-  const r = C.tuneLine(s, 11);
-  assert.ok(r.ok);
-  assert.equal(r.bought, 11);
-  assert.deepEqual(s.machines, { sorter: 2, press: 3, assembler: 6 }, '처리량이 같아지는 비율(2:3:6)로 오른다');
+  const r = C.tuneLine(s, 12);
+  assert.ok(r.ok); assert.equal(r.bought, 12);
+  assert.deepEqual(s.machines, { sorter: 4, press: 4, assembler: 4 }, '값과 만드는 양이 같은 비율이라 셋이 고르게 오른다');
   near(1e14 - s.supplies, r.cost);
-  assert.equal(C.lineInfo(s).load, 1);
   // 물자가 모자라면 살 수 있는 만큼만
   const t = inFactory(); t.supplies = C.MACHINES[0].baseCost;
   const one = C.tuneLine(t, 50);
@@ -716,7 +700,7 @@ test('라인: 병목 올리기는 그때그때 가장 느린 기계를 올린다
   for (const junk of [NaN, -3, 'x', undefined, 1e99]) { const u = inFactory(); u.supplies = 1e13; assert.doesNotThrow(() => C.tuneLine(u, junk)); }
 });
 
-test('라인: 시간이 흐르면 물자가 들어오고 정속 가동 시간이 쌓인다', () => {
+test('라인: 시간이 흐르면 물자가 들어오고 가동 시간이 쌓인다', () => {
   const s = inFactory();
   s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6;
   s.defenses.rail = 1e5; s.signalIn = 1e9; s.autoSell = false;
@@ -727,10 +711,8 @@ test('라인: 시간이 흐르면 물자가 들어오고 정속 가동 시간이
   near(s.supplies - before, rate * 10 + C.searchRate(s) * 10);
   assert.equal(s.steadySeconds, 10);
   near(C.productionPerSec(s), C.searchRate(s) + C.tradeRate(s) + C.lineRate(s));
-  s.machines.sorter = 9;                           // 맞물림이 깨지면 정속 시간은 멈춘다
-  C.tick(s, 10, half);
-  assert.equal(s.steadySeconds, 10);
-  assert.ok(s.lineEarned > rate * 10);
+  s.machines.sorter = 9; C.tick(s, 10, half);
+  assert.equal(s.steadySeconds, 20, '도는 동안은 계속 쌓인다');
 });
 
 test('라인: 자리를 비운 동안에도 돈다', () => {
@@ -752,7 +734,7 @@ test('라인: 목표 셋과 일지, 그리고 철수하면 기계가 사라진�
   let ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'story' && e.id === 'z3-0'), '들어서면 일지가 열린다');
   assert.equal(C.guide(s).id, 'goal');
-  s.machines.sorter = 30; s.machines.press = 40; s.machines.assembler = 50;
+  s.machines.sorter = 50; s.machines.press = 50; s.machines.assembler = 50;
   ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z3a'));
   s.runEarned = C.RETREAT_MIN * 10; s.pendingPerks = [];
@@ -2594,22 +2576,6 @@ test('지나온 구역의 자동은 온전히 받고, 지금 있는 구역의 �
   for (let i = 0; i < 20; i++) { past.contract = null; past.contractIn = 0; C.stepContracts(past, 1, 0, () => 0.9, []); assert.equal(past.contract.item, 'bolt'); }
 });
 
-test('3구역 기계 다시 맞추기: 쓴 물자만큼 처리량이 같아지게 다시 나눈다. 정속 가동일 때는 쓸 수 없다', () => {
-  const s = inFactory(); s.machines = { sorter: 87, press: 80, assembler: 95 };      // 실제로 받은 화면의 상태: 가동률 36%
-  assert.ok(C.lineInfo(s).load < 0.4 && !C.lineInfo(s).steady);
-  const spent = C.machineSpent(s);
-  const r = C.rebalanceLine(s); assert.ok(r.ok);
-  assert.ok(C.machineSpent(s) <= spent, '쓴 물자보다 비싼 구성이 되지 않는다');
-  assert.ok(C.machineSpent(s) > spent * 0.5, '쓴 물자를 거의 다 살린다');
-  assert.ok(C.lineInfo(s).steady); assert.ok(C.lineInfo(s).load > 0.95);
-  assert.equal(s.retool, C.REBALANCE_SECONDS); assert.equal(C.lineNow(s), 0, '맞추는 동안은 선다');
-  assert.equal(C.rebalanceLine(s).reason, 'steady');
-  // 어떤 합계에서도 합이 보존되고 음수가 없다
-  for (let n = 3; n < 400; n += 7) { const t = inFactory(); t.machines = { sorter: n, press: 0, assembler: 0 }; const p = C.splitLevels(n); assert.equal(p.sorter + p.press + p.assembler, n); assert.ok(C.machineSpent(t, C.rebalancePlan(t)) <= Math.max(C.machineSpent(t), C.machineSpent(t, C.splitLevels(3)))); assert.ok(p.sorter >= 1 && p.press >= 1 && p.assembler >= 1, 'n=' + n); }
-  const few = inFactory(); few.machines = { sorter: 2, press: 0, assembler: 0 }; assert.equal(C.rebalanceLine(few).reason, 'few');
-  assert.equal(C.rebalanceLine(inMarket()).reason, 'locked');
-});
-
 test('연속 방어: 연달아 막을수록 전리품이 커지고, 못 막으면 처음으로 돌아간다', () => {
   const s = fresh(); s.defenses.wire = 60;
   assert.equal(C.defStreakMult(s), 1);
@@ -2765,17 +2731,6 @@ test('선제 공격·반격을 쓸 수 있게 된 순간을 알리고, 급한 �
   assert.equal(C.guide(b).id, 'counter');
 });
 
-test('기계를 다시 맞추는 동안 품목을 바꿔도 남은 시간이 줄지 않는다', () => {
-  const s = inFactory(); s.machines = { sorter: 87, press: 80, assembler: 95 };
-  assert.ok(C.rebalanceLine(s).ok); assert.equal(s.retool, C.REBALANCE_SECONDS);
-  C.tick(s, 5, () => 0.99); const left = s.retool; assert.ok(left > C.RETOOL_SECONDS);
-  const r = C.setRecipe(s, 'plate'); assert.ok(r.ok); assert.equal(s.retool, left, '30초가 6초로 덮이지 않는다'); assert.equal(r.seconds, Math.ceil(left));
-  // 평소에는 품목을 바꾸면 6초
-  const t = inFactory(); t.machines = { sorter: 10, press: 15, assembler: 30 }; assert.equal(C.setRecipe(t, 'gear').seconds, C.RETOOL_SECONDS); assert.equal(t.retool, C.RETOOL_SECONDS);
-  // 거의 끝나 갈 때 바꾸면 다시 6초
-  s.retool = 2; s.recipe = 'bolt'; C.setRecipe(s, 'gear'); assert.equal(s.retool, C.RETOOL_SECONDS);
-});
-
 test('1.5.9: 5구역 연구원은 약품을 만들어 물자를 번다', () => {
   const s = C.createState(0);
   assert.equal(C.labRate(s), 0, '5구역이 잠겨 있으면 약품이 없다');
@@ -2795,19 +2750,6 @@ test('1.5.9: 구역 문 값은 뒤로 갈수록 커지고, 혈청 값은 7구역
   for (let i = 1; i < C.ZONES.length; i++) assert.ok(C.ZONES[i].cost > C.ZONES[i - 1].cost);
   assert.ok(C.SERUM_COSTS[0] > C.ZONES[6].cost);
   for (let i = 1; i < C.SERUM_COSTS.length; i++) assert.ok(C.SERUM_COSTS[i] > C.SERUM_COSTS[i - 1]);
-});
-
-test('1.6.1: 싼 선별기만 사고 다시 맞추기를 되풀이해도 이득이 없다', () => {
-  const s = inFactory(); s.machines = { sorter: 20, press: 30, assembler: 60 };
-  const start = C.machineSpent(s); let paid = 0, rounds = 0;
-  for (let i = 0; i < 30; i++) {
-    for (let k = 0; k < 40; k++) { const c = C.machineCost(s, 'sorter', 1); if (!isFinite(c)) break; paid += c; s.machines.sorter++; }
-    s.retool = 0;
-    if (!C.rebalanceLine(s).ok) break;
-    rounds++;
-    assert.ok(C.machineSpent(s) <= (start + paid) * (1 + 1e-9), i + '번째: 기계 값어치가 낸 물자를 넘지 않는다');
-  }
-  assert.ok(paid > 0 && rounds > 0);
 });
 
 test('1.6.1: 자동에 맡기면 의뢰가 바라는 품목으로 알아서 바꾼다. 자동이 아니면 그대로 둔다', () => {
@@ -2844,16 +2786,6 @@ test('1.6.2 길 정찰: 7구역의 끝도 정찰 시간이 지나야 온다', ()
   assert.ok(!C.tick(s, 0.1, () => 0.5).some(e => e.type === 'ending'));
   s.runSeconds = 100 + C.scoutNeed(6);
   assert.ok(C.tick(s, 0.1, () => 0.5).some(e => e.type === 'ending'));
-});
-
-test('1.6.3: 기계를 다시 맞추고 남는 값은 물자로 돌려받는다. 누적은 늘지 않고, 되풀이해도 이득이 없다', () => {
-  const s = inFactory(); s.machines = { sorter: 110, press: 120, assembler: 238 }; s.supplies = 0;      // 받은 화면: 선별기를 80 → 110 으로 올린 상태
-  const spent = C.machineSpent(s), earned = s.runEarned, refund = C.rebalanceRefund(s);
-  assert.ok(refund > 0);
-  const r = C.rebalanceLine(s); assert.ok(r.ok); assert.equal(r.refund, refund);
-  assert.equal(s.supplies, refund); assert.equal(s.runEarned, earned, '되받은 물자는 번 것으로 세지 않는다');
-  assert.ok(Math.abs(C.machineSpent(s) + refund - spent) <= spent * 1e-9, '기계 값 + 돌려받은 물자 = 쓴 물자');
-  const few = inFactory(); few.machines = { sorter: 1, press: 0, assembler: 0 }; assert.equal(C.rebalanceRefund(few), 0);
 });
 
 test('1.6.5 도전(규칙만, 화면은 아직 없음): 고르기, 조건, 성공과 실패, 훈장', () => {
@@ -3346,4 +3278,23 @@ test('3.1.0 7구역 주파수: 바늘이 띠 안에 있을 때 맞추면 먼 무
   const back = C.deserialize(C.serialize(s), 0); near(back.tune.band, s.tune.band); near(back.tune.cool, s.tune.cool);
   const bad = JSON.parse(C.serialize(s)); bad.tune = { t: 'x', band: 9, cool: -5 }; const fixed = C.deserialize(JSON.stringify(bad), 0);
   assert.ok(fixed.tune.band <= 0.85 && fixed.tune.cool === 0 && fixed.tune.t === 0);
+});
+
+test('3.2.0 기계 다시 맞추기는 쓸 일이 없어졌다: 맞출 비율이 없다', () => {
+  const s = inFactory(); s.machines.sorter = 30; s.machines.press = 2; s.machines.assembler = 1; s.supplies = 1e30;
+  assert.equal(C.rebalanceLine(s).reason, 'steady');
+  assert.deepEqual(s.machines, { sorter: 30, press: 2, assembler: 1 });
+});
+
+test('3.2.0 옛 저장: 새 셈으로 처리량이 줄지 않게 선별기 레벨을 얹어 준다', () => {
+  const s = inFactory(); s.machines.sorter = 23; s.machines.press = 34; s.machines.assembler = 66;      // 예전의 한 줄 = min(69, 68, 66) = 66
+  const raw = JSON.parse(C.serialize(s)); delete raw.lineV;
+  const back = C.deserialize(JSON.stringify(raw), 0);
+  assert.ok(C.lineInfo(back).flow >= 66 * 7, '합이 예전 한 줄의 7배 이상: ' + C.lineInfo(back).flow);
+  assert.equal(back.machines.press, 34); assert.equal(back.machines.assembler, 66); assert.ok(back.machines.sorter > 23);
+  // 한 번 바꾼 저장은 다시 바꾸지 않는다
+  const again = C.deserialize(C.serialize(back), 0); assert.deepEqual(again.machines, back.machines);
+  // 고르게 올려 둔 저장은 그대로
+  const even = inFactory(); even.machines.sorter = 40; even.machines.press = 40; even.machines.assembler = 40;
+  const r2 = JSON.parse(C.serialize(even)); delete r2.lineV; assert.equal(C.deserialize(JSON.stringify(r2), 0).machines.sorter, 40);
 });
