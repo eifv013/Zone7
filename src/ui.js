@@ -718,7 +718,11 @@
     while (list.children.length > LOG_MAX) list.removeChild(list.lastChild);
   }
   /** 화면 구석에 잠깐 떴다 사라지는 쪽지. 무전 로그를 안 보고 있어도 알아챌 일(업적, 유물 등)에 쓴다. */
+  /** "3구역 …"처럼 구역 번호로 시작하는 알림이 지나온 구역 것인가. */
+  function pastZoneText(text) { var m = /^([1-7])구역/.exec(String(text)); return !!m && state && Number(m[1]) - 1 < state.zone; }
   function toast(text) {
+    // 2.9.3: 지나온 구역의 알림은 띄우지 않는다(일지에는 남는다). 뒤 구역에 가 있으면 앞 구역들의 주문 · 고장 · 트럭 알림이 쉬지 않고 올라왔다
+    if (pastZoneText(text)) return;
     var box = $('toasts');
     var t = el('div', 'toast', text);
     t.addEventListener('animationend', function () { t.remove(); });
@@ -3049,19 +3053,19 @@
           if (ev.dangerTickets) log('위험 단계 보상으로 뽑기권 ' + ev.dangerTickets + '장을 받았다.', 'good');
           break;
         case 'salvage':
-          toast('4구역 표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); sfx('signal');
+          toast('4구역 표류 화물 · ' + ev.name); log('선로에서 ' + ev.name + (C.hasBatchim(ev.name) ? '을' : '를') + ' 찾았다.', ''); if (!pastZoneText('4구역')) sfx('signal');
           break;
         case 'salvage-gone':
           log('표류 화물을 놓쳤다.', '');
           break;
         case 'contract':
-          toast('3구역 납품 의뢰 · ' + ev.name + ' · ' + (ev.itemName || '완제품')); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' ' + (ev.itemName || '완제품') + ' ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          toast('3구역 납품 의뢰 · ' + ev.name + ' · ' + (ev.itemName || '완제품')); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' ' + (ev.itemName || '완제품') + ' ' + fmt(ev.need) + '개를 찾는다.', ''); if (!pastZoneText('3구역')) sfx('signal');
           break;
         case 'contract-gone':
           log('거래처가 기다리다 돌아갔다.', '');
           break;
         case 'order':
-          toast('2구역 단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); sfx('signal');
+          toast('2구역 단골 주문 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 상품 ' + fmt(ev.need) + '개를 찾는다.', ''); if (!pastZoneText('2구역')) sfx('signal');
           break;
         case 'order-filled':      // 흥정꾼·자동 제어반·자동 신호가 알아서 넘긴 것(1.3.1)
         case 'contract-filled':
@@ -3084,13 +3088,13 @@
           log('변이체를 막은 몫으로 특전 하나를 고른다.', 'good');
           break;
         case 'jam':
-          toast('3구역 고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); sfx('signal');
+          toast('3구역 고장 · ' + ev.name); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 멈칫거린다. 고치면 라인이 빨라진다.', ''); if (!pastZoneText('3구역')) sfx('signal');
           break;
         case 'jam-fixed':
           log(ev.auto ? '자동 제어반이 기계를 다시 돌렸다.' : '기계가 저절로 다시 돈다.', '');
           break;
         case 'truck':
-          toast('3구역 출하 트럭이 왔어요'); log('출하 트럭이 왔다. 출하장에 ' + Math.floor(ev.seconds) + '초분이 쌓여 있다.', ''); sfx('signal');
+          toast('3구역 출하 트럭이 왔어요'); log('출하 트럭이 왔다. 출하장에 ' + Math.floor(ev.seconds) + '초분이 쌓여 있다.', ''); if (!pastZoneText('3구역')) sfx('signal');
           break;
         case 'truck-loaded':
           log('자동 제어반이 트럭에 실어 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
