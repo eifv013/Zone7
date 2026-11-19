@@ -733,8 +733,8 @@ test('과제: 지나온 구역의 과제는 나오지 않는다(2.9.5)', () => {
   for (const id of ['soil', 'ledger', 'process', 'transit']) assert.ok(!z5.has(id), id);
   for (const id of ['drill', 'serum', 'refine', 'drop']) assert.ok(z5.has(id), id);
   const z7 = seen(6); assert.equal(z7.size, 4);
-  assert.equal(C.drawOffers(() => 0.5, { zone: 6 }).length, 3);
-  assert.equal(new Set(C.drawOffers(() => 0.5)).size, 3, '상태 없이 부르면 전체에서 뽑는다');
+  assert.equal(C.drawOffers(() => 0.5, { zone: 6 }).length, C.OFFER_COUNT);
+  assert.equal(new Set(C.drawOffers(() => 0.5)).size, C.OFFER_COUNT, '상태 없이 부르면 전체에서 뽑는다');
 });
 
 test('특전: 아직 열지 않은 구역의 특전은 나오지 않는다', () => {
@@ -771,7 +771,6 @@ test('연구: 5구역을 열기 전에는 연구원도 과제도 없다', () => 
   const s = inStation(); s.supplies = 1e40; s.points = 1e9; s.offers = ['soil'];
   assert.equal(C.buyStaff(s, 1).reason, 'locked');
   assert.equal(C.runProject(s, 'soil', half).reason, 'locked');
-  assert.equal(C.rerollOffers(s, half).reason, 'locked');
   assert.equal(C.staffCost(s, 1), Infinity);
   assert.equal(C.maxStaff(s), 0);
   s.staff = 10;
@@ -789,14 +788,12 @@ test('연구: 연구원이 점수를 모으고, 들어서면 과제 셋이 나�
   assert.ok(C.buyStaff(s, 1).ok);
   assert.equal(C.staffCost(s, 1), Math.ceil(c1 * C.STAFF_GROWTH));
   assert.equal(C.researchRate(s), 1);
-  C.tick(s, 30, half);
-  near(s.points, 30);
+  C.tick(s, 30, half);      // 3.9.0: 연구 점수는 시험관을 거둘 때 들어온다(가만히 두면 탄 관에서 조금만 건진다)
+  assert.ok(s.points < 30);
   assert.equal(s.offers.length, C.OFFER_COUNT);
   assert.equal(new Set(s.offers).size, C.OFFER_COUNT);
   s.staff = 10;
   assert.equal(C.researchRate(s), 20, '10명에 닿으면 2배');
-  s.upgrades.scope = 4;
-  assert.equal(C.researchRate(s), 40);
   s.upgrades.dorm = 1; s.staff = 1;
   near(C.staffCost(s, 1), c1 * C.STAFF_GROWTH * 0.96);      // 이만큼 큰 수는 곱하는 순서에 따라 끝자리가 달라진다
 });
@@ -859,21 +856,6 @@ test('연구: 보급 요청은 효과가 남지 않고 물자를 바로 준다',
   assert.ok(C.runProject(empty, 'drop', half).gain >= 1, '생산이 0 이어도 0 을 주지는 않는다');
 });
 
-test('연구: 다시 뽑기는 과제 값의 일부를 낸다', () => {
-  const s = inLab(); s.offers = ['soil', 'drill', 'serum'];
-  assert.equal(C.rerollCost(s), Math.ceil(C.PROJECT_BASE * C.REROLL_SHARE));
-  s.points = C.rerollCost(s) - 1;
-  assert.equal(C.rerollOffers(s, half).reason, 'points');
-  s.points = 100;
-  let k = 0;
-  const r = C.rerollOffers(s, () => (k += 0.37) % 1);
-  assert.ok(r.ok);
-  assert.equal(s.points, 100 - r.cost);
-  assert.equal(s.offers.length, C.OFFER_COUNT);
-  assert.equal(s.projectsDone, 0, '다시 뽑기는 과제 값을 올리지 않는다');
-  for (let i = 0; i < 200; i++) { let z = i; const o = C.drawOffers(() => ((z = (z * 9301 + 49297) % 233280) / 233280)); assert.equal(new Set(o).size, C.OFFER_COUNT); o.forEach(id => assert.ok(C.PROJECTS.find(p => p.id === id))); }
-});
-
 test('연구: 자리를 비운 동안에도 점수가 모인다', () => {
   const s = inLab(); s.staff = 10; s.defenses.rail = 1e9;
   const rep = C.applyOffline(s, 1000);
@@ -887,7 +869,7 @@ test('연구: 목표와 일지, 그리고 철수하면 연구가 사라진다', 
   s.defenses.rail = 1e9; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
   let ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'story' && e.id === 'z5-0'));
-  s.research.serum = 3;
+  s.peaksRun = 20;
   ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z5c'));
   s.pendingPerks = []; s.runEarned = C.RETREAT_MIN * 10; s.staff = 9; s.points = 77; s.projectsDone = 4;
@@ -904,7 +886,7 @@ test('연구: 목표와 일지, 그리고 철수하면 연구가 사라진다', 
 
 test('저장: 연구를 안전하게 읽는다', () => {
   const s = inLab();
-  s.staff = 7; s.points = 123.5; s.research.soil = 2; s.offers = ['soil', 'drop', 'serum']; s.projectsDone = 2;
+  s.staff = 7; s.points = 123.5; s.research.soil = 2; s.offers = ['soil', 'drop']; s.projectsDone = 2;
   assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
   const bad = C.sanitizeState({ version: 2, zone: 4, staff: 1e9, points: -3, research: { soil: 1e9, ghost: 4, drill: 'x' }, offers: ['soil', 'soil', 'ghost', 42, 'drop', 'serum', 'drill'], projectsDone: 3.9 }, 0);
   assert.equal(bad.staff, C.COUNT_MAX);
@@ -912,7 +894,7 @@ test('저장: 연구를 안전하게 읽는다', () => {
   assert.equal(bad.research.soil, 200);
   assert.equal(bad.research.ghost, undefined);
   assert.equal(bad.research.drill, 0);
-  assert.deepEqual(bad.offers, ['soil', 'drop', 'serum']);
+  assert.deepEqual(bad.offers, ['soil', 'drop']);
   assert.equal(bad.projectsDone, 3);
   for (const junk of [null, 'x', 7, {}]) assert.doesNotThrow(() => C.sanitizeState({ version: 2, zone: 4, research: junk, offers: junk }, 0));
   assert.doesNotThrow(() => C.mods({ upgrades: {}, perks: {}, traits: {} }), '연구 기록이 없는 상태에도 배수를 셀 수 있다');
@@ -2044,22 +2026,6 @@ test('4·6·7구역 사건: 그 구역이 벌고 있을 때만 뜨고, 바로 �
   const o = inLab(); o.zev.rail = { left: 20 }; C.applyOffline(o, 600); assert.equal(o.zev.rail, null);
 });
 
-test('5구역 밤샘 연구: 잠깐 연구가 빨라지고 쉬는 시간이 있다', () => {
-  const s = inLab(); s.staff = 10;
-  const rate = C.researchRate(s); assert.ok(rate > 0);
-  const r = C.focusLab(s); assert.ok(r.ok); assert.equal(s.focusLeft, C.FOCUS_SECONDS); assert.equal(s.focusCool, C.FOCUS_COOL);
-  near(C.researchNow(s), rate * C.FOCUS_MULT); assert.equal(C.focusLab(s).reason, 'cooldown');
-  const p0 = s.points; C.tick(s, 1, () => 0.99); near(s.points - p0, rate * C.FOCUS_MULT);
-  // 긴 시간을 한 번에 흘려도 남은 밤샘 시간까지만 배로 친다
-  const p1 = s.points; C.tick(s, 40, () => 0.99); near(s.points - p1, C.researchRate(s) * (40 + (C.FOCUS_MULT - 1) * (C.FOCUS_SECONDS - 1)));
-  assert.equal(s.focusLeft, 0); near(C.researchNow(s), C.researchRate(s));
-  for (let i = 0; i < C.FOCUS_COOL; i++) C.tick(s, 1, () => 0.99);
-  assert.equal(s.focusCool, 0); assert.ok(C.focusLab(s).ok);
-  const none = inLab(); assert.equal(C.focusLab(none).reason, 'stopped');
-  const closed = inStation(); assert.equal(C.focusLab(closed).reason, 'locked');
-  assert.equal(C.sanitizeState({ version: 2, zone: 2, focusLeft: 10, focusCool: 50 }, 0).focusLeft, 0);
-});
-
 test('6구역 순찰과 7구역 직접 방송: 누르면 잠깐 그 구역이 배로 돌고, 쉬는 시간이 있다', () => {
   const s = inLab(); s.zone = 6; s.posts = 12; s.antennas = 12; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 }; s.jamIn = 1e6; s.truckIn = 1e6;
   const g = C.guardRate(s), v = C.survivorRate(s);
@@ -2082,11 +2048,11 @@ test('6구역 순찰과 7구역 직접 방송: 누르면 잠깐 그 구역이 �
 test('5·6·7구역의 자동 개조: 단추는 알아서 누르고, 사건은 알아서 받되 절반만 받는다', () => {
   const s = inLab(); s.zone = 6; s.staff = 10; s.posts = 12; s.antennas = 12; s.supplies = 1e60; s.jamIn = 1e6; s.truckIn = 1e6; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 };
   assert.equal(C.autoOn(s, 4), false); assert.equal(C.autoOn(s, 5), false); assert.equal(C.autoOn(s, 6), false);
-  C.tick(s, 1, () => 0.99); assert.equal(s.focusLeft, 0); assert.equal(s.push.guard.left, 0, '개조가 없으면 알아서 누르지 않는다');
+  C.tick(s, 1, () => 0.99); assert.equal(s.push.guard.left, 0, '개조가 없으면 알아서 누르지 않는다');
   ['autolab', 'autoguard', 'autotower'].forEach((id) => assert.ok(C.buyUpgrade(s, id).ok, id));
   assert.ok(C.autoOn(s, 4) && C.autoOn(s, 5) && C.autoOn(s, 6));
   const ev = C.tick(s, 1, () => 0.99).filter((e) => e.type === 'auto-push').map((e) => e.id).sort();
-  assert.deepEqual(ev, ['guard', 'lab']); assert.ok(s.focusLeft > 0 && s.push.guard.left > 0); assert.ok(s.tune.cool > 0, '송신 기사는 주파수를 알아서 맞춘다(3.1.0)');
+  assert.deepEqual(ev, ['guard']); assert.ok(s.push.guard.left > 0); assert.ok(s.tune.cool > 0, '송신 기사는 주파수를 알아서 맞춘다(3.1.0)');
   // 사건: 3초 뒤에 알아서 받고, 절반만 받는다
   s.zev.guard = { left: C.ZEV_WAIT }; s.zev.tower = { left: C.ZEV_WAIT };
   const full = C.zevReward(s, 'guard', false), auto5 = C.zevReward(s, 'guard', true), auto6 = C.zevReward(s, 'tower', true);
@@ -2272,21 +2238,6 @@ test('선제 공격·반격을 쓸 수 있게 된 순간을 알리고, 급한 �
   const held = []; for (let i = 0; i < C.COUNTER_NIGHTS + 1; i++) held.push(C.resolveNight(b));
   assert.deepEqual(held.map((e) => !!e.counterReady), [false, false, true, false]);
   assert.equal(C.guide(b).id, 'counter');
-});
-
-test('1.5.9: 5구역 연구원은 약품을 만들어 물자를 번다', () => {
-  const s = C.createState(0);
-  assert.equal(C.labRate(s), 0, '5구역이 잠겨 있으면 약품이 없다');
-  s.zone = 4; s.staff = 0;
-  assert.equal(C.labRate(s), 0, '연구원이 없으면 약품이 없다');
-  s.staff = 5; const five = C.labRate(s);
-  assert.ok(five > 0);
-  s.staff = 10;
-  assert.ok(C.labRate(s) >= five * 4 - 1, '10명 문턱에서 2배가 붙는다');
-  assert.ok(C.productionPerSec(s) >= C.labRate(s), '초당 생산에 약품이 들어 있다');
-  const before = s.supplies, earned = s.runEarned;
-  C.tick(s, 1, () => 0.5);
-  assert.ok(s.supplies > before && s.runEarned > earned, '시간이 흐르면 약품 값이 물자와 누적에 쌓인다');
 });
 
 test('1.5.9: 구역 문 값은 뒤로 갈수록 커지고, 혈청 값은 7구역 문 값보다 크다', () => {
@@ -2955,10 +2906,11 @@ test('4구역 무리: 닿으면 뒤쪽 절반을 떼고 떠난다. 가끔 달려
   assert.ok(ev.some(e => e.type === 'horde-sprint')); assert.equal(C.trainInfo(ru).rush, 'warn'); const p0 = ru.plat.pos;
   for (let i = 0; i < 10; i++) C.stepRail(ru, 0.1, ev, calm); assert.ok(ru.plat.pos > p0 - 0.05, '예고 동안은 달려오지 않는다');
   for (let i = 0; i < 10; i++) C.stepRail(ru, 0.1, ev, calm); assert.equal(C.trainInfo(ru).rush, 'run'); assert.ok(ru.plat.pos < p0 - 0.2, 'pos ' + ru.plat.pos);
-  assert.equal(C.deserialize(C.serialize(ru), 0).plat.rush, 1);
+  assert.ok(C.deserialize(C.serialize(ru), 0).plat.rush > 0);
   const stop = JSON.parse(JSON.stringify(ru)), hr = C.blowHorn(stop); assert.ok(hr.ok && hr.broke); assert.equal(stop.plat.rush, -1); assert.equal(C.trainInfo(stop).rush, '');
   const p1 = stop.plat.pos; for (let i = 0; i < 20; i++) C.stepRail(stop, 0.1, ev, () => 0.001); assert.ok(stop.plat.pos > p1 - 0.05, '끊긴 돌진은 다시 오지 않는다'); assert.equal(ev.filter(e => e.type === 'horde-sprint').length, 1);
-  for (let i = 0; i < 30 && !ru.hordeHits; i++) C.stepRail(ru, 0.1, ev, calm); assert.equal(ru.hordeHits, 1, '내버려 두면 끝까지 달려와 닿는다');
+  for (let i = 0; i < 30; i++) C.stepRail(ru, 0.1, ev, calm); assert.equal(ru.hordeHits || 0, 0, '멀리서 온 돌진은 닿지 않는다(3.9.2)'); assert.equal(ru.plat.rush, -1); assert.ok(Math.abs((p0 - ru.plat.pos) - C.HORDE_RUSH_DIST) < 0.12, '거리의 45%쯤 다가온다: ' + (p0 - ru.plat.pos));
+  const close = onPlatform(); close.plat.t = C.CAR_SECONDS * 3; close.plat.bank = 9; close.plat.pos = 0.3; close.plat.rush = C.HORDE_RUSH_DIST; close.plat.warn = 0; C.stepRail(close, 1, [], calm); assert.equal(close.hordeHits, 1, '이미 가까울 때의 돌진은 닿는다');
   // 굴림에 따라 닿는 때가 달라진다(정확히 알 수 없다)
   const when = (seed) => { const z = onPlatform(), r = lcg(seed); for (let t = 1; t < 400; t++) { C.stepRail(z, 1, [], r); if (z.hordeHits) return t; } return 400; };
   const times = [1, 2, 3, 4, 5, 6, 7, 8].map(when); assert.ok(Math.max(...times) - Math.min(...times) >= 4, times.join(',')); assert.ok(times.every(t => t > 8 && t < 200), times.join(','));
@@ -2976,12 +2928,10 @@ test('4구역 역무원: 꽉 차면, 또는 무리가 가까워지면 보낸다.
   assert.ok(idle.speed < auto.speed * 0.6, '가만히 ' + idle.speed.toFixed(2) + ' / 역무원 ' + auto.speed.toFixed(2)); 
   const autoLong = run({ autosig: 1, longplat: 2 }, null, 5);
   assert.ok(hand.speed > autoLong.speed, '손 ' + hand.speed.toFixed(2) + ' / 역무원 ' + autoLong.speed.toFixed(2)); assert.ok(hand.long > autoLong.long, '손이 긴 열차를 더 자주 보낸다');
-  // 3.8.9 역무원과 돌진: 경고 동안은 기다리고(손으로 경적을 울릴 틈), 끝나면 뒤쪽을 떼고 떠난다. 튼튼한 연결기가 덜 떼이게 한다
-  const mkRush = (up) => { const z = onPlatform(); Object.assign(z.upgrades, { autosig: 1 }, up); z.plat.t = C.CAR_SECONDS * 6; z.plat.bank = 9; z.plat.rush = 1; z.plat.warn = C.HORDE_WARN; return z; };
-  const w = mkRush({}); ev = []; C.stepRail(w, C.HORDE_WARN - 0.2, ev, calm); assert.ok(!ev.some(x => x.type === 'train'), '경고 동안은 보내지 않는다');
-  C.stepRail(w, 0.3, ev, calm); const cut1 = ev.find(x => x.type === 'train'); assert.equal(cut1.why, 'horde'); assert.equal(cut1.kept, 3, '절반을 떼고 떠난다');
-  const w2 = mkRush({ coupler: 1 }); ev = []; C.stepRail(w2, C.HORDE_WARN + 0.1, ev, calm); assert.equal(ev.find(x => x.type === 'train').kept, 4, '연결기: 3분의 1만');
-  const w3 = mkRush({ horn: 1 }); C.stepRail(w3, 0.5, [], calm); assert.ok(C.blowHorn(w3).broke); ev = []; C.stepRail(w3, 3, ev, calm); assert.ok(!ev.some(x => x.why === 'horde'), '경적으로 끊으면 떼이지 않는다');
+  // 3.9.2 역무원과 돌진: 경고가 도는 동안은 보내지 않는다(손으로 경적을 울릴 틈). 그 뒤에는 평소대로, 가까워지면 온전히 보낸다
+  const w = onPlatform(); w.upgrades.autosig = 1; w.plat.t = C.CAR_SECONDS * 6; w.plat.bank = 9; w.plat.pos = 0.5; w.plat.rush = C.HORDE_RUSH_DIST; w.plat.warn = C.HORDE_WARN; ev = [];
+  C.stepRail(w, C.HORDE_WARN - 0.2, ev, calm); assert.ok(!ev.some(x => x.type === 'train'), '경고 동안은 보내지 않는다');
+  for (let i = 0; i < 10 && !ev.some(x => x.type === 'train'); i++) C.stepRail(w, 0.1, ev, calm); const sent = ev.find(x => x.type === 'train'); assert.equal(sent.why, 'auto'); assert.equal(sent.kept, 6, '떼이지 않는다');
 });
 
 test('4구역: 긴 시간 · 이상한 값 · 저장 · 자리 비움 · 철수 · 목표', () => {
@@ -3054,4 +3004,86 @@ test('4구역: 열기 전에는 열차도 줄도 없다. 기관차를 사면 값
   assert.equal(C.trainCost(s, 1), Math.ceil(t1 * C.TRAIN_GROWTH)); assert.equal(C.buyTrain(s, 0).reason, 'unknown');
   s.upgrades.yard = 1; assert.equal(C.trainCost(s, 1), Math.ceil(t1 * C.TRAIN_GROWTH * 0.96));
   s.trains = C.TRAIN_MAX; s.supplies = 1e300; assert.equal(C.buyTrain(s, 1).reason, 'max');
+});
+
+/* ---------- 3.9.0 5구역 혈청 달이기(구역 전체) ---------- */
+function onBench(n) { const s = inLab(); s.staff = 10; s.racks = (n || 4) - 4; s.defenses.rail = 1e9; s.signalIn = 1e9; C.tubesOf(s).forEach((t) => { t.t = 0; t.age = 0; t.r = 1; }); return s; }
+
+test('5구역 시험관: 단계마다 익고, 절정을 넘기면 탄다. 누르면 달여진 시간만큼 거둔다', () => {
+  const s = onBench(4);
+  assert.equal(C.tubeCount(s), 4); assert.equal(s.tubes.length, 4);
+  const S = C.TUBE_STAGE_SECONDS, t = s.tubes[0];
+  assert.equal(C.tubeStage(s, t), 1); t.t = S; assert.equal(C.tubeStage(s, t), 2); t.t = S * 3.5; assert.equal(C.tubeStage(s, t), 4);
+  t.t = S * 4; assert.equal(C.tubeStage(s, t), 5, '절정'); t.t = S * 4 + C.TUBE_PEAK_SECONDS - 0.1; assert.equal(C.tubeStage(s, t), 5); t.t = S * 4 + C.TUBE_PEAK_SECONDS; assert.equal(C.tubeStage(s, t), 6, '탔다');
+  s.upgrades.cooler = 2; assert.equal(C.peakSeconds(s), C.TUBE_PEAK_SECONDS + 2); assert.equal(C.tubeStage(s, t), 5, '냉각기: 절정이 오래간다'); s.upgrades.cooler = 0;
+  // 흐르는 시간: 관마다 빠르기가 다르고, 절정에 닿으면 받을 것이 더 늘지 않는다
+  const f = onBench(4); f.tubes[1].r = 0.5; C.stepTubes(f, S * 2, calm, []);
+  assert.equal(C.tubeStage(f, f.tubes[0]), 3); assert.equal(C.tubeStage(f, f.tubes[1]), 2); near(f.tubes[0].age, S * 2);
+  C.stepTubes(f, S * 2 + 2, calm, []); assert.equal(C.tubeStage(f, f.tubes[0]), 5); near(f.tubes[0].age, S * 4, '절정에서 멈춘다');
+  // 거두기: 물자와 연구 점수. 단계가 높을수록 곱이 크다(3단계 1배 · 절정 2배)
+  const y = C.tubeYield(f, 0); assert.equal(y.stage, 5); assert.equal(y.mult, 2); near(y.gain, C.labRate(f) / 4 * S * 4 * 2); near(y.points, C.researchRate(f) / 4 * S * 4 * 2);
+  const sup = f.supplies, pts = f.points, r = C.harvestTube(f, 0, calm);
+  assert.ok(r.ok && r.peak); near(f.supplies - sup, y.gain); near(f.points - pts, y.points); assert.equal(f.peaksRun, 1); assert.equal(f.harvestsRun, 1);
+  assert.equal(f.tubes[0].t, 0); assert.equal(f.tubes[0].age, 0); near(f.tubes[0].r, 1, '굴림 0.5 → 빠르기 1');
+  const y2 = C.tubeYield(f, 1); assert.equal(y2.stage, 3); assert.equal(y2.mult, 1);
+  // 탄 관: 조금만 건진다. 살균기가 더 건져 준다. 내버려 두면 저절로 비워진다
+  const b = onBench(4); b.tubes[0].t = S * 4 + C.TUBE_PEAK_SECONDS + 1; b.tubes[0].age = S * 4;
+  assert.equal(C.tubeYield(b, 0).mult, C.TUBE_BURNT); b.upgrades.sterile = 2; near(C.tubeYield(b, 0).mult, C.TUBE_BURNT + 0.3); b.upgrades.sterile = 0;
+  const hb = C.harvestTube(b, 0, calm); assert.ok(hb.burnt); assert.equal(b.burntRun, 1); assert.equal(b.peaksRun, 0);
+  const idle = onBench(4); let ev = []; C.stepTubes(idle, S * 4 + C.TUBE_PEAK_SECONDS + C.TUBE_BURNT_SECONDS + 1, calm, ev); assert.equal(idle.burntRun, 4); assert.ok(idle.tubes.every((x) => x.t < S));
+  // 안 되는 경우
+  assert.equal(C.harvestTube(inStation(), 0, calm).reason, 'locked'); const none = inLab(); assert.equal(C.harvestTube(none, 0, calm).reason, 'stopped');
+  for (const junk of [-1, 99, NaN, 'x', undefined]) assert.equal(C.harvestTube(onBench(4), junk, calm).reason, 'empty');
+  for (const junk of [NaN, -5, 'x', undefined, 1e99]) assert.doesNotThrow(() => C.stepTubes(onBench(4), junk, calm, []));
+});
+
+test('5구역 줄: 연구원은 값, 시험관은 개수(값도 그만큼), 시약 등급은 레벨마다 2배', () => {
+  const s = onBench(4); s.supplies = 1e60;
+  const r0 = C.labRate(s), p0 = C.researchRate(s);
+  assert.ok(C.buyRack(s).ok); assert.equal(C.tubeCount(s), 5); assert.equal(s.tubes.length, 5); near(C.labRate(s), r0 * 5 / 4); near(C.researchRate(s), p0 * 5 / 4);
+  const r1 = C.labRate(s); assert.ok(C.buyReagent(s).ok); near(C.labRate(s), r1 * C.REAGENT_STEP); near(C.researchRate(s), p0 * 5 / 4, '시약은 연구 점수를 바꾸지 않는다');
+  const r2 = C.labRate(s); assert.ok(C.buyStaff(s, 1).ok); assert.ok(C.labRate(s) > r2);
+  for (let i = 0; i < 20; i++) C.buyRack(s); assert.equal(C.tubeCount(s), C.TUBE_MAX); assert.equal(C.rackCost(s), Infinity); assert.equal(C.buyRack(s).ok, false);
+  for (let i = 0; i < 20; i++) C.buyReagent(s); assert.equal(s.reagent, C.REAGENT_MAX); assert.equal(C.reagentCost(s), Infinity);
+  const d = onBench(4), c0 = C.rackCost(d); d.upgrades.dorm = 1; near(C.rackCost(d), Math.ceil(c0 * 0.96), '기숙사가 깎아 준다');
+  assert.equal(C.buyRack(inStation()).reason, 'locked'); assert.equal(C.buyReagent(inStation()).reason, 'locked');
+});
+
+test('5구역 연구 조교: 3단계에서 거둔다(초당 그대로). 가만히 둠 < 조교 < 손', () => {
+  const a = onBench(4); a.upgrades.autolab = 1; let ev = [];
+  const sup = a.supplies; C.stepTubes(a, C.TUBE_STAGE_SECONDS * 2, calm, ev);
+  assert.ok(ev.some((e) => e.type === 'tube-auto' && e.stage === 3)); assert.equal(a.peaksRun, 0); assert.equal(a.harvestsRun, 0, '조교가 거둔 것은 손으로 친 횟수에 안 든다');
+  near(a.supplies - sup, C.labRate(a) * C.TUBE_STAGE_SECONDS * 2, '3단계에서 거두면 1배');
+  const off = onBench(4); off.upgrades.autolab = 1; C.setAutoEvents(off, 4, false); C.stepTubes(off, C.TUBE_STAGE_SECONDS * 3, calm, []); assert.equal(off.labEarned, 0, '구역 자동을 끄면 손을 기다린다');
+  const run = (up, policy, seed) => { const z = onBench(4); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.labRate(z); for (let t = 0; t < 3600; t++) { C.stepTubes(z, 1, r, []); if (policy) for (let i = 0; i < 4; i++) if (policy(C.tubeStage(z, z.tubes[i]))) { C.harvestTube(z, i, r); break; } } return z.labEarned / 3600 / rate; };
+  const idle = run({}, null, 3), auto = run({ autolab: 1 }, null, 3), hand = run({}, (st) => st === 5, 3);
+  assert.ok(idle < 0.3, '가만히 ' + idle.toFixed(2)); assert.ok(auto > 0.9 && auto < 1.1, '조교 ' + auto.toFixed(2)); assert.ok(hand > 1.6, '손 ' + hand.toFixed(2));
+});
+
+test('5구역 갈림길: 연구 점수가 차면 둘 가운데 하나를 고른다. 다시 뽑기와 밤샘 연구는 없다', () => {
+  assert.equal(C.OFFER_COUNT, 2);
+  const s = onBench(4); C.tick(s, 0.1, half); assert.equal(s.offers.length, 2); assert.equal(new Set(s.offers).size, 2);
+  assert.equal(C.runProject(s, s.offers[0], half).reason, 'points'); s.points = C.projectCost(s);
+  const pick = s.offers[0], r = C.runProject(s, pick, half); assert.ok(r.ok); assert.equal(s.projectsDone, 1); assert.equal(s.research[pick], 1); assert.equal(s.offers.length, 2);
+  assert.equal(C.rerollOffers(s, half).reason, 'gone'); assert.equal(C.focusLab(s).reason, 'gone');
+  // 연구 점수는 시간이 흐른다고 쌓이지 않는다: 거둘 때 들어온다
+  const idle = onBench(4); idle.upgrades.cooler = 3; const p0 = idle.points; C.tick(idle, C.TUBE_STAGE_SECONDS * 4 + 1, calm); assert.equal(idle.points, p0); C.harvestTube(idle, 0, calm); assert.ok(idle.points > p0);
+});
+
+test('5구역: 저장 · 옛 저장 옮기기 · 자리 비움 · 철수 · 목표', () => {
+  const s = onBench(6); s.reagent = 2; s.tubes[2].t = 9; s.tubes[2].age = 9; s.peaksRun = 3; s.burntRun = 1; s.harvestsRun = 8; s.labEarned = 55;
+  const back = C.deserialize(C.serialize(s), 0); assert.deepEqual(back.tubes, s.tubes); assert.equal(back.racks, 2); assert.equal(back.reagent, 2); assert.equal(back.peaksRun, 3); assert.equal(back.labEarned, 55);
+  const raw = JSON.parse(C.serialize(s)); raw.tubes = [{ t: 'x', age: -4, r: 99 }, null, 7]; raw.racks = 1e9; raw.reagent = -3;
+  const fixed = C.deserialize(JSON.stringify(raw), 0); assert.equal(fixed.racks, C.TUBE_MAX - C.TUBE_BASE); assert.equal(fixed.reagent, 0); assert.deepEqual(fixed.tubes[0], { t: 0, age: 0, r: 1.5 }); assert.equal(C.tubesOf(fixed).length, C.TUBE_MAX);
+  // 3.9.0 이전 저장: 없앤 현미경에 쓴 물자만큼 시약 등급과 시험관을 사 준다. 내민 과제는 둘로 줄인다
+  const old = JSON.parse(C.serialize(inLab())); delete old.labV; delete old.tubes; old.staff = 30; old.upgrades.scope = 12; old.offers = ['drill', 'serum', 'drop']; old.supplies = 9;
+  const m = C.deserialize(JSON.stringify(old), 0); assert.ok(m.reagent >= 1, 'reagent ' + m.reagent); assert.ok(m.racks >= 1); assert.equal(m.upgrades.scope, undefined); assert.equal(m.supplies, 9); assert.equal(m.offers.length, 2); assert.equal(m.staff, 30);
+  assert.deepEqual([C.deserialize(C.serialize(m), 0).reagent, C.deserialize(C.serialize(m), 0).racks], [m.reagent, m.racks], '한 번 옮긴 저장은 다시 옮기지 않는다');
+  // 자리 비움: 조교가 거둔 것으로 친다
+  const away = onBench(4); away.defenses.rail = 1e5; const rate = C.labRate(away), pr = C.researchRate(away), sup = away.supplies, pts = away.points; const rep = C.applyOffline(away, 1000);
+  assert.ok(away.supplies - sup >= rate * 1000 * C.OFFLINE_RATE * 0.999); near(away.points - pts, pr * 1000 * C.OFFLINE_RATE); near(rep.points, pr * 1000 * C.OFFLINE_RATE);
+  // 목표
+  assert.equal(C.goals(s, 4)[2].text, '절정에서 20번 거두기');
+  // 철수하면 실험대는 처음부터
+  away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(next.racks, 0); assert.equal(next.reagent, 0); assert.equal(next.peaksRun, 0); assert.equal(next.staff, 0);
 });

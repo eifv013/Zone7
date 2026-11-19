@@ -1427,8 +1427,25 @@
       });
       rows.offers.push({ btn: b, name: name, desc: desc, cost: cost }); $('lab-offers').appendChild(b);
     })(k);
-    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '연구 점수와 약품을 만든다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff)), 'staff'); });
+    rows.staff = buildRow({ id: 'staff', name: '연구원', desc: '약품과 연구 점수를 만든다. 10·25·50명마다 2배' }, function () { buy(C.buyStaff(state, qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff)), 'staff'); });
     $('rows-z4').appendChild(rows.staff.btn);
+    // 3.9.2 5구역 줄: 연구원(값) · 시험관(개수) · 시약 등급(거두는 약품 2배)
+    rows.rack = buildRow({ id: 'rack', name: '시험관', desc: '실험대에 시험관을 하나 더 놓는다' }, function () { buy(C.buyRack(state), 'staff'); });
+    rows.reagent = buildRow({ id: 'reagent', name: '시약 등급', desc: '거두는 약품이 2배가 된다' }, function () { buy(C.buyReagent(state), 'staff'); });
+    $('rows-z4').appendChild(rows.rack.btn); $('rows-z4').appendChild(rows.reagent.btn);
+    // 시험관 칸: 가장 많을 때의 수만큼 만들어 두고, 가진 수만 보인다. 누르면 거둔다
+    for (var tk = 0; tk < C.TUBE_MAX; tk++) (function (slot) {
+      var tb = el('button', 'tube'), cv = document.createElement('canvas'), sm = el('small');
+      tb.type = 'button'; cv.width = 16; cv.height = 30; tb.appendChild(cv); tb.appendChild(sm); tb._cv = cv; tb._sm = sm;
+      tb.addEventListener('click', function () {
+        var r = C.harvestTube(state, slot);
+        if (!r.ok) return;
+        tubeFx[slot] = r.peak ? 'peak' : r.burnt ? 'burnt' : 'pop';
+        if (r.gain > 0) popNumber('+' + fmt(r.gain));
+        sfx(r.peak ? 'signal' : r.burnt ? 'click' : 'buy'); buzz(r.peak ? 25 : 10); Store.save(); render();
+      });
+      $('tubes').appendChild(tb);
+    })(tk);
     // 6구역: 초소
     rows.post = buildRow({ id: 'post', name: '초소', desc: '다리를 건너오는 사람들에게서 통행 물자를 받는다. 10·25·50곳마다 2배' }, function () { buy(C.buyPost(state, qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts)), 'defense'); });
     $('rows-z5').appendChild(rows.post.btn);
@@ -2300,6 +2317,29 @@
    */
   var boardFx = {}, boardSeen = null;
   /*
+   * 5구역 시험관 그림(3.9.2). 칸 하나에 16×30 도트: 유리관, 단계에 따라 차오르고 색이 변하는 약, 아래의 불꽃.
+   *   1 붉음 → 2 주홍 → 3 주황 → 4 노랑 → 5 금빛(절정, 반짝임) → 6 탔다(검은 찌꺼기와 연기, 불은 꺼져 있다).
+   */
+  var tubeFx = {}, TUBE_COL = ['#3a3d47', '#b8402e', '#d8663a', '#e0903c', '#e8c44a', '#ffd95a', '#3a3a36'], TUBE_DARK = ['#2a2c34', '#7a2a1e', '#96422a', '#a0642a', '#a88a2e', '#c89a2a', '#1f1f1c'];
+  function drawTube(cv, stage, tube) {
+    var g = cv.getContext('2d'), now = Date.now(), grow = C.TUBE_STAGE_SECONDS * 4;
+    g.clearRect(0, 0, 16, 30);
+    var frac = stage === 0 ? 0 : Math.min(1, (tube.t || 0) / grow), h = stage === 0 ? 0 : 4 + Math.round(frac * 12), top = 21 - h;
+    px(g, 4, 1, 8, 1, '#cfd6e0'); px(g, 3, 2, 1, 1, '#cfd6e0'); px(g, 12, 2, 1, 1, '#cfd6e0');      // 주둥이
+    px(g, 4, 2, 1, 19, '#9aa3b2'); px(g, 11, 2, 1, 19, '#9aa3b2'); px(g, 5, 21, 6, 1, '#9aa3b2');      // 유리벽과 바닥
+    px(g, 5, 2, 6, 19, 'rgba(160,180,210,.10)');
+    if (h > 0) {
+      px(g, 5, top, 6, h, TUBE_COL[stage]); px(g, 9, top, 2, h, TUBE_DARK[stage]); px(g, 5, top, 6, 1, stage === 6 ? '#4a4a44' : '#fff2c0');
+      if (stage >= 1 && stage <= 5) { var bub = Math.floor(now / (stage === 5 ? 120 : 260) + (tube.r || 1) * 7) % 5; px(g, 6 + bub % 3, top + 2 + (bub * 3) % Math.max(1, h - 3), 1, 1, '#fff2c0'); }      // 끓는 방울
+      if (stage === 5 && Math.floor(now / 160) % 2) { px(g, 2, top - 2, 1, 1, '#fff2c0'); px(g, 13, top + 3, 1, 1, '#fff2c0'); px(g, 7, top - 4, 1, 1, '#ffd95a'); }      // 절정의 반짝임
+      if (stage === 6) { var sm = Math.floor(now / 200) % 3; px(g, 6 + sm, top - 3 - sm, 2, 1, '#6a6a64'); px(g, 8 - sm, top - 6 - sm, 2, 1, '#4a4a44'); }      // 연기
+    }
+    px(g, 6, 3, 1, 12, 'rgba(255,255,255,.25)');      // 유리의 빛
+    px(g, 1, 23, 14, 1, '#6b4a3a'); px(g, 2, 24, 1, 5, '#4a3428'); px(g, 13, 24, 1, 5, '#4a3428');      // 받침대
+    if (stage >= 1 && stage <= 5) { var fl = Math.floor(now / 110) % 2; px(g, 6, 26 - fl, 4, 3 + fl, '#e0703c'); px(g, 7, 27 - fl, 2, 2 + fl, '#ffd95a'); px(g, 7 + fl, 24, 1, 1, '#e0703c'); }      // 불꽃
+    else px(g, 6, 28, 4, 1, '#3a3a36');
+  }
+  /*
    * 3.3.1 합치기 판의 도트 그림. 칸 하나는 32×27 도트: 어두운 바닥 + 품목 그림(14×14).
    *   왜: 색 네모에 글자만 적힌 판은 "보는 재미"가 없었다. 품목이 눈으로 구분되고, 합칠수록 물건이 그럴듯해져야 한다.
    *   품목 그림은 BOX_ART[단계 - 1](g, x, y) 가 그린다. 아홉 가지를 돌려 쓰고, 한 바퀴 돌 때마다 모서리에 별이 하나 붙는다(이름의 ★과 같다).
@@ -2401,11 +2441,6 @@
         log(def.id === 'guard' ? '초소를 한 바퀴 돈다. ' + r.seconds + '초 동안 통행 물자가 ' + C.PUSH_MULT + '배다.' : '마이크를 잡았다. ' + r.seconds + '초 동안 생존자가 ' + C.PUSH_MULT + '배로 모인다.', 'good');
         sfx('signal'); buzz(25); Store.save(); render();
       });
-    });
-    $('lab-focus').addEventListener('click', function () {
-      var r = C.focusLab(state);
-      if (!r.ok) return;
-      log('밤샘 연구를 시작했다. ' + r.seconds + '초 동안 연구가 ' + C.FOCUS_MULT + '배로 빨라진다.', 'good'); sfx('staff'); buzz(25); Store.save(); render();
     });
   }
   /*
@@ -2790,7 +2825,7 @@
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
       $('auto-ev').checked = C.autoEvents(state, aeZone);
-      setText($('auto-ev-text'), ['', '단골 주문 자동', '조립공 · 의뢰 넘기기', '역무원 · 표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
+      setText($('auto-ev-text'), ['', '단골 주문 자동', '조립공 · 의뢰 넘기기', '역무원 · 표류·특별 화물 자동', '연구 조교', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
     }
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-now').hidden = tab !== 'wall';
@@ -3053,6 +3088,7 @@
         : ti.rush ? (ti.horn > 0 ? '경적으로 돌진을 끊으세요' : '경적이 없어요 · 바로 보내세요')
         : ti.full ? '보내야 다음 열차가 와요'
         : (state.trainsSent || 0) < 5 ? '그림을 누르면 칸이 빨리 붙어요 · 무리가 닿기 전에 보내세요'      // 3.8.4: 누르는 법은 처음 몇 대만. 횟수 기록은 목표와 업적에 있어서 뺐다
+        : ti.hand && !ti.rushed ? '칸을 당긴 열차에는 무리가 돌진할 수 있어요 · 경적으로 끊어요'      // 3.9.2: 돌진이 언제 오고 어떻게 막는지 그 자리에서 알려 준다
         : ti.cars >= 1 ? '한 칸 더 붙으면 ×' + nextMult.toFixed(2) : '');
       $('platform').setAttribute('data-pulls', state.pullsRun || 0); $('platform').setAttribute('data-sent', state.trainsSent || 0);      // 화면 테스트가 읽는다
       drawPlatform(ti);
@@ -3107,37 +3143,51 @@
       rows.post.btn.disabled = !(pcost <= state.supplies); afford(rows.post.cost, pcost);
     }
     if (tab === 'z4' && open) {
-      var pc = C.projectCost(state), rc = C.rerollCost(state), rate = C.researchNow(state);
-      setText($('lab-points'), fmt(state.points));
-      $('lab-rate').classList.toggle('boosted', state.focusLeft > 0 && rate > 0);      // 3.0.0: 밤샘 연구 중에도 노란 딱지(6 · 7구역과 같게)
-      setText($('lab-rate'), rate > 0 ? '초당 +' + fmt(rate) + (state.focusLeft > 0 ? ' · 밤샘 중 ×' + C.FOCUS_MULT : '') + (state.points < pc ? ' · 다음 과제까지 ' + clock((pc - state.points) / rate) : ' · 과제를 고를 수 있어요') : '연구원을 뽑으면 점수가 모여요');
+      /* 3.9.2 5구역 혈청 달이기. 차림은 1구역과 같다: 머리줄(왼쪽 숫자 · 오른쪽 자동 안내) → 누르는 칸 → 카드(갈림길) → 기록 한 줄 */
+      var pc = C.projectCost(state), rate = C.researchRate(state), autoL = C.autoOn(state, 4), autoLOn = autoL && C.autoEvents(state, 4), tubeList = C.tubesOf(state), nT = tubeList.length, tb = $('tubes');
+      setText($('lab-points'), '연구 점수 ' + fmt(Math.floor(state.points)));
+      setText($('lab-rate'), !(state.staff > 0) ? '연구원을 뽑으면 불이 붙어요' : !autoL ? '개조에서 연구 조교를 사요' : autoLOn ? '연구 조교 · ' + C.TUBE_AUTO_STAGE + '단계에서 거둬요' : '연구 조교가 쉬고 있어요');
+      tb.style.setProperty('--n', nT <= 6 ? nT : Math.ceil(nT / 2));      // 일곱 개부터는 두 줄로 고르게 나눈다
+      for (var ti5 = 0; ti5 < tb.children.length; ti5++) {
+        var tbn = tb.children[ti5], on5 = ti5 < nT;
+        if (tbn.hidden !== !on5) tbn.hidden = !on5;
+        if (!on5) continue;
+        var tu = tubeList[ti5], st5 = state.staff > 0 ? C.tubeStage(state, tu) : 0, y5 = C.tubeYield(state, ti5), cls5 = 'tube' + (st5 === 5 ? ' peak' : st5 === 6 ? ' burnt' : '') + (tubeFx[ti5] ? ' mb-pop' : '');
+        if (tbn.className !== cls5) tbn.className = cls5;
+        drawTube(tbn._cv, st5, tu);
+        setText(tbn._sm, st5 === 0 ? '' : st5 === 5 ? '절정' : st5 === 6 ? '탔어요' : '+' + fmt(y5.gain));
+        tbn.disabled = !(state.staff > 0);
+      }
+      tubeFx = {};
+      setText($('lab-note'), state.staff > 0 && (state.harvestsRun || 0) < 5 ? '시험관을 누르면 거둬요 · 금빛(절정)일 때가 가장 많아요' : '');
+      // 갈림길: 연구 점수가 차면 둘 가운데 하나를 고른다
+      setText($('fork-cost'), fmt(Math.floor(state.points)) + ' / ' + fmt(pc));
+      fill($('fork-bar'), pc > 0 ? state.points / pc : 0);
+      $('fork').classList.toggle('ready', state.points >= pc);
+      setText($('fork-title'), '갈림길 ' + (state.projectsDone + 1) + '번째' + (state.points >= pc ? ' · 하나를 고르세요' : ''));
       rows.offers.forEach(function (o, i) {
         var def = null, id = state.offers[i];
         C.PROJECTS.forEach(function (p) { if (p.id === id) def = p; });
         o.btn.hidden = !def;
         if (!def) return;
         var lv = state.research[def.id];
-        setText(o.name, def.name + (lv ? ' · ' + lv + '번 끝냄' : ''));
+        setText(o.name, def.name + (lv ? ' ' + (lv + 1) : ''));
         setText(o.desc, def.desc);
-        setText(o.cost, '점수 ' + fmt(pc));
+        setText(o.cost, '');
         o.btn.disabled = !(pc <= state.points);
       });
-      // 밤샘 연구: 전력 투입·청신호와 같은 틀(누르면 잠깐 빨라지고, 쉬는 시간이 있다)
-      var fb = $('lab-focus'), fOn = state.focusLeft > 0;
-      fb.disabled = fOn || state.focusCool > 0 || !(C.researchRate(state) > 0);
-      fb.className = 'surge' + (fOn ? ' on' : '');
-      setText(fb, fOn ? '밤샘 연구 중 ' + Math.ceil(state.focusLeft) + '초' : state.focusCool > 0 ? '다음 밤샘 ' + clock(state.focusCool) : '밤샘 연구 ×' + C.FOCUS_MULT);
-      fill(fb, fOn ? state.focusLeft / C.FOCUS_SECONDS : state.focusCool > 0 ? 1 - state.focusCool / C.FOCUS_COOL : 0);
-      var rr = $('lab-reroll');
-      rr.disabled = !(rc <= state.points) || !state.offers.length;
-      setText(rr, '다른 과제 보기 · 점수 ' + fmt(rc));
-      var doneList = C.PROJECTS.filter(function (p) { return state.research[p.id] > 0 && p.key !== 'drop'; }).map(function (p) { return p.name + ' ' + state.research[p.id]; });
-      setText($('lab-record'), '서류 ' + C.recordCount(state) + ' / ' + C.RECORDS.length + ' · 이번 회차 ' + state.recordsRun + '장 · 연구 속도 +' + Math.round((C.recordMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.RECORD_BONUS_MAX * 100) + '%)');
-      setText($('lab-done'), '끝낸 과제 ' + state.projectsDone + '개' + (doneList.length ? ' · ' + doneList.join(', ') : '') + ' · 과제를 끝낼수록 다음 과제가 비싸져요');
+      setText($('lab-record'), '서류 ' + C.recordCount(state) + ' / ' + C.RECORDS.length + ' · 연구 속도 +' + Math.round((C.recordMult(state) - 1) * 100) + '%');
+      $('lab').setAttribute('data-harvests', state.harvestsRun || 0); $('lab').setAttribute('data-peaks', state.peaksRun || 0); $('lab').setAttribute('data-forks', state.projectsDone || 0);      // 화면 테스트가 읽는다
+      // 줄: 시험관 · 시약 등급
+      var rkc = C.rackCost(state), rgc = C.reagentCost(state), rgl = state.reagent || 0;
+      setText(rows.rack.count, nT + ' / ' + C.TUBE_MAX); setText(rows.rack.info, isFinite(rkc) ? nT + '개 → ' + (nT + 1) + '개' : nT + '개');
+      setText(rows.rack.cost, isFinite(rkc) ? '×1 ' + fmt(rkc) : '최대'); rows.rack.btn.disabled = !(rkc <= state.supplies); afford(rows.rack.cost, rkc); rows.rack.btn.classList.toggle('row-max', !isFinite(rkc));
+      setText(rows.reagent.count, 'Lv ' + rgl + ' / ' + C.REAGENT_MAX); setText(rows.reagent.info, '×' + fmt(Math.pow(C.REAGENT_STEP, rgl)) + (isFinite(rgc) ? ' → ×' + fmt(Math.pow(C.REAGENT_STEP, rgl + 1)) : ''));
+      setText(rows.reagent.cost, isFinite(rgc) ? '×1 ' + fmt(rgc) : '최대'); rows.reagent.btn.disabled = !(rgc <= state.supplies); afford(rows.reagent.cost, rgc); rows.reagent.btn.classList.toggle('row-max', !isFinite(rgc));
       var sq = qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff), scost = C.staffCost(state, sq);
       setText(rows.staff.count, state.staff + ' / ' + C.COUNT_MAX);
       setMile(rows.staff, state.staff, sq, scost <= state.supplies);
-      setText(rows.staff.info, '초당 점수 ' + fmt(rate) + ' · 약품 +' + fmt(C.labRate(state)));      // 1.5.9: 연구원은 약품(물자)도 만든다
+      setText(rows.staff.info, '약품 초당 ' + fmt(C.labRate(state)) + ' · 점수 초당 ' + fmt(rate));      // 1.5.9: 연구원은 약품(물자)도 만든다
       setText(rows.staff.cost, isFinite(scost) ? '×' + sq + ' ' + fmt(scost) : '최대');
       rows.staff.btn.disabled = !(scost <= state.supplies); afford(rows.staff.cost, scost);
     }
@@ -3652,11 +3702,6 @@
       if (r.soon) log(r.zone.no + '구역 ' + r.zone.name + '의 문 앞에 닿았다. 문은 아직 열리지 않는다.', 'good');
       else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; pane = 'play';      /* 2.8.9: 새 구역은 운영 화면부터. 목표 화면에서 넘어가면 새 구역의 목표 화면에 그대로 서 있었다 */ moveFx(r.zone.no + '구역', r.zone.name, 1, r.index - 1, r.index); }
       sfx('relocate'); Store.save(); Cloud.flush(); render();
-    });
-    // 5구역: 점수를 조금 내고 과제 셋을 다시 뽑는다.
-    $('lab-reroll').addEventListener('click', function () {
-      if (!C.rerollOffers(state).ok) return;
-      sfx('buy'); render();
     });
     // 4구역: 청신호. 이 신호로 도착한 열차가 있으면 평소의 도착 알림을 그대로 낸다.
     // 3.8.0: 승강장 그림을 누르면 다음 칸이 빨리 붙는다(손이 쉬지 않게). 누른 자리에 불꽃이 튄다

@@ -362,25 +362,46 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다(6구역 상황)')
     elif mode == 'lab':
-        # 5구역: 과제 셋이 보이고 → 하나를 끝내면 점수가 줄고 셋이 새로 나오고 → 다음 과제가 비싸지고 → 연구원을 뽑으면 점수가 모인다
+        # 5구역(3.9.2 혈청 달이기): 갈림길 둘 → 하나를 고른다 → 연구원을 뽑으면 시험관이 달여진다 → 눌러 거둔다(손가락으로도) → 절정을 잡는다 → 줄을 산다
         tap('[data-mview-set=manage]'); tap('[data-tab=z4]')
-        if not page.locator('#lab').is_visible(): problems.append('5구역 탭에 연구 칸이 없다')
-        if page.locator('.lab-offer:visible').count() != 3: problems.append('과제가 셋이 아니다: %d' % page.locator('.lab-offer:visible').count())
-        if '토양 분석' not in text('offer-0') or '점수 60' not in text('offer-0'): problems.append('첫 과제 표시가 이상하다: ' + text('offer-0'))
+        if not page.locator('#lab').is_visible(): problems.append('5구역 탭에 실험대가 없다')
+        if page.locator('.lab-offer:visible').count() != 2: problems.append('갈림길이 둘이 아니다: %d' % page.locator('.lab-offer:visible').count())
         if '연구원을 뽑으면' not in text('lab-rate'): problems.append('연구원이 없을 때의 안내가 없다: ' + text('lab-rate'))
-        if not tap('#offer-0'): problems.append('과제를 고를 수 없다')
-        if text('lab-points') != '40': problems.append('과제를 끝냈는데 점수가 40이 아니다: ' + text('lab-points'))
-        if '끝낸 과제 1개' not in text('lab-done') or '토양 분석 1' not in text('lab-done'): problems.append('끝낸 과제 표시가 없다: ' + text('lab-done'))
-        if '점수 108' not in text('offer-0'): problems.append('다음 과제 값이 오르지 않았다: ' + text('offer-0'))
-        if not page.is_disabled('#offer-0'): problems.append('점수가 모자란데 과제 단추가 켜져 있다')
-        if not tap('#lab-reroll'): problems.append('다른 과제 보기를 누를 수 없다')
-        if text('lab-points') != '13': problems.append('다시 뽑은 뒤 점수가 13이 아니다: ' + text('lab-points'))
+        if page.locator('#tubes .tube:visible').count() != 4: problems.append('시험관이 넷이 아니다: %d' % page.locator('#tubes .tube:visible').count())
+        for old in ['#lab-reroll', '#lab-focus', '#row-scope', '#lab-done']:
+            if page.locator(old).count(): problems.append('옛 단추나 개조가 남아 있다: ' + old)
+        for up in ['#row-cooler', '#row-sterile', '#row-autolab', '#row-rack', '#row-reagent']:
+            if not page.locator(up).count(): problems.append('새 줄이나 개조가 없다: ' + up)
+        if not tap('#offer-0'): problems.append('갈림길을 고를 수 없다')
+        if page.get_attribute('#lab', 'data-forks') != '1': problems.append('갈림길을 골랐는데 횟수가 안 오른다')
+        if not page.is_disabled('#offer-0'): problems.append('점수가 모자란데 갈림길 단추가 켜져 있다')
         if not tap('#row-staff'): problems.append('연구원을 뽑을 수 없다')
-        tap('[data-qty="10"]'); tap('#row-staff'); tap('[data-qty="1"]'); tap('#row-scope')
-        if '초당 +' not in text('lab-rate'): problems.append('연구원을 뽑았는데 점수 속도가 없다: ' + text('lab-rate'))
+        tap('[data-qty="10"]'); tap('#row-staff'); tap('[data-qty="1"]')
+        if page.is_disabled('#tubes .tube'): problems.append('연구원을 뽑았는데 시험관을 누를 수 없다')
         if not fits(): problems.append('한 화면에 들어오지 않는다(5구역)')
-        page.wait_for_timeout(4000)
-        if text('lab-points') == '13': problems.append('연구원이 있는데 점수가 모이지 않는다')
+        page.wait_for_timeout(3000)
+        small = page.evaluate("[...document.querySelectorAll('#tubes .tube')].filter(b => !b.hidden).map(b => { const r = b.getBoundingClientRect(), c = b.querySelector('canvas').getBoundingClientRect(); return [Math.round(r.width), Math.round(c.height), getComputedStyle(b).opacity]; })")
+        if any(w < 30 or h < 30 or float(o) < 0.9 for w, h, o in small): problems.append('시험관이 너무 작거나 흐리다: %s' % small)
+        pts0 = text('lab-points')
+        # 손가락으로 빠르게 두 번(다른 시험관): 둘 다 거둬져야 한다
+        page.evaluate("""() => new Promise((done) => { const bs = [...document.querySelectorAll('#tubes .tube')].slice(0, 2); let k = 0;
+          const one = () => { const el = bs[k], r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+            const mk = (type) => { const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y }); el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [t], changedTouches: [t] })); };
+            mk('touchstart'); mk('touchend'); el.click(); if (++k < 2) setTimeout(one, 70); else done(); };
+          one(); })""")
+        page.wait_for_timeout(300)
+        if int(page.get_attribute('#lab', 'data-harvests') or 0) < 2: problems.append('시험관 둘을 눌렀는데 %s번만 거둬졌다' % page.get_attribute('#lab', 'data-harvests'))
+        if text('lab-points') == pts0: problems.append('거뒀는데 연구 점수가 그대로다: ' + pts0)
+        got_peak = False
+        for _ in range(140):
+            if page.locator('#tubes .tube.peak').count(): page.locator('#tubes .tube.peak').first.click(); got_peak = True; break
+            page.wait_for_timeout(200)
+        page.wait_for_timeout(200)
+        if not got_peak or int(page.get_attribute('#lab', 'data-peaks') or 0) < 1: problems.append('절정을 잡지 못했다(절정 표시 %s, 횟수 %s)' % (got_peak, page.get_attribute('#lab', 'data-peaks')))
+        if not tap('#row-rack'): problems.append('시험관을 살 수 없다')
+        if page.locator('#tubes .tube:visible').count() != 5: problems.append('시험관을 샀는데 다섯이 아니다: %d' % page.locator('#tubes .tube:visible').count())
+        rg0 = text('row-reagent')
+        if not tap('#row-reagent') or text('row-reagent') == rg0 or '×2 →' not in text('row-reagent'): problems.append('시약 등급을 샀는데 그대로다: ' + text('row-reagent'))
         tap('[data-tab=z5]')
         if '아직 열지 않은' not in text('soon'): problems.append('아직 열지 않은 6구역 탭에 안내가 없다: ' + text('soon'))
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=radio]'); tap('[data-mview-set=base]')

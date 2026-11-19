@@ -60,7 +60,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (!IDLE && s.zone === 3) { for (let k = 0; k < Math.round((taps || 0) * dt); k++) C.pullCar(s); let ti = C.trainInfo(s); if (ti.running && ti.rush && ti.horn > 0) { C.blowHorn(s); ti = C.trainInfo(s); } if (ti.running && ti.cars >= 1 && (ti.full || ti.near < 0.36 || ti.rush)) C.sendTrain(s); }      // 3.4.0: 4구역에 있는 동안은 무리가 닿기 직전에 손으로 보낸다      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
     // 4·6·7구역 사건: 배수를 먼저 다 쌓고, 그 뒤로는 바로 받는다. 5구역 밤샘 연구는 되는 대로 누른다
     if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
-    if (!IDLE) { if (s.zone >= 4 && !(s.focusCool > 0)) C.focusLab(s); if (s.zone >= 5) C.pushZone(s, 'guard'); if (s.zone >= 6) C.pushZone(s, 'tower'); }
+    if (!IDLE) { if (s.zone >= 4) { let left5 = Math.max(1, Math.round((taps || 1) * dt)); const tb5 = C.tubesOf(s); for (let i5 = 0; i5 < tb5.length && left5 > 0; i5++) { const st5 = C.tubeStage(s, tb5[i5]); if (st5 >= 5) { C.harvestTube(s, i5, rng); left5--; } } } if (s.zone >= 5) C.pushZone(s, 'guard'); if (s.zone >= 6) C.pushZone(s, 'tower'); }
     if (!IDLE) { if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s); }
     // 7구역 정착지와 주파수(3.1.0): 지을 수 있는 건물은 짓되 혈청 줄(가운데)을 먼저. 주파수는 바늘이 띠 안에 있을 때만 누른다
     if (s.zone >= 6) {
@@ -95,7 +95,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       z2a: () => C.buyStall(s, 1), z2a2: cheapestHand, z2c2: () => cheapestUp(1),
       z3a: () => C.buyMachine(s, 'forge', 1), z3b2: () => C.buyMachine(s, 'paint', 1), z3a2: () => cheapestUp(2), z3b: () => ({ ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
       z4a: () => C.buyTrain(s, 1), z4b: () => (s.upgrades.longplat ? { ok: false } : C.buyUpgrade(s, 'longplat')), z4a2: () => C.buyRoute(s, 'grade'), z4c2: () => cheapestUp(3),
-      z5a: () => C.buyStaff(s, 1), z5a2: () => cheapestUp(4),
+      z5a: () => C.buyStaff(s, 1), z5a2: () => cheapestUp(4), z5c2: () => C.buyRack(s),
       z6a: () => C.buyPost(s, 1), z6a2: cheapestDef, z6b: () => cheapestUp(5), z6b2: () => C.buyUpgrade(s, 'booth'),
       z7a: () => C.buyAntenna(s, 1)
     };
@@ -120,7 +120,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
         consider(C.trainCost(s, 1), C.railRate(t) - rate, () => C.buyTrain(s, 1));
         for (const r of C.ROUTES) { const q = probe(); q.routes[r.id]++; consider(C.routeCost(s, r.id), r.id === 'crew' ? rate * 0.03 : C.railRate(q) - rate, () => C.buyRoute(s, r.id)); }
       }
-      if (s.zone >= 4) { const q = Object.create(s); q.staff = s.staff + 1; consider(C.staffCost(s, 1), Math.max(C.labRate(q) - C.labRate(s), per * 0.03), () => C.buyStaff(s, 1)); }      // 5구역: 연구원은 약품도 만든다
+      if (s.zone >= 4) { const q = Object.create(s); q.staff = s.staff + 1; consider(C.staffCost(s, 1), Math.max(C.labRate(q) - C.labRate(s), per * 0.03), () => C.buyStaff(s, 1)); consider(C.rackCost(s), C.labRate(s) / C.tubeCount(s), () => C.buyRack(s)); consider(C.reagentCost(s), C.labRate(s), () => C.buyReagent(s)); }      // 5구역: 연구원은 약품도 만든다
       if (s.zone >= 5) { const q = Object.create(s); q.posts = s.posts + 1; consider(C.postCost(s, 1), Math.max(C.guardRate(q) - C.guardRate(s), per * 0.01), () => C.buyPost(s, 1)); }      // 6구역: 초소
       if (s.zone >= 6) { const q = Object.create(s); q.antennas = s.antennas + 1; consider(C.antennaCost(s, 1), Math.max(per * 0.05, per * (C.survivorRate(q) - C.survivorRate(s)) / Math.max(1, C.survivorRate(s)) * 0.2), () => C.buyAntenna(s, 1)); }      // 7구역: 안테나(생존자가 전체 배수를 올린다)   // 5구역: 연구원은 물자를 직접 벌지 않으므로 어림값으로 따진다
       for (const u of C.UPGRADES) { if (C.challengeOn(s, 'frugal') || (C.challengeOn(s, 'hands') && C.AUTO_KEYS.indexOf(u.key) >= 0)) continue; const c = C.upgradeCost(s, u.id); if (isFinite(c)) consider(c, per * (u.key === 'click' || u.key === 'loot' ? 0.02 : u.key === 'cap' || u.key === 'broker' || u.key === 'slack' || u.key === 'trip' || u.key === 'traincost' || u.key === 'routecost' || u.key === 'staffcost' || u.key === 'labcost' ? 0.03 : u.key === 'lab' ? 0.06 : 0.12), () => C.buyUpgrade(s, u.id)); }

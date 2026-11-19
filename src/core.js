@@ -95,7 +95,7 @@
   var STAFF_GROWTH = 1.25;         // 연구원을 한 명 더 뽑을 때마다 값이 오르는 배수
   var PROJECT_BASE = 60;           // 첫 연구 과제에 드는 연구 점수
   var PROJECT_GROWTH = 1.8;        // 과제를 하나 끝낼 때마다 다음 과제의 점수가 오르는 배수
-  var OFFER_COUNT = 3;             // 한 번에 내미는 과제 수
+  var OFFER_COUNT = 2;             // 한 번에 내미는 과제 수(3.9.0: 갈림길. 둘 가운데 하나)
   var REROLL_SHARE = 0.25;         // 과제를 다시 뽑는 데 드는 점수: 지금 과제 값의 이 비율
   var SUPPLY_DROP_SECONDS = 600;   // '보급 요청' 과제가 주는 물자: 생산 이만큼의 초치
   // 동물 친구
@@ -444,12 +444,13 @@
     { id: 'fence',   zone: 3, name: '철조망',    desc: '무리가 다가오는 걸음 -8%', key: 'hordespeed', per: -0.08, baseCost: 2e18, growth: 4, max: 5 },
     { id: 'horn',    zone: 3, name: '경적',      desc: '열차마다 경적을 한 번 더 울릴 수 있다(돌진을 끊는다)', key: 'horn', per: 1, baseCost: 8e18, growth: 300, max: 2 },
     { id: 'coupler', zone: 3, name: '튼튼한 연결기', desc: '무리에 닿아도 뒤쪽 3분의 1만 떼인다', key: 'keepmore', per: 1, baseCost: 5e20, growth: 1, max: 1 },
-    { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e23, growth: 2.4, max: 40 },
-    { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
+    { id: 'cooler',  zone: 4, name: '냉각기',    desc: '절정이 1초 더 오래간다',   key: 'peak',    per: 1,    baseCost: 3e23, growth: 30, max: 3 },
+    { id: 'sterile', zone: 4, name: '살균기',    desc: '타 버린 관에서 15%p 더 건진다', key: 'sterile', per: 0.15, baseCost: 2e23, growth: 20, max: 3 },
+    { id: 'notes',   zone: 4, name: '연구 노트', desc: '갈림길에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
     { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 1.5e27, growth: 2.4, max: 40 },
     { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 5e27, growth: 6,   max: 4 },
     { id: 'amp',     zone: 6, name: '증폭기',    desc: '생존자가 모이는 속도 +25%', key: 'z7',    per: 0.25, baseCost: 1.5e30, growth: 2.4, max: 40 },
-    { id: 'dorm',    zone: 4, name: '기숙사',    desc: '연구원 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e23, growth: 3, max: 12 },
+    { id: 'dorm',    zone: 4, name: '기숙사',    desc: '5구역 시설 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e23, growth: 3, max: 12 },
     // 구역 사이 콘텐츠가 더 자주 나오게 하는 개조(1.3.1). 1구역의 '소문'(은닉처 확률)과 같은 자리다.
     //   간격을 줄이는 셋은 곱으로 쌓이고 절반 아래로는 줄지 않는다. 확률을 올리는 둘은 %p 를 더한다(서류 35→60%, 통행인 50→80%).
     { id: 'flyer',    zone: 1, name: '전단지',     desc: '단골 주문이 오는 간격 -8%',  key: 'ordergap',    per: -0.08, baseCost: 4e5,  growth: 4, max: 6 },
@@ -466,9 +467,9 @@
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
     { id: 'autoline', zone: 2, name: '조립공', desc: '상자가 차면 가장 많이 쌓인 것을 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
-    { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 보낸다 · 돌진은 못 끊는다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
+    { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
-    { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
+    { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '시험관이 3단계가 되면 알아서 거둔다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
     { id: 'autoguard', zone: 5, name: '초소장',     desc: '순찰을 알아서 돌고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
     { id: 'autotower', zone: 6, name: '송신 기사',  desc: '주파수를 알아서 맞추고, 무전에 알아서 응답한다(절반)', key: 'autotower', per: 1, baseCost: 5e31, growth: 1, max: 1 }
   ];
@@ -531,8 +532,8 @@
       { id: 'z4b', text: '10칸 이상 열차 3번 보내기', need: 3, value: function (s) { return s.longRuns || 0; } },
       { id: 'z4c', text: '화물로 번 물자 누적 10해', need: 1e21, value: function (s) { return s.railEarned; } } ],
     [ { id: 'z5a', text: '연구원 28명', need: 28, value: function (s) { return s.staff; } },
-      { id: 'z5b', text: '연구 과제 10개 끝내기', need: 10, value: function (s) { return s.projectsDone; } },
-      { id: 'z5c', text: '혈청 배양 2번 끝내기', need: 2, value: function (s) { return s.research.serum; } } ],
+      { id: 'z5b', text: '갈림길 10번 고르기', need: 10, value: function (s) { return s.projectsDone; } },
+      { id: 'z5c', text: '절정에서 20번 거두기', need: 20, value: function (s) { return s.peaksRun || 0; } } ],
     [ { id: 'z6a', text: '초소 28곳', need: 28, value: function (s) { return s.posts; } },
       { id: 'z6b', text: '6구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 5); } },
       { id: 'z6c', text: '통행 물자 누적 5,000자', need: 5e27, value: function (s) { return s.guardEarned; } } ],
@@ -576,7 +577,7 @@
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
-      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
+      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, tubes: [], labEarned: 0, peaksRun: 0, burntRun: 0, harvestsRun: 0, labV: 2,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
@@ -717,6 +718,19 @@
     s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
     s.sweepClock = clamp(safeNum(raw.sweepClock, 0), 0, SWEEP_AUTO_SECONDS);
     s.staff = Math.min(s.staff, COUNT_MAX);
+    // 3.9.0 시험관
+    s.racks = clamp(safeCount(raw.racks), 0, TUBE_MAX - TUBE_BASE); s.reagent = clamp(safeCount(raw.reagent), 0, REAGENT_MAX);
+    s.tubes = []; (Array.isArray(raw.tubes) ? raw.tubes : []).slice(0, TUBE_MAX).forEach(function (t) { t = t && typeof t === 'object' ? t : {}; s.tubes.push({ t: clamp(safeNum(t.t, 0), 0, 600), age: clamp(safeNum(t.age, 0), 0, 600), r: clamp(safeNum(t.r, 1), 0.5, 1.5) }); });
+    s.labEarned = clamp(safeNum(raw.labEarned, 0), 0, 1e300); s.peaksRun = clamp(safeCount(raw.peaksRun), 0, 1e12); s.burntRun = clamp(safeCount(raw.burntRun), 0, 1e12); s.harvestsRun = clamp(safeCount(raw.harvestsRun), 0, 1e12);
+    /* 옛 저장(labV 2 미만): 없앤 개조 '현미경'에 쓴 물자만큼 시약 등급과 시험관을 사 준 것으로 한다(시약 먼저, 그보다 훨씬 싼 동안은 시험관도). 내민 과제는 둘로 줄인다 */
+    if (raw.labV !== 2 && s.zone >= 4) {
+      var rup5 = raw.upgrades && typeof raw.upgrades === 'object' ? raw.upgrades : {}, n5 = clamp(safeCount(rup5.scope), 0, 40), bud5 = n5 > 0 ? seriesCost(1e23, 2.4, 0, n5) : 0;
+      for (var g5 = 0; g5 < 40; g5++) {
+        var rc5 = s.racks < TUBE_MAX - TUBE_BASE ? RACK_COST * Math.pow(RACK_GROWTH, s.racks) : Infinity, gc5 = s.reagent < REAGENT_MAX ? REAGENT_COST * Math.pow(REAGENT_GROWTH, s.reagent) : Infinity;
+        if (rc5 <= bud5 && rc5 < gc5 / 3) { s.racks++; bud5 -= rc5; } else if (gc5 <= bud5) { s.reagent++; bud5 -= gc5; } else if (rc5 <= bud5) { s.racks++; bud5 -= rc5; } else break;
+      }
+    }
+    s.labV = 2;
     s.posts = clamp(safeCount(raw.posts), 0, COUNT_MAX); s.guardEarned = Math.max(0, safeNum(raw.guardEarned, 0)); s.safeNights = clamp(safeCount(raw.safeNights), 0, 1e9);
     if (s.zone < 5) { s.posts = 0; }
     s.antennas = s.zone >= 6 ? clamp(safeCount(raw.antennas), 0, COUNT_MAX) : 0; s.survivors = s.zone >= 6 ? clamp(safeNum(raw.survivors, 0), 0, 1e15) : 0;
@@ -792,7 +806,7 @@
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
     // 3.4.0 승강장의 열차. 깨진 값이나 옛 저장은 새 열차로 시작한다
     var rp = raw.plat && typeof raw.plat === 'object' ? raw.plat : {};
-    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9), rush: rp.rush === 1 || rp.rush === -1 ? rp.rush : 0, warn: clamp(safeNum(rp.warn, 0), 0, 5), hand: rp.hand ? 1 : 0 };
+    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9), rush: rp.rush === -1 ? -1 : typeof rp.rush === 'number' && rp.rush > 0 && rp.rush <= 1 ? rp.rush : 0, warn: clamp(safeNum(rp.warn, 0), 0, 5), hand: rp.hand ? 1 : 0 };
     s.pullsRun = clamp(safeCount(raw.pullsRun), 0, 1e12); s.hornsRun = clamp(safeCount(raw.hornsRun), 0, 1e12);
     s.longRuns = clamp(safeCount(raw.longRuns), 0, 1e12); s.hordeHits = clamp(safeCount(raw.hordeHits), 0, 1e12);
     s.trainsSent = clamp(safeCount(raw.trainsSent), 0, 1e12);
@@ -893,8 +907,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { peak: 1, sterile: 1, horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -1797,7 +1811,7 @@
   var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
   var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
   var TEST = { rush: 1 };      // 화면 테스트용 손잡이: 돌진이 오는 확률에 곱한다(0 이면 오지 않는다). 게임에서는 늘 1
-  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.08, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
+  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.08, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_DIST = 0.45, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
   var CAR_MULTS = [0, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.95, 2.25, 2.6, 3];
   function carMult(n) { n = clamp(Math.floor(safeNum(n, 0)), 0, CAR_MAX); return CAR_MULTS[n]; }
@@ -1824,7 +1838,7 @@
   function trainInfo(state) {
     var p = platOf(state), cs = carSeconds(state), max = carMax(state), cars = Math.min(max, Math.floor(p.t / cs + 1e-9));
     return { cars: cars, max: max, full: cars >= max, next: cars >= max ? 0 : cs - (p.t - cars * cs), near: p.pos,
-      mult: carMult(cars), gain: trainGain(state, cars, cars), bank: p.bank, running: railUnits(state) > 0, horn: Math.max(0, hornMax(state) - (p.horn || 0)), rush: p.rush > 0 ? (p.warn > 0 ? 'warn' : 'run') : '', warn: p.rush > 0 ? p.warn || 0 : 0 };
+      mult: carMult(cars), gain: trainGain(state, cars, cars), bank: p.bank, running: railUnits(state) > 0, horn: Math.max(0, hornMax(state) - (p.horn || 0)), hand: !!p.hand, rushed: p.rush === -1, rush: p.rush > 0 ? (p.warn > 0 ? 'warn' : 'run') : '', warn: p.rush > 0 ? p.warn || 0 : 0 };
   }
   /** cars 칸이 붙은 열차를 kept 칸만 달고 보낼 때 받는 물자. */
   function trainGain(state, cars, kept) { var p = platOf(state); return cars >= 1 && kept >= 1 ? p.bank * (kept / cars) * carMult(kept) / CAR_NORM : 0; }
@@ -1899,14 +1913,19 @@
       /* 3.9.1: 돌진은 '손댄 열차'에만 온다(이 열차에서 칸을 한 번이라도 당겼을 때). 돌진은 손으로 경적을 울려야 끊을 수 있는데,
          아무도 보고 있지 않은 열차에 오면 막을 길이 없이 떼이기만 한다. 3.8.9 처럼 빈도를 낮추는 것으로는 그 문제가 그대로 남는다.
          그래서 역무원에게 맡겨 둔 열차는 조용히 다니고, 칸을 당겨 더 긴 열차를 노릴 때에만 돌진의 위험이 따라온다 */
-      if (!p.rush && p.hand && before.cars >= HORDE_RUSH_CARS && roll() < HORDE_SPRINT * TEST.rush * h) { p.rush = 1; p.warn = HORDE_WARN; if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
-      else if (p.rush > 0) { if (p.warn > 0) p.warn = Math.max(0, p.warn - h); else p.pos -= HORDE_RUSH_SPEED * h; }
+      if (!p.rush && p.hand && before.cars >= HORDE_RUSH_CARS && roll() < HORDE_SPRINT * TEST.rush * h) { p.rush = HORDE_RUSH_DIST; p.warn = HORDE_WARN; if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
+      else if (p.rush > 0) {
+        /* 3.9.2: 돌진은 거리의 HORDE_RUSH_DIST(45%)만큼만 달려온다. 3.8.6 에서는 닿을 때까지 달려와서, 무리가 아무리 멀어도 한 번에 끝났다.
+           멀리 있을 때의 돌진은 '확 가까워지는 것'이고, 이미 가까울 때의 돌진만 닿는다 */
+        if (p.warn > 0) p.warn = Math.max(0, p.warn - h);
+        else { var run = Math.min(p.rush, HORDE_RUSH_SPEED * h); p.pos -= run; p.rush -= run; if (!(p.rush > 1e-9)) p.rush = -1; }
+      }
       var info = trainInfo(state);
       /* 3.8.9 역무원과 돌진: 역무원은 돌진을 끊지 못한다. 경고가 도는 동안은 기다리고(그 사이에 손으로 경적을 울릴 수 있다),
          경고가 끝나면 뒤쪽을 떼고 떠난다(무리에 닿은 것과 같다 — 튼튼한 연결기가 여기서 쓸모가 있다).
          3.8.6 에서는 돌진이 오자마자 역무원이 보내 버려 경적을 울릴 틈이 없었고, 떼이는 일이 없어 연결기가 쓸모없었다 */
-      if (auto && p.rush > 0 && !(p.warn > 0) && !info.full) departTrain(state, 'horde', events);
-      else if (auto && info.cars >= 1 && (info.full || (p.pos <= AUTO_NEAR && !(p.rush > 0)))) departTrain(state, 'auto', events);
+      /* 3.9.2: 돌진이 끝까지 오지 않게 되어, 역무원은 다시 평소대로 한다. 다만 경고가 도는 동안은 보내지 않는다(그 사이에 손으로 경적을 울릴 수 있게) */
+      if (auto && info.cars >= 1 && (info.full || (p.pos <= AUTO_NEAR && !(p.rush > 0 && p.warn > 0)))) departTrain(state, 'auto', events);
       else if (p.pos <= 0) departTrain(state, 'horde', events);
     }
     if (rest > 0) { var flat = railRate(state) * rest; earn(state, flat); state.railEarned += flat; }
@@ -1968,7 +1987,83 @@
     state.treats = Math.min(1e9, state.treats + RECORD_TREATS);
     return { id: who.id, name: who.name, first: first };
   }
-  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab * recordMult(state) : 0; }
+  /*
+   * ---------- 3.9.0 5구역을 새로 만들었다: 혈청 달이기 ----------
+   * 왜: 전에는 연구원을 사 두면 점수가 저절로 쌓이고, 쌓이면 과제 셋 중 하나를 골랐다. 그 사이에 손이 할 일이 '밤샘 연구' 단추 하나뿐이었다.
+   *   기준은 "간단하다 · 누르는 재미 · 보는 재미 · 선택의 긴장감", 그리고 "모든 구역에서 손이 쉬지 않는다".
+   * 판:   실험대에 시험관이 tubeCount 개 놓여 있고, 불 위에서 혈청이 달여진다. 시험관마다 익는 빠르기가 달라서 제각각 익는다.
+   *       색이 단계마다 변한다: 1 붉음 → 2 주홍 → 3 주황 → 4 노랑 → 5 금빛(절정). 절정은 peakSeconds 동안이고, 넘기면 타 버린다.
+   * 손:   시험관을 누르면 불을 끄고 거둔다. 그 관이 달여진 시간만큼의 약품(물자)과 연구 점수를 받는데, 단계가 높을수록 곱이 크다(TUBE_MULTS).
+   *       절정에 거두면 2배, 3단계에서 거두면 1배(화면의 '초당'과 같다), 타 버린 관은 닦으면서 조금만 건진다(TUBE_BURNT).
+   *       여러 관이 따로 익어가니 계속 볼 것이 있고, "지금 딸까, 절정까지 기다릴까"를 관마다 고른다.
+   * 갈림길: 연구 점수가 차면 과제 둘 가운데 하나를 고른다(전에는 셋이었고 다시 뽑기가 있었다). 고르면 다음 갈림길이 열린다.
+   * 줄:   연구원(값) · 시험관(개수, 실험대에 바로 놓인다) · 시약 등급(레벨마다 2배).
+   * 개조: 냉각기(절정이 오래간다) · 살균(타도 더 건진다) · 연구 노트 · 기숙사 · 문서고 열쇠 · 연구 조교(자동).
+   * 자동: 연구 조교는 3단계가 되면 거둔다(1배). 절정은 못 잡는다. 가만히 둠 < 조교 < 손.
+   */
+  var TUBE_BASE = 4, TUBE_MAX = 12, TUBE_STAGE_SECONDS = 4, TUBE_PEAK_SECONDS = 4, TUBE_BURNT_SECONDS = 10, TUBE_MULTS = [0, 0.4, 0.7, 1, 1.4, 2], TUBE_BURNT = 0.25, TUBE_AUTO_STAGE = 3, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
+  var RACK_COST = 2e23, RACK_GROWTH = 6, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
+  function tubeCount(state) { return clamp(TUBE_BASE + Math.floor(safeNum(state.racks, 0)), TUBE_BASE, TUBE_MAX); }
+  function peakSeconds(state) { return TUBE_PEAK_SECONDS + mods(state).peak; }
+  function tubesOf(state) {
+    if (!Array.isArray(state.tubes)) state.tubes = [];
+    var n = tubeCount(state);
+    while (state.tubes.length < n) state.tubes.push({ t: 0, age: 0, r: 0.8 + (state.tubes.length * 7 % 5) * 0.1 });      // 처음 놓일 때는 관마다 빠르기를 조금씩 다르게
+    if (state.tubes.length > n) state.tubes.length = n;
+    return state.tubes;
+  }
+  /** 관 하나의 단계: 1~4 익는 중, 5 절정, 6 탔다. */
+  function tubeStage(state, tube) {
+    var t = tube && tube.t >= 0 ? tube.t : 0, grow = TUBE_STAGE_SECONDS * 4;
+    if (t < grow) return 1 + Math.floor(t / TUBE_STAGE_SECONDS);
+    return t < grow + peakSeconds(state) ? 5 : 6;
+  }
+  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab * recordMult(state) * tubeCount(state) / TUBE_BASE : 0; }
+  function rackCost(state) { return zoneOpen(state, 4) && tubeCount(state) < TUBE_MAX ? Math.ceil(RACK_COST * Math.pow(RACK_GROWTH, state.racks || 0) * mods(state).cost * mods(state).staffcost) : Infinity; }
+  function buyRack(state) { if (!zoneOpen(state, 4)) return fail('locked'); return pay(state, rackCost(state), function () { state.racks = (state.racks || 0) + 1; tubesOf(state); }); }
+  function reagentCost(state) { return zoneOpen(state, 4) && (state.reagent || 0) < REAGENT_MAX ? Math.ceil(REAGENT_COST * Math.pow(REAGENT_GROWTH, state.reagent || 0) * mods(state).cost * mods(state).staffcost) : Infinity; }
+  function buyReagent(state) { if (!zoneOpen(state, 4)) return fail('locked'); return pay(state, reagentCost(state), function () { state.reagent = (state.reagent || 0) + 1; }); }
+  /** 관 하나를 지금 거두면 받는 것 { stage, mult, gain 물자, points 연구 점수 }. */
+  function tubeYield(state, i) {
+    var tubes = tubesOf(state), tube = tubes[i];
+    if (!tube) return { stage: 0, mult: 0, gain: 0, points: 0 };
+    var st = tubeStage(state, tube), mult = st === 6 ? TUBE_BURNT + mods(state).sterile : TUBE_MULTS[st], n = tubes.length;
+    return { stage: st, mult: mult, gain: labRate(state) / n * tube.age * mult, points: researchRate(state) / n * tube.age * mult };
+  }
+  function resetTube(tube, rng) { tube.t = 0; tube.age = 0; tube.r = 0.75 + (typeof rng === 'function' ? rng() : Math.random()) * 0.5; }
+  function harvestTube(state, i, rng, auto) {
+    if (!zoneOpen(state, 4)) return fail('locked');
+    if (!(state.staff > 0)) return fail('stopped');
+    i = Math.floor(safeNum(i, -1));
+    var tubes = tubesOf(state), tube = tubes[i];
+    if (!tube) return fail('empty');
+    var y = tubeYield(state, i);
+    if (y.gain > 0) { earn(state, y.gain); state.labEarned = (state.labEarned || 0) + y.gain; }
+    state.points += y.points;
+    if (y.stage === 5) state.peaksRun = (state.peaksRun || 0) + 1;
+    if (y.stage === 6) state.burntRun = (state.burntRun || 0) + 1;
+    if (!auto) state.harvestsRun = (state.harvestsRun || 0) + 1;
+    resetTube(tube, rng);
+    return { ok: true, at: i, stage: y.stage, peak: y.stage === 5, burnt: y.stage === 6, gain: y.gain, points: y.points, auto: !!auto };
+  }
+  /** 시험관의 시간을 흘린다. 절정에 닿으면 더 달여지지 않는다(받을 것이 더 늘지 않는다). 탄 관은 TUBE_BURNT_SECONDS 뒤에 저절로 비워진다. */
+  function stepTubes(state, dt, rng, events) {
+    if (!zoneOpen(state, 4) || !(state.staff > 0)) return;
+    dt = safeNum(dt, 0); if (!(dt > 0)) return;
+    var tubes = tubesOf(state), auto = autoEvents(state, 4), grow = TUBE_STAGE_SECONDS * 4, peak = peakSeconds(state), steps = Math.min(600, Math.ceil(dt)), h = Math.min(dt, steps) / steps, rest = dt - h * steps;
+    for (var k = 0; k < steps; k++) {
+      for (var i = 0; i < tubes.length; i++) {
+        var tube = tubes[i], was = tubeStage(state, tube);
+        if (tube.t < grow) tube.age += Math.min(h, (grow - tube.t) / tube.r);      // 절정에 닿는 걸음까지만 달여진 시간으로 친다
+        tube.t += h * tube.r;
+        var st = tubeStage(state, tube);
+        if (st === 5 && was < 5 && events && k === steps - 1) events.push({ type: 'tube-peak', at: i });
+        if (auto && st >= TUBE_AUTO_STAGE && st < 6) { var r = harvestTube(state, i, rng, true); if (events && k >= steps - 2) { r.type = 'tube-auto'; events.push(r); } }
+        else if (st === 6 && tube.t >= grow + peak + TUBE_BURNT_SECONDS) { var b = harvestTube(state, i, rng, true); if (events && k >= steps - 2) { b.type = 'tube-burnt'; events.push(b); } }
+      }
+    }
+    if (rest > 0) { var flat = labRate(state) * rest; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; state.points += researchRate(state) * rest; }
+  }
   /** 지금 과제 하나를 끝내는 데 드는 점수. 어느 과제를 고르든 같다. */
   function projectCost(state) { return Math.ceil(PROJECT_BASE * Math.pow(PROJECT_GROWTH, state.projectsDone) * mods(state).labcost); }
   function rerollCost(state) { return Math.ceil(projectCost(state) * REROLL_SHARE); }
@@ -2008,6 +2103,7 @@
   }
   /** 점수를 조금 내고 과제 셋을 다시 뽑는다. */
   function rerollOffers(state, rng) {
+    if (true) return fail('gone');      // 3.9.0: 갈림길은 다시 뽑지 않는다
     if (!zoneOpen(state, 4)) return fail('locked');
     var cost = rerollCost(state);
     if (cost > state.points) return fail('points');
@@ -2018,10 +2114,7 @@
   function stepLab(state, dt, rng) {
     if (!zoneOpen(state, 4)) return;
     if (!state.offers.length) state.offers = drawOffers(rng, state);       // 구역에 처음 들어섰을 때
-    // 밤샘 연구 중인 시간만큼은 FOCUS_MULT 배로 모인다(dt 가 길어도 남은 시간까지만)
-    var focused = Math.min(dt, Math.max(0, state.focusLeft || 0));
-    state.points += researchRate(state) * (dt + (FOCUS_MULT - 1) * focused);
-    state.focusLeft = Math.max(0, (state.focusLeft || 0) - dt); state.focusCool = Math.max(0, (state.focusCool || 0) - dt);
+    state.focusLeft = 0; state.focusCool = 0;      // 3.9.0: 밤샘 연구는 없앴다. 연구 점수는 시험관을 거둘 때 들어온다(stepTubes)
   }
 
   /**
@@ -2250,7 +2343,7 @@
    */
   function labRate(state) {
     if (!zoneOpen(state, 4) || !(state.staff > 0)) return 0;
-    return state.staff * milestoneMult(state.staff) * LAB_VALUE * mods(state).lab * globalMult(state);
+    return state.staff * milestoneMult(state.staff) * LAB_VALUE * LAB_SCALE * mods(state).lab * globalMult(state) * tubeCount(state) / TUBE_BASE * Math.pow(REAGENT_STEP, state.reagent || 0);
   }
   function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + labRate(state) + guardRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
@@ -2350,7 +2443,7 @@
       { id: 'z4c2', text: '4구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 3); } } ],
     [ { id: 'z5a2', text: '5구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 4); } },
       { id: 'z5b2', text: '병원 서류 3장 찾기', need: 3, value: function (s) { return s.recordsRun; } },
-      { id: 'z5c2', text: '방어 교범 2번 끝내기', need: 2, value: function (s) { return s.research.drill; } } ],
+      { id: 'z5c2', text: '시험관 8개', need: 8, value: function (s) { return tubeCount(s); } } ],
     [ { id: 'z6a2', text: '방어 수단 합계 200개', need: 200, value: function (s) { return defenseCount(s); } },
       { id: 'z6b2', text: '검문대 7단계', need: 7, value: function (s) { return s.upgrades.booth || 0; } },
       null ],
@@ -2468,13 +2561,10 @@
   /** 5구역 밤샘 연구: 잠깐 연구 속도를 올린다. */
   function focusLab(state) {
     if (!zoneOpen(state, 4)) return fail('locked');
-    if (state.focusCool > 0) return fail('cooldown');
-    if (!(researchRate(state) > 0)) return fail('stopped');
-    state.focusLeft = FOCUS_SECONDS; state.focusCool = FOCUS_COOL;
-    return { ok: true, seconds: FOCUS_SECONDS };
+    return fail('gone');      // 3.9.0: 밤샘 연구는 없앴다
   }
   /** 지금 이 순간의 연구 속도(밤샘 연구 포함). 화면 표시용. */
-  function researchNow(state) { return researchRate(state) * (state.focusLeft > 0 ? FOCUS_MULT : 1); }
+  function researchNow(state) { return researchRate(state); }
 
   /* ---------- 구역 목표와 다음 구역 ---------- */
   /** 구역 index 의 목표 진행 [{ id, text, value, need, done }]. 아직 없는 구역은 빈 배열. */
@@ -3677,7 +3767,7 @@
     { id: 'z4auto', group: 'z4', name: '맡겨 둔 승강장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autosig; }, text: function () { return '역무원 두기'; } },
     // 5구역 대학 병원
     { id: 'z5staff', group: 'z5', name: '연구실장', needs: [5, 25, 100, 250], value: function (s) { return s.staff; }, text: function (n) { return '연구원 ' + n + '명 뽑기'; } },
-    { id: 'z5done', group: 'z5', name: '끝낸 과제', needs: [1, 10, 30, 60], value: function (s) { return s.projectsDone; }, text: function (n) { return '한 회차에 과제 ' + n + '개 끝내기'; } },
+    { id: 'z5done', group: 'z5', name: '끝낸 과제', needs: [1, 10, 30, 60], value: function (s) { return s.projectsDone; }, text: function (n) { return '한 회차에 갈림길 ' + n + '번 고르기'; } },
     { id: 'z5points', group: 'z5', name: '쌓인 연구', needs: [1000, 1000000], value: function (s) { return s.points; }, text: function (n) { return '연구 점수 ' + formatNumber(n) + ' 모아 두기'; } },
     { id: 'z5up', group: 'z5', name: '실험 도구', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 4); }, text: function (n) { return '5구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z5deep', group: 'z5', name: '한 우물', needs: [5, 10], value: function (s) { return maxOf(s.research); }, text: function (n) { return '같은 과제를 ' + n + '번 끝내기'; } },
@@ -3767,14 +3857,12 @@
     stepLineEvents(state, dt, rng, events);
     stepZoneEvents(state, dt, rng, events);
     // 자동 개조: 밤샘 연구, 순찰, 직접 방송을 준비되는 대로 알아서 누른다
-    if (autoEvents(state, 4) && !(state.focusCool > 0) && focusLab(state).ok) events.push({ type: 'auto-push', id: 'lab' });
     PUSHES.forEach(function (d) { if (autoEvents(state, d.zone) && !(state.push[d.id].cool > 0) && pushZone(state, d.id).ok) events.push({ type: 'auto-push', id: d.id }); });      // 3구역 납품 의뢰: 이번 틱에 만든 완제품 수를 넘긴다
     if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * dt * pushFactor(state, 'tower', dt));      // 7구역: 방송을 듣고 생존자가 모인다(직접 방송 중이면 더 빨리)
     stepTune(state, dt, rng, events);      // 7구역 주파수(3.1.0): 바늘이 움직이고, 송신 기사가 있으면 알아서 맞춘다
     var guard = guardRate(state) * dt * pushFactor(state, 'guard', dt);      // 6구역 통행 물자(순찰 중이면 더 많이)
     if (guard > 0) { earn(state, guard); state.guardEarned += guard; }
-    var drug = labRate(state) * dt;      // 5구역 약품(1.5.9)
-    if (drug > 0) earn(state, drug);
+    stepTubes(state, dt, rng, events);      // 5구역(3.9.0): 약품과 연구 점수는 시험관을 거둘 때 들어온다
     if (state.surgeLeft > 0 || state.surgeCool > 0) {
       var wasOn = state.surgeLeft > 0;
       state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
@@ -3854,7 +3942,8 @@
     if (railAway > 0) { earn(state, railAway); state.railEarned += railAway; report.gain += railAway; report.trains = Math.floor(counted / (carSeconds(state) * AUTO_CARS)); state.trainsSent = (state.trainsSent || 0) + report.trains; }
     if (elapsed >= 60) state.plat = newPlat();
     // 5구역 연구: 점수도 자리 비움 효율로 모인다
-    report.points = researchRate(state) * counted * rate;
+    report.points = researchRate(state) * counted * rate;      // 3.9.0: 자리를 비운 동안은 조교가 3단계에서 거둔 것으로 친다(약품도 위에서 labRate 로 쳤다)
+    if (elapsed >= 60 && Array.isArray(state.tubes)) state.tubes.forEach(function (t, ti) { t.t = 0; t.age = 0; t.r = 0.8 + (ti * 7 % 5) * 0.1; });
     state.points += report.points;
     state.awaySeconds += counted; state.runSeconds += counted;
     var clock = state.dayClock + counted, nights = Math.floor(clock / DAY_SECONDS);
@@ -3971,6 +4060,8 @@
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
+    TUBE_BASE: TUBE_BASE, TUBE_MAX: TUBE_MAX, TUBE_STAGE_SECONDS: TUBE_STAGE_SECONDS, TUBE_PEAK_SECONDS: TUBE_PEAK_SECONDS, TUBE_BURNT_SECONDS: TUBE_BURNT_SECONDS, TUBE_MULTS: TUBE_MULTS, TUBE_BURNT: TUBE_BURNT, TUBE_AUTO_STAGE: TUBE_AUTO_STAGE, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
+    tubeCount: tubeCount, peakSeconds: peakSeconds, tubesOf: tubesOf, tubeStage: tubeStage, tubeYield: tubeYield, harvestTube: harvestTube, stepTubes: stepTubes, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
@@ -3990,7 +4081,7 @@
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
     AUTO_MERGE_ROOM: AUTO_MERGE_ROOM, boardRoom: boardRoom, BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, boardFull: boardFull, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
     boxWorth: boxWorth, boardSum: boardSum, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
-    CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, TEST: TEST, HORDE_SECONDS: HORDE_SECONDS, HORDE_WARN: HORDE_WARN, HORDE_RUSH_SPEED: HORDE_RUSH_SPEED, HORDE_RUSH_CARS: HORDE_RUSH_CARS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, GRADE_STEP: GRADE_STEP, CREW_STEP: CREW_STEP, PULL_SECONDS: PULL_SECONDS, HORN_PUSH: HORN_PUSH, pullCar: pullCar, blowHorn: blowHorn, hornMax: hornMax, carMax: carMax,
+    CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, TEST: TEST, HORDE_SECONDS: HORDE_SECONDS, HORDE_WARN: HORDE_WARN, HORDE_RUSH_SPEED: HORDE_RUSH_SPEED, HORDE_RUSH_DIST: HORDE_RUSH_DIST, HORDE_RUSH_CARS: HORDE_RUSH_CARS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, GRADE_STEP: GRADE_STEP, CREW_STEP: CREW_STEP, PULL_SECONDS: PULL_SECONDS, HORN_PUSH: HORN_PUSH, pullCar: pullCar, blowHorn: blowHorn, hornMax: hornMax, carMax: carMax,
     stepRail: stepRail, carMult: carMult, carSeconds: carSeconds, railUnits: railUnits, trainInfo: trainInfo, sendTrain: sendTrain, trainGain: trainGain,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, JAM_SELF_FIX: JAM_SELF_FIX, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, recipeOf: recipeOf, setRecipe: setRecipe, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, ROUTE_MAX: ROUTE_MAX, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
