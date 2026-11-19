@@ -1470,14 +1470,18 @@
     $('stage-normal').setAttribute('aria-pressed', String(!hardOn)); $('stage-hard').setAttribute('aria-pressed', String(hardOn));
     $('stage-hard').disabled = !!whyHard && !hardOn;
     $('stage-go').parentElement.classList.toggle('hard', hardOn);
-    setText($('stage-go'), hardOn ? '하드 출발' : '출발');
-    setText($('stage-d-sub'), '규칙 · ' + (C.stageRuleTexts(d, hardOn).join(', ') || '없음') + '\n목표 · ' + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit)
-      + (hardOn ? '\n닫으면 처음부터 · 다시 도전 물자 없음' : '')
-      + (d.boss ? '\n보상 · 지역 휘장 · 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : hardOn && whyHard ? '\n일반을 클리어하면 열려요' : ''));
+    var bonus = C.stageRetryBonus(state, d.id, false), starOf = function (ks) { return ks.map(function (k) { return m[k] ? '★' : '☆'; }).join(''); };
+    setText($('stage-go'), hardOn ? '하드 출발' : bonus > 0 ? '출발 · 시작 물자 +' + fmt(bonus) : '출발');
+    // 위: 이 원정이 무엇인지(일반 규칙이 없으면 그 줄은 적지 않는다). 아래 두 줄: 일반과 하드. 누르면 그쪽으로 고른다
+    var baseRules = C.stageRuleTexts(d, false).join(', ');
+    setText($('stage-d-sub'), (baseRules ? baseRules + '\n' : '') + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit)
+      + (d.boss ? '\n보상 · 지역 휘장 · 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
+    setText($('stage-n-info'), m.best ? '최고 ' + clock(m.best) : m.pct > 0 ? '가장 멀리 ' + Math.floor(m.pct * 100) + '%' : '');
+    setText($('stage-h-info'), whyHard && !why ? '일반을 클리어하면 열려요' : C.STAGE_RULES[d.hard] + ' · 닫으면 처음부터');
+    setText($('stage-n-stars'), starOf(C.STAGE_STARS.normal)); setText($('stage-h-stars'), starOf(C.STAGE_STARS.hard));
+    // 고른 쪽의 별 조건 한 줄
     var STAR_HOW = { clear: '클리어', speed: clock(d.speed) + ' 안에', safe: '방어 실패 없이', hard: '클리어', hardSpeed: clock(d.speed) + ' 안에', hardSafe: '방어 실패 없이' };
-    var bonus = C.stageRetryBonus(state, d.id, hardOn);
-    setText($('stage-d-marks'), keys.map(function (k) { return (m[k] ? '★ ' : '☆ ') + STAR_HOW[k]; }).join('  ')
-      + '\n' + (hardOn ? (m.hard ? '하드 클리어함' : '아직 하드 기록이 없어요') : m.best ? '최고 ' + clock(m.best) : m.pct > 0 ? '가장 멀리 ' + Math.floor(m.pct * 100) + '%' : '아직 기록이 없어요') + (bonus > 0 ? ' · 다시 도전 시작 물자 +' + fmt(bonus) : ''));
+    setText($('stage-d-marks'), '별 · ' + keys.map(function (k) { return STAR_HOW[k]; }).join(' · '));
     $('stage-go').disabled = !!block;
   }
   /*
