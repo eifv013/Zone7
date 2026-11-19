@@ -596,7 +596,7 @@
       remember(VERSION_KEY, Update.current);
       if (seen && seen !== Update.current) {
         var name = PATCH_NOTES.length ? PATCH_NOTES[0].ver : Update.current;
-        notice(name + (C.hasBatchim(name) && !/[178]$/.test(name) ? '으로' : '로') + ' 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.', 14000);      // 시작 화면이 6초쯤 가리므로, 보이기 시작한 뒤로 8초쯤 남는다
+        notice(name + (C.hasBatchim(name) && !/[178]$/.test(name) ? '으로' : '로') + ' 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.', 8000);
       }
     }
   };
@@ -733,8 +733,21 @@
   function notice(text, ms) {
     setText($('notice-text'), text);
     $('notice').hidden = false;
-    if (noticeTimer) { clearTimeout(noticeTimer); noticeTimer = null; }      // 뒤에 온 알림을 앞 알림의 시계가 닫지 않게
-    if (ms > 0) noticeTimer = setTimeout(function () { noticeTimer = null; if ($('notice-text').textContent === text) $('notice').hidden = true; }, ms);
+    if (noticeTimer) { clearInterval(noticeTimer); noticeTimer = null; }      // 뒤에 온 알림을 앞 알림의 시계가 닫지 않게
+    setText($('notice-close'), '닫기');
+    if (!(ms > 0)) return;
+    // 2.9.0: 닫기 단추에 남은 초를 적는다("닫기 8"). 언제 사라지는지 보이고, 기다리지 않고 눌러 닫을 수도 있다.
+    // 시작 화면이 가리고 있는 동안에는 세지 않는다: 보이기도 전에 시간이 다 가지 않게.
+    var left = ms;
+    function shown() { var boot = $('boot'); return !(boot && !boot.hidden && boot.getClientRects().length > 0) && !document.hidden; }
+    function paint() { setText($('notice-close'), '닫기 ' + Math.max(1, Math.ceil(left / 1000))); }
+    paint();
+    noticeTimer = setInterval(function () {
+      if ($('notice').hidden || $('notice-text').textContent !== text) { clearInterval(noticeTimer); noticeTimer = null; return; }      // 이미 닫았거나 다른 알림으로 바뀌었다
+      if (!shown()) return;
+      left -= 250;
+      if (left <= 0) { clearInterval(noticeTimer); noticeTimer = null; $('notice').hidden = true; setText($('notice-close'), '닫기'); } else paint();
+    }, 250);
   }
 
   /* ---------- 목록 만들기 (최초 1회) ---------- */
@@ -2197,13 +2210,15 @@
       if (!def) return;
       var btn = el('button', 'sync-pick'), name = el('b', '', def.name);
       btn.type = 'button';
-      name.setAttribute('data-lv', 'Lv ' + state.perks[id] + ' → ' + (state.perks[id] + 1));
+      // 2.9.0: 한도가 있는 특전(채혈)은 마지막 레벨에 '최대'를 붙인다
+      var lvText = 'Lv ' + state.perks[id] + ' → ' + (state.perks[id] + 1) + (def.max > 0 ? (state.perks[id] + 1 >= def.max ? ' (최대)' : ' / ' + def.max) : '');
+      name.setAttribute('data-lv', lvText);
       btn.appendChild(name);
       btn.appendChild(el('span', '', '레벨당 ' + def.desc));
       // 고르기 전에 한 번 더 묻는다(2.8.1). 다른 것을 연달아 누르던 중에 특전 창이 뜨면, 읽기도 전에 누른 자리의 특전이 골라졌다.
       // 확인 창의 '고른다'는 뜬 뒤 0.5초 동안 눌리지 않는다: 연달아 누르던 손이 확인까지 눌러 버리지 않게.
       btn.addEventListener('click', function () {
-        confirmBox('특전 고르기', '〈' + def.name + '〉 Lv ' + state.perks[id] + ' → ' + (state.perks[id] + 1) + '\n레벨당 ' + def.desc + '\n이 특전을 고를까요?', '다시 본다', '고른다', function () {
+        confirmBox('특전 고르기', '〈' + def.name + '〉 ' + lvText + '\n레벨당 ' + def.desc + '\n이 특전을 고를까요?', '다시 본다', '고른다', function () {
           var r = C.choosePerk(state, id);
           if (!r.ok) return;
           log('특전을 골랐다: ' + def.name + ' Lv ' + r.level + '.', 'good');
@@ -2900,7 +2915,7 @@
     if (!owned.length) list.appendChild(el('li', 'hint', '아직 고른 특전이 없다.'));
     owned.forEach(function (p) {
       var li = el('li');
-      li.appendChild(el('span', '', p.name + ' Lv ' + state.perks[p.id]));
+      li.appendChild(el('span', '', p.name + ' Lv ' + state.perks[p.id] + (p.max > 0 && state.perks[p.id] >= p.max ? ' · 최대' : '')));
       li.appendChild(el('span', 'num', C.effectNow(p, state.perks[p.id]) || p.desc));      // 지금 쌓인 효과를 적는다(전에는 레벨당 수치만 있었다)
       list.appendChild(li);
     });
