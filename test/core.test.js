@@ -2858,7 +2858,7 @@ test('1.6.5 도전(규칙만, 화면은 아직 없음): 고르기, 조건, 성�
   // 맨몸: 개조를 살 수 없다
   n.supplies = 1e12; assert.equal(C.buyUpgrade(n, C.UPGRADES[0].id).reason, 'challenge');
   // 성공: 3구역에 닿으면 훈장과 간식, 그 뒤로는 조건이 풀린다
-  n.zone = C.CHALLENGES[0].goal; const ev = []; const treats = n.treats; C.checkChallenge(n, ev);
+  n.zone = C.CHALLENGES.find(d => d.id === 'frugal').goal; const ev = []; const treats = n.treats; C.checkChallenge(n, ev);
   assert.equal(ev[0].type, 'challenge-done'); assert.equal(ev[0].first, true); assert.ok(n.treats > treats);
   assert.equal(C.medalCount(n), 1); assert.equal(C.medalMult(n), 1 + C.MEDAL_BONUS); assert.equal(C.activeChallenge(n), null);
   assert.notEqual(C.buyUpgrade(n, C.UPGRADES[0].id).reason, 'challenge');
@@ -2890,7 +2890,7 @@ test('1.7.0 도전 켜고 끄기: 1구역에서만, 한 회차에 한 번, 이�
   s = mk(); s.breaches = 1; assert.equal(C.startChallenge(s, 'unbroken').reason, 'broken');
   s = mk(); s.bestZone = 0; s.ended = 0; assert.equal(C.startChallenge(s, 'frugal').reason, 'locked');
   // 연속 성공: 성공할 때마다 간식이 늘고, 포기·실패·도전 중 철수면 0
-  s = mk(); s.challengeStreak = 2; C.startChallenge(s, 'frugal'); s.zone = C.CHALLENGES[0].goal;
+  s = mk(); s.challengeStreak = 2; C.startChallenge(s, 'frugal'); s.zone = C.CHALLENGES.find(d => d.id === 'frugal').goal;
   const ev = []; C.tick(s, 0.1, () => 0.5).forEach(e => ev.push(e));
   const done = ev.find(e => e.type === 'challenge-done'); assert.ok(done, '시간이 흐르면 성공을 알아챈다'); assert.equal(s.challengeStreak, 3);
   assert.ok(done.treats >= 4, '연속 2번 뒤의 성공은 간식을 더 받는다');
@@ -3015,7 +3015,7 @@ test('1.9.0 뽑기권: 원정의 새 표시, 도전 성공, 변이체를 막은 
   const main = C.createState(0); main.bestZone = 2;
   const st = C.createStage(main, 's1-1', false, 0); st.runEarned = 5e6; st.runSeconds = 100; C.tick(st, 0.1, () => 0.5);
   const r = C.finishStage(main, st); assert.equal(r.tickets, 2); assert.equal(main.tickets, 2);
-  const c = C.createState(0); c.bestZone = 6; C.startChallenge(c, 'frugal'); c.zone = C.CHALLENGES[0].goal; C.tick(c, 0.1, () => 0.5); assert.equal(c.tickets, 3);
+  const c = C.createState(0); c.bestZone = 6; C.startChallenge(c, 'frugal'); c.zone = C.CHALLENGES.find(d => d.id === 'frugal').goal; C.tick(c, 0.1, () => 0.5); assert.equal(c.tickets, 3);
 });
 
 test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
@@ -3202,7 +3202,7 @@ test('2.5.0 도전 난이도: 외벽·무결은 무리가 불고, 거센 무리�
   assert.ok(o.challenge.failed); assert.equal(ev[0].why, 'time');
   const o2 = on('oneshot'); o2.runSeconds = C.ONESHOT_SECONDS - 1; C.checkChallenge(o2, []); assert.ok(!o2.challenge.failed);
   // 목표 구역: 여덟 개 가운데 여섯이 6구역 이상이다(전에는 3~5구역이 다섯이었다)
-  assert.deepEqual(C.CHALLENGES.map(d => d.goal), [4, 6, 3, 6, 6, 6, 6, 'end']);
+  assert.deepEqual(C.CHALLENGES.map(d => d.goal), [2, 3, 4, 5, 5, 6, 6, 'end']);
 });
 
 test('4구역 배차: 복구한 노선에는 먼저 한 대씩 가고, 남은 열차는 배수가 높은 노선부터 채운다', () => {

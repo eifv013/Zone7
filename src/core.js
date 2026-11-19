@@ -2636,14 +2636,18 @@
    */
   var HANDS_AWAY = 0.5;      // 도전 '손수' 중 자리 비움 효율에 곱하는 값
   var MEDAL_BONUS = 0.02, CHALLENGE_TREATS = 10, CHALLENGE_TREATS_AGAIN = 3, SPRINT_SECONDS = 25 * 60, HORDE_MULT = 100, LEAN_MULT = 0.25, UNBROKEN_MULT = 10, ONEWALL_MULT = 5, HORDE_BREACHES = 3, ONESHOT_SECONDS = 150 * 60;
+  /*
+   * 2.9.4: 목표 구역을 구역마다 나눴다(3 · 4 · 5 · 6 · 6 · 7 · 7 · 끝). 전에는 여섯이 7구역에 몰려 있어서, 7구역에 닿기 전에는 도전이 둘뿐이었다.
+   *        목록도 목표 구역이 가까운 것부터 늘어놓는다(열리는 순서와 같다).
+   */
   var CHALLENGES = [
-    { id: 'frugal',   name: '맨몸',      rule: '개조를 살 수 없어요',            goal: 4, perk: { key: 'cost', mult: 0.95, text: '모든 구매 비용 -5%' } },
-    { id: 'hands',    name: '손수',      rule: '자동 개조 금지 · 자리 비움 효율 절반',      goal: 6, perk: { key: 'autoshare', add: 0.1, text: '현재 구역 자동 효율 +10%p' } },
+    { id: 'onewall',  name: '외벽',      rule: '무리 5배 · 방벽은 한 종류만',  goal: 2, perk: { key: 'defense', mult: 1.1, text: '방어력 +10%' } },
     { id: 'sprint',   name: '질주',      rule: '25분 안에 닿아야 해요',          goal: 3, perk: { key: 'scout', mult: 0.85, text: '길 정찰 시간 -15%' } },
-    { id: 'onewall',  name: '외벽',      rule: '무리 5배 · 방벽은 한 종류만',  goal: 6, perk: { key: 'defense', mult: 1.1, text: '방어력 +10%' } },
-    { id: 'unbroken', name: '무결',      rule: '무리 10배 · 방어 실패가 없어야 해요',         goal: 6, perk: { key: 'loot', mult: 1.2, text: '방어 성공 시 전리품 +20%' } },
+    { id: 'frugal',   name: '맨몸',      rule: '개조를 살 수 없어요',            goal: 4, perk: { key: 'cost', mult: 0.95, text: '모든 구매 비용 -5%' } },
+    { id: 'lean',     name: '반쪽 보급', rule: '전체 생산이 4분의 1이에요',     goal: 5, perk: { key: 'prod', mult: 1.1, text: '전체 생산 +10%' } },
+    { id: 'unbroken', name: '무결',      rule: '무리 10배 · 방어 실패가 없어야 해요',         goal: 5, perk: { key: 'loot', mult: 1.2, text: '방어 성공 시 전리품 +20%' } },
+    { id: 'hands',    name: '손수',      rule: '자동 개조 금지 · 자리 비움 효율 절반',      goal: 6, perk: { key: 'autoshare', add: 0.1, text: '현재 구역 자동 효율 +10%p' } },
     { id: 'horde',    name: '거센 무리', rule: '무리 100배 · 방어 실패는 3번까지',              goal: 6, perk: { key: 'defcost', mult: 0.9, text: '방벽 비용 -10%' } },
-    { id: 'lean',     name: '반쪽 보급', rule: '전체 생산이 4분의 1이에요',     goal: 6, perk: { key: 'prod', mult: 1.1, text: '전체 생산 +10%' } },
     { id: 'oneshot',  name: '단숨에',    rule: '철수 없이 2시간 30분 안에 끝까지',          goal: 'end', perk: { key: 'antibody', mult: 1.1, text: '철수 항체 샘플 +10%' } }
   ];
   /** 도전의 목표를 글로: '4구역 도착' / '이야기의 끝'. */
