@@ -336,7 +336,9 @@
           var off = s && s.target && s.target.closest ? s.target.closest('button.row:disabled') : null;
           if (off && C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) { off.classList.remove('nope'); void off.offsetWidth; off.classList.add('nope'); (function (b) { setTimeout(function () { b.classList.remove('nope'); }, 350); })(off); }
           if (!(multi || quick) || !s || !C.isTap(t.clientX - s.x, t.clientY - s.y, Date.now() - s.at)) continue;
-          var btn = s.target && s.target.closest ? s.target.closest('button') : null, under = document.elementFromPoint(t.clientX, t.clientY);
+          // 3.8.1: 단추가 아닌데 누르는 것(4구역 승강장 그림)도 [data-tap] 으로 표시해 두면 같이 눌러 준다.
+          //   전에는 단추만 찾아서, 그림을 빠르게 두드리면 두 번째부터는 '빈 곳을 두 번 누른 것'으로 보고 누름을 버렸다(첫 번째만 먹었다)
+          var btn = s.target && s.target.closest ? s.target.closest('button, [data-tap]') : null, under = document.elementFromPoint(t.clientX, t.clientY);
           /*
            * 1.3.0: 예전에는 손을 뗀 자리에 그 단추가 그대로 있어야만(elementFromPoint) 눌러 주었다.
            *   수색 지도의 칸은 눌리면 잠깐 작아졌다 커지고(tile-hit), 칸 사이에 틈도 있어서, 빠르게 두드리면 손끝이 칸 가장자리를 벗어난 것으로 읽혀 누름이 버려졌다.

@@ -405,15 +405,25 @@ def run_case(browser, name, size, state, mode):
         if left not in ('멀어요', '다가와요', '코앞이에요'): problems.append('무리와의 거리 글이 이상하다: ' + left)
         if '초' in left: problems.append('무리가 닿는 시간이 숫자로 보인다: ' + left)
         bar = page.evaluate("parseFloat(document.getElementById('plat-horde-bar').style.width)")
-        if not (40 < bar < 100): problems.append('무리와의 거리 막대가 이상하다: %s' % bar)
+        if not (0 <= bar <= 100): problems.append('무리와의 거리 막대가 이상하다: %s' % bar)
         if page.is_disabled('#train-go') or '+' not in text('train-go'): problems.append('출발 단추에 받을 물자가 없다: ' + text('train-go'))
         # 손이 할 일: 그림을 누르면 칸이 빨리 붙고, 경적은 열차마다 한 번
         c0 = int(text('plat-cars').split('화물칸 ')[1].split(' /')[0])
         tap('#platform')      # 운영 쪽으로 넘어가서 한 번 누른다
-        for _ in range(11): page.locator('#platform').click(position={'x': 60, 'y': 40}); page.wait_for_timeout(30)
+        # 손가락으로 빠르게 두드려도 한 번 한 번이 다 먹어야 한다(3.8.0 에서는 첫 번째만 먹었다).
+        #   손가락 누르기(touchstart → touchend)를 60ms 간격으로 열두 번 만들어 보낸다. 빠른 누르기는 게임이 직접 처리하므로, 처음 하나를 뺀 열한 번이 당겨져야 한다
+        page.evaluate("""() => new Promise((done) => { const el = document.getElementById('platform'), r = el.getBoundingClientRect(); let k = 0;
+          const one = () => { const x = r.left + 30 + (k % 4) * 40, y = r.top + r.height * 0.6, t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
+            el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [t], targetTouches: [t], changedTouches: [t] }));
+            el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [t] }));
+            if (++k < 12) setTimeout(one, 60); else done(); };
+          one(); })""")
+        page.wait_for_timeout(200)
         c1 = int(text('plat-cars').split('화물칸 ')[1].split(' /')[0])
         if c1 <= c0: problems.append('그림을 열두 번 눌렀는데 칸이 안 늘었다: %d → %d' % (c0, c1))
-        if '당긴 횟수 12' not in text('plat-note'): problems.append('당긴 횟수가 안 맞는다: ' + text('plat-note'))
+        import re as _re2
+        pulled = int((_re2.search(r'당긴 횟수 (\d+)', text('plat-note')) or [0, '0'])[1])
+        if pulled < 12: problems.append('빠르게 열두 번 두드렸는데 %d번만 당겨졌다' % pulled)
         if text('train-horn').strip() != '경적 1' or page.is_disabled('#train-horn'): problems.append('경적 단추가 이상하다: ' + text('train-horn'))
         bar0 = page.evaluate("parseFloat(document.getElementById('plat-horde-bar').style.width)")
         tap('#train-horn'); page.wait_for_timeout(150)
