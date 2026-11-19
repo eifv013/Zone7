@@ -385,11 +385,17 @@
    *   seconds 한 번 다녀오는 시간, mult 화물 배수, baseCost 첫 단계(복구)의 값. 단계마다 열차 ROUTE_SLOTS 대가 더 다닐 수 있다.
    * 열차는 배수가 높은 노선부터 알아서 채워 탄다. 화물은 열차가 돌아왔을 때 한꺼번에 들어온다.
    */
+  /*
+   * 3.8.0 4구역의 줄. 전에는 기관차와 노선 넷(순환선 · 강변선 · 외곽선 · 심야 급행)이 모두 "초당 +얼마"였다: 다섯 줄이 하는 일이 같았다.
+   *   이제 셋이고, 승강장에서 하는 일이 다르다(이름은 ROUTES 를 그대로 쓴다: 저장의 routes 칸과 화면의 줄이 이 이름을 본다).
+   *     기관차(state.trains)  한 칸의 값을 올린다(꾸준히 올리는 줄. FLEET_MILESTONES 마다 2배)
+   *     화물 등급(grade)      붙는 화물칸이 더 값진 것으로 바뀐다(레벨마다 GRADE_STEP 배. 값이 크게 오르는 줄)
+   *     연결 작업반(crew)     화물칸이 더 빨리 붙는다(무리가 닿기 전에 더 길게 만들 수 있다)
+   */
+  var GRADE_STEP = 2, CREW_STEP = 0.96;
   var ROUTES = [
-    { id: 'loop',    name: '순환선',    desc: '역 주변을 한 바퀴 돈다',       seconds: 30,   mult: 1,   baseCost: 1e18 },
-    { id: 'river',   name: '강변선',    desc: '강을 따라 창고 지대까지 간다', seconds: 180,  mult: 1.4, baseCost: 1e19 },
-    { id: 'outer',   name: '외곽선',    desc: '도시 바깥 화물역을 돈다',      seconds: 900,  mult: 2,   baseCost: 1e20 },
-    { id: 'express', name: '심야 급행', desc: '밤새 달려 가장 먼 곳까지 간다', seconds: 3600, mult: 3,   baseCost: 1e21 }
+    { id: 'grade', name: '화물 등급',   desc: '더 값진 화물칸이 붙는다',   baseCost: 2e19, growth: 12,  max: 12 },
+    { id: 'crew',  name: '연결 작업반', desc: '화물칸이 더 빨리 붙는다',   baseCost: 3e18, growth: 2.5, max: 20 }
   ];
   /*
    * 5구역의 연구 과제: 연구 점수를 써서 끝내면 이번 판 동안 효과가 남는다. 같은 과제를 또 끝내면 효과가 곱으로 쌓인다.
@@ -433,12 +439,11 @@
     { id: 'bonus',   zone: 2, name: '손맛',      desc: '손으로 합칠 때의 덤 +50%', key: 'mergebonus', per: 0.5, baseCost: 3e11, growth: 4,  max: 10 },
     { id: 'lucky',   zone: 2, name: '행운 상자', desc: '들어오는 상자가 한 단계 더 높을 확률 +10%p', key: 'lucky', per: 0.1, baseCost: 6e11, growth: 5, max: 5 },
     { id: 'wide',    zone: 2, name: '판 넓히기', desc: '판에 5칸이 더 생긴다',     key: 'boardsize', per: 5, baseCost: 5e13, growth: 400, max: 2 },
-    { id: 'signal',  zone: 3, name: '신호기',    desc: '화물 값 +25%',           key: 'z4',      per: 0.25, baseCost: 1e18, growth: 2.4, max: 40 },
-    { id: 'timetable', zone: 3, name: '시간표',  desc: '화물칸이 붙는 시간 -5%',          key: 'trip',    per: -0.05, baseCost: 3e18, growth: 4,  max: 8 },
-    { id: 'tracks',  zone: 3, name: '선로 정비', desc: '노선 값 -6%',            key: 'routecost', per: -0.06, baseCost: 3e18, growth: 3, max: 12 },
-    { id: 'depot',   zone: 3, name: '차량 기지', desc: '기관차 값 -4%',          key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
+    { id: 'yard',    zone: 3, name: '정비창',    desc: '4구역 시설 값 -4%',      key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
     { id: 'longplat', zone: 3, name: '긴 승강장', desc: '화물칸을 2칸 더 붙일 수 있다', key: 'platlen', per: 2, baseCost: 2e19, growth: 500, max: 2 },
     { id: 'fence',   zone: 3, name: '철조망',    desc: '무리가 다가오는 걸음 -8%', key: 'hordespeed', per: -0.08, baseCost: 2e18, growth: 4, max: 5 },
+    { id: 'horn',    zone: 3, name: '경적',      desc: '열차마다 경적을 한 번 더 울릴 수 있다', key: 'horn', per: 1, baseCost: 8e18, growth: 300, max: 2 },
+    { id: 'coupler', zone: 3, name: '튼튼한 연결기', desc: '무리에 닿아도 뒤쪽 3분의 1만 떼인다', key: 'keepmore', per: 1, baseCost: 5e20, growth: 1, max: 1 },
     { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e23, growth: 2.4, max: 40 },
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '과제에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
     { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 1.5e27, growth: 2.4, max: 40 },
@@ -568,7 +573,7 @@
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
-      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, plat: { t: 0, bank: 0, pos: 1 }, trainsSent: 0, longRuns: 0, hordeHits: 0,
+      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
@@ -739,10 +744,9 @@
     (Array.isArray(raw.offers) ? raw.offers : []).forEach(function (id) { if (findById(PROJECTS, id) && s.offers.indexOf(id) < 0 && s.offers.length < OFFER_COUNT) s.offers.push(id); });
     s.trains = Math.min(s.trains, TRAIN_MAX);
     s.greenCool = clamp(safeNum(raw.greenCool, 0), 0, GREEN_COOLDOWN);
-    s.routes = counts(ROUTES, raw.routes, ROUTE_MAX);
+    s.routes = counts(ROUTES, raw.routes, ROUTE_MAX); ROUTES.forEach(function (d) { s.routes[d.id] = Math.min(d.max, s.routes[d.id] || 0); });
     ROUTES.forEach(function (d) {
       var rc = raw.routeClock && typeof raw.routeClock === 'object' ? raw.routeClock[d.id] : 0, rl = raw.routeLoad && typeof raw.routeLoad === 'object' ? raw.routeLoad[d.id] : 0;
-      s.routeClock[d.id] = clamp(safeNum(rc, 0), 0, d.seconds);
       s.routeLoad[d.id] = 0; s.routeClock[d.id] = 0;      // 3.4.0: 노선마다 따로 달리던 시계는 쓰지 않는다
     });
     /*
@@ -766,10 +770,30 @@
     for (var lowi = 0; lowi < s.board.length; lowi++) if (s.board[lowi] >= 1 && s.board[lowi] < spawnLevel(s)) s.board[lowi] = spawnLevel(s);
     if (seedBoard) [5, 4, 3, 2, 1, 0].forEach(function (up, k) { s.board[k * 3] = Math.min(BOX_MAX, spawnLevel(s) + up); });
     for (var bz = boardSize(s); bz < BOARD_MAX; bz++) s.board[bz] = 0;      // 칸 수 밖의 상자는 없다
+    /*
+     * 3.8.0 옛 저장(railV 2 미만): 노선 넷과 없앤 개조(신호기 · 시간표 · 선로 정비 · 차량 기지)에 쓴 물자를 셈해서, 그 물자로 화물 등급과 연결 작업반을 사 준 것으로 한다.
+     *   기관차 레벨과 가진 물자는 그대로다.
+     */
+    if (raw.railV !== 2 && s.zone >= 3) {
+      var rro = raw.routes && typeof raw.routes === 'object' ? raw.routes : {}, rup4 = raw.upgrades && typeof raw.upgrades === 'object' ? raw.upgrades : {}, bud4 = 0;
+      [['loop', 1e18, 2.2, 25], ['river', 1e19, 2.2, 25], ['outer', 1e20, 2.2, 25], ['express', 1e21, 2.2, 25]].forEach(function (o) { var n = clamp(safeCount(rro[o[0]]), 0, o[3]); if (n > 0) bud4 += seriesCost(o[1], o[2], 0, n); });
+      [['signal', 1e18, 2.4, 40], ['timetable', 3e18, 4, 8], ['tracks', 3e18, 3, 12], ['depot', 3e18, 3, 12]].forEach(function (o) { var n = clamp(safeCount(rup4[o[0]]), 0, o[3]); if (n > 0) bud4 += seriesCost(o[1], o[2], 0, n); });
+      ROUTES.forEach(function (d) { s.routes[d.id] = 0; });
+      for (var g4 = 0; g4 < 200 && isFinite(bud4); g4++) {
+        // 화물 등급을 먼저(값이 크게 오른다), 등급 하나 값의 5분의 1 아래인 동안은 작업반도 함께
+        var gd = ROUTES[0], cw = ROUTES[1], gc = s.routes.grade < gd.max ? seriesCost(gd.baseCost, gd.growth, s.routes.grade, 1) : Infinity, cc = s.routes.crew < cw.max ? seriesCost(cw.baseCost, cw.growth, s.routes.crew, 1) : Infinity;
+        if (cc <= bud4 && cc < gc / 5) { s.routes.crew++; bud4 -= cc; }
+        else if (gc <= bud4) { s.routes.grade++; bud4 -= gc; }
+        else if (cc <= bud4) { s.routes.crew++; bud4 -= cc; }
+        else break;
+      }
+    }
+    s.railV = 2;
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
     // 3.4.0 승강장의 열차. 깨진 값이나 옛 저장은 새 열차로 시작한다
     var rp = raw.plat && typeof raw.plat === 'object' ? raw.plat : {};
-    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1 };
+    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9) };
+    s.pullsRun = clamp(safeCount(raw.pullsRun), 0, 1e12); s.hornsRun = clamp(safeCount(raw.hornsRun), 0, 1e12);
     s.longRuns = clamp(safeCount(raw.longRuns), 0, 1e12); s.hordeHits = clamp(safeCount(raw.hordeHits), 0, 1e12);
     s.trainsSent = clamp(safeCount(raw.trainsSent), 0, 1e12);
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
@@ -869,8 +893,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -1642,9 +1666,9 @@
   /** 노선을 한 단계 늘리는 값(첫 단계는 복구). */
   function routeCost(state, id) {
     var def = findById(ROUTES, id);
-    if (!def || !zoneOpen(state, 3) || state.routes[id] >= ROUTE_MAX) return Infinity;
+    if (!def || !zoneOpen(state, 3) || (state.routes[id] || 0) >= def.max) return Infinity;
     var m = mods(state);
-    return Math.ceil(def.baseCost * Math.pow(ROUTE_GROWTH, state.routes[id]) * m.cost * m.routecost);
+    return Math.ceil(def.baseCost * Math.pow(def.growth, state.routes[id] || 0) * m.cost * m.traincost);
   }
   function buyRoute(state, id) {
     if (!findById(ROUTES, id)) return fail('unknown');
@@ -1652,7 +1676,7 @@
     return pay(state, routeCost(state, id), function () { state.routes[id]++; });
   }
   /** 노선 하나를 다녀오는 데 걸리는 시간(초, 강화 포함). */
-  function tripSeconds(state, id) { var def = findById(ROUTES, id); return def ? def.seconds * mods(state).trip : Infinity; }
+  function tripSeconds() { return Infinity; }      // 3.4.0 부터 쓰지 않는다
   /**
    * 지금의 배차 { riders: { 노선: 열차 수 }, slots: { 노선: 자리 수 }, idle: 탈 노선이 없어 쉬는 열차 수 }.
    * 배수가 높은 노선부터 자리를 채운다.
@@ -1741,30 +1765,38 @@
    *       꽉 찬 열차는 더 싣지 못하고 서 있다(알아서 떠나지 않는다).
    * 무리: 선로를 따라 다가온다(plat.pos 1 → 0). 걸음이 고르지 않고 가끔 달려든다: 언제 닿을지 정확히는 알 수 없다(화면에는 거리만 보인다).
    *       닿으면 열차는 뒤쪽 절반을 떼고 떠난다.
-   * 줄:   기관차(화물 +) · 노선 넷(더 값진 화물 +). 각자 더해져서 무엇을 사든 초당이 오른다.
-   * 개조: 긴 승강장(칸 수 +2) · 철조망(무리가 느려진다) · 시간표(칸이 빨리 붙는다) · 신호기(화물 값) · 역무원.
+   * 줄:   기관차(한 칸의 값) · 화물 등급(더 값진 칸, 레벨마다 2배) · 연결 작업반(칸이 빨리 붙는다). 셋이 하는 일이 다르다(3.8.0).
+   * 개조: 긴 승강장(칸 수 +2) · 철조망(무리가 느려진다) · 튼튼한 연결기(덜 떼인다) · 정비창(값) · 부표(표류 화물) · 역무원.
    * 자동: 역무원은 꽉 차면, 또는 무리가 AUTO_NEAR 안으로 들어오면 보낸다. 떼이지는 않지만 아슬아슬하게 끌지도 않는다.
    *       손으로는 무리가 더 가까이 올 때까지 끌 수 있다(그만큼 칸이 더 붙는다).
    *       (처음에는 역무원이 늘 8칸에서 보내게 했다. 그러면 긴 승강장을 사도 역무원을 켜 둔 사람은 10칸을 영영 못 보냈다.)
    */
-  var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 8, AUTO_NEAR = 0.36, RAIL_SCALE = 0.5;
-  var HORDE_SECONDS = 70, HORDE_SPRINT = 0.04, HORDE_JUMP_MIN = 0.08, HORDE_JUMP_MAX = 0.3, LONG_CARS = 10;
+  /*
+   * 3.8.0 손이 할 일을 늘렸다. 전에는 40초에 한 번 '출발'을 누르는 것이 전부라 그 사이가 지루했다.
+   *   - 칸 당기기(pullCar): 승강장 그림을 누를 때마다 다음 칸이 PULL_SECONDS 초만큼 빨리 붙는다. 누르는 만큼 열차가 길어지고 배수가 오른다.
+   *   - 경적(blowHorn): 무리를 HORN_PUSH 만큼 밀어낸다. 열차 하나에 hornMax 번뿐이라 언제 쓸지 골라야 한다.
+   *   - 무리는 더 빨리 온다(HORDE_SECONDS 70 → 45). 가만히 있으면 8칸도 못 채운다: 당기고, 밀어내고, 떠날 때를 잰다.
+   *   기준 칸 수(AUTO_CARS)도 8 → 6 으로 낮췄다: 역무원에게 맡기면 대략 화면의 초당만큼, 손으로 당기면 그보다 훨씬 더 번다.
+   */
+  var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
+  var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
+  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.04, HORDE_JUMP_MIN = 0.08, HORDE_JUMP_MAX = 0.3, LONG_CARS = 10;
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
   var CAR_MULTS = [0, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.95, 2.25, 2.6, 3];
   function carMult(n) { n = clamp(Math.floor(safeNum(n, 0)), 0, CAR_MAX); return CAR_MULTS[n]; }
   var CAR_NORM = carMult(AUTO_CARS);
-  function carSeconds(state) { return CAR_SECONDS * mods(state).trip; }
+  function carSeconds(state) { return CAR_SECONDS * Math.pow(CREW_STEP, state.routes.crew || 0) * mods(state).trip; }
   function carMax(state) { return clamp(CAR_BASE + Math.round(mods(state).platlen), CAR_BASE, CAR_MAX); }
-  /** 화물을 싣는 힘: 기관차 한 레벨이 1, 노선 한 단계가 ROUTE_SLOTS × 배수. */
+  /** 화물을 싣는 힘: 기관차 레벨 × 화물 등급의 배수. 기관차가 없으면 열차가 서지 않는다. */
   function railUnits(state) {
     if (!zoneOpen(state, 3)) return 0;
-    var n = state.trains || 0;
-    ROUTES.forEach(function (d) { n += (state.routes[d.id] || 0) * ROUTE_SLOTS * d.mult; });
-    return n;
+    return (state.trains || 0) * Math.pow(GRADE_STEP, state.routes.grade || 0);
   }
   /** 4구역이 초당 싣는 물자. 역무원에게 맡겨 8칸에서 보낼 때 실제로 버는 속도와 같다. */
   function railRate(state) { return railUnits(state) * RAIL_SCALE * cargoValue(state); }
-  function newPlat() { return { t: 0, bank: 0, pos: 1 }; }
+  function newPlat() { return { t: 0, bank: 0, pos: 1, horn: 0 }; }
+  /** 열차 하나에 쓸 수 있는 경적 횟수. */
+  function hornMax(state) { return HORN_BASE + Math.round(mods(state).horn); }
   function platOf(state) {
     var p = state.plat;
     if (!p || typeof p !== 'object') p = state.plat = newPlat();
@@ -1775,12 +1807,12 @@
   function trainInfo(state) {
     var p = platOf(state), cs = carSeconds(state), max = carMax(state), cars = Math.min(max, Math.floor(p.t / cs + 1e-9));
     return { cars: cars, max: max, full: cars >= max, next: cars >= max ? 0 : cs - (p.t - cars * cs), near: p.pos,
-      mult: carMult(cars), gain: trainGain(state, cars, cars), bank: p.bank, running: railUnits(state) > 0 };
+      mult: carMult(cars), gain: trainGain(state, cars, cars), bank: p.bank, running: railUnits(state) > 0, horn: Math.max(0, hornMax(state) - (p.horn || 0)) };
   }
   /** cars 칸이 붙은 열차를 kept 칸만 달고 보낼 때 받는 물자. */
   function trainGain(state, cars, kept) { var p = platOf(state); return cars >= 1 && kept >= 1 ? p.bank * (kept / cars) * carMult(kept) / CAR_NORM : 0; }
   function departTrain(state, why, events) {
-    var p = platOf(state), info = trainInfo(state), cars = info.cars, kept = why === 'horde' ? Math.ceil(cars / 2) : cars;
+    var p = platOf(state), info = trainInfo(state), cars = info.cars, kept = why === 'horde' ? Math.ceil(cars * (mods(state).keepmore > 0 ? 2 / 3 : 1 / 2)) : cars;      // 튼튼한 연결기: 뒤쪽 절반이 아니라 3분의 1만 떼인다
     var gain = cars >= 1 ? trainGain(state, cars, kept) : p.bank / CAR_NORM / 2;      // 한 칸도 못 붙이고 쫓겨난 열차는 실은 것의 절반
     if (gain > 0) {
       earn(state, gain); state.railEarned += gain;
@@ -1794,6 +1826,27 @@
     var ev = { type: 'train', why: why, cars: cars, kept: kept, gain: gain, full: why !== 'horde' && kept >= CAR_MAX, name: kept + '칸 열차' };
     if (events) events.push(ev);
     return ev;
+  }
+  /** 칸 당기기: 다음 칸이 PULL_SECONDS 초만큼 빨리 붙는다. 꽉 찬 열차에는 못 쓴다. */
+  function pullCar(state) {
+    if (!zoneOpen(state, 3)) return fail('locked');
+    if (!(railUnits(state) > 0)) return fail('stopped');
+    var p = platOf(state), before = trainInfo(state);
+    if (before.full) return fail('full');
+    p.t += PULL_SECONDS;      // 화물은 실제로 흐른 시간만큼만 실린다. 당기면 '같은 시간에 더 긴 열차'가 되어 배수가 오른다(최대 만차 ×3)
+    state.pullsRun = (state.pullsRun || 0) + 1;
+    var after = trainInfo(state);
+    return { ok: true, cars: after.cars, added: after.cars > before.cars, full: after.full };
+  }
+  /** 경적: 무리를 HORN_PUSH 만큼 밀어낸다. 열차 하나에 hornMax 번. */
+  function blowHorn(state) {
+    if (!zoneOpen(state, 3)) return fail('locked');
+    if (!(railUnits(state) > 0)) return fail('stopped');
+    var p = platOf(state);
+    if ((p.horn || 0) >= hornMax(state)) return fail('empty');
+    p.horn = (p.horn || 0) + 1; p.pos = Math.min(1, p.pos + HORN_PUSH);
+    state.hornsRun = (state.hornsRun || 0) + 1;
+    return { ok: true, near: p.pos, left: hornMax(state) - p.horn };
   }
   /** 손으로 보낸다. 한 칸이라도 붙어 있어야 한다. */
   function sendTrain(state) {
@@ -2260,7 +2313,7 @@
     [ { id: 'z3a2', text: '3구역 개조를 모두 합쳐 12번', need: 12, value: function (s) { return zoneUpgrades(s, 2); } },
       { id: 'z3b2', text: '도장 라인 25레벨', need: 25, value: function (s) { return s.machines.paint || 0; } },
       { id: 'z3c2', text: '납품 의뢰 3번 채우기', need: 3, value: function (s) { return s.contractsRun; } } ],
-    [ { id: 'z4a2', text: '노선 단계 합계 10', need: 10, value: function (s) { return routeLevels(s); } },
+    [ { id: 'z4a2', text: '화물 등급 3레벨', need: 3, value: function (s) { return s.routes.grade || 0; } },
       { id: 'z4b2', text: '표류 화물 2번 끌어오기', need: 2, value: function (s) { return s.salvagesRun; } },
       { id: 'z4c2', text: '4구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 3); } } ],
     [ { id: 'z5a2', text: '5구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 4); } },
@@ -3587,8 +3640,8 @@
     { id: 'z4train', group: 'z4', name: '차량 기지장', needs: [5, 20, 50, 100], value: function (s) { return s.trains; }, text: function (n) { return '기관차 ' + n + '레벨 올리기'; } },
     { id: 'z4earn', group: 'z4', name: '화물왕', needs: [1e20, 1e23, 1e26], value: function (s) { return s.railEarned; }, text: function (n) { return '한 회차에 화물로 물자 ' + formatNumber(n) + ' 벌기'; } },
     { id: 'z4express', group: 'z4', name: '만차', needs: [1, 20, 200], value: function (s) { return s.expressRuns; }, text: function (n) { return '한 회차에 12칸 열차를 ' + n + '번 보내기'; } },
-    { id: 'z4route', group: 'z4', name: '선로 복구반', needs: [5, 20], value: function (s) { return sumOf(s.routes); }, text: function (n) { return '노선 단계를 모두 합쳐 ' + n + ' 올리기'; } },
-    { id: 'z4up', group: 'z4', name: '역무원', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 3); }, text: function (n) { return '4구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
+    { id: 'z4route', group: 'z4', name: '귀한 짐', needs: [3, 10], value: function (s) { return s.routes.grade || 0; }, text: function (n) { return '화물 등급 ' + n + '레벨 올리기'; } },
+    { id: 'z4up', group: 'z4', name: '역무원', needs: [10, 25], value: function (s) { return zoneUpgrades(s, 3); }, text: function (n) { return '4구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z4auto', group: 'z4', name: '맡겨 둔 승강장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autosig; }, text: function () { return '역무원 두기'; } },
     // 5구역 대학 병원
     { id: 'z5staff', group: 'z5', name: '연구실장', needs: [5, 25, 100, 250], value: function (s) { return s.staff; }, text: function (n) { return '연구원 ' + n + '명 뽑기'; } },
@@ -3905,7 +3958,7 @@
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
     BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, boardFull: boardFull, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
     boxWorth: boxWorth, boardSum: boardSum, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
-    CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, HORDE_SECONDS: HORDE_SECONDS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, carMax: carMax,
+    CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, HORDE_SECONDS: HORDE_SECONDS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, GRADE_STEP: GRADE_STEP, CREW_STEP: CREW_STEP, PULL_SECONDS: PULL_SECONDS, HORN_PUSH: HORN_PUSH, pullCar: pullCar, blowHorn: blowHorn, hornMax: hornMax, carMax: carMax,
     stepRail: stepRail, carMult: carMult, carSeconds: carSeconds, railUnits: railUnits, trainInfo: trainInfo, sendTrain: sendTrain, trainGain: trainGain,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, JAM_SELF_FIX: JAM_SELF_FIX, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, recipeOf: recipeOf, setRecipe: setRecipe, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, ROUTE_MAX: ROUTE_MAX, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,

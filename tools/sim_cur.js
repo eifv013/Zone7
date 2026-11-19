@@ -57,7 +57,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
     const IDLE = !!process.env.IDLE;      // IDLE=1: 사기만 하고 사건·단추는 손대지 않는 사람(자동 개조가 대신 하는 것만 일어난다)
     if (!IDLE) { if (s.zone === 2) { const held = C.heldLevel(s); for (let g = 0; g < 3; g++) { const m = C.mergeable(s).filter(i => s.board[i] !== held); if (!m.length) break; const lo = Math.min(...m.map(i => s.board[i])); C.mergeBox(s, m.find(i => s.board[i] === lo)); } } }      // 3.3.0: 3구역에 있는 동안은 상자를 손으로 합친다(지나온 뒤에는 가만히 둔다)
-    if (!IDLE && s.zone === 3) { const ti = C.trainInfo(s); if (ti.running && ti.cars >= 1 && (ti.full || ti.near < 0.36)) C.sendTrain(s); }      // 3.4.0: 4구역에 있는 동안은 무리가 닿기 직전에 손으로 보낸다      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
+    if (!IDLE && s.zone === 3) { for (let k = 0; k < Math.round((taps || 0) * dt); k++) C.pullCar(s); let ti = C.trainInfo(s); if (ti.running && !ti.full && ti.near < 0.4 && ti.horn > 0) { C.blowHorn(s); ti = C.trainInfo(s); } if (ti.running && ti.cars >= 1 && (ti.full || ti.near < 0.36)) C.sendTrain(s); }      // 3.4.0: 4구역에 있는 동안은 무리가 닿기 직전에 손으로 보낸다      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
     // 4·6·7구역 사건: 배수를 먼저 다 쌓고, 그 뒤로는 바로 받는다. 5구역 밤샘 연구는 되는 대로 누른다
     if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
     if (!IDLE) { if (s.zone >= 4 && !(s.focusCool > 0)) C.focusLab(s); if (s.zone >= 5) C.pushZone(s, 'guard'); if (s.zone >= 6) C.pushZone(s, 'tower'); }
@@ -94,7 +94,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       z1a: () => C.buyBuilding(s, 'scouts', 1), z1a2: () => C.buyBuilding(s, 'garden', 1), z1b2: cheapestDef, z1c2: () => cheapestUp(0),
       z2a: () => C.buyStall(s, 1), z2a2: cheapestHand, z2c2: () => cheapestUp(1),
       z3a: () => C.buyMachine(s, 'forge', 1), z3b2: () => C.buyMachine(s, 'paint', 1), z3a2: () => cheapestUp(2), z3b: () => ({ ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
-      z4a: () => C.buyTrain(s, 1), z4b: () => (s.upgrades.longplat ? { ok: false } : C.buyUpgrade(s, 'longplat')), z4a2: cheapestRoute, z4c2: () => cheapestUp(3),
+      z4a: () => C.buyTrain(s, 1), z4b: () => (s.upgrades.longplat ? { ok: false } : C.buyUpgrade(s, 'longplat')), z4a2: () => C.buyRoute(s, 'grade'), z4c2: () => cheapestUp(3),
       z5a: () => C.buyStaff(s, 1), z5a2: () => cheapestUp(4),
       z6a: () => C.buyPost(s, 1), z6a2: cheapestDef, z6b: () => cheapestUp(5), z6b2: () => C.buyUpgrade(s, 'booth'),
       z7a: () => C.buyAntenna(s, 1)
@@ -118,7 +118,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
         const rate = C.railRate(s), probe = () => { const o = Object.create(s); o.routes = Object.assign({}, s.routes); return o; };
         const t = probe(); t.trains = s.trains + 1;
         consider(C.trainCost(s, 1), C.railRate(t) - rate, () => C.buyTrain(s, 1));
-        for (const r of C.ROUTES) { const q = probe(); q.routes[r.id]++; consider(C.routeCost(s, r.id), Math.max(C.railRate(q) - rate, s.trains ? 0 : C.cargoValue(s) * 0.1), () => C.buyRoute(s, r.id)); }
+        for (const r of C.ROUTES) { const q = probe(); q.routes[r.id]++; consider(C.routeCost(s, r.id), r.id === 'crew' ? rate * 0.03 : C.railRate(q) - rate, () => C.buyRoute(s, r.id)); }
       }
       if (s.zone >= 4) { const q = Object.create(s); q.staff = s.staff + 1; consider(C.staffCost(s, 1), Math.max(C.labRate(q) - C.labRate(s), per * 0.03), () => C.buyStaff(s, 1)); }      // 5구역: 연구원은 약품도 만든다
       if (s.zone >= 5) { const q = Object.create(s); q.posts = s.posts + 1; consider(C.postCost(s, 1), Math.max(C.guardRate(q) - C.guardRate(s), per * 0.01), () => C.buyPost(s, 1)); }      // 6구역: 초소

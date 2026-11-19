@@ -45,7 +45,7 @@ const near = (a, b, msg) => assert.ok(Math.abs(a - b) <= Math.max(1e-9, Math.abs
 
 /* ================= 상태와 저장 ================= */
 
-function onPlatform() { const s = inStation(); s.trains = 4; s.routes.loop = 2; s.plat = { t: 0, bank: 0, pos: 1 }; s.defenses.rail = 1e9; s.signalIn = 1e9; s.salvageIn = 1e9; return s; }
+function onPlatform() { const s = inStation(); s.trains = 4; s.routes.grade = 1; s.plat = { t: 0, bank: 0, pos: 1, horn: 0 }; s.defenses.rail = 1e9; s.signalIn = 1e9; s.salvageIn = 1e9; return s; }
 const calm = () => 0.5;      // 무리가 기준 걸음으로만 걷고 달려들지 않는다
 function onBoard(levels) { const s = inFactory(); (levels || []).forEach((lv, i) => { s.board[i] = lv; }); return s; }
 
@@ -678,47 +678,6 @@ test('저장: 기계와 라인 기록을 안전하게 읽고, 문 앞에 있던 
 
 /* ================= 4구역: 노선 ================= */
 
-test('노선: 4구역을 열기 전에는 열차도 노선도 없다', () => {
-  const s = inFactory(); s.supplies = 1e40;
-  assert.equal(C.buyTrain(s, 1).reason, 'locked');
-  assert.equal(C.buyRoute(s, 'loop').reason, 'locked');
-  assert.equal(C.trainCost(s, 1), Infinity);
-  assert.equal(C.routeCost(s, 'loop'), Infinity);
-  assert.equal(C.maxTrains(s), 0);
-  s.trains = 5; s.routes.loop = 3;
-  assert.equal(C.railRate(s), 0);
-  assert.equal(C.railPlan(s).riders.loop, 0);
-  const before = s.supplies;
-  s.defenses.rail = 1e9; s.signalIn = 1e9;
-  const ev = C.tick(s, 100, half);
-  assert.ok(!ev.some(e => e.type === 'train'));
-});
-
-test('노선: 열차와 노선을 사고, 값이 오른다', () => {
-  const s = inStation();
-  const t1 = C.trainCost(s, 1);
-  s.supplies = t1 * 0.99;                         // 이만큼 큰 수에서는 1을 빼도 값이 그대로다
-  assert.equal(C.buyTrain(s, 1).reason, 'supplies');
-  s.supplies = t1;
-  assert.ok(C.buyTrain(s, 1).ok);
-  assert.equal(s.trains, 1);
-  assert.equal(C.trainCost(s, 1), Math.ceil(t1 * C.TRAIN_GROWTH));
-  const loop = C.ROUTES.find(r => r.id === 'loop');
-  assert.equal(C.routeCost(s, 'loop'), loop.baseCost);
-  s.supplies = loop.baseCost;
-  assert.ok(C.buyRoute(s, 'loop').ok);
-  assert.equal(s.routes.loop, 1);
-  assert.equal(C.routeCost(s, 'loop'), Math.ceil(loop.baseCost * C.ROUTE_GROWTH));
-  assert.equal(C.buyRoute(s, 'nothing').reason, 'unknown');
-  assert.equal(C.buyTrain(s, 0).reason, 'unknown');
-  s.upgrades.tracks = 1; s.upgrades.depot = 1;
-  assert.equal(C.routeCost(s, 'loop'), Math.ceil(loop.baseCost * C.ROUTE_GROWTH * 0.94));
-  assert.equal(C.trainCost(s, 1), Math.ceil(t1 * C.TRAIN_GROWTH * 0.96));
-  s.trains = C.TRAIN_MAX; s.routes.loop = C.ROUTE_MAX; s.supplies = 1e300;
-  assert.equal(C.buyTrain(s, 1).reason, 'max');
-  assert.equal(C.buyRoute(s, 'loop').reason, 'max');
-});
-
 test('노선: 열차 수가 구간에 닿을 때마다 화물 2배', () => {
   assert.equal(C.fleetMilestone(0), 1);
   assert.equal(C.fleetMilestone(C.FLEET_MILESTONES[0]), 2);
@@ -727,18 +686,6 @@ test('노선: 열차 수가 구간에 닿을 때마다 화물 2배', () => {
   const v = C.cargoValue(s);
   s.trains = 4;
   near(C.cargoValue(s), v * 2);
-});
-
-test('노선: 자리를 비운 동안에도 다니고, 돌아온 화물은 자리 비움 효율로 받는다', () => {
-  const s = inStation();
-  s.trains = 2; s.routes.loop = 1; s.defenses.rail = 1e9;
-  const loop = C.ROUTES.find(r => r.id === 'loop'), value = C.cargoValue(s), before = s.supplies;
-  const rep = C.applyOffline(s, loop.seconds * 10);
-  assert.ok(rep.trains >= 1);
-  near(s.railEarned, 2 * loop.seconds * 10 * loop.mult * value * C.OFFLINE_RATE);
-  assert.ok(rep.gain >= s.railEarned);
-  assert.ok(s.supplies > before);
-  assert.ok(s.runEarned >= 0 && s.lifetimeEarned >= 0);
 });
 
 test('노선: 목표와 일지, 그리고 철수하면 열차와 노선이 사라진다', () => {
@@ -750,23 +697,21 @@ test('노선: 목표와 일지, 그리고 철수하면 열차와 노선이 사�
   s.trains = 16; s.expressRuns = 3;
   ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z4a'));
-  s.pendingPerks = []; s.runEarned = C.RETREAT_MIN * 10; s.routes.loop = 3; s.routeLoad.loop = 50; s.routeClock.loop = 5;
+  s.pendingPerks = []; s.runEarned = C.RETREAT_MIN * 10; s.routes.grade = 3;
   const r = C.retreat(s, 0);
   assert.equal(r.state.trains, 0);
-  assert.deepEqual(r.state.routes, { loop: 0, river: 0, outer: 0, express: 0 });
-  assert.deepEqual(r.state.routeLoad, { loop: 0, river: 0, outer: 0, express: 0 });
+  assert.deepEqual(r.state.routes, { grade: 0, crew: 0 });
   assert.equal(r.state.expressRuns, 0);
   assert.equal(r.state.railEarned, 0);
 });
 
 test('저장: 열차와 노선을 안전하게 읽는다', () => {
   const s = inStation();
-  s.trains = 5; s.routes.river = 2; s.railEarned = 9; s.expressRuns = 1;
+  s.trains = 5; s.routes.crew = 2; s.railEarned = 9; s.expressRuns = 1;
   assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
-  const bad = C.sanitizeState({ version: 2, zone: 3, trains: 1e9, routes: { loop: 1e9, river: -1, ghost: 2 }, routeClock: { loop: 1e9, river: 'x' }, routeLoad: { loop: 1e30, outer: NaN }, railEarned: -4, expressRuns: 2.7 }, 0);
+  const bad = C.sanitizeState({ version: 2, zone: 3, trains: 1e9, routes: { grade: 1e9, crew: -1, ghost: 2 }, railV: 2, railEarned: -4, expressRuns: 2.7 }, 0);
   assert.equal(bad.trains, C.TRAIN_MAX);
-  assert.deepEqual(bad.routes, { loop: C.ROUTE_MAX, river: 0, outer: 0, express: 0 });
-  assert.equal(bad.routeClock.loop, 0); assert.equal(bad.routeLoad.loop, 0);      // 3.4.0: 노선마다 달리던 시계는 쓰지 않는다
+  assert.deepEqual(bad.routes, { grade: C.ROUTES[0].max, crew: 0 });
   assert.equal(bad.railEarned, 0);
   assert.equal(bad.expressRuns, 2);
   for (const junk of [null, 'x', 7, []]) assert.doesNotThrow(() => C.sanitizeState({ version: 2, zone: 3, routes: junk, routeClock: junk, routeLoad: junk }, 0));
@@ -1136,7 +1081,7 @@ test('시세판: 저장을 안전하게 읽고, 철수하면 비워진다', () =
 
 test('청신호: 잠긴 구역, 자리 비움, 저장', () => {
   assert.equal(C.greenSignal(inFactory()).reason, 'locked');
-  const s = inStation(); s.defenses.rail = 1e5; s.trains = 1; s.routes.loop = 1;
+  const s = inStation(); s.defenses.rail = 1e5; s.trains = 1; s.routes.grade = 1;
   C.greenSignal(s);
   assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
   C.applyOffline(s, 1000);
@@ -1267,7 +1212,7 @@ test('자동화: 레벨이 오를수록 대기 시간이 줄고, 절반 아래�
   near(C.greenCooldown(s), C.GREEN_COOLDOWN * (1 - C.ASSIST_STEP));
   s.traits.auto = C.ASSIST_MAX;
   assert.equal(C.assistFactor(s), 0.5);
-  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6; s.trains = 1; s.routes.loop = 1;
+  s.machines.sorter = 2; s.machines.press = 3; s.machines.assembler = 6; s.trains = 1; s.routes.grade = 1;
   const t = C.TRAITS.find(x => x.id === 'auto');
   assert.equal(t.max, C.ASSIST_MAX);
   const b = fresh(); b.antibodies = 2;
@@ -1796,7 +1741,7 @@ test('표류 화물: 4구역에서만 발견되고, 열차가 싣고 온 값이 
   for (let i = 0; i < 30; i++) C.tick(f, 1, () => 0.3);
   assert.equal(f.salvage, null, '4구역을 열기 전에는 없다');
   const s = inStation(); s.supplies = 1e40;
-  assert.ok(C.buyTrain(s, 8).ok); assert.ok(C.buyRoute(s, 'loop').ok);
+  assert.ok(C.buyTrain(s, 8).ok); assert.ok(C.buyRoute(s, 'grade').ok);
   assert.ok(C.railRate(s) > 0);
   s.salvageIn = 0.5;
   let got = null;
@@ -2758,22 +2703,6 @@ test('2.5.0 도전 난이도: 외벽·무결은 무리가 불고, 거센 무리�
   assert.deepEqual(C.CHALLENGES.map(d => d.goal), [2, 3, 4, 5, 5, 6, 6, 'end']);
 });
 
-test('4구역 배차: 복구한 노선에는 먼저 한 대씩 가고, 남은 열차는 배수가 높은 노선부터 채운다', () => {
-  const s = inStation();
-  s.routes.loop = 7; s.routes.river = 8; s.routes.outer = 5; s.routes.express = 2;
-  s.trains = 22;
-  const p = C.railPlan(s);
-  assert.ok(p.riders.loop >= 1, '순환선도 돈다');
-  assert.deepEqual(p.riders, { express: p.slots.express, outer: p.slots.outer, river: 22 - p.slots.express - p.slots.outer - 1, loop: 1 });
-  assert.equal(p.idle, 0);
-  // 열차가 노선 수보다 적으면 배수가 높은 노선부터 한 대씩
-  s.trains = 2; assert.deepEqual(C.railPlan(s).riders, { express: 1, outer: 1, river: 0, loop: 0 });
-  // 끊긴 노선에는 가지 않는다. 자리가 남으면 쉬는 열차로 센다
-  s.routes.loop = 0; s.trains = 22; assert.equal(C.railPlan(s).riders.loop, 0);
-  s.routes = { loop: 1, river: 0, outer: 0, express: 0 }; s.trains = 5;
-  const q = C.railPlan(s); assert.equal(q.riders.loop, Math.min(5, q.slots.loop)); assert.equal(q.idle, 5 - q.riders.loop);
-});
-
 test('3.0.6 원정 목표는 다녀올 때마다 다른 것으로 바뀐다', () => {
   const main = C.createState(0); main.bestZone = 6; main.zone = 3;
   const id = 's1-1', def = C.STAGES[0];
@@ -2985,14 +2914,6 @@ test('3구역: 저장 · 옛 저장 옮기기 · 자리 비움 · 철수 · 없�
 });
 
 /* ---------- 3.7.0 4구역 승강장(구역 전체) ---------- */
-test('4구역 줄: 기관차와 노선은 각자 화물을 더한다. 무엇을 사든 초당이 오른다', () => {
-  const s = onPlatform();
-  assert.equal(C.railUnits(s), 4 + 2 * C.ROUTE_SLOTS * 1); near(C.railRate(s), C.railUnits(s) * C.RAIL_SCALE * C.cargoValue(s));
-  const r0 = C.railRate(s); s.trains = 5; assert.ok(C.railRate(s) > r0);
-  const r1 = C.railRate(s); s.routes.river = 1; assert.ok(C.railRate(s) > r1, '기관차가 모자라도 노선을 사면 오른다');
-  assert.equal(C.railRate(inFactory()), 0); assert.equal(C.railUnits(inFactory()), 0);
-});
-
 test('4구역 판: 화물칸이 간격마다 붙고, 길수록 한 칸의 값이 뛴다. 꽉 차면 더 싣지 못하고 서 있다', () => {
   const s = onPlatform();
   assert.equal(C.trainInfo(s).cars, 0); assert.equal(C.trainInfo(s).max, C.CAR_BASE); assert.equal(C.sendTrain(s).reason, 'empty');
@@ -3008,7 +2929,7 @@ test('4구역 판: 화물칸이 간격마다 붙고, 길수록 한 칸의 값이
   const f = onPlatform(); f.upgrades.fence = 5; C.stepRail(f, C.CAR_SECONDS * C.CAR_BASE, [], calm);
   assert.ok(C.trainInfo(f).full); assert.equal(f.trainsSent, 0); const bank = f.plat.bank; C.stepRail(f, 5, [], calm); assert.equal(f.plat.bank, bank); assert.equal(f.trainsSent, 0);
   const u = onPlatform(); u.upgrades.longplat = 1; assert.equal(C.carMax(u), 10); u.upgrades.longplat = 2; assert.equal(C.carMax(u), C.CAR_MAX);
-  const cs = C.carSeconds(u); u.upgrades.timetable = 2; assert.ok(C.carSeconds(u) < cs);
+  const cs = C.carSeconds(u); u.routes.crew = 2; near(C.carSeconds(u), cs * C.CREW_STEP * C.CREW_STEP, '연결 작업반: 칸이 빨리 붙는다');
   const a = onPlatform(), b = onPlatform(); b.upgrades.fence = 5; C.stepRail(a, 10, [], calm); C.stepRail(b, 10, [], calm); assert.ok(b.plat.pos > a.plat.pos, '철조망: 무리가 느리다');
 });
 
@@ -3027,12 +2948,12 @@ test('4구역 무리: 닿으면 뒤쪽 절반을 떼고 떠난다. 가끔 달려
 
 test('4구역 역무원: 꽉 차면, 또는 무리가 가까워지면 보낸다. 떼이지 않는다. 가만히 둔 것 < 역무원 < 손', () => {
   const s = onPlatform(); s.upgrades.autosig = 1; s.upgrades.fence = 5; let ev = [];
-  const sup = s.supplies; C.stepRail(s, C.CAR_SECONDS * C.AUTO_CARS, ev, calm);
-  const a = ev.find(e => e.type === 'train'); assert.equal(a.why, 'auto'); assert.equal(a.kept, C.AUTO_CARS); near(s.supplies - sup, C.railRate(s) * C.CAR_SECONDS * C.AUTO_CARS, '8칸에서 보내면 초당 그대로');
+  const sup = s.supplies; C.stepRail(s, C.CAR_SECONDS * C.CAR_BASE, ev, calm);
+  const a = ev.find(e => e.type === 'train'); assert.equal(a.why, 'auto'); assert.equal(a.kept, C.CAR_BASE, '꽉 차면 보낸다'); near(s.supplies - sup, C.railRate(s) * C.CAR_SECONDS * C.CAR_BASE * C.carMult(C.CAR_BASE) / C.CAR_NORM);
   const e = onPlatform(); e.upgrades.autosig = 1; e.plat.pos = C.AUTO_NEAR + 0.01; e.plat.t = 11; e.plat.bank = 5; ev = []; C.stepRail(e, 2, ev, calm);
   const b = ev.find(x => x.type === 'train'); assert.equal(b.why, 'auto'); assert.equal(b.kept, 2, '무리가 가까워지면 그 전에 보낸다');
-  const off = onPlatform(); off.upgrades.autosig = 1; off.upgrades.fence = 5; C.setAutoEvents(off, 3, false); ev = []; C.stepRail(off, C.CAR_SECONDS * C.AUTO_CARS + 1, ev, calm); assert.ok(!ev.some(x => x.type === 'train'), '구역 자동을 끄면 손을 기다린다');
-  const run = (up, policy, seed) => { const z = onPlatform(); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.railRate(z), e0 = z.railEarned; for (let t = 0; t < 7200; t++) { C.stepRail(z, 1, [], r); const i = C.trainInfo(z); if (policy && i.cars >= 1 && policy(i)) C.sendTrain(z); } return { speed: (z.railEarned - e0) / 7200 / rate, hits: z.hordeHits, long: z.longRuns }; };
+  const off = onPlatform(); off.upgrades.autosig = 1; off.upgrades.fence = 5; C.setAutoEvents(off, 3, false); ev = []; C.stepRail(off, C.CAR_SECONDS * C.CAR_BASE + 1, ev, calm); assert.ok(!ev.some(x => x.type === 'train'), '구역 자동을 끄면 손을 기다린다');
+  const run = (up, policy, seed) => { const z = onPlatform(); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.railRate(z), e0 = z.railEarned; for (let t = 0; t < 7200; t++) { C.stepRail(z, 1, [], r); if (policy) { C.pullCar(z); C.pullCar(z); } const i = C.trainInfo(z); if (policy && i.cars >= 1 && policy(i)) C.sendTrain(z); } return { speed: (z.railEarned - e0) / 7200 / rate, hits: z.hordeHits, long: z.longRuns }; };
   const idle = run({}, null, 5), auto = run({ autosig: 1 }, null, 5), hand = run({ longplat: 2 }, (i) => i.full || i.near < 0.25, 5);
   assert.ok(idle.speed < auto.speed * 0.6, '가만히 ' + idle.speed.toFixed(2) + ' / 역무원 ' + auto.speed.toFixed(2)); assert.equal(auto.hits, 0, '역무원은 떼이지 않는다');
   const autoLong = run({ autosig: 1, longplat: 2 }, null, 5);
@@ -3047,7 +2968,7 @@ test('4구역: 긴 시간 · 이상한 값 · 저장 · 자리 비움 · 철수 
   const p = onPlatform(); C.stepRail(p, 17, [], calm); p.trainsSent = 9; p.longRuns = 2; p.hordeHits = 1;
   const back = C.deserialize(C.serialize(p), 0); assert.deepEqual(back.plat, p.plat); assert.equal(back.trainsSent, 9); assert.equal(back.longRuns, 2); assert.equal(back.hordeHits, 1);
   const raw = JSON.parse(C.serialize(p)); raw.plat = { t: 'x', bank: -5, pos: 7 }; const fixed = C.deserialize(JSON.stringify(raw), 0);
-  assert.deepEqual(fixed.plat, { t: 0, bank: 0, pos: 1 }); delete raw.plat; assert.equal(C.deserialize(JSON.stringify(raw), 0).plat.pos, 1);
+  assert.deepEqual(fixed.plat, { t: 0, bank: 0, pos: 1, horn: 0 }); delete raw.plat; assert.equal(C.deserialize(JSON.stringify(raw), 0).plat.pos, 1);
   raw.plat = { t: 20, bank: 9, horde: 52 }; assert.equal(C.deserialize(JSON.stringify(raw), 0).plat.pos, 1, '3.4.0 의 저장(닿는 시간)은 무리를 멀리서 다시 오게 한다');
   const away = onPlatform(); away.defenses.rail = 1e5; const rate = C.railRate(away), before = away.railEarned; C.applyOffline(away, 1000);
   near(away.railEarned - before, rate * 1000 * C.OFFLINE_RATE, '자리를 비운 동안은 역무원이 보낸 것으로 친다'); assert.equal(away.plat.t, 0);
@@ -3055,4 +2976,58 @@ test('4구역: 긴 시간 · 이상한 값 · 저장 · 자리 비움 · 철수 
   const g = onPlatform(); g.upgrades.longplat = 1; g.upgrades.fence = 5; C.stepRail(g, C.CAR_SECONDS * 10, [], calm); assert.equal(C.trainInfo(g).cars, 10); C.sendTrain(g); assert.equal(g.longRuns, 1); assert.equal(g.expressRuns, 0);
   assert.equal(C.goals(g, 3)[1].text, '10칸 이상 열차 3번 보내기');
   away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(next.trainsSent, 0); assert.equal(next.longRuns, 0); assert.equal(next.plat.pos, 1);
+});
+
+test('4구역 줄 셋(3.8.0): 기관차는 한 칸의 값, 화물 등급은 레벨마다 2배, 연결 작업반은 칸을 빨리 붙인다', () => {
+  assert.deepEqual(C.ROUTES.map(d => d.id), ['grade', 'crew']);
+  const s = onPlatform();
+  assert.equal(C.railUnits(s), 4 * C.GRADE_STEP); near(C.railRate(s), C.railUnits(s) * C.RAIL_SCALE * C.cargoValue(s));
+  const r0 = C.railRate(s); s.trains = 5; near(C.railRate(s), r0 * 5 / 4);
+  const r1 = C.railRate(s); s.routes.grade = 2; near(C.railRate(s), r1 * C.GRADE_STEP);
+  const none = inStation(); none.routes.grade = 5; assert.equal(C.railRate(none), 0, '기관차가 없으면 열차가 서지 않는다');
+  assert.equal(C.railRate(inFactory()), 0);
+  // 값: 줄마다 다르게 오르고 끝이 있다. 정비창이 깎아 준다
+  const b = inStation(); b.supplies = 1e40; near(C.routeCost(b, 'grade'), C.ROUTES[0].baseCost); assert.ok(C.buyRoute(b, 'grade').ok); near(C.routeCost(b, 'grade'), C.ROUTES[0].baseCost * C.ROUTES[0].growth);
+  b.upgrades.yard = 1; near(C.routeCost(b, 'crew'), C.ROUTES[1].baseCost * 0.96);
+  b.routes.grade = C.ROUTES[0].max; assert.equal(C.routeCost(b, 'grade'), Infinity); assert.equal(C.buyRoute(b, 'grade').ok, false); assert.equal(C.buyRoute(b, 'loop').reason, 'unknown');
+});
+
+test('4구역 손이 할 일(3.8.0): 그림을 눌러 칸을 당기고, 경적으로 무리를 밀어낸다', () => {
+  const s = onPlatform();
+  const r = C.pullCar(s); assert.ok(r.ok); near(s.plat.t, C.PULL_SECONDS); assert.equal(s.plat.bank, 0, '화물은 흐른 시간만큼만 실린다'); assert.equal(s.pullsRun, 1);
+  for (let i = 0; i < 400; i++) C.pullCar(s);
+  assert.ok(C.trainInfo(s).full); assert.equal(C.pullCar(s).reason, 'full'); assert.equal(C.pullCar(inFactory()).reason, 'locked'); assert.equal(C.pullCar(inStation()).reason, 'stopped');
+  // 당기면 같은 시간에 더 긴 열차가 된다 → 한꺼번에 받는 것이 커진다
+  const a = onPlatform(), b = onPlatform(); C.stepRail(a, 20, [], calm); C.stepRail(b, 20, [], calm); for (let i = 0; i < 24; i++) C.pullCar(b);
+  assert.equal(C.trainInfo(a).cars, 4); assert.ok(C.trainInfo(b).cars > 4); assert.ok(C.trainInfo(b).gain > C.trainInfo(a).gain);
+  // 경적: 열차 하나에 한 번(개조로 세 번까지). 무리를 밀어낸다. 새 열차가 서면 다시 쓸 수 있다
+  const h = onPlatform(); C.stepRail(h, 20, [], calm); const pos = h.plat.pos; assert.equal(C.trainInfo(h).horn, 1);
+  const hr = C.blowHorn(h); assert.ok(hr.ok); near(h.plat.pos, pos + C.HORN_PUSH); assert.equal(C.trainInfo(h).horn, 0); assert.equal(C.blowHorn(h).reason, 'empty');
+  C.sendTrain(h); assert.equal(C.trainInfo(h).horn, 1);
+  h.upgrades.horn = 2; assert.equal(C.hornMax(h), 3);
+  const far = onPlatform(); C.blowHorn(far); assert.equal(far.plat.pos, 1, '1보다 멀어지지는 않는다');
+  assert.equal(C.blowHorn(inFactory()).reason, 'locked');
+  // 튼튼한 연결기: 떼일 때 3분의 1만
+  const c = onPlatform(); c.upgrades.coupler = 1; const ev = []; C.stepRail(c, C.HORDE_SECONDS + 1, ev, calm); const t = ev.find(e => e.type === 'train'); assert.equal(t.why, 'horde'); assert.equal(t.kept, Math.ceil(C.CAR_BASE * 2 / 3));
+  // 저장
+  h.pullsRun = 7; h.hornsRun = 3; C.blowHorn(h); const back = C.deserialize(C.serialize(h), 0); assert.equal(back.plat.horn, 1); assert.equal(back.pullsRun, 7); assert.equal(back.hornsRun, 4);
+});
+
+test('4구역 옛 저장(3.8.0): 노선 넷과 없앤 개조에 쓴 물자만큼 화물 등급과 연결 작업반을 사 준다', () => {
+  const old = JSON.parse(C.serialize(inStation())); delete old.railV; old.trains = 30; old.routes = { loop: 16, river: 13, outer: 10, express: 7 }; old.upgrades.signal = 20; old.upgrades.timetable = 8; old.supplies = 77;
+  const m = C.deserialize(JSON.stringify(old), 0);
+  assert.equal(m.trains, 30); assert.equal(m.supplies, 77); assert.ok(m.routes.grade >= 3, JSON.stringify(m.routes)); assert.ok(m.routes.crew >= 1); assert.equal(m.routes['loop'], undefined); assert.equal(m.upgrades.signal, undefined);
+  assert.ok(C.railRate(m) > 0); assert.deepEqual(C.deserialize(C.serialize(m), 0).routes, m.routes, '한 번 옮긴 저장은 다시 옮기지 않는다');
+  const fresh4 = JSON.parse(C.serialize(inStation())); delete fresh4.railV; fresh4.routes = {}; assert.deepEqual(C.deserialize(JSON.stringify(fresh4), 0).routes, { grade: 0, crew: 0 });
+});
+
+test('4구역: 열기 전에는 열차도 줄도 없다. 기관차를 사면 값이 오른다', () => {
+  const f = inFactory();
+  assert.equal(C.buyTrain(f, 1).reason, 'locked'); assert.equal(C.buyRoute(f, 'grade').reason, 'locked'); assert.equal(C.trainCost(f, 1), Infinity); assert.equal(C.routeCost(f, 'grade'), Infinity); assert.equal(C.maxTrains(f), 0);
+  f.trains = 5; f.routes.grade = 3; assert.equal(C.railRate(f), 0); f.defenses.rail = 1e9; f.signalIn = 1e9; assert.ok(!C.tick(f, 100, half).some(e => e.type === 'train'));
+  const s = inStation(), t1 = C.trainCost(s, 1);
+  s.supplies = t1 * 0.99; assert.equal(C.buyTrain(s, 1).reason, 'supplies'); s.supplies = t1; assert.ok(C.buyTrain(s, 1).ok); assert.equal(s.trains, 1);
+  assert.equal(C.trainCost(s, 1), Math.ceil(t1 * C.TRAIN_GROWTH)); assert.equal(C.buyTrain(s, 0).reason, 'unknown');
+  s.upgrades.yard = 1; assert.equal(C.trainCost(s, 1), Math.ceil(t1 * C.TRAIN_GROWTH * 0.96));
+  s.trains = C.TRAIN_MAX; s.supplies = 1e300; assert.equal(C.buyTrain(s, 1).reason, 'max');
 });
