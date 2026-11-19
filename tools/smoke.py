@@ -273,6 +273,10 @@ def run_case(browser, name, size, state, mode):
         if '합쳐져요' not in text('line-note'): problems.append('합치기 안내가 없다: ' + text('line-note'))
         page.locator('#mboard button.pair').first.click(); page.wait_for_timeout(200)
         if not page.evaluate("(() => { const c = document.querySelector('#mboard button.pair canvas, #mboard button canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size >= 3; })()"): problems.append('상자 그림이 그려지지 않았다')
+        # 합친 뒤에도(움직임이 끝난 뒤) 상자가 든 칸은 모두 눈에 보여야 한다. 3.5.0 에서는 합쳐진 칸이 통째로 투명해져 판이 빈 것처럼 보였다
+        page.wait_for_timeout(1300)
+        ghost = page.evaluate("(() => { const m = document.getElementById('mboard').getBoundingClientRect(); return [...document.querySelectorAll('#mboard button')].filter(b => !b.hidden && b.querySelector('small') && b.querySelector('small').textContent).filter(b => { const r = b.getBoundingClientRect(), cs = getComputedStyle(b); return cs.opacity !== '1' || cs.position !== 'relative' || r.top < m.top - 1 || r.bottom > m.bottom + 1; }).length; })()")
+        if ghost: problems.append('상자가 있는데 안 보이는 칸이 %d개 있다' % ghost)
         if '손으로 1번 합침' not in text('line-note'): problems.append('합친 횟수가 안 오른다: ' + text('line-note'))
         if page.locator('#mboard button i').count() < 1: problems.append('합쳤는데 덤(+물자) 표시가 없다')
         close_story()

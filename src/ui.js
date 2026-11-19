@@ -2304,7 +2304,7 @@
   function drawBoxCell(cv, lv, pair) {
     var g = cv.getContext('2d'), W = 32, H = 27;
     // 바닥은 어둡고 잔무늬 없이: 품목만 눈에 들어오게 한다(나무 팔레트와 바닥 무늬를 넣었더니 화면이 어수선했다)
-    px(g, 0, 0, W, H, '#2b2d33'); px(g, 0, 0, W, 1, '#383b42'); px(g, 0, 0, 1, H, '#383b42'); px(g, 0, H - 1, W, 1, '#1f2126'); px(g, W - 1, 0, 1, H, '#1f2126');
+    px(g, 0, 0, W, H, '#30333a'); px(g, 0, 0, W, 1, '#454952'); px(g, 0, 0, 1, H, '#454952'); px(g, 0, H - 1, W, 1, '#1f2126'); px(g, W - 1, 0, 1, H, '#1f2126');
     if (!(lv >= 1)) return;
     var tier = Math.floor((lv - 1) / BOX_ART.length);
     g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(9, 17, 14, 1);      // 물건 밑의 옅은 그림자
@@ -2348,7 +2348,7 @@
         b.setAttribute('aria-label', lv ? C.boxName(lv) + ' ' + lv + '단계' + (can[i] ? ', 합칠 수 있음' : '') + (want ? ', 의뢰가 찾는 상자' : '') : '빈칸');
         var old = b.querySelector('i'); if (old) b.removeChild(old);
         if (fx && lv) {
-          void b.offsetWidth; b.classList.add(fx.pop ? 'pop' : 'in');
+          void b.offsetWidth; b.classList.add(fx.pop ? 'mb-pop' : 'mb-in');      // 'pop' · 'in' 은 다른 곳(떠오르는 숫자)의 클래스라 칸이 통째로 투명해졌다. 판만의 이름을 쓴다
           if (fx.gain > 0) b.appendChild(el('i', '', '+' + fmt(fx.gain)));
         }
       }
@@ -2758,7 +2758,7 @@
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
       $('auto-ev').checked = C.autoEvents(state, aeZone);
-      setText($('auto-ev-text'), ['', '단골 주문 자동', '의뢰·고장·트럭 자동', '표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
+      setText($('auto-ev-text'), ['', '단골 주문 자동', '자동 합치기', '역무원 · 표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + (aeZone === 2 ? '' : ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%'));
     }
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-now').hidden = tab !== 'wall';
@@ -2958,7 +2958,7 @@
       ld.className = 'num steady';
       var pairs = C.mergeable(state).length;
       setText($('line-note'), (pairs ? '숫자가 노란 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 손으로 ' + (state.mergesRun || 0) + '번 합침'
-        + (autoM ? '\n자동 합치기가 ' + C.autoMergeSeconds(state).toFixed(1) + '초마다 하나씩 도와요. 손으로 합치면 덤을 받아요.' : ''));
+        + (autoM && C.autoEvents(state, 2) ? '\n자동 합치기가 ' + C.autoMergeSeconds(state).toFixed(1) + '초마다 하나씩 도와요. 손으로 합치면 덤을 받아요.' : ''));
       $('line-note').classList.remove('boosted');
       setText($('line-mile'), '가장 높은 상자 ' + (state.boxBest ? C.boxName(state.boxBest) + ' (' + state.boxBest + '단계)' : '-') + ' · 칸 ' + line.size + '개');
       var tb = $('tune'), tc = C.tuneCost(state);

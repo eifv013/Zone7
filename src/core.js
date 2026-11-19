@@ -760,6 +760,8 @@
       }
     }
     s.lineV = 3;
+    // 들어오는 단계보다 낮은 상자는 짝이 영영 생기지 않는다(옛 저장을 옮길 때 줄만 올라가서 생겼다). 들어오는 단계로 올려 준다
+    for (var lowi = 0; lowi < s.board.length; lowi++) if (s.board[lowi] >= 1 && s.board[lowi] < spawnLevel(s)) s.board[lowi] = spawnLevel(s);
     if (seedBoard) [5, 4, 3, 2, 1, 0].forEach(function (up, k) { s.board[k * 3] = Math.min(BOX_MAX, spawnLevel(s) + up); });
     for (var bz = boardSize(s); bz < BOARD_MAX; bz++) s.board[bz] = 0;      // 칸 수 밖의 상자는 없다
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
@@ -1428,7 +1430,7 @@
   function stepBoard(state, dt, rng, events, limit) {
     if (!zoneOpen(state, 2)) return;
     dt = safeNum(dt, 0); if (!(dt > 0)) return;
-    var fs = feedSeconds(state), n = 0, max = limit || 60, auto = autoOn(state, 2);
+    var fs = feedSeconds(state), n = 0, max = limit || 60, auto = autoEvents(state, 2);      // 구역 자동 스위치를 끄면 자동 합치기도 쉰다(짝을 손으로 다 합치고 싶을 때)
     state.feed = (typeof state.feed === 'number' && isFinite(state.feed) ? state.feed : 1) + dt / fs;
     if (auto) state.autoMerge = safeNum(state.autoMerge, 0) + dt / autoMergeSeconds(state);
     while (state.feed >= 1 && n < max) {

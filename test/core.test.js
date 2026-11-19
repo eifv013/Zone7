@@ -2998,6 +2998,7 @@ test('3구역 자동 합치기: 5초에 짝 하나만. 그래서 자동을 사�
   const a = onBoard([1, 1, 1, 1, 2, 2]); a.upgrades.autoline = 1; let ev = [];
   C.stepBoard(a, C.AUTO_MERGE_SECONDS, half, ev);
   assert.equal(ev.filter(e => e.type === 'box-merge' && e.auto).length, 1); assert.equal(a.mergesRun, 0); assert.ok(C.mergeable(a).length >= 2, '누를 짝이 남아 있다');
+  const sw = onBoard([1, 1, 1, 1]); sw.upgrades.autoline = 1; C.setAutoEvents(sw, 2, false); C.stepBoard(sw, C.AUTO_MERGE_SECONDS * 3, half, []); assert.equal(sw.mergesAll, 0, '구역 자동을 끄면 자동 합치기도 쉰다');
   const h = onBoard([1, 1, 3, 3]); h.upgrades.autoline = 1; h.contract = { who: 'bike', level: 1, need: 2, have: 2, left: 50 };
   C.stepBoard(h, C.AUTO_MERGE_SECONDS, half, []); assert.deepEqual(h.board.slice(0, 4).filter(x => x), [1, 1, 4], '의뢰가 찾는 단계는 건드리지 않는다');
   const mk3 = (auto) => { const s = onBoard([]); s.feed = 1; s.upgrades.autoline = auto ? 1 : 0; return s; };
@@ -3040,6 +3041,7 @@ test('3구역: 저장 · 옛 저장 옮기기 · 자리 비움 · 철수 · 없�
   assert.ok(moved.machines.paint > 20, JSON.stringify(moved.machines)); assert.ok(moved.machines.feed >= 1); assert.equal(moved.supplies, 123, '가진 물자는 그대로'); assert.equal(moved.upgrades.lube, undefined);
   assert.ok(C.boardSum(moved) > 0, '판에 상자 몇 개를 놓아 준다'); assert.ok(C.lineRate(moved) > 0);
   assert.deepEqual(C.deserialize(C.serialize(moved), 0).machines, moved.machines, '한 번 옮긴 저장은 다시 옮기지 않는다');
+  const low = JSON.parse(C.serialize(onBoard([1, 2, 9]))); low.machines = { feed: 0, forge: 3, paint: 0 }; assert.deepEqual(C.deserialize(JSON.stringify(low), 0).board.slice(0, 3), [4, 4, 9], '들어오는 단계보다 낮은 상자는 올려 준다');
   const early = JSON.parse(C.serialize(inMarket())); delete early.lineV; delete early.board; assert.equal(C.boardSum(C.deserialize(JSON.stringify(early), 0)), 0);
   const away = onBoard([9]); away.feed = 0; away.defenses.rail = 1e5;
   const rate = C.lineRate(away); C.applyOffline(away, 3000); near(away.lineEarned, rate * 3000 * C.OFFLINE_RATE); assert.ok(C.boardSum(away) > C.boxWorth(9), '판은 그동안 자란다');

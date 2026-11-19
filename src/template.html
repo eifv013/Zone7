@@ -645,7 +645,7 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 /* 3구역: 품목 고르기, 고장, 출하 트럭 */
 /* 3.3.0 합치기 판. 예전 컨베이어 그림 · 기계 칸 · 품목 · 고장 · 전력 투입은 쓰지 않아 감춘다 */
 #belt, #line-flow, #recipes, #jam-fix, #line .line-acts { display: none !important; }
-.mboard-wrap { margin-bottom: 8px; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; background: #1f2126; }
+.mboard-wrap { margin-bottom: 8px; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; background: #15161a; }
 .mboard-top { display: block; width: 100%; height: auto; image-rendering: pixelated; }
 .mboard { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; padding: 4px 5px 6px; }
 .mboard button { position: relative; aspect-ratio: 32 / 27; min-height: 0; padding: 0; border: 0; border-radius: 0; background: #4a4d54; color: #e8e6dc; overflow: visible; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -655,13 +655,13 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .mboard button.pair small { color: #ffd95a; }
 .mboard button.want::after { content: ''; position: absolute; inset: 0; border: 2px solid #6aaede; pointer-events: none; }      /* 의뢰가 찾는 상자: 파란 테두리(합치지 말고 모아 둘 것) */
 .mboard button[hidden] { display: none; }
-.mboard button.pop canvas { animation: box-pop .28s ease-out; }
-.mboard button.in canvas { animation: box-in .25s ease-out; }
+.mboard button.mb-pop canvas { animation: box-pop .28s ease-out; }
+.mboard button.mb-in canvas { animation: box-in .25s ease-out; }
 .mboard button i { position: absolute; left: 50%; top: -4px; transform: translateX(-50%); font: 700 12px/1 var(--font-mono); font-style: normal; color: #ffd95a; white-space: nowrap; pointer-events: none; animation: box-gain .9s ease-out forwards; text-shadow: 0 1px 0 #17180f, 0 -1px 0 #17180f, 1px 0 0 #17180f, -1px 0 0 #17180f; z-index: 2; }
 @keyframes box-pop { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
 @keyframes box-in { 0% { transform: translateY(-8px); opacity: 0; } 100% { transform: none; opacity: 1; } }
 @keyframes box-gain { 0% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, -22px); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .mboard button.pop canvas, .mboard button.in canvas { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .mboard button.mb-pop canvas, .mboard button.mb-in canvas { animation: none; } }
 .recipes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
 .recipes button { padding: 7px 4px; border: 2px solid var(--ink-soft); border-radius: 8px; background: transparent; color: var(--ink); font: 700 14px/1.2 var(--font-body); cursor: pointer; }
 .recipes button small { display: block; margin-top: 2px; font-weight: 400; font-size: 11px; color: var(--ink-soft); }
@@ -1332,7 +1332,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 3.5.0</div>
+  <div class="boot-ver">7구역 알파 3.5.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1774,7 +1774,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 3.5.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 3.5.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
