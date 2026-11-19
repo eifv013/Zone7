@@ -103,6 +103,23 @@
   var PATCH_NOTES = window.PatchNotes || [];
 
   /* ---------- 저장소 ---------- */
+  var STAGE_KEY = 'zone7-stage-v1';      // 하던 원정 판(3.0.1). 본 게임 저장과 따로 둔다
+  /** 적어 둔 원정 판이 있으면 그 판으로 돌아간다. 본 게임(state)을 다 읽고 자리 비움 정산까지 끝난 뒤에 부른다. */
+  function resumeStage(now) {
+    var raw = null;
+    try { raw = localStorage.getItem(STAGE_KEY); } catch (e) { return false; }
+    if (!raw || home) return false;
+    try {
+      var saved = JSON.parse(raw), sg = saved && saved.stage, def = sg && C.STAGES.filter(function (d) { return d.id === sg.id; })[0];
+      if (!def || sg.won || sg.lost) { localStorage.removeItem(STAGE_KEY); return false; }
+      var st = C.deserialize(saved.text, now);
+      st.stage = { id: def.id, hard: !!sg.hard, won: false, lost: false, seconds: Math.max(0, Number(sg.seconds) || 0) };
+      st.lastSeen = now;      // 닫혀 있던 동안 원정의 시간은 흐르지 않는다
+      home = state; stageEnter = now; state = st;      // 본 게임은 방금 정산했으므로, 원정을 끝낼 때는 지금부터의 시간만 더 정산한다
+      tab = 'z0'; pane = 'play'; perkShown = '';
+      return true;
+    } catch (e) { try { localStorage.removeItem(STAGE_KEY); } catch (e2) { /* 그대로 둬도 다음에 다시 지운다 */ } return false; }
+  }
   var Store = {
     /** { state, error } 를 돌려준다. 저장이 없으면 둘 다 null. */
     load: function () {
@@ -117,10 +134,12 @@
       try {
         if (!home) state.lastSeen = Date.now();      // 스테이지 중에는 본 게임의 '마지막으로 본 때'를 건드리지 않는다(들어간 때로 남는다)
         localStorage.setItem(SAVE_KEY, C.serialize(mainState()));
+        // 3.0.1: 원정 중이면 원정 판도 따로 적어 둔다. 전에는 원정 판을 어디에도 적지 않아서, 도중에 업데이트되거나 창이 닫히면 원정이 처음(0)으로 돌아갔다
+        try { if (home) localStorage.setItem(STAGE_KEY, JSON.stringify({ stage: state.stage, text: C.serialize(state) })); else localStorage.removeItem(STAGE_KEY); } catch (e2) { /* 원정만 못 이어 갈 뿐이다 */ }
         return true;
       } catch (e) { return false; }
     },
-    clear: function () { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* 지울 것이 없다 */ } }
+    clear: function () { try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(STAGE_KEY); } catch (e) { /* 지울 것이 없다 */ } }
   };
 
   /* ---------- 계정 저장 ---------- */
@@ -2678,9 +2697,11 @@
       var ld = $('line-load');
       setText(ld, '가동률 ' + Math.floor(line.load * 100 + 1e-6) + '% · 정속 ' + Math.round(line.steadyAt * 100) + '% 이상');
       ld.className = 'num' + (line.steady ? ' steady' : '');
-      setText($('line-note'), state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
+      var surgeShow = state.surgeLeft > 0 && !(state.retool > 0) && line.flow > 0;      // 3.0.1: 전력 투입 중에도 노란 딱지(5 · 6 · 7구역과 같게)
+      $('line-note').classList.toggle('boosted', surgeShow);
+      setText($('line-note'), (surgeShow ? '전력 투입 중 ×' + C.SURGE_MULT + ' · ' : '') + (state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
         ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '정속 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
-        : '기계 셋이 모두 있어야 라인이 돌아요');
+        : '기계 셋이 모두 있어야 라인이 돌아요'));
       drawBelt(line);
       var sg = $('surge'), sOn = state.surgeLeft > 0;
       sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
@@ -3743,6 +3764,7 @@
       if (!loaded.error) notice('알파 0.6 부터 구조가 새로 바뀌었어요. "다음 할 일"을 따라가면 돼요. 자세한 설명은 기록 > 도움말에 있어요.');
     }
 
+    if (resumeStage(now)) log('하던 원정으로 돌아왔다.', 'good');
     lastFrame = now; lastSave = now;
     render();
     // 도트 화면은 부가 요소다. 모듈이 없거나 캔버스를 못 써도 게임은 그대로 진행한다.
@@ -3759,7 +3781,9 @@
 
   // 뷰어가 페이지를 교체할 때 진행 상황을 넘겨받을 수 있도록 현재 상태를 제공한다.
   var hot = window.claude && window.claude.hot;
-  try { if (hot && hot.snapshot) hot.snapshot(function () { return state; }); } catch (e) { /* 뷰어 밖에서는 없다 */ }
+  // 3.0.1: 넘겨주는 것은 언제나 본 게임이다. 전에는 원정 중이면 원정 판(0에서 시작한 판)을 넘겨서, 새 페이지가 그것을 본 게임으로 알고 이어 갔다.
+  //        원정 판은 Store.save 가 따로 적어 두고, 새 페이지가 resumeStage 로 되찾는다.
+  try { if (hot && hot.snapshot) hot.snapshot(function () { if (home) { try { Store.save(); } catch (e) { /* 넘기기만 하면 된다 */ } } return mainState(); }); } catch (e) { /* 뷰어 밖에서는 없다 */ }
   if (hot && hot.ready) hot.ready(start);
   else start((hot && hot.data) || {});
 })();
