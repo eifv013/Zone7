@@ -2421,7 +2421,7 @@
     setText($('t7-freq'), (87.5 + C.tunePos(state) * 20.5).toFixed(1) + ' MHz');
     setText($('t7-gain'), rate > 0 ? '맞추면 먼 무리 +' + fmt(Math.floor(C.tuneGain(state))) + '명' + (C.mods(state).autotower > 0 && C.autoEvents(state, 6) ? ' · 자동은 절반' : '') : '');
     btn.disabled = cool || !(rate > 0);
-    setText(btn, !(rate > 0) ? '안테나를 먼저 세워요' : cool ? '다시 잡는 중 ' + Math.ceil(t.cool) + '초' : '지금 맞춘다');
+    setText(btn, !(rate > 0) ? '안테나를 먼저 세워요' : cool ? '다시 잡는 중 ' + Math.ceil(t.cool) + '초' : '맞춘다');
     fill(btn, cool ? 1 - t.cool / C.TUNE_COOL : 0);
   }
   function wireTower() {
@@ -2682,7 +2682,7 @@
       var dn = Math.min(state.dangerNext || 0, dMax);
       setText($('danger-val'), '위험 ' + dn);
       $('danger-down').disabled = dn <= 0; $('danger-up').disabled = dn >= dMax;
-      setText($('danger-text'), dn > 0 ? '무리 ×' + C.dangerHorde(dn).toFixed(2) + ' · 문 값 ×' + fmt(C.dangerCost(dn)) + '\n철수 항체 +' + Math.round(dn * C.DANGER_ANTIBODY * 100) + '% · 끝을 보면 뽑기권 +' + dn * C.DANGER_TICKETS : '다음 회차의 위험 단계를 올리면 더 어렵고, 보상이 커요.\n처음 돌파한 단계마다 전체 생산이 ' + Math.round((C.DANGER_PROD - 1) * 100) + '% 늘어요.');
+      setText($('danger-text'), dn > 0 ? '어려워지는 것 · 밤의 무리 ×' + C.dangerHorde(dn).toFixed(2) + ', 다음 구역을 여는 값 ×' + fmt(C.dangerCost(dn)) + '\n더 받는 것 · 철수할 때 항체 샘플 +' + Math.round(dn * C.DANGER_ANTIBODY * 100) + '%, 끝을 보면 뽑기권 +' + dn * C.DANGER_TICKETS : '다음 회차의 위험 단계를 올리면 더 어렵고, 보상이 커요.\n처음 돌파한 단계마다 전체 생산이 ' + Math.round((C.DANGER_PROD - 1) * 100) + '% 늘어요.');
     }
     setText($('retreat-sub'), can ? '' : state.pendingPerks.length ? '' : '물자를 더 모으면 철수할 수 있어요. 철수하면 항체 샘플을 받아요.');
     // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
