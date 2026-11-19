@@ -2777,7 +2777,8 @@
     if (tab === 'z4' && open) {
       var pc = C.projectCost(state), rc = C.rerollCost(state), rate = C.researchNow(state);
       setText($('lab-points'), fmt(state.points));
-      setText($('lab-rate'), rate > 0 ? '초당 +' + fmt(rate) + (state.points < pc ? ' · 다음 과제까지 ' + clock((pc - state.points) / rate) : ' · 과제를 고를 수 있어요') : '연구원을 뽑으면 점수가 모여요');
+      $('lab-rate').classList.toggle('boosted', state.focusLeft > 0 && rate > 0);      // 3.0.0: 밤샘 연구 중에도 노란 딱지(6 · 7구역과 같게)
+      setText($('lab-rate'), rate > 0 ? '초당 +' + fmt(rate) + (state.focusLeft > 0 ? ' · 밤샘 중 ×' + C.FOCUS_MULT : '') + (state.points < pc ? ' · 다음 과제까지 ' + clock((pc - state.points) / rate) : ' · 과제를 고를 수 있어요') : '연구원을 뽑으면 점수가 모여요');
       rows.offers.forEach(function (o, i) {
         var def = null, id = state.offers[i];
         C.PROJECTS.forEach(function (p) { if (p.id === id) def = p; });
