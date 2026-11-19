@@ -49,7 +49,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (process.env.STAGE) {
       if (s.runSeconds >= stageBeat) { stageBeat += 60; if (process.env.CURVE) console.log(`  ${Math.round(s.runSeconds / 60)}분 누적 ${C.formatNumber(s.runEarned)} 시설 ${C.totalBuildings(s)} 밤 ${s.wavesCleared} 동네 ${s.sweeps} 뚫림 ${s.breaches}`); }
       const st = C.stageStatus(s);
-      if (st.over) { console.log(`${process.env.STAGE}${process.env.HARD ? ' 하드' : ''}: ${st.won ? '클리어 ' + (st.seconds / 60).toFixed(1) + '분' + (st.seconds <= st.def.speed ? ' (스피드)' : '') : '실패 ' + C.formatNumber(st.value) + '/' + C.formatNumber(st.need)} · 제한 ${st.def.limit / 60}분 · 스피드 ${st.def.speed / 60}분`); process.exit(0); }
+      if (st.over) { console.log(`${process.env.STAGE}${process.env.HARD ? ' 하드' : ''}: ${st.won ? '클리어 ' + (st.seconds / 60).toFixed(1) + '분' + (st.seconds <= C.stageSpeed(st.def, st.hard) ? ' (스피드)' : '') + ((s.breaches || 0) <= C.stageSafe(st.def, st.hard) ? ' (무결)' : '') + ' 뚫림 ' + (s.breaches || 0) : '실패 ' + C.formatNumber(st.value) + '/' + C.formatNumber(st.need)} · 제한 ${st.def.limit / 60}분 · 스피드 ${st.def.speed / 60}분`); process.exit(0); }
     }
     if (s.zone >= 1 && s.goods > 0 && s.price >= C.peakPrice(s)) C.sellGoods(s, false);      // 고점이면 손으로 판다(흥정꾼이 없는 도전에서도 2구역 목표를 채우게)
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });

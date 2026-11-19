@@ -321,8 +321,17 @@ body { word-break: keep-all; }
 .stage-sub, .stage-marks { font-size: 13px; line-height: 1.5; color: #b9b8ab; white-space: pre-line; }
 .stage-marks { font-family: var(--font-mono); font-size: 12px; color: #e6e5db; }
 .stage-acts { display: grid; grid-template-columns: 1fr; }
-.story-card .stage-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; align-self: auto; padding: 7px 10px; margin: 0; background: transparent; color: #e6e5db; border: 1.5px solid #4a4c40; text-align: left; font-size: 13px; }
+.story-card .stage-row { display: block; width: 100%; align-self: auto; padding: 7px 10px; margin: 0; background: transparent; color: #e6e5db; border: 1.5px solid #4a4c40; text-align: left; font-size: 13px; }
 .story-card .stage-row + .stage-row { margin-top: -2px; }
+.stage-row-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+/* 3.0.5: 고른 줄만 펼쳐져 별 셋의 조건이 별마다 붙어 나온다(전에는 카드 아래에 조건을 한 줄로 따로 적었다). 고른 줄의 오른쪽 별 묶음은 숨긴다: 같은 별이 두 번 보이지 않게 */
+.stage-how { display: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 7px; }
+.stage-row[aria-pressed="true"] .stage-how { display: grid; }
+.stage-row[aria-pressed="true"] .stage-stars { display: none; }
+.stage-how span { display: block; text-align: center; padding: 5px 2px; font-size: 11.5px; line-height: 1.35; border: 1px solid #4a4c40; border-radius: 4px; color: #a9a898; }
+.stage-how b { display: block; font-size: 16px; line-height: 1; margin-bottom: 3px; color: #7a7a6a; }
+.stage-how .got { color: #e6e5db; border-color: #f0b400; } .stage-how .got b { color: #f0b400; }
+.stage-row.hard .stage-how .got { border-color: #d8483a; } .stage-row.hard .stage-how .got b { color: #e0705c; }
 .story-card .stage-row small { color: #a9a898; font-size: 11.5px; font-weight: 400; margin-left: 6px; }
 .story-card .stage-row[aria-pressed="true"] { border-color: #f0b400; background: #2a2610; position: relative; }
 .story-card .stage-row.hard[aria-pressed="true"] { border-color: #d8483a; background: #2c1614; }
@@ -1256,7 +1265,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 3.0.4</div>
+  <div class="boot-ver">7구역 알파 3.0.5</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1675,7 +1684,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 3.0.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 3.0.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1744,9 +1753,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="stage-head"><span class="stage-no" id="stage-d-no"></span><b id="stage-d-name"></b></div>
         <div class="stage-sub" id="stage-d-sub"></div>
         <!-- 3.0.4: 일반 줄과 하드 줄이 그대로 고르는 단추다(전에는 작은 단추 셋이 한 줄에 끼어 있었다). 두 쪽의 별이 나란히 보이고, 출발 단추는 하나다 -->
-        <button type="button" class="stage-row" id="stage-normal" aria-pressed="true"><span><b>일반</b><small id="stage-n-info"></small></span><span class="stage-stars" id="stage-n-stars"></span></button>
-        <button type="button" class="stage-row hard" id="stage-hard" aria-pressed="false"><span><b>하드</b><small id="stage-h-info"></small></span><span class="stage-stars" id="stage-h-stars"></span></button>
-        <div class="stage-marks" id="stage-d-marks"></div>
+        <button type="button" class="stage-row" id="stage-normal" aria-pressed="true"><span class="stage-row-top"><span><b>일반</b><small id="stage-n-info"></small></span><span class="stage-stars" id="stage-n-stars"></span></span><span class="stage-how" id="stage-n-how"></span></button>
+        <button type="button" class="stage-row hard" id="stage-hard" aria-pressed="false"><span class="stage-row-top"><span><b>하드</b><small id="stage-h-info"></small></span><span class="stage-stars" id="stage-h-stars"></span></span><span class="stage-how" id="stage-h-how"></span></button>
         <div class="stage-acts"><button type="button" id="stage-go">출발</button></div>
       </div>
     </div>
