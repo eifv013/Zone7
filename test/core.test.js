@@ -3049,15 +3049,18 @@ test('5구역 줄: 연구원은 값, 시험관은 개수(값도 그만큼), 시�
   assert.equal(C.buyRack(inStation()).reason, 'locked'); assert.equal(C.buyReagent(inStation()).reason, 'locked');
 });
 
-test('5구역 연구 조교: 3단계에서 거둔다(초당 그대로). 가만히 둠 < 조교 < 손', () => {
+test('5구역 연구 조교: 타기 직전에 거둔다(손보다 적게). 가만히 둠 < 조교 < 손', () => {
   const a = onBench(4); a.upgrades.autolab = 1; let ev = [];
-  const sup = a.supplies; C.stepTubes(a, C.TUBE_STAGE_SECONDS * 2, calm, ev);
-  assert.ok(ev.some((e) => e.type === 'tube-auto' && e.stage === 3)); assert.equal(a.peaksRun, 0); assert.equal(a.harvestsRun, 0, '조교가 거둔 것은 손으로 친 횟수에 안 든다');
-  near(a.supplies - sup, C.labRate(a) * C.TUBE_STAGE_SECONDS * 2, '3단계에서 거두면 1배');
-  const off = onBench(4); off.upgrades.autolab = 1; C.setAutoEvents(off, 4, false); C.stepTubes(off, C.TUBE_STAGE_SECONDS * 3, calm, []); assert.equal(off.labEarned, 0, '구역 자동을 끄면 손을 기다린다');
+  C.stepTubes(a, C.TUBE_STAGE_SECONDS * 4, calm, ev); assert.equal(a.labEarned, 0, '절정이 되어도 바로 거두지 않는다(손이 잡을 틈)'); assert.equal(C.tubeStage(a, a.tubes[0]), 5);
+  const sup = a.supplies; C.stepTubes(a, C.TUBE_PEAK_SECONDS, calm, ev);
+  assert.ok(ev.some((e) => e.type === 'tube-auto')); assert.equal(a.peaksRun, 0, '조교가 거둔 것은 절정 횟수에 안 든다'); assert.equal(a.burntRun, 0); assert.equal(a.harvestsRun, 0);
+  near(a.supplies - sup, C.labRate(a) * C.TUBE_STAGE_SECONDS * 4 * C.TUBE_AUTO_MULT, '조교의 몫');
+  const h2 = onBench(4); h2.upgrades.autolab = 1; C.stepTubes(h2, C.TUBE_STAGE_SECONDS * 4 + 1, calm, []); const hr = C.harvestTube(h2, 0, calm); assert.ok(hr.peak && C.TUBE_MULTS[5] > C.TUBE_AUTO_MULT, '조교가 있어도 손으로 절정을 잡으면 더 받는다'); assert.equal(h2.peaksRun, 1);
+  const off = onBench(4); off.upgrades.autolab = 1; C.setAutoEvents(off, 4, false); C.stepTubes(off, C.TUBE_STAGE_SECONDS * 4 + C.TUBE_PEAK_SECONDS - 0.5, calm, []); assert.equal(off.labEarned, 0, '구역 자동을 끄면 손을 기다린다');
   const run = (up, policy, seed) => { const z = onBench(4); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.labRate(z); for (let t = 0; t < 3600; t++) { C.stepTubes(z, 1, r, []); if (policy) for (let i = 0; i < 4; i++) if (policy(C.tubeStage(z, z.tubes[i]))) { C.harvestTube(z, i, r); break; } } return z.labEarned / 3600 / rate; };
   const idle = run({}, null, 3), auto = run({ autolab: 1 }, null, 3), hand = run({}, (st) => st === 5, 3);
-  assert.ok(idle < 0.3, '가만히 ' + idle.toFixed(2)); assert.ok(auto > 0.9 && auto < 1.1, '조교 ' + auto.toFixed(2)); assert.ok(hand > 1.6, '손 ' + hand.toFixed(2));
+  assert.ok(idle < 0.3, '가만히 ' + idle.toFixed(2)); assert.ok(auto > 0.85 && auto < 1.15, '조교 ' + auto.toFixed(2)); assert.ok(hand > 1.6, '손 ' + hand.toFixed(2));
+  const both = run({ autolab: 1 }, (st) => st === 5, 3); assert.ok(both > auto * 1.5, '조교를 두고도 손으로 잡으면 더 번다: ' + both.toFixed(2));
 });
 
 test('5구역 갈림길: 연구 점수가 차면 둘 가운데 하나를 고른다. 다시 뽑기와 밤샘 연구는 없다', () => {

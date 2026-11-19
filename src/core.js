@@ -469,7 +469,7 @@
     { id: 'autoline', zone: 2, name: '조립공', desc: '상자가 차면 가장 많이 쌓인 것을 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
     { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
-    { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '시험관이 3단계가 되면 알아서 거둔다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
+    { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '시험관이 타기 전에 알아서 거둔다 · 손으로 절정에 거두는 것보다 적게 받는다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
     { id: 'autoguard', zone: 5, name: '초소장',     desc: '순찰을 알아서 돌고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
     { id: 'autotower', zone: 6, name: '송신 기사',  desc: '주파수를 알아서 맞추고, 무전에 알아서 응답한다(절반)', key: 'autotower', per: 1, baseCost: 5e31, growth: 1, max: 1 }
   ];
@@ -1999,9 +1999,10 @@
    * 갈림길: 연구 점수가 차면 과제 둘 가운데 하나를 고른다(전에는 셋이었고 다시 뽑기가 있었다). 고르면 다음 갈림길이 열린다.
    * 줄:   연구원(값) · 시험관(개수, 실험대에 바로 놓인다) · 시약 등급(레벨마다 2배).
    * 개조: 냉각기(절정이 오래간다) · 살균(타도 더 건진다) · 연구 노트 · 기숙사 · 문서고 열쇠 · 연구 조교(자동).
-   * 자동: 연구 조교는 3단계가 되면 거둔다(1배). 절정은 못 잡는다. 가만히 둠 < 조교 < 손.
+   * 자동(3.9.4): 연구 조교는 절정이 거의 끝날 때(TUBE_AUTO_LATE) 타기 직전에 거둔다. 서툴러서 TUBE_AUTO_MULT 배만 받는다(손으로 절정에 거두면 2배).
+   *   3.9.2 에서는 3단계에서 거뒀는데, 그러면 시험관이 금빛이 되기 전에 다 비워져서 조교를 사고 나면 손이 할 일이 없었다. 가만히 둠 < 조교 < 손.
    */
-  var TUBE_BASE = 4, TUBE_MAX = 12, TUBE_STAGE_SECONDS = 4, TUBE_PEAK_SECONDS = 4, TUBE_BURNT_SECONDS = 10, TUBE_MULTS = [0, 0.4, 0.7, 1, 1.4, 2], TUBE_BURNT = 0.25, TUBE_AUTO_STAGE = 3, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
+  var TUBE_BASE = 4, TUBE_MAX = 12, TUBE_STAGE_SECONDS = 4, TUBE_PEAK_SECONDS = 4, TUBE_BURNT_SECONDS = 10, TUBE_MULTS = [0, 0.4, 0.7, 1, 1.4, 2], TUBE_BURNT = 0.25, TUBE_AUTO_STAGE = 3, TUBE_AUTO_MULT = 1.25, TUBE_AUTO_LATE = 0.75, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
   var RACK_COST = 2e23, RACK_GROWTH = 6, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
   function tubeCount(state) { return clamp(TUBE_BASE + Math.floor(safeNum(state.racks, 0)), TUBE_BASE, TUBE_MAX); }
   function peakSeconds(state) { return TUBE_PEAK_SECONDS + mods(state).peak; }
@@ -2038,10 +2039,11 @@
     var tubes = tubesOf(state), tube = tubes[i];
     if (!tube) return fail('empty');
     var y = tubeYield(state, i);
+    if (auto === 'aide') { var am = TUBE_AUTO_MULT / (y.mult || 1); y = { stage: y.stage, mult: TUBE_AUTO_MULT, gain: y.gain * am, points: y.points * am }; }      // 조교가 거둔 것: 단계와 상관없이 조교의 몫
     if (y.gain > 0) { earn(state, y.gain); state.labEarned = (state.labEarned || 0) + y.gain; }
     state.points += y.points;
-    if (y.stage === 5) state.peaksRun = (state.peaksRun || 0) + 1;
-    if (y.stage === 6) state.burntRun = (state.burntRun || 0) + 1;
+    if (y.stage === 5 && !auto) state.peaksRun = (state.peaksRun || 0) + 1;      // 절정 횟수(목표)는 손으로 잡은 것만 센다
+    if (y.stage === 6 && auto !== 'aide') state.burntRun = (state.burntRun || 0) + 1;
     if (!auto) state.harvestsRun = (state.harvestsRun || 0) + 1;
     resetTube(tube, rng);
     return { ok: true, at: i, stage: y.stage, peak: y.stage === 5, burnt: y.stage === 6, gain: y.gain, points: y.points, auto: !!auto };
@@ -2058,7 +2060,7 @@
         tube.t += h * tube.r;
         var st = tubeStage(state, tube);
         if (st === 5 && was < 5 && events && k === steps - 1) events.push({ type: 'tube-peak', at: i });
-        if (auto && st >= TUBE_AUTO_STAGE && st < 6) { var r = harvestTube(state, i, rng, true); if (events && k >= steps - 2) { r.type = 'tube-auto'; events.push(r); } }
+        if (auto && tube.t >= grow + peak * TUBE_AUTO_LATE) { var r = harvestTube(state, i, rng, 'aide'); if (events && k >= steps - 2) { r.type = 'tube-auto'; events.push(r); } }
         else if (st === 6 && tube.t >= grow + peak + TUBE_BURNT_SECONDS) { var b = harvestTube(state, i, rng, true); if (events && k >= steps - 2) { b.type = 'tube-burnt'; events.push(b); } }
       }
     }
@@ -4060,7 +4062,7 @@
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
-    TUBE_BASE: TUBE_BASE, TUBE_MAX: TUBE_MAX, TUBE_STAGE_SECONDS: TUBE_STAGE_SECONDS, TUBE_PEAK_SECONDS: TUBE_PEAK_SECONDS, TUBE_BURNT_SECONDS: TUBE_BURNT_SECONDS, TUBE_MULTS: TUBE_MULTS, TUBE_BURNT: TUBE_BURNT, TUBE_AUTO_STAGE: TUBE_AUTO_STAGE, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
+    TUBE_BASE: TUBE_BASE, TUBE_MAX: TUBE_MAX, TUBE_STAGE_SECONDS: TUBE_STAGE_SECONDS, TUBE_PEAK_SECONDS: TUBE_PEAK_SECONDS, TUBE_BURNT_SECONDS: TUBE_BURNT_SECONDS, TUBE_MULTS: TUBE_MULTS, TUBE_BURNT: TUBE_BURNT, TUBE_AUTO_STAGE: TUBE_AUTO_STAGE, TUBE_AUTO_MULT: TUBE_AUTO_MULT, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
     tubeCount: tubeCount, peakSeconds: peakSeconds, tubesOf: tubesOf, tubeStage: tubeStage, tubeYield: tubeYield, harvestTube: harvestTube, stepTubes: stepTubes, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,

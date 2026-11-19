@@ -1445,7 +1445,7 @@
     // 시험관 칸: 가장 많을 때의 수만큼 만들어 두고, 가진 수만 보인다. 누르면 거둔다
     for (var tk = 0; tk < C.TUBE_MAX; tk++) (function (slot) {
       var tb = el('button', 'tube'), cv = document.createElement('canvas'), sm = el('small');
-      tb.type = 'button'; cv.width = 16; cv.height = 30; tb.appendChild(cv); tb.appendChild(sm); tb._cv = cv; tb._sm = sm;
+      tb.type = 'button'; cv.width = 16; cv.height = 34; tb.appendChild(cv); tb.appendChild(sm); tb._cv = cv; tb._sm = sm;
       tb.addEventListener('click', function () {
         var r = C.harvestTube(state, slot);
         if (!r.ok) return;
@@ -2332,7 +2332,8 @@
   var tubeFx = {}, TUBE_COL = ['#3a3d47', '#b8402e', '#d8663a', '#e0903c', '#e8c44a', '#ffd95a', '#3a3a36'], TUBE_DARK = ['#2a2c34', '#7a2a1e', '#96422a', '#a0642a', '#a88a2e', '#c89a2a', '#1f1f1c'];
   function drawTube(cv, stage, tube) {
     var g = cv.getContext('2d'), now = Date.now(), grow = C.TUBE_STAGE_SECONDS * 4;
-    g.clearRect(0, 0, 16, 30);
+    g.clearRect(0, 0, 16, 34);
+    for (var pp = 0; pp < 4; pp++) px(g, 2 + pp * 3, 31, 2, 2, stage === 6 ? '#4a3a38' : stage === 5 ? '#ffd95a' : pp < stage ? TUBE_COL[Math.min(4, pp + 1)] : '#3a3d47');      // 단계 네 칸
     var frac = stage === 0 ? 0 : Math.min(1, (tube.t || 0) / grow), h = stage === 0 ? 0 : 4 + Math.round(frac * 12), top = 21 - h;
     px(g, 4, 1, 8, 1, '#cfd6e0'); px(g, 3, 2, 1, 1, '#cfd6e0'); px(g, 12, 2, 1, 1, '#cfd6e0');      // 주둥이
     px(g, 4, 2, 1, 19, '#9aa3b2'); px(g, 11, 2, 1, 19, '#9aa3b2'); px(g, 5, 21, 6, 1, '#9aa3b2');      // 유리벽과 바닥
@@ -3155,7 +3156,7 @@
       /* 3.9.2 5구역 혈청 달이기. 차림은 1구역과 같다: 머리줄(왼쪽 숫자 · 오른쪽 자동 안내) → 누르는 칸 → 카드(갈림길) → 기록 한 줄 */
       var pc = C.projectCost(state), rate = C.researchRate(state), autoL = C.autoOn(state, 4), autoLOn = autoL && C.autoEvents(state, 4), tubeList = C.tubesOf(state), nT = tubeList.length, tb = $('tubes');
       setText($('lab-points'), '연구 점수 ' + fmt(Math.floor(state.points)));
-      setText($('lab-rate'), !(state.staff > 0) ? '연구원을 뽑으면 불이 붙어요' : !autoL ? '개조에서 연구 조교를 사요' : autoLOn ? '연구 조교 · ' + C.TUBE_AUTO_STAGE + '단계에서 거둬요' : '연구 조교가 쉬고 있어요');
+      setText($('lab-rate'), !(state.staff > 0) ? '연구원을 뽑으면 불이 붙어요' : !autoL ? '개조에서 연구 조교를 사요' : autoLOn ? '연구 조교 · 타기 전에 거둬요' : '연구 조교가 쉬고 있어요');
       tb.style.setProperty('--n', nT <= 6 ? nT : Math.ceil(nT / 2));      // 일곱 개부터는 두 줄로 고르게 나눈다
       for (var ti5 = 0; ti5 < tb.children.length; ti5++) {
         var tbn = tb.children[ti5], on5 = ti5 < nT;
@@ -3164,7 +3165,7 @@
         var tu = tubeList[ti5], st5 = state.staff > 0 ? C.tubeStage(state, tu) : 0, y5 = C.tubeYield(state, ti5), cls5 = 'tube' + (st5 === 5 ? ' peak' : st5 === 6 ? ' burnt' : '') + (tubeFx[ti5] ? ' mb-pop' : '');
         if (tbn.className !== cls5) tbn.className = cls5;
         drawTube(tbn._cv, st5, tu);
-        setText(tbn._sm, st5 === 0 ? '' : st5 === 5 ? '절정' : st5 === 6 ? '탔어요' : '+' + fmt(y5.gain));
+        setText(tbn._sm, st5 === 5 ? '절정' : st5 === 6 ? '탔어요' : '');      // 3.9.4: 관마다 숫자를 적지 않는다(열두 개가 숫자로 빽빽했다). 단계는 그림 아래 네 칸으로 보인다
         tbn.disabled = !(state.staff > 0);
       }
       tubeFx = {};
