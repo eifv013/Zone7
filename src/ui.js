@@ -2952,7 +2952,7 @@
       }
       $('truck').hidden = true;
       setText($('stock-note'), '');
-      setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 이번 회차 의뢰 ' + state.contractsRun + '번 · 상자 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.CONTRACT_BONUS_MAX * 100) + '%)');
+      setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 상자 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.CONTRACT_BONUS_MAX * 100) + '%)');
       C.MACHINES.forEach(function (d) {
         var r = rows.machines[d.id], lv = state.machines[d.id] || 0, q = qtyFor(C.maxMachines(state, d.id), d.max - lv), cost = C.machineCost(state, d.id, q);
         setText(r.count, 'Lv ' + lv + ' / ' + d.max);
@@ -2970,10 +2970,19 @@
       ld.className = 'num steady';
       var pairs = C.mergeable(state).length;
       var fullB = C.boardFull(state);
-      setText($('line-note'), (fullB ? '판이 가득 찼어요. 상자를 눌러 자리를 내야 새 상자가 들어와요' : pairs ? '상자를 누르면 같은 상자끼리 모두 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 손으로 ' + (state.mergesRun || 0) + '번 합침'
-        + (autoM && C.autoEvents(state, 2) ? '\n자동 합치기가 ' + C.autoMergeSeconds(state).toFixed(1) + '초마다 하나씩 도와요. 손으로 합치면 덤을 받아요.' : ''));
+      /* 3.8.4: 글을 덜어 냈다. 횟수('손으로 N번 합침')는 목표에 이미 나오고, 자동 합치기의 박자는 글이 아니라 막대로 보여 준다.
+         누르는 법은 처음 몇 번만 알려 주고, 그 뒤로는 판이 가득 찼을 때만 한 줄 적는다 */
+      setText($('line-note'), fullB ? '판이 가득 찼어요 · 상자를 눌러 자리를 내세요' : (state.mergesAll || 0) < 10 ? '상자를 누르면 같은 상자끼리 합쳐져요' : '');
+      $('line').setAttribute('data-merges', state.mergesRun || 0);      // 화면 테스트가 읽는다(글에서 횟수를 뺐다)
+      var ab = $('auto-merge'), aOn = !!autoM && C.autoEvents(state, 2);
+      ab.hidden = !autoM;
+      if (autoM) {
+        setText($('auto-merge-sec'), aOn ? C.autoMergeSeconds(state).toFixed(1) + '초' : '꺼짐');
+        $('auto-merge-fill').style.width = (aOn ? Math.round(Math.max(0, Math.min(1, state.autoMerge || 0)) * 100) : 0) + '%';
+        ab.classList.toggle('off', !aOn);
+      }
       $('line-note').classList.toggle('boosted', fullB);
-      setText($('line-mile'), '가장 높은 상자 ' + (state.boxBest ? C.boxName(state.boxBest) + ' (' + state.boxBest + '단계)' : '-') + ' · 칸 ' + line.size + '개');
+      setText($('line-mile'), '가장 높은 상자 ' + (state.boxBest ? C.boxName(state.boxBest) + ' (' + state.boxBest + '단계)' : '-'));
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.hidden = true;      // 3.2.1: 기계 줄의 구매 단추와 하는 일이 같아서 뺐다(1 · 2구역에도 없는 단추)
       tb.disabled = !(tc <= state.supplies); afford(tb, tc);
@@ -2993,7 +3002,7 @@
         $('salvage-fill').disabled = !sdone;
         setText($('salvage-fill'), sdone ? '끌어온다' : '열차 화물 ' + fmt(sv.have) + ' / ' + fmt(sv.need) + ' · ' + Math.floor(sv.need > 0 ? sv.have / sv.need * 100 : 0) + '%');
       }
-      setText($('salvage-note'), '화물 ' + C.cargoCount(state) + ' / ' + C.CARGOS.length + ' · 이번 회차 ' + state.salvagesRun + '번 · 화물 값 +' + Math.round((C.salvageMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.SALVAGE_BONUS_MAX * 100) + '%)');
+      setText($('salvage-note'), '화물 ' + C.cargoCount(state) + ' / ' + C.CARGOS.length + ' · 화물 값 +' + Math.round((C.salvageMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.SALVAGE_BONUS_MAX * 100) + '%)');
       // 3.7.0 승강장의 열차
       var cargo = C.cargoValue(state), ti = C.trainInfo(state), unit = C.RAIL_SCALE * cargo, autoT = C.autoOn(state, 3) && C.autoEvents(state, 3);
       setText($('plat-cars'), ti.running ? '화물칸 ' + ti.cars + ' / ' + ti.max + (ti.cars ? ' · ×' + ti.mult.toFixed(2) : '') : '');
@@ -3012,14 +3021,15 @@
       var go = $('train-go'), nextMult = ti.cars < ti.max ? C.carMult(ti.cars + 1) : 0;
       go.disabled = !(ti.running && ti.cars >= 1);
       var goKey = (ti.cars >= 1 ? fmt(ti.gain) : '-') + (ti.full ? 'F' : '');
-      if (go._t !== goKey) { go._t = goKey; go.textContent = ''; go.appendChild(el('span', '', ti.full ? '꽉 찼어요 · 출발' : '지금 출발')); go.appendChild(el('span', '', ti.cars >= 1 ? '+' + fmt(ti.gain) : ti.running ? '첫 칸을 붙이는 중' : '열차가 없어요')); }
+      if (go._t !== goKey) { go._t = goKey; go.textContent = ''; go.appendChild(el('span', '', ti.full ? '꽉 찼어요 · 출발' : '출발')); go.appendChild(el('span', '', ti.cars >= 1 ? '+' + fmt(ti.gain) : ti.running ? '첫 칸을 붙이는 중' : '열차가 없어요')); }
       go.classList.toggle('full', ti.running && ti.full);
       var hb = $('train-horn'); hb.disabled = !(ti.running && ti.horn > 0); setText(hb, '경적 ' + (ti.running ? ti.horn : 0));
       $('platform').classList.toggle('tappable', ti.running && !ti.full);
       setText($('plat-note'), !ti.running ? '기관차를 사면 승강장에 열차가 서요.'
-        : (ti.full ? '더 실을 수 없어요. 보내야 다음 열차가 와요.' : '그림을 누르면 칸이 빨리 붙어요.' + (ti.cars >= 1 ? ' 한 칸 더 붙으면 ×' + nextMult.toFixed(2) : ''))
-          + '\n무리가 닿으면 뒤쪽을 떼고 떠나요. 가끔 달려들어요. 경적으로 밀어낼 수 있어요.' + (autoT ? '\n역무원이 꽉 차면, 또는 무리가 가까워지면 보내요. 더 아슬아슬하게 끌려면 직접 누르세요.' : '')
-          + '\n보낸 열차 ' + (state.trainsSent || 0) + '번 · 당긴 횟수 ' + (state.pullsRun || 0) + ' · 10칸 이상 ' + (state.longRuns || 0) + '번 · 만차 ' + (state.expressRuns || 0) + '번 · 떼인 적 ' + (state.hordeHits || 0) + '번');
+        : ti.full ? '보내야 다음 열차가 와요'
+        : (state.trainsSent || 0) < 5 ? '그림을 누르면 칸이 빨리 붙어요 · 무리가 닿기 전에 보내세요'      // 3.8.4: 누르는 법은 처음 몇 대만. 횟수 기록은 목표와 업적에 있어서 뺐다
+        : ti.cars >= 1 ? '한 칸 더 붙으면 ×' + nextMult.toFixed(2) : '');
+      $('platform').setAttribute('data-pulls', state.pullsRun || 0); $('platform').setAttribute('data-sent', state.trainsSent || 0);      // 화면 테스트가 읽는다
       drawPlatform(ti);
       C.ROUTES.forEach(function (d) {
         var r = rows.routes[d.id], lv = state.routes[d.id] || 0, cost = C.routeCost(state, d.id);
@@ -3141,6 +3151,11 @@
         var bp = Object.create(state); bp.upgrades = Object.create(state.upgrades); bp.upgrades.broker = lv + 1;
         var bNow = secs(C.sellInterval(state)), bNext = secs(C.sellInterval(bp));
         infoText = !lv ? '사면 ' + bNext + '마다 판매' : lv >= u.max ? '현재 ' + bNow + '마다 판매' : '현재 ' + bNow + ' → ' + bNext;
+      }
+      if (u.id === 'autoline') {           // 3.8.4 자동 합치기: 몇 초마다 한 쌍인지(현재 → 산 뒤). 설명에 초가 없었다
+        var ap = Object.create(state); ap.upgrades = Object.create(state.upgrades); ap.upgrades.autoline = lv + 1;
+        var aNow = C.autoMergeSeconds(state).toFixed(1) + '초', aNext = C.autoMergeSeconds(ap).toFixed(1) + '초';
+        infoText = !lv ? '사면 ' + aNext + '마다 한 번' : lv >= u.max ? '현재 ' + aNow + '마다 한 번' : '현재 ' + aNow + ' → ' + aNext;
       }
       if (u.id === 'repair') infoText = !lv ? '사면 5초마다 하나' : '현재 ' + secs(C.repairInterval(state)) + '마다 하나';
       if (!infoText && lv > 0 && C.effectNow(u, lv)) infoText = '현재 ' + C.effectNow(u, lv);
@@ -3389,6 +3404,9 @@
         case 'salvage-filled':
           if (ev.first) { toast('새로 적었다 · ' + ev.name); log(ev.name + '. 도감에 적었다.', 'good'); }
           else log(ev.name + (ev.type === 'order-filled' ? '에게 흥정꾼이 상품을 팔았다.' : ev.type === 'contract-filled' ? '에 알아서 납품했다.' : (C.hasBatchim(ev.name) ? '을' : '를') + ' 알아서 거뒀다.') + ' 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
+          break;
+        case 'box-merge':      // 3.8.4: 자동 합치기가 합친 칸도 손으로 합쳤을 때처럼 튀어 보인다(전에는 아무 표시 없이 숫자만 바뀌었다)
+          if (ev.auto) boardFx[ev.at] = { pop: true, gain: 0, delay: Math.min(ev.delay || 0, 12) * 60 };
           break;
         case 'mastered':
           toast(ev.all ? '세 품목을 모두 익혔다' : ev.name + ' 숙련'); log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 손에 익었다.' + (ev.all ? ' 세 품목을 모두 익혀 라인이 더 빨리 돈다.' : ''), 'good'); sfx('goal');

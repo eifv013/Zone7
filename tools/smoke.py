@@ -286,7 +286,8 @@ def run_case(browser, name, size, state, mode):
         page.wait_for_timeout(1300)
         ghost = page.evaluate("(() => { const m = document.getElementById('mboard').getBoundingClientRect(); return [...document.querySelectorAll('#mboard button')].filter(b => !b.hidden && b.querySelector('small') && b.querySelector('small').textContent).filter(b => { const r = b.getBoundingClientRect(), cs = getComputedStyle(b); return cs.opacity !== '1' || cs.position !== 'relative' || r.top < m.top - 1 || r.bottom > m.bottom + 1; }).length; })()")
         if ghost: problems.append('상자가 있는데 안 보이는 칸이 %d개 있다' % ghost)
-        if '손으로 0번 합침' in text('line-note') or '손으로' not in text('line-note'): problems.append('합친 횟수가 안 오른다: ' + text('line-note'))
+        if int(page.get_attribute('#line', 'data-merges') or 0) < 1: problems.append('합친 횟수가 안 오른다')
+        if '합침' in text('line-note') or '도와요' in text('line-note'): problems.append('3.8.4 에서 뺀 글이 남아 있다: ' + text('line-note'))
         if page.locator('#mboard button i').count() < 1: problems.append('합쳤는데 덤(+물자) 표시가 없다')
         close_story()
         # 줄 셋: 도장 라인은 값이 바로 오르고, 단조기는 판의 상자가 모두 오르고, 투입구는 간격이 줄어든다
@@ -431,7 +432,7 @@ def run_case(browser, name, size, state, mode):
         c1 = int(text('plat-cars').split('화물칸 ')[1].split(' /')[0])
         if c1 <= c0: problems.append('그림을 열두 번 눌렀는데 칸이 안 늘었다: %d → %d' % (c0, c1))
         import re as _re2
-        pulled = int((_re2.search(r'당긴 횟수 (\d+)', text('plat-note')) or [0, '0'])[1])
+        page.wait_for_timeout(300); pulled = int(page.get_attribute('#platform', 'data-pulls') or 0)
         if pulled < 12: problems.append('빠르게 열두 번 두드렸는데 %d번만 당겨졌다' % pulled)
         if text('train-horn').strip() != '경적 1' or page.is_disabled('#train-horn'): problems.append('경적 단추가 이상하다: ' + text('train-horn'))
         bar0 = page.evaluate("parseFloat(document.getElementById('plat-horde-bar').style.width)")
@@ -439,7 +440,8 @@ def run_case(browser, name, size, state, mode):
         if page.evaluate("parseFloat(document.getElementById('plat-horde-bar').style.width)") <= bar0 and bar0 < 99: problems.append('경적을 울렸는데 무리가 그대로다')
         if not page.is_disabled('#train-horn'): problems.append('경적을 다 썼는데 또 눌린다')
         tap('#train-go'); page.wait_for_timeout(1200)
-        if '보낸 열차 1번' not in text('plat-note'): problems.append('보냈는데 횟수가 안 오른다: ' + text('plat-note'))
+        if page.get_attribute('#platform', 'data-sent') != '1': problems.append('보냈는데 횟수가 안 오른다: ' + str(page.get_attribute('#platform', 'data-sent')))
+        if text('plat-note').count('\n') > 0 or len(text('plat-note')) > 40: problems.append('승강장 안내가 길다: ' + text('plat-note'))
         if '화물칸 0 / 8' not in text('plat-cars'): problems.append('보낸 뒤 새 열차가 서지 않는다: ' + text('plat-cars'))
         if page.is_disabled('#train-horn'): problems.append('새 열차인데 경적이 돌아오지 않았다')
         for up in ['#row-longplat', '#row-fence', '#row-horn', '#row-coupler', '#row-yard']:

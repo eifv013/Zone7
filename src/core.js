@@ -465,7 +465,7 @@
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
-    { id: 'autoline', zone: 2, name: '자동 합치기', desc: '짝을 알아서 합치고, 다 모인 의뢰를 넘긴다 · 올릴수록 빨라진다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
+    { id: 'autoline', zone: 2, name: '자동 합치기', desc: '가장 많이 쌓인 상자를 알아서 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
     { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
@@ -573,7 +573,7 @@
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
-      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
+      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
@@ -792,7 +792,7 @@
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
     // 3.4.0 승강장의 열차. 깨진 값이나 옛 저장은 새 열차로 시작한다
     var rp = raw.plat && typeof raw.plat === 'object' ? raw.plat : {};
-    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9) };
+    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9), rush: typeof rp.rush === 'number' && isFinite(rp.rush) ? clamp(rp.rush, -1, 1) : 0 };
     s.pullsRun = clamp(safeCount(raw.pullsRun), 0, 1e12); s.hornsRun = clamp(safeCount(raw.hornsRun), 0, 1e12);
     s.longRuns = clamp(safeCount(raw.longRuns), 0, 1e12); s.hordeHits = clamp(safeCount(raw.hordeHits), 0, 1e12);
     s.trainsSent = clamp(safeCount(raw.trainsSent), 0, 1e12);
@@ -1500,8 +1500,16 @@
   function autoMergeSeconds(state) { var lv = clamp(Math.round(mods(state).autoline), 1, AUTO_MERGE_STEPS.length); return AUTO_MERGE_STEPS[lv - 1] * assistFactor(state); }
   function autoMergeOnce(state, events) {
     state.autoMerge -= 1;
-    var p = lowestPair(state, heldLevel(state)); if (!p) return false;
-    var r = doMerge(state, p[0], p[1], false); r.type = 'box-merge'; r.auto = true; if (events) events.push(r);
+    /* 고르는 단계: 상자가 가장 많이 쌓인 단계(같으면 낮은 쪽). 가장 낮은 짝부터 고르면 새로 들어오는 상자만 치우느라 위에 쌓인 같은 상자들에 끝내 손이 닿지 않았다 */
+    var held = heldLevel(state), cnt = {}, pick = 0; boardOf(state).forEach(function (v) { if (v >= 1 && v < BOX_MAX && v !== held) cnt[v] = (cnt[v] || 0) + 1; });
+    Object.keys(cnt).forEach(function (k) { k = +k; if (cnt[k] >= 2 && (!pick || cnt[k] > cnt[pick] || (cnt[k] === cnt[pick] && k < pick))) pick = k; });
+    if (!pick) return false;
+    /* 3.8.4: 자동 합치기도 손과 같게 한다. 전에는 한 번에 짝 하나만 합쳐서, 손으로 누르면 같은 상자가 모두 합쳐지는 것과 달랐고
+       상자가 들어오는 것보다 느려 판이 늘 같은 상자로 차 있었다("안 합쳐지는 것 같다"). 이제는 한 단계의 짝을 모두 합친다.
+       손과의 차이는 덤이다: 자동은 덤(합칠 때 받는 물자)을 받지 못한다. 의뢰가 찾는 단계는 그대로 남겨 둔다 */
+    var b = boardOf(state), lv = pick, cells = [];
+    for (var i = 0; i < b.length; i++) if (b[i] === lv) cells.push(i);
+    for (var k = 0; k + 1 < cells.length; k += 2) { var r = doMerge(state, cells[k], cells[k + 1], false); r.type = 'box-merge'; r.auto = true; r.delay = k / 2; if (events) events.push(r); }
     return true;
   }
   /** 이 줄을 하나 더 사면 길게 보아 수입이 몇 배가 되는가(−1). 봇과 '한 번에 올리기'가 고르는 데 쓴다. */
@@ -1783,7 +1791,7 @@
    */
   var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
   var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
-  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.04, HORDE_JUMP_MIN = 0.08, HORDE_JUMP_MAX = 0.3, LONG_CARS = 10;
+  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.06, HORDE_JUMP_MIN = 0.3, HORDE_JUMP_MAX = 0.55, HORDE_RUSH_SPEED = 0.5, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
   var CAR_MULTS = [0, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.95, 2.25, 2.6, 3];
   function carMult(n) { n = clamp(Math.floor(safeNum(n, 0)), 0, CAR_MAX); return CAR_MULTS[n]; }
@@ -1797,7 +1805,7 @@
   }
   /** 4구역이 초당 싣는 물자. 역무원에게 맡겨 8칸에서 보낼 때 실제로 버는 속도와 같다. */
   function railRate(state) { return railUnits(state) * RAIL_SCALE * cargoValue(state); }
-  function newPlat() { return { t: 0, bank: 0, pos: 1, horn: 0 }; }
+  function newPlat() { return { t: 0, bank: 0, pos: 1, horn: 0, rush: 0 }; }      // rush: 달려오는 중이면 남은 거리(양수), 이 열차에서 이미 한 번 달려왔으면 -1
   /** 열차 하나에 쓸 수 있는 경적 횟수. */
   function hornMax(state) { return HORN_BASE + Math.round(mods(state).horn); }
   function platOf(state) {
@@ -1861,7 +1869,7 @@
   }
   /**
    * 승강장의 시간을 dt 초 흘린다. 1초 이하로 나눠서 본다(무리가 닿는 때를 지나치지 않게).
-   *   무리의 걸음: 1초에 1 / HORDE_SECONDS 씩이 기준이고, 그때그때 0.5~1.5배로 흔들린다. 1초에 HORDE_SPRINT 의 확률로 달려든다(거리의 8~15%를 한 번에).
+   *   무리의 걸음: 1초에 1 / HORDE_SECONDS 씩이 기준이고, 그때그때 0.5~1.5배로 흔들린다. 1초에 HORDE_SPRINT 의 확률로 달려든다(3.8.4: 거리의 30~55%를 1초쯤에 걸쳐).
    *   철조망(hordespeed)이 걸음을 늦춘다. 달려드는 거리는 그대로다.
    *   너무 긴 dt 는 900걸음까지만 따라가고, 남는 시간은 역무원이 보낸 것으로 친다(평균 속도).
    */
@@ -1875,10 +1883,13 @@
       var p = platOf(state), before = trainInfo(state);
       p.t += h; if (!before.full) p.bank += railRate(state) * h;      // 꽉 찬 열차는 더 싣지 못한다
       p.pos -= h / HORDE_SECONDS * (0.5 + roll()) * slow;
-      if (roll() < HORDE_SPRINT * h) { p.pos -= HORDE_JUMP_MIN + (HORDE_JUMP_MAX - HORDE_JUMP_MIN) * roll(); if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
+      /* 3.8.4 돌진: 전에는 그 자리에서 거리의 8~30%를 건너뛰었다. 한 번에 사라져 "확 온다"는 느낌이 없었고, 양도 작았다.
+         이제는 30~55%를 초당 HORDE_RUSH_SPEED 로 달려온다(1초쯤). 달려오는 동안 경적을 울리거나 바로 보낼 틈이 있다. 철조망은 돌진을 늦추지 못한다 */
+      if (!p.rush && roll() < HORDE_SPRINT * h) { /* 열차 한 대에 한 번만 달려온다(연달아 달려와 첫 칸도 못 붙이고 쫓겨나는 일이 없게) */ p.rush = HORDE_JUMP_MIN + (HORDE_JUMP_MAX - HORDE_JUMP_MIN) * roll(); if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
+      if (p.rush > 0) { var run = Math.min(p.rush, HORDE_RUSH_SPEED * h); p.pos -= run; p.rush -= run; if (!(p.rush > 1e-9)) p.rush = -1; }
       var info = trainInfo(state);
-      if (p.pos <= 0) departTrain(state, 'horde', events);
-      else if (auto && info.cars >= 1 && (info.full || p.pos <= AUTO_NEAR)) departTrain(state, 'auto', events);
+      if (auto && info.cars >= 1 && (info.full || p.pos <= AUTO_NEAR)) departTrain(state, 'auto', events);      // 역무원이 먼저 본다(긴 dt 한 걸음에 돌진이 끝까지 닿아도 떼이지 않게)
+      else if (p.pos <= 0) departTrain(state, 'horde', events);
     }
     if (rest > 0) { var flat = railRate(state) * rest; earn(state, flat); state.railEarned += flat; }
   }

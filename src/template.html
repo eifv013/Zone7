@@ -648,6 +648,10 @@ html, body, button, .row, .panel { touch-action: pan-x pan-y; }
 /* 3.3.0 합치기 판. 예전 컨베이어 그림 · 기계 칸 · 품목 · 고장 · 전력 투입은 쓰지 않아 감춘다 */
 #belt, #line-flow, #recipes, #jam-fix, #line .line-acts { display: none !important; }
 .mboard-wrap { margin-bottom: 8px; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; background: #15161a; }
+.auto-merge { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.auto-merge .am-bar { flex: 1; height: 8px; border-radius: 4px; background: var(--line, #3a3b33); overflow: hidden; }
+.auto-merge .am-fill { display: block; height: 100%; width: 0; background: var(--ok, #6fbf8f); }
+.auto-merge.off { opacity: .5; }
 .mboard-top { display: block; width: 100%; height: auto; image-rendering: pixelated; }
 .mboard { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; padding: 4px 5px 6px; }
 .mboard button { position: relative; aspect-ratio: 32 / 27; min-height: 0; padding: 0; border: 0; border-radius: 0; background: #4a4d54; color: #e8e6dc; overflow: visible; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -1338,7 +1342,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 3.8.3</div>
+  <div class="boot-ver">7구역 알파 3.8.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1548,6 +1552,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <!-- 품목: 무엇을 만들지 고른다. 품목마다 느린 기계가 다르다 -->
         <div class="recipes" id="recipes" role="group" aria-label="만들 품목"></div>
         <div class="line-stat"><span class="num" id="line-load">가동률 0%</span><span class="label" id="line-note"></span></div>
+        <!-- 3.8.4 자동 합치기 막대: 다음 한 쌍을 합칠 때까지 차오른다(전에는 '몇 초마다 도와요'라는 글이었다) -->
+        <div class="auto-merge" id="auto-merge" hidden><span class="label">자동 합치기</span><span class="am-bar"><span class="am-fill" id="auto-merge-fill"></span></span><span class="label num" id="auto-merge-sec"></span></div>
         <button type="button" class="jam-fix" id="jam-fix" hidden></button>
         <button type="button" class="lab-reroll" id="rebalance" hidden></button>
         <div class="label" id="line-mile"></div>
@@ -1780,7 +1786,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 3.8.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 3.8.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
