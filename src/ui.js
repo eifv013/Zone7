@@ -378,7 +378,8 @@
     });
   }
   /** 짧은 진동. 설정에서 껐거나 기기가 지원하지 않으면 아무 일도 하지 않는다. */
-  function buzz(ms) { try { if (prefs.vibrate === 'on' && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
+  // 3.1.1: 아직 화면을 한 번도 누르지 않았으면 진동을 부르지 않는다. 브라우저가 막으면서 오류를 찍는다(공사가 저절로 끝날 때처럼 누르지 않고도 진동이 불리는 일이 생겼다)
+  function buzz(ms) { try { var ua = navigator.userActivation; if (prefs.vibrate === 'on' && navigator.vibrate && (!ua || ua.hasBeenActive)) navigator.vibrate(ms); } catch (e) { /* 진동은 없어도 된다 */ } }
   function recall(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function remember(key, value) { try { localStorage.setItem(key, String(value)); } catch (e) { /* 기억만 못 한다 */ } }
   function hasProgress(st) { return !!st && (st.lifetimeEarned > 0 || st.clicks > 0); }
