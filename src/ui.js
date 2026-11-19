@@ -2600,8 +2600,21 @@
     // 끝 화면: 일지와 특전 창이 모두 닫힌 뒤에 띄운다(겹치지 않게)
     if (pendingEnding && $('ending').hidden && $('story').hidden && $('perk').hidden) {
       setText($('ending-text'), '끝까지 왔어요.\n노란 우비는 탑 꼭대기에 걸려 있어요.');
-      setText($('ending-stats'), 'D+' + pendingEnding.day + ' · 철수 ' + pendingEnding.retreats + '번 · 켜 둔 시간 ' + duration(pendingEnding.seconds) + (pendingEnding.count > 1 ? ' · ' + pendingEnding.count + '번째 끝' : ''));
-      setText($('ending-after'), '거점은 계속 돌아가요.\n철수하면 처음부터 다시, 더 강하게 시작할 수 있어요.');
+      var pe = pendingEnding;
+      setText($('ending-stats'), (pe.count > 1 ? pe.count + '번째 끝 · ' : '') + '이번 회차 ' + duration(pe.runSeconds || 0) + (pe.danger > 0 ? ' · 위험 ' + pe.danger : '') + '\nD+' + pe.day + ' · 철수 ' + pe.retreats + '번 · 켜 둔 시간 ' + duration(pe.seconds));
+      // 받은 것: 뽑기권, 구조한 생존자(누적이 문턱을 넘으면 생산이 는다), 위험 단계 첫 돌파, 기록
+      var got = ['뽑기권 +' + (3 + (pe.dangerTickets || 0)) + '장'];
+      if (pe.saved > 0) got.push('구조한 생존자 +' + fmt(pe.saved) + '명 (누적 ' + fmt(Math.floor(pe.rescued || 0)) + '명)');
+      if (pe.tierUp) got.push('구조한 사람이 늘어 전체 생산 +' + Math.round(C.RESCUE_BONUS * 100) + '% (철수해도 남아요)');
+      if (pe.higher) got.push('위험 ' + pe.danger + ' 첫 돌파 · 전체 생산 +' + Math.round((C.DANGER_PROD - 1) * 100) + '% (철수해도 남아요)');
+      if (pe.fastest) got.push('가장 빠른 기록');
+      setText($('ending-got'), got.join('\n'));
+      // 새로 열린 것: 처음 끝을 봤을 때, 그리고 더 높은 위험 단계를 돌파했을 때
+      var fresh = [];
+      if (pe.count === 1) { fresh.push('위험 단계 · 철수 화면에서 다음 회차를 더 어렵게 걸 수 있어요. 보상이 커져요.'); fresh.push('끝까지 가는 도전 · 모험 화면에서 고를 수 있어요.'); }
+      else if (pe.higher && pe.danger < C.DANGER_MAX) fresh.push('위험 ' + (pe.danger + 1) + ' · 철수 화면에서 고를 수 있어요.');
+      $('ending-new-box').hidden = !fresh.length; setText($('ending-new'), fresh.join('\n'));
+      setText($('ending-after'), '거점은 계속 돌아가요.\n철수하면 1구역부터 다시 시작해요.');
       $('ending').hidden = false; sfx('goal');
       try { $('ending-ok').focus(); } catch (e) { /* 초점을 못 옮겨도 된다 */ }
     }
@@ -2979,12 +2992,12 @@
       var fullB = C.boardFull(state);
       /* 3.8.4: 글을 덜어 냈다. 횟수('손으로 N번 합침')는 목표에 이미 나오고, 자동 합치기의 박자는 글이 아니라 막대로 보여 준다.
          누르는 법은 처음 몇 번만 알려 주고, 그 뒤로는 판이 가득 찼을 때만 한 줄 적는다 */
-      setText($('line-note'), fullB ? '판이 가득 찼어요 · 상자를 눌러 자리를 내세요' : (state.mergesAll || 0) < 10 ? '상자를 누르면 같은 상자끼리 합쳐져요' : '');
+      setText($('line-note'), fullB ? '상자가 가득 찼어요 · 눌러서 자리를 내세요' : (state.mergesAll || 0) < 10 ? '상자를 누르면 같은 상자끼리 합쳐져요' : '');
       $('line').setAttribute('data-merges', state.mergesRun || 0);      // 화면 테스트가 읽는다(글에서 횟수를 뺐다)
       // 3.8.5 조립공: 1구역 순찰조와 같은 틀(글 한 줄 + .autobar, fill 이 부드럽게 채운다)
       var aOn = !!autoM && C.autoEvents(state, 2);
       $('merge-bar').hidden = !aOn;
-      setText($('merge-note'), !autoM ? '개조에서 조립공을 사요' : !aOn ? '조립공이 쉬고 있어요' : C.boardRoom(state) > C.AUTO_MERGE_ROOM ? '조립공 · 판이 차면 일해요' : '조립공 · ' + secs(C.autoMergeSeconds(state)) + '마다');
+      setText($('merge-note'), !autoM ? '개조에서 조립공을 사요' : !aOn ? '조립공이 쉬고 있어요' : C.boardRoom(state) > C.AUTO_MERGE_ROOM ? '조립공 · 상자가 차면 일해요' : '조립공 · ' + secs(C.autoMergeSeconds(state)) + '마다');
       fill($('merge-bar'), aOn ? state.autoMerge || 0 : 0);
       $('line-note').classList.toggle('boosted', fullB);
       setText($('line-mile'), '가장 높은 상자 ' + (state.boxBest ? C.boxName(state.boxBest) + ' (' + state.boxBest + '단계)' : '-'));

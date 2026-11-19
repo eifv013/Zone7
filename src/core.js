@@ -377,7 +377,7 @@
    */
   var MACHINES = [
     { id: 'feed',  name: '투입구',   desc: '상자가 더 자주 들어온다',                           baseCost: 3e10, growth: 2.5,  max: 30 },
-    { id: 'forge', name: '단조기',   desc: '들어오는 상자와 판의 상자가 한 단계 오른다', baseCost: 1e13, growth: 40,   max: 15 },
+    { id: 'forge', name: '단조기',   desc: '들어오는 상자와 놓인 상자가 한 단계 오른다', baseCost: 1e13, growth: 40,   max: 15 },
     { id: 'paint', name: '도장 라인', desc: '상자 값을 올린다',                                 baseCost: 2e10, growth: 1.3, max: 500 }
   ];
   /*
@@ -438,7 +438,7 @@
     { id: 'manual',  zone: 2, name: '정비 교범', desc: '3구역 시설 값 -4%',      key: 'z3cost',  per: -0.04, baseCost: 3e11, growth: 3,  max: 12 },
     { id: 'bonus',   zone: 2, name: '손맛',      desc: '손으로 합칠 때의 덤 +50%', key: 'mergebonus', per: 0.5, baseCost: 3e11, growth: 4,  max: 10 },
     { id: 'lucky',   zone: 2, name: '행운 상자', desc: '들어오는 상자가 한 단계 더 높을 확률 +10%p', key: 'lucky', per: 0.1, baseCost: 6e11, growth: 5, max: 5 },
-    { id: 'wide',    zone: 2, name: '판 넓히기', desc: '판에 5칸이 더 생긴다',     key: 'boardsize', per: 5, baseCost: 5e13, growth: 400, max: 2 },
+    { id: 'wide',    zone: 2, name: '칸 넓히기', desc: '칸이 5개 더 생긴다',     key: 'boardsize', per: 5, baseCost: 5e13, growth: 400, max: 2 },
     { id: 'yard',    zone: 3, name: '정비창',    desc: '4구역 시설 값 -4%',      key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
     { id: 'longplat', zone: 3, name: '긴 승강장', desc: '화물칸을 2칸 더 붙일 수 있다', key: 'platlen', per: 2, baseCost: 2e19, growth: 500, max: 2 },
     { id: 'fence',   zone: 3, name: '철조망',    desc: '무리가 다가오는 걸음 -8%', key: 'hordespeed', per: -0.08, baseCost: 2e18, growth: 4, max: 5 },
@@ -465,7 +465,7 @@
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
-    { id: 'autoline', zone: 2, name: '조립공', desc: '판이 차면 가장 많이 쌓인 상자를 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
+    { id: 'autoline', zone: 2, name: '조립공', desc: '상자가 차면 가장 많이 쌓인 것을 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
     { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 보낸다 · 돌진은 못 끊는다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
@@ -573,7 +573,7 @@
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
-      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
+      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
@@ -792,7 +792,7 @@
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
     // 3.4.0 승강장의 열차. 깨진 값이나 옛 저장은 새 열차로 시작한다
     var rp = raw.plat && typeof raw.plat === 'object' ? raw.plat : {};
-    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9), rush: rp.rush === 1 || rp.rush === -1 ? rp.rush : 0, warn: clamp(safeNum(rp.warn, 0), 0, 5) };
+    s.plat = { t: clamp(safeNum(rp.t, 0), 0, 3600), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), pos: typeof rp.pos === 'number' && rp.pos >= 0 && rp.pos <= 1 ? rp.pos : 1, horn: clamp(safeCount(rp.horn), 0, 9), rush: rp.rush === 1 || rp.rush === -1 ? rp.rush : 0, warn: clamp(safeNum(rp.warn, 0), 0, 5), hand: rp.hand ? 1 : 0 };
     s.pullsRun = clamp(safeCount(raw.pullsRun), 0, 1e12); s.hornsRun = clamp(safeCount(raw.hornsRun), 0, 1e12);
     s.longRuns = clamp(safeCount(raw.longRuns), 0, 1e12); s.hordeHits = clamp(safeCount(raw.hordeHits), 0, 1e12);
     s.trainsSent = clamp(safeCount(raw.trainsSent), 0, 1e12);
@@ -1797,7 +1797,7 @@
   var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
   var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
   var TEST = { rush: 1 };      // 화면 테스트용 손잡이: 돌진이 오는 확률에 곱한다(0 이면 오지 않는다). 게임에서는 늘 1
-  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.03, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
+  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.08, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
   var CAR_MULTS = [0, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.95, 2.25, 2.6, 3];
   function carMult(n) { n = clamp(Math.floor(safeNum(n, 0)), 0, CAR_MAX); return CAR_MULTS[n]; }
@@ -1811,7 +1811,7 @@
   }
   /** 4구역이 초당 싣는 물자. 역무원에게 맡겨 8칸에서 보낼 때 실제로 버는 속도와 같다. */
   function railRate(state) { return railUnits(state) * RAIL_SCALE * cargoValue(state); }
-  function newPlat() { return { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0 }; }      // rush: 달려오는 중이면 남은 거리(양수), 이 열차에서 이미 한 번 달려왔으면 -1
+  function newPlat() { return { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }; }      // rush: 달려오는 중이면 남은 거리(양수), 이 열차에서 이미 한 번 달려왔으면 -1
   /** 열차 하나에 쓸 수 있는 경적 횟수. */
   function hornMax(state) { return HORN_BASE + Math.round(mods(state).horn); }
   function platOf(state) {
@@ -1850,6 +1850,7 @@
     if (!(railUnits(state) > 0)) return fail('stopped');
     var p = platOf(state), before = trainInfo(state);
     if (before.full) return fail('full');
+    p.hand = 1;      // 3.9.1: 손댄 열차(돌진은 손댄 열차에만 온다)
     p.t += PULL_SECONDS;      // 화물은 실제로 흐른 시간만큼만 실린다. 당기면 '같은 시간에 더 긴 열차'가 되어 배수가 오른다(최대 만차 ×3)
     state.pullsRun = (state.pullsRun || 0) + 1;
     var after = trainInfo(state);
@@ -1895,7 +1896,10 @@
          이제: 칸이 HORDE_RUSH_CARS 칸 이상 붙은 열차에(잃을 것이 있을 때) 1초에 HORDE_SPRINT 의 확률로 온다. 열차 한 대에 한 번.
            1) 예고 HORDE_WARN 초: 화면이 경고한다. 2) 그 뒤로는 초당 HORDE_RUSH_SPEED 로 닿을 때까지 달려온다(철조망도 못 늦춘다).
          막는 길은 둘: 경적을 울려 돌진을 끊거나(blowHorn), 그 자리에서 보낸다. 그래서 경적을 미리 써 버릴지 아껴 둘지가 선택이 된다 */
-      if (!p.rush && before.cars >= HORDE_RUSH_CARS && roll() < HORDE_SPRINT * TEST.rush * h) { p.rush = 1; p.warn = HORDE_WARN; if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
+      /* 3.9.1: 돌진은 '손댄 열차'에만 온다(이 열차에서 칸을 한 번이라도 당겼을 때). 돌진은 손으로 경적을 울려야 끊을 수 있는데,
+         아무도 보고 있지 않은 열차에 오면 막을 길이 없이 떼이기만 한다. 3.8.9 처럼 빈도를 낮추는 것으로는 그 문제가 그대로 남는다.
+         그래서 역무원에게 맡겨 둔 열차는 조용히 다니고, 칸을 당겨 더 긴 열차를 노릴 때에만 돌진의 위험이 따라온다 */
+      if (!p.rush && p.hand && before.cars >= HORDE_RUSH_CARS && roll() < HORDE_SPRINT * TEST.rush * h) { p.rush = 1; p.warn = HORDE_WARN; if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
       else if (p.rush > 0) { if (p.warn > 0) p.warn = Math.max(0, p.warn - h); else p.pos -= HORDE_RUSH_SPEED * h; }
       var info = trainInfo(state);
       /* 3.8.9 역무원과 돌진: 역무원은 돌진을 끊지 못한다. 경고가 도는 동안은 기다리고(그 사이에 손으로 경적을 울릴 수 있다),
@@ -3663,7 +3667,7 @@
     { id: 'z3up', group: 'z3', name: '정비반', needs: [10, 40], value: function (s) { return zoneUpgrades(s, 2); }, text: function (n) { return '3구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
     { id: 'z3auto', group: 'z3', name: '손을 뗀 공장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autoline; }, text: function () { return '조립공 들이기'; } },
     { id: 'z3even', group: 'z3', name: '명품', tier: 3, needs: [20], value: function (s) { return s.boxBest || 0; }, text: function (n) { return '상자 ' + n + '단계 만들기'; } },
-    { id: 'z3belt', group: 'z3', name: '넓은 공장', tier: 4, needs: [2], value: function (s) { return s.upgrades.wide; }, text: function () { return '판을 끝까지 넓히기'; } },
+    { id: 'z3belt', group: 'z3', name: '넓은 공장', tier: 4, needs: [2], value: function (s) { return s.upgrades.wide; }, text: function () { return '칸을 끝까지 넓히기'; } },
     // 4구역 환승역
     { id: 'z4train', group: 'z4', name: '차량 기지장', needs: [5, 20, 50, 100], value: function (s) { return s.trains; }, text: function (n) { return '기관차 ' + n + '레벨 올리기'; } },
     { id: 'z4earn', group: 'z4', name: '화물왕', needs: [1e20, 1e23, 1e26], value: function (s) { return s.railEarned; }, text: function (n) { return '한 회차에 화물로 물자 ' + formatNumber(n) + ' 벌기'; } },

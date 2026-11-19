@@ -8,5 +8,6 @@ test('화면 글에 쓰지 않기로 한 낱말이 없다(지금 · 문 값 · �
 });
 test('낱말 검수기가 실제로 잡아낸다', () => {
   for (const [bad] of [['지금 철수'], ['문 값 ×2'], ['이번 판'], ['자동 합치기']]) assert.ok(lint.BANNED.some((b) => b.re.test(bad)), bad);
-  assert.ok(!lint.BANNED.slice(0, 4).some((b) => b.re.test('판이 가득 찼어요 · 현재 회차')), '합치기 판은 괜찮다');
+  assert.ok(lint.BANNED.some((b) => b.re.test('판이 가득 찼어요')) && lint.BANNED.some((b) => b.re.test('합치기 판')), '합치기 판도 쓰지 않는다(3.9.1)');
+  for (const ok of ['시세판', '판매', '간판', '상자가 가득 찼어요 · 현재 회차']) assert.ok(!lint.BANNED.some((b) => !b.from && b.re.test(ok)), ok);
 });
