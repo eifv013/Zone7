@@ -2339,7 +2339,18 @@
     R(0, 0, 184, 96, '#1c2a2e'); for (var y = 0; y < 84; y += 8) for (var x = 0; x < 184; x += 8) { R(x, y, 7, 7, '#22343a'); R(x, y, 1, 1, '#2a4048'); }      // 타일 벽
     [26, 118].forEach(function (lx) { R(lx, 1, 40, 2, '#d8f0f0'); R(lx, 3, 40, 1, '#8ab0b4'); g.fillStyle = 'rgba(200,240,240,.07)'; g.fillRect(lx - 8, 4, 56, 26); });      // 천장등
     R(0, 84, 184, 12, '#3a4a50'); R(0, 84, 184, 2, '#5a6e76'); R(0, 86, 184, 1, '#2a383c');      // 실험대 앞판
+    /* 다듬기(3.9.6): 벽이 타일뿐이라 허전했다. 칠판(식과 그래프), 약병 선반 둘, 벽시계, 천장 배관, 받침대의 나사와 그림자를 더한다. 시험관이 서는 자리(가운데 아래)는 비워 둔다 */
+    R(0, 0, 184, 1, '#0e1618'); R(0, 6, 22, 1, '#2f474e'); R(162, 6, 22, 1, '#2f474e'); R(70, 0, 2, 5, '#2f474e'); R(112, 0, 2, 5, '#2f474e');      // 배관
+    R(74, 6, 36, 17, '#0e1618'); R(75, 7, 34, 15, '#23402f'); R(75, 21, 34, 1, '#6b4a3a');      // 칠판
+    [[77, 9, 9], [77, 12, 13], [77, 15, 6], [94, 9, 5]].forEach(function (l) { R(l[0], l[1], l[2], 1, '#b8d0bc'); });
+    [[95, 19], [97, 17], [99, 16], [101, 13], [103, 12], [105, 9]].forEach(function (p) { R(p[0], p[1], 1, 1, '#ffd95a'); }); R(94, 12, 1, 8, '#7a9a80'); R(94, 19, 13, 1, '#7a9a80');
+    [3, 163].forEach(function (sx) {      // 약병 선반
+      R(sx, 20, 18, 1, '#6b4a3a'); R(sx, 21, 18, 1, '#3a2a20'); R(sx + 1, 21, 1, 3, '#3a2a20'); R(sx + 16, 21, 1, 3, '#3a2a20');
+      [['#b8402e', 5], ['#6aaede', 6], ['#e98a3c', 4], ['#7fb85a', 6]].forEach(function (b, k) { R(sx + 1 + k * 4, 20 - b[1], 3, b[1], '#8ab0b4'); R(sx + 1 + k * 4, 20 - b[1] + 2, 3, b[1] - 2, b[0]); R(sx + 2 + k * 4, 19 - b[1], 1, 1, '#d8f0f0'); });
+    });
+    R(144, 8, 9, 9, '#0e1618'); R(145, 9, 7, 7, '#e8e6dc'); R(148, 10, 1, 3, '#0e1618'); R(148, 12, 3, 1, '#0e1618'); R(148, 12, 1, 1, '#b8402e');      // 벽시계
     R(8, 74, 168, 3, '#8a8a82'); R(8, 74, 168, 1, '#b0b0a8'); R(8, 77, 168, 8, '#55564e');      // 버너 받침(긴 랙)
+    R(8, 73, 168, 1, 'rgba(0,0,0,.25)'); for (var nx = 11; nx < 176; nx += 12) R(nx, 80, 1, 1, '#8a8a82'); R(8, 84, 168, 1, '#2a383c');
     return (labBack = cv);
   }
   /*
@@ -2361,13 +2372,18 @@
         var lv = burnt ? 10 : 6 + Math.round(Math.min(1, (t.t || 0) / grow) * 37);
         R(x + 2, top + h - 1 - lv, 6, lv, LAB_COL[st]); R(x + 2, top + h - 1 - lv, 6, 1, burnt ? '#55564e' : '#fff2c0');
         if (!burnt) for (var k = 0; k < st; k++) { var by = top + h - 4 - ((k * 9 + Math.floor(now / (peak ? 90 : 220)) * 2) % Math.max(2, lv - 3)); R(x + 3 + (k * 3) % 5, by, 1, 1, '#fff2c0'); }      // 올라가는 방울
-        if (peak) spr(g, x + 3, top - 8 - Math.floor(now / 300) % 2, ['.#.', '###', '.#.'], { '#': '#fff2c0' });
+        if (peak) {      // 3.9.6: 절정이 얼마나 남았는지 관 위의 금빛 줄로 보인다(다 줄면 탄다)
+          var leftP = Math.max(0, Math.min(1, 1 - ((t.t || 0) - grow) / C.peakSeconds(state)));
+          R(x, top - 5, 10, 2, '#0e1618'); R(x, top - 5, Math.max(1, Math.round(10 * leftP)), 2, leftP < 0.3 && Math.floor(now / 120) % 2 ? '#ff5a4a' : '#ffd95a');
+          spr(g, x + 3, top - 10 - Math.floor(now / 300) % 2, ['.#.', '###', '.#.'], { '#': '#fff2c0' });
+        }
         if (burnt) { var sm = Math.floor(now / 220) % 3; [[2, -4], [5, -8], [3, -12], [6, -15]].forEach(function (p) { R(x + p[0] + (sm + p[1]) % 2, top + p[1] - sm, 1, 1, '#6a6a64'); }); R(x + 2, top + 8, 6, h - 20, '#2a2a28'); }
       }
       R(x + 2, top + 3, 1, 1, '#e8f2fa'); R(x + 2, top + 5, 1, 1, '#e8f2fa');
       R(x + 3, 78, 4, 3, '#30343c');      // 버너
       if (st >= 1 && st <= 5) { var fl = Math.floor(now / 120 + i) % 2; R(x + 4, 76 - fl, 1, 1 + fl, '#6aaede'); R(x + 5, 75 + fl, 1, 2 - fl, '#9ad0e8'); R(x + 4, 77, 2, 1, '#3f7fb8'); }
       for (var p5 = 0; p5 < 5; p5++) R(x + p5 * 2, 88, 1, 3, burnt ? '#55564e' : p5 < st ? (peak ? '#ffd95a' : '#e98a3c') : '#22343a');      // 단계 눈금
+      if (fx && now - fx.at < 500) { var up = Math.round((now - fx.at) / 500 * 14); spr(g, x + 3, top - 6 - up, ['.#.', '###', '.#.'], { '#': fx.kind === 'burnt' ? '#8a8a82' : '#ffd95a' }); R(x + 1, top + 2 - up, 1, 1, '#fff2c0'); R(x + 8, top + 6 - up, 1, 1, '#fff2c0'); }      // 거둔 것이 위로 솟는다
       if (fx && now - fx.at < 260) { g.fillStyle = 'rgba(' + (fx.kind === 'peak' ? '255,217,90' : fx.kind === 'burnt' ? '160,160,150' : '255,255,255') + ',' + (0.55 * (1 - (now - fx.at) / 260)).toFixed(2) + ')'; g.fillRect(x - 1, top - 2, 12, h + 4); }      // 거둔 순간의 번쩍임
     }
   }  /*
@@ -3186,7 +3202,7 @@
       setText($('fork-cost'), fmt(Math.floor(state.points)) + ' / ' + fmt(pc));
       fill($('fork-bar'), pc > 0 ? state.points / pc : 0);
       $('fork').classList.toggle('ready', state.points >= pc);
-      setText($('fork-title'), '갈림길 ' + (state.projectsDone + 1) + '번째' + (state.points >= pc ? ' · 하나를 고르세요' : ''));
+      setText($('fork-title'), '연구 성과 ' + (state.projectsDone + 1) + '번째' + (state.points >= pc ? ' · 하나를 고르세요' : ''));
       rows.offers.forEach(function (o, i) {
         var def = null, id = state.offers[i];
         C.PROJECTS.forEach(function (p) { if (p.id === id) def = p; });
