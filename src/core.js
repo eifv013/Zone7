@@ -1726,13 +1726,13 @@
   function rerollCost(state) { return Math.ceil(projectCost(state) * REROLL_SHARE); }
   /** 과제 OFFER_COUNT 개를 겹치지 않게 뽑는다. */
   /*
-   * 2.9.2: 두 구역 넘게 지나온 구역만 키우는 과제는 내밀지 않는다(5구역에서는 1 · 2 · 3구역 과제가 빠진다).
+   * 2.9.2: 지나온 구역만 키우는 과제는 내밀지 않는다(2.9.5 부터 바로 앞 구역 것도 뺀다: 5구역에서는 1 · 2 · 3 · 4구역 과제가 모두 빠진다).
    *   뒤 구역의 수입이 앞 구역의 수만 배라, 앞 구역 생산을 2배로 해도 달라지는 것이 없었다. 고를 것이 셋 중 하나뿐인 때가 많았다.
    */
   var PROJECT_ZONE = { z1: 0, z2: 1, z3: 2, z4: 3 };
   function drawOffers(rng, state) {
     var at = state && typeof state.zone === 'number' ? state.zone : -1;
-    var pool = PROJECTS.filter(function (p) { return !(at >= 0 && PROJECT_ZONE[p.key] !== undefined && at - PROJECT_ZONE[p.key] >= 2); }).map(function (p) { return p.id; }), out = [];
+    var pool = PROJECTS.filter(function (p) { return !(at >= 0 && PROJECT_ZONE[p.key] !== undefined && at - PROJECT_ZONE[p.key] >= 1); }).map(function (p) { return p.id; }), out = [];
     rng = typeof rng === 'function' ? rng : Math.random;
     while (out.length < OFFER_COUNT && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length) % pool.length, 1)[0]);
     return out;
