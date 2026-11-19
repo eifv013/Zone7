@@ -68,7 +68,7 @@
   var STREAK_BONUS = 0.1;          // 연속 호가 한 단계마다 직접 판매에 붙는 비율(+10%)
   var PEAK_PRICE = 1.8;            // '고점 판매'로 치는 시세
   // 3구역 생산 라인
-  var PRODUCT_VALUE = 2e8;          // 완제품 하나의 기준 값(물자)
+  var PRODUCT_VALUE = 6e5;          // 완제품 하나의 기준 값(물자)
   var LINE_SCALE = 1 / 10.5;       // 3.2.0: 완제품 값에 곱한다. 기계 셋의 합(레벨당 1 + 2 + 4)이 예전의 '한 줄'보다 많이 만들고 언제나 다 돌아서, 버는 속도를 예전과 같게 맞추는 수(재서 정했다)
   var STEADY_AT = 0.9;             // 가동률이 이 이상이면 '정속 가동'
   var STEADY_BONUS = 0.5;          // 정속 가동일 때 라인 산출에 더하는 비율(+50%)
@@ -77,7 +77,7 @@
   var SURGE_COOLDOWN = 90;         // 다시 쓸 수 있을 때까지의 시간(투입을 누른 때부터)
   var ASSIST_MAX = 9;              // 영구 특성 '자동화'의 최대 레벨
   var ASSIST_STEP = 0.06;          // 자동화 2레벨부터 레벨마다 줄어드는 대기 시간의 비율
-  var LINE_MILESTONES = [25, 50, 100, 165, 245, 360, 490, 655, 850, 1080, 1300, 1500];      // 3.2.0: 같은 처리량에 드는 레벨 합계가 1.64배가 되어(셋을 고르게 올린다) 그만큼 늘렸다 // 기계 레벨 합계가 이 수에 닿을 때마다 라인 산출 2배
+  var LINE_MILESTONES = [10, 25, 50, 100, 150, 200, 250, 300, 400, 500];      // 3.5.0: 도장 라인이 이 레벨에 닿을 때마다 상자 값 2배
   // 4구역 노선
   var TRAIN_VALUE = 1e14;          // 열차 한 대가 운행 1초마다 싣는 화물의 기준 값(물자)
   var TRAIN_GROWTH = 1.4;          // 열차를 한 대 더 살 때마다 값이 오르는 배수
@@ -371,10 +371,14 @@
    * 3구역의 기계: 원료 → 부품 → 완제품 순서로 맞물려 돈다. rate 는 레벨 하나당 초당 처리량.
    * 라인 전체는 셋 중 가장 느린 기계(병목)의 속도로만 나온다.
    */
+  /*
+   * 3.5.0 3구역의 줄 셋. 전에는 선별기 · 가공기 · 조립기가 모두 '상자 값'만 올렸다(옛 라인의 이름과 숫자를 그대로 둔 것).
+   *   이제 셋이 판에서 하는 일이 다르고, 사면 판에서 바로 보인다.
+   */
   var MACHINES = [
-    { id: 'sorter',    name: '선별기', desc: '고철을 골라 원료로 만든다',   baseCost: 2e10,  rate: 1 },
-    { id: 'press',     name: '가공기', desc: '원료를 눌러 부품으로 찍는다', baseCost: 4e10,  rate: 2 },
-    { id: 'assembler', name: '조립기', desc: '부품을 맞춰 완제품을 낸다',   baseCost: 8e10,  rate: 4 }
+    { id: 'feed',  name: '투입구',   desc: '상자가 더 자주 들어온다',                           baseCost: 3e10, growth: 2.5,  max: 30 },
+    { id: 'forge', name: '단조기',   desc: '들어오는 상자가 한 단계 높아진다 · 판의 상자도 모두 오른다', baseCost: 1e13, growth: 40,   max: 15 },
+    { id: 'paint', name: '도장 라인', desc: '상자 값을 올린다',                                 baseCost: 2e10, growth: 1.3, max: 500 }
   ];
   /*
    * 4구역의 노선: 멀리 가는 노선일수록 운행이 오래 걸리지만 같은 시간에 더 많이 싣는다(mult).
@@ -420,15 +424,15 @@
     { id: 'crowbar', zone: 0, name: '쇠지렛대',  desc: '수색 배수 +100%',        key: 'click',   per: 1,    baseCost: 100,  growth: 4,   max: 12 },
     { id: 'maps',    zone: 0, name: '동네 지도', desc: '1구역 생산 +25%',        key: 'z1',      per: 0.25, baseCost: 400,  growth: 2.4, max: 30 },
     { id: 'cart',    zone: 0, name: '손수레',    desc: '1구역 시설 값 -4%',      key: 'z1cost',  per: -0.04, baseCost: 2000, growth: 3,  max: 12 },
-    { id: 'shifts',  zone: 0, name: '교대 수색', desc: '밤 전리품 +25%',         key: 'loot',    per: 0.25, baseCost: 5000, growth: 3,   max: 15 },
+    { id: 'shifts',  zone: 0, name: '교대 수색', desc: '밤 전리품 +25%',         key: 'loot',    per: 0.25, baseCost: 1e13, growth: 40,   max: 15 },
     { id: 'haggle',  zone: 1, name: '흥정',      desc: '시세의 바닥 +0.1',       key: 'floor',   per: 0.1,  baseCost: 2e5,  growth: 4,   max: 8 },
     { id: 'regular', zone: 1, name: '단골',      desc: '시세의 천장 +0.2',       key: 'ceil',    per: 0.2,  baseCost: 5e5,  growth: 3.2, max: 15 },
     { id: 'stock',   zone: 1, name: '창고 확장', desc: '쌓아 둘 수 있는 양 +100%', key: 'cap',    per: 1,    baseCost: 1e5,  growth: 3,   max: 12 },
     { id: 'scale',   zone: 1, name: '좋은 저울', desc: '상품 값 +25%',           key: 'z2',      per: 0.25, baseCost: 3e5,  growth: 2.4, max: 40 },
-    { id: 'lube',    zone: 2, name: '윤활유',    desc: '완제품 값 +25%',         key: 'z3',      per: 0.25, baseCost: 1.5e11, growth: 2.4, max: 40 },
-    { id: 'manual',  zone: 2, name: '정비 교범', desc: '기계 값 -4%',            key: 'z3cost',  per: -0.04, baseCost: 3e11, growth: 3,  max: 12 },
-    { id: 'belt',    zone: 2, name: '컨베이어',  desc: '라인 가동 보너스 +10%p', key: 'steady',  per: 0.1,  baseCost: 6e11, growth: 3.5, max: 10 },
-    { id: 'spare',   zone: 2, name: '예비 부품', desc: '완제품 값 +4%', key: 'z3', per: 0.04,      /* 3.2.0: 예전에는 정속 가동 기준을 낮췄다. 맞출 비율이 없어져 값을 올리는 것으로 바꿨다 */ baseCost: 3e11, growth: 4, max: 5 },
+    { id: 'manual',  zone: 2, name: '정비 교범', desc: '3구역 시설 값 -4%',      key: 'z3cost',  per: -0.04, baseCost: 3e11, growth: 3,  max: 12 },
+    { id: 'bonus',   zone: 2, name: '손맛',      desc: '손으로 합칠 때의 덤 +50%', key: 'mergebonus', per: 0.5, baseCost: 3e11, growth: 4,  max: 10 },
+    { id: 'lucky',   zone: 2, name: '행운 상자', desc: '들어오는 상자가 한 단계 더 높을 확률 +10%p', key: 'lucky', per: 0.1, baseCost: 6e11, growth: 5, max: 5 },
+    { id: 'wide',    zone: 2, name: '판 넓히기', desc: '판에 5칸이 더 생긴다',     key: 'boardsize', per: 5, baseCost: 5e13, growth: 400, max: 2 },
     { id: 'signal',  zone: 3, name: '신호기',    desc: '화물 값 +25%',           key: 'z4',      per: 0.25, baseCost: 1e18, growth: 2.4, max: 40 },
     { id: 'timetable', zone: 3, name: '시간표',  desc: '화물칸이 붙는 시간 -5%',          key: 'trip',    per: -0.05, baseCost: 3e18, growth: 4,  max: 8 },
     { id: 'tracks',  zone: 3, name: '선로 정비', desc: '노선 값 -6%',            key: 'routecost', per: -0.06, baseCost: 3e18, growth: 3, max: 12 },
@@ -454,7 +458,7 @@
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
-    { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 1.5e13, growth: 1, max: 1 },
+    { id: 'autoline', zone: 2, name: '자동 합치기', desc: '5초마다 짝 하나를 알아서 합친다', key: 'autoline', per: 1, baseCost: 1.5e13, growth: 1, max: 1 },
     { id: 'autosig', zone: 3, name: '역무원',  desc: '8칸이 차면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
@@ -498,7 +502,7 @@
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
     { id: 'reroll',  name: '다시 뽑기', desc: '특전 후보를 한 회차에 1번 더 다시 뽑을 수 있다', key: 'reroll', per: 1, baseCost: 3, growth: 1.8, max: 5 },
-    { id: 'auto',    name: '자동화',    desc: '전력 투입·청신호의 대기 시간 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
+    { id: 'auto',    name: '자동화',    desc: '자동 합치기가 일하는 간격 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
   ];
 
   /*
@@ -513,8 +517,8 @@
     [ { id: 'z2a', text: '좌판 50곳', need: 50, value: function (s) { return s.stalls; } },
       { id: 'z2b', text: '고점 시세에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
       { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
-    [ { id: 'z3a', text: '기계 레벨 합계 140', need: 140, value: function (s) { return machineLevels(s); } },
-      { id: 'z3b', text: '상자 합치기 누적 40번', need: 40, value: function (s) { return s.mergesAll || 0; } },      /* 3.3.0: 예전에는 '라인 가동 누적 2분'(기다리면 차는 목표)이었다 */
+    [ { id: 'z3a', text: '상자 7단계 만들기', need: 7, value: function (s) { return s.boxBest || 0; } },
+      { id: 'z3b', text: '손으로 합치기 40번', need: 40, value: function (s) { return s.mergesRun || 0; } },
       { id: 'z3c', text: '완제품으로 번 물자 누적 10경', need: 1e17, value: function (s) { return s.lineEarned; } } ],
     [ { id: 'z4a', text: '열차 11대', need: 11, value: function (s) { return s.trains; } },
       { id: 'z4b', text: '열차 20번 보내기', need: 20, value: function (s) { return s.trainsSent || 0; } },
@@ -558,7 +562,7 @@
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
-      machines: {}, lineEarned: 0, steadySeconds: 0, lineV: 2, board: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], feed: 1, mergesRun: 0, mergesAll: 0, boxBest: 0,
+      machines: {}, lineEarned: 0, steadySeconds: 0, lineV: 3, board: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], autoMerge: 0, feed: 1, mergesRun: 0, mergesAll: 0, boxBest: 0,
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
@@ -674,8 +678,10 @@
     s.defenses = counts(DEFENSES, raw.defenses, 1e6);
     s.machines = counts(MACHINES, raw.machines, COUNT_MAX);
     // 3.3.0 합치기 판. 판이 없는 옛 저장은 '가만히 둔 판의 평균'에 가까운 판으로 시작한다(업데이트했다고 수입이 0부터 다시 오르지 않게)
-    s.board = []; for (var bi = 0; bi < BOARD_SIZE; bi++) s.board.push(Array.isArray(raw.board) ? clamp(safeCount(raw.board[bi]), 0, BOX_MAX) : 0);
-    if (!Array.isArray(raw.board) && s.zone >= 2) [9, 7, 6, 4].forEach(function (lv, k) { s.board[k * 3 % BOARD_SIZE] = lv; });
+    s.board = []; for (var bi = 0; bi < BOARD_MAX; bi++) s.board.push(Array.isArray(raw.board) ? clamp(safeCount(raw.board[bi]), 0, BOX_MAX) : 0);
+    MACHINES.forEach(function (d) { s.machines[d.id] = Math.min(d.max, s.machines[d.id] || 0); });
+    s.autoMerge = clamp(safeNum(raw.autoMerge, 0), 0, 2);
+    var seedBoard = !Array.isArray(raw.board) && s.zone >= 2;      // 판이 없던 옛 저장: 아래 3.5.0 옮기기가 끝난 뒤에 상자 몇 개를 놓아 준다
     s.feed = typeof raw.feed === 'number' && isFinite(raw.feed) ? Math.min(2, raw.feed) : 1; s.mergesRun = clamp(safeCount(raw.mergesRun), 0, 1e9); s.boxBest = clamp(safeCount(raw.boxBest), 0, BOX_MAX); s.mergesAll = clamp(safeCount(raw.mergesAll), 0, 1e12);
     s.heroName = cleanName(raw.heroName, HERO_DEFAULT);
     if (s.heroName === '생존자') s.heroName = HERO_DEFAULT;
@@ -696,16 +702,9 @@
       }
     }
     s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
-    s.recipe = findById(RECIPES, raw.recipe) ? raw.recipe : 'bolt';
-    var rm = raw.mastery && typeof raw.mastery === 'object' ? raw.mastery : {};
-    RECIPES.forEach(function (r) { var v = clamp(safeNum(rm[r.id], 0), 0, 1); if (v > 0 && r.id !== 'bolt') s.mastery[r.id] = v; });
-    s.retool = clamp(safeNum(raw.retool, 0), 0, REBALANCE_SECONDS); s.tuneLeft = clamp(safeNum(raw.tuneLeft, 0), 0, TUNE_SECONDS);
-    s.jamIn = clamp(safeNum(raw.jamIn, 90), 0, JAM_GAP_MAX); s.truckIn = clamp(safeNum(raw.truckIn, 100), 0, TRUCK_GAP_MAX);
-    s.jam = raw.jam && typeof raw.jam === 'object' && findById(MACHINES, raw.jam.id) ? { id: raw.jam.id, left: clamp(safeNum(raw.jam.left, 0), 0, JAM_SELF_FIX) } : null;
-    s.truck = raw.truck && typeof raw.truck === 'object' ? { left: clamp(safeNum(raw.truck.left, 0), 0, TRUCK_WAIT) } : null;
-    s.stockSec = clamp(safeNum(raw.stockSec, 0), 0, TRUCK_STOCK_MAX);
+    // 3.5.0: 품목 · 숙련 · 고장 · 트럭은 없앴다. 칸만 남겨 둔다(옛 저장을 읽어도 탈이 없게)
+    s.recipe = 'bolt'; s.mastery = {}; s.retool = 0; s.tuneLeft = 0; s.jamIn = 90; s.truckIn = 100; s.jam = null; s.truck = null; s.stockSec = 0;
     s.repairsRun = clamp(safeCount(raw.repairsRun), 0, 1e9); s.trucksRun = clamp(safeCount(raw.trucksRun), 0, 1e9);
-    if (s.zone < 2) { s.jam = null; s.truck = null; s.recipe = 'bolt'; s.mastery = {}; s.retool = 0; s.tuneLeft = 0; s.stockSec = 0; }
     s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
     s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
     s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
@@ -744,13 +743,25 @@
       s.routeClock[d.id] = clamp(safeNum(rc, 0), 0, d.seconds);
       s.routeLoad[d.id] = 0; s.routeClock[d.id] = 0;      // 3.4.0: 노선마다 따로 달리던 시계는 쓰지 않는다
     });
-    // 3.2.0 옛 저장: 예전에는 가장 느린 기계만큼(선별 3 · 가공 2 · 조립 1) 나왔다. 새 셈(합)으로 처리량이 줄지 않게, 모자라는 만큼 선별기(가장 싼 기계) 레벨을 얹어 준다
-    if (raw.lineV !== 2 && s.zone >= 2) {
-      var om = s.machines, oldFlow = Math.min(3 * (om.sorter || 0), 2 * (om.press || 0), om.assembler || 0), newSum = (om.sorter || 0) + 2 * (om.press || 0) + 4 * (om.assembler || 0);
-      var short = oldFlow * 10.5 / 1.5 - newSum;      // 예전 한 줄(정속 보너스 전) = 지금의 합 ÷ 7
-      if (short > 0) om.sorter = Math.min(COUNT_MAX, (om.sorter || 0) + Math.ceil(short));
+    /*
+     * 3.5.0 옛 저장(lineV 3 미만): 줄과 개조가 통째로 바뀌었다. 옛 기계 셋과 없앤 개조(윤활유 · 컨베이어 · 예비 부품)에 쓴 물자를 셈해서,
+     *   그 물자로 새 줄을 '값에 견줘 가장 이득인 것부터' 사 준 것으로 한다. 가진 물자는 건드리지 않는다.
+     */
+    if (raw.lineV !== 3 && s.zone >= 2) {
+      var rmach = raw.machines && typeof raw.machines === 'object' ? raw.machines : {}, rup = raw.upgrades && typeof raw.upgrades === 'object' ? raw.upgrades : {}, budget = 0;
+      [['sorter', 2e10, 1.15, 5000], ['press', 4e10, 1.15, 5000], ['assembler', 8e10, 1.15, 5000]].forEach(function (o) { var n = clamp(safeCount(rmach[o[0]]), 0, o[3]); if (n > 0) budget += seriesCost(o[1], o[2], 0, n); });
+      [['lube', 1.5e11, 2.4, 40], ['belt', 6e11, 3.5, 10], ['spare', 3e11, 4, 5]].forEach(function (o) { var n = clamp(safeCount(rup[o[0]]), 0, o[3]); if (n > 0) budget += seriesCost(o[1], o[2], 0, n); });
+      MACHINES.forEach(function (d) { s.machines[d.id] = 0; });
+      for (var guard = 0; guard < 3000 && isFinite(budget); guard++) {
+        var pick = null, score = -1, cost = 0;
+        MACHINES.forEach(function (d) { var lv = s.machines[d.id]; if (lv >= d.max) return; var c = seriesCost(d.baseCost, d.growth, lv, 1), g = machineGain(s, d.id) / c; if (c <= budget && g > score) { score = g; pick = d.id; cost = c; } });
+        if (!pick) break;
+        s.machines[pick]++; budget -= cost;
+      }
     }
-    s.lineV = 2;
+    s.lineV = 3;
+    if (seedBoard) [5, 4, 3, 2, 1, 0].forEach(function (up, k) { s.board[k * 3] = Math.min(BOX_MAX, spawnLevel(s) + up); });
+    for (var bz = boardSize(s); bz < BOARD_MAX; bz++) s.board[bz] = 0;      // 칸 수 밖의 상자는 없다
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
     // 3.4.0 승강장의 열차. 깨진 값이나 옛 저장은 새 열차로 시작한다
     var rp = raw.plat && typeof raw.plat === 'object' ? raw.plat : {};
@@ -810,8 +821,9 @@
     s.contractsRun = clamp(safeCount(raw.contractsRun), 0, 1e6);
     s.contractIn = clamp(safeNum(raw.contractIn, 120), 0, CONTRACT_GAP_MAX);
     var rk = raw.contract;
-    s.contract = rk && typeof rk === 'object' && findById(CLIENTS, rk.who) && safeNum(rk.need, 0) > 0 && safeNum(rk.left, 0) > 0
-      ? { who: rk.who, item: findById(RECIPES, rk.item) ? rk.item : '', need: Math.floor(safeNum(rk.need, 0)), have: clamp(safeNum(rk.have, 0), 0, Math.floor(safeNum(rk.need, 0))), left: clamp(safeNum(rk.left, 0), 0, CONTRACT_SECONDS) } : null;
+    // 3.5.0: 의뢰는 "몇 단계 상자 몇 개". 단계가 없는 옛 의뢰(완제품 몇백 개)는 버린다
+    s.contract = rk && typeof rk === 'object' && findById(CLIENTS, rk.who) && safeNum(rk.level, 0) >= 1 && safeNum(rk.need, 0) >= 1 && safeNum(rk.left, 0) > 0
+      ? { who: rk.who, level: clamp(Math.floor(safeNum(rk.level, 1)), 1, BOX_MAX), need: clamp(Math.floor(safeNum(rk.need, 1)), 1, 5), have: clamp(safeCount(rk.have), 0, 5), left: clamp(safeNum(rk.left, 0), 0, CONTRACT_SECONDS) } : null;
     var rr = raw.regulars && typeof raw.regulars === 'object' ? raw.regulars : {};
     REGULARS.forEach(function (r) { var n = clamp(safeCount(rr[r.id]), 0, 1e9); if (n > 0) s.regulars[r.id] = n; });
     s.ordersRun = clamp(safeCount(raw.ordersRun), 0, 1e6);
@@ -852,8 +864,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -1292,170 +1304,178 @@
     if (full || good) { var sold = sellGoods(state, true); if (sold.ok) { sold.type = 'sold'; sold.auto = true; events.push(sold); } }
   }
 
-  /* ---------- 3구역: 생산 라인 ---------- */
+  /* ---------- 3구역: 합치기 판(3.5.0 에서 구역 전체를 다시 만들었다) ---------- */
   /*
-   * 기계 셋이 차례로 맞물려 돈다. 라인은 가장 느린 기계(병목)의 속도로만 나온다: 빠른 기계를 더 올려 봐야 소용없다.
-   *   가동률 = 가장 느린 기계 ÷ 가장 빠른 기계. STEADY_AT 이상이면 '정속 가동'으로 산출이 늘어난다.
-   *   기계 레벨의 합계가 LINE_MILESTONES 에 닿을 때마다 라인 전체가 2배가 된다.
-   * 상품을 쌓아 두고 파는 2구역과 달리 만든 즉시 물자가 된다. 할 일은 "어느 기계를 올릴까"다.
-   */
-  /*
-   * 3구역에서 할 일 셋(1.5.0). 전에는 병목을 올리고 기다리는 것뿐이었다.
+   * 왜 다시 만들었나: 3.3.0 은 판만 새로 얹고 줄 · 개조 · 의뢰 · 자동 · 목표는 옛 '라인'의 것을 그대로 뒀다. 그래서
+   *   - 옛 '자동 제어반'이 들어오는 대로 전부 합쳐 버려 손으로 누를 것이 없었고,
+   *   - 줄 셋은 이름만 다르고 하는 일이 같았고, 개조(윤활유 · 컨베이어)는 판과 상관이 없었다.
+   * 이번에는 한 덩어리로 맞췄다. 기준은 "간단하다 · 누르는 재미 · 보는 재미 · 선택의 긴장감".
    *
-   * ① 품목과 숙련(RECIPES): 볼트·철판·톱니 가운데 무엇을 만들지 고른다. 품목마다 숙련도(0~1)가 있고, 만드는 동안 MASTERY_SECONDS 에 걸쳐 찬다.
-   *    숙련이 낮은 품목은 라인이 느리다: 배수 = MASTERY_MIN + (1 - MASTERY_MIN) × 숙련. 볼트는 처음부터 다 익혀 있다(전과 같은 속도).
-   *    세 품목을 모두 익히면 라인이 MASTERY_ALL 배가 된다. 품목을 바꾸면 RETOOL_SECONDS 동안 라인이 선다.
-   *    납품 의뢰는 품목을 정해서 오고, 그 품목을 만드는 동안에만 찬다.
-   *    (1.4.1 에서는 품목마다 기계의 처리량이 달랐다. 그러면 다른 품목을 만들며 기계를 올린 사람은 어느 품목에서도 정속 가동을 못 맞추게 되고,
-   *     기계 값이 레벨마다 불어나서 되돌리기도 어려웠다. 기계는 건드리지 않고 숙련으로 바꿨다.)
-   * ② 고장과 정비: JAM_GAP 마다 기계 하나가 멈칫거려 라인이 JAM_SLOW 배로 느려진다. "고친다"를 누르면 바로 풀리고 TUNE_SECONDS 동안 라인이 TUNE_MULT 배로 돈다.
-   *    내버려 두면 JAM_SELF_FIX 초 뒤에 저절로 풀린다(보너스 없음). 자동 제어반이 있으면 JAM_AUTO_FIX 초 만에 알아서 풀지만 보너스는 없다: 손으로 고치는 쪽이 낫다.
-   * ③ 출하 트럭: 라인이 도는 동안 출하장에 완제품이 쌓인다(TRUCK_STOCK_MAX 초분까지). TRUCK_GAP 마다 트럭이 와서 TRUCK_WAIT 초 기다린다.
-   *    실으면 쌓인 시간 × 초당 수입 × TRUCK_SHARE 만큼 더 받는다. 놓치면 쌓인 것은 그대로 남는다. 자동 제어반은 TRUCK_AUTO 배로 알아서 싣는다.
-   *
-   * 평균 수입(lineRate)은 이 셋을 넣지 않는다: 자리 비움과 화면의 "초당"은 전과 같다. 고장·정비·트럭은 접속해 있을 때만 일어난다.
+   * 판:   boardSize 칸. feedSeconds 마다 상자(spawnLevel 단계)가 빈칸에 들어온다. 같은 단계 둘을 합치면 윗단계 하나(값은 BOX_STEP 배).
+   *       손으로 합치면 덤(새 상자의 MERGE_SECONDS 초분 × 손맛)을 받는다. 가득 차면 가장 낮은 짝이 알아서 합쳐져 막히지 않는다.
+   * 줄:   투입구(더 자주) · 단조기(시작 단계 +1, 사는 순간 판의 상자도 모두 +1) · 도장 라인(상자 값, LINE_MILESTONES 마다 2배).
+   * 개조: 손맛(덤) · 행운 상자(가끔 한 단계 높게) · 판 넓히기 · 정비 교범(값) · 견본 상자(의뢰 간격) · 자동 합치기.
+   * 의뢰: 거래처가 "N단계 상자 몇 개"를 시간 안에 달라고 온다. 그 상자들을 판에 모아 두었다가 넘기면 크게 받는다.
+   *       합치면 초당이 오르고, 아껴 두면 의뢰를 채운다: 3구역의 "선택"은 이것이다. 놓쳐도 잃는 것은 없다.
+   * 자동: AUTO_MERGE_SECONDS 마다 짝 하나만 합친다(투입구보다 느리다). 그래서 자동을 사도 누를 짝은 늘 남고, 손이 언제나 더 낫다.
+   *       의뢰가 찾는 단계의 상자는 자동이 건드리지 않는다.
    */
-  var RECIPES = [
-    { id: 'bolt',  name: '볼트' },
-    { id: 'plate', name: '철판' },
-    { id: 'gear',  name: '톱니' }
-  ];
-  var RETOOL_SECONDS = 6, MASTERY_MIN = 0.5, MASTERY_SECONDS = 180, MASTERY_ALL = 1.1;
-  function mastery(state, id) { var m = state.mastery && state.mastery[id]; return id === 'bolt' ? 1 : Math.max(0, Math.min(1, m || 0)); }
-  function masteredAll(state) { return RECIPES.every(function (r) { return mastery(state, r.id) >= 1; }); }
-  /** 그 품목을 만들 때의 라인 배수(숙련). */
-  function recipeFactor(state, id) { return (MASTERY_MIN + (1 - MASTERY_MIN) * mastery(state, id)) * (masteredAll(state) ? MASTERY_ALL : 1); }
-  var JAM_GAP_MIN = 70, JAM_GAP_MAX = 130, JAM_SLOW = 0.5, JAM_SELF_FIX = 30, JAM_AUTO_FIX = 5, TUNE_SECONDS = 15, TUNE_MULT = 2;
-  var TRUCK_GAP_MIN = 80, TRUCK_GAP_MAX = 130, TRUCK_WAIT = 20, TRUCK_STOCK_MAX = 120, TRUCK_SHARE = 0.3, TRUCK_AUTO = 0.5;
-  function recipeOf(state) { return findById(RECIPES, state.recipe) || RECIPES[0]; }
-  function machineRate(state, id) { var d = findById(MACHINES, id); return d ? d.rate : 0; }
-  /** 품목을 바꾼다. 바꾸는 동안(RETOOL_SECONDS) 라인이 선다. */
-  function setRecipe(state, id) {
-    if (!zoneOpen(state, 2)) return fail('locked');
-    if (!findById(RECIPES, id)) return fail('unknown');
-    if (true) return fail('gone');      // 3.3.0: 품목 고르기는 없앴다
-    if (recipeOf(state).id === id) return fail('same');
-    // 이미 라인이 서 있으면(기계 다시 맞추기 30초 등) 남은 시간을 줄이지 않는다: 전에는 품목을 바꾸면 30초가 6초로 덮여서 기다림을 건너뛸 수 있었다
-    state.recipe = id; state.retool = Math.max(state.retool || 0, RETOOL_SECONDS);
-    return { ok: true, id: id, seconds: Math.ceil(state.retool) };
-  }
-  /** 지금 이 순간 라인에 걸린 배수: 품목을 바꾸는 중이면 0, 고장이면 느려지고, 정비 직후면 빨라진다. */
-  function lineFactor(state) {
-    return 1;      // 3.3.0: 품목 · 숙련 · 고장 · 정비는 없앴다(합치기 판 하나로 바꿨다)
-  }
-  /** 멈칫거리는 기계를 고친다. 바로 풀리고, 잠깐 라인이 더 빨리 돈다. */
-  function repairJam(state) {
-    if (!state.jam) return fail('none');
-    var id = state.jam.id;
-    state.jam = null; state.tuneLeft = TUNE_SECONDS; state.repairsRun = (state.repairsRun || 0) + 1;
-    return { ok: true, id: id, seconds: TUNE_SECONDS };
-  }
-  /** 트럭에 실으면 받을 물자. */
-  function truckReward(state, auto) { return lineRate(state) * Math.max(0, state.stockSec || 0) * TRUCK_SHARE * (auto ? autoShare(state, 2) : 1); }
-  /** 출하장에 쌓인 것을 트럭에 싣는다. */
-  function loadTruck(state, auto) {
-    if (!state.truck) return fail('none');
-    var gain = truckReward(state, auto), secs = state.stockSec || 0;
-    earn(state, gain); state.lineEarned += gain;
-    state.stockSec = 0; state.truck = null; state.trucksRun = (state.trucksRun || 0) + 1;
-    return { ok: true, gain: gain, seconds: secs, auto: !!auto };
-  }
-  /** 고장·정비·출하 트럭의 시간을 흘린다. 라인이 돌지 않으면 아무 일도 없다. */
-  function stepLineEvents(state, dt, rng, events) {
-    if (!zoneOpen(state, 2)) return;
-    state.retool = Math.max(0, (state.retool || 0) - dt);
-    state.tuneLeft = Math.max(0, (state.tuneLeft || 0) - dt);
-    stepBoard(state, dt, rng, events);
-    state.jam = null; state.retool = 0; state.tuneLeft = 0; state.jamIn = 1e9;      // 3.3.0: 고장은 나지 않는다
-    if (!(lineInfo(state).flow > 0)) return;
-    rng = typeof rng === 'function' ? rng : Math.random;
-    var auto = autoEvents(state, 2);
-    // 고장
-    if (state.jam) {
-      state.jam.left -= dt;
-      if (auto && state.jam.left <= JAM_SELF_FIX - JAM_AUTO_FIX) {
-        events.push({ type: 'jam-fixed', id: state.jam.id, auto: true });
-        if (state.zone > 2) repairJam(state); else state.jam = null;      // 지나온 구역이면 자동 제어반이 손으로 고친 것처럼 정비 효과까지 낸다
-      }
-      else if (state.jam.left <= 0) { events.push({ type: 'jam-fixed', id: state.jam.id, auto: false }); state.jam = null; }
-    } else {
-      state.jamIn -= dt;
-      if (state.jamIn <= 0) {
-        var def = MACHINES[Math.floor(rng() * MACHINES.length) % MACHINES.length];
-        state.jam = { id: def.id, left: JAM_SELF_FIX };
-        state.jamIn = JAM_GAP_MIN + rng() * (JAM_GAP_MAX - JAM_GAP_MIN);
-        events.push({ type: 'jam', id: def.id, name: def.name });
-      }
-    }
-    // 출하장과 트럭
-    if (!(state.retool > 0)) {
-      state.stockSec = Math.min(TRUCK_STOCK_MAX, (state.stockSec || 0) + dt);
-      // 숙련: 만드는 동안 그 품목이 손에 익는다
-      var rid = recipeOf(state).id;
-      if (false && rid !== 'bolt' && mastery(state, rid) < 1) { var was = masteredAll(state); state.mastery[rid] = Math.min(1, mastery(state, rid) + dt / MASTERY_SECONDS); if (state.mastery[rid] >= 1) events.push({ type: 'mastered', id: rid, name: recipeOf(state).name, all: !was && masteredAll(state) }); }
-    }
-    if (state.truck) {
-      state.truck.left -= dt;
-      if (auto && state.truck.left <= TRUCK_WAIT - 3) { var lt = loadTruck(state, true); lt.type = 'truck-loaded'; events.push(lt); }
-      else if (state.truck.left <= 0) { state.truck = null; events.push({ type: 'truck-gone' }); }
-    } else {
-      state.truckIn -= dt;
-      if (state.truckIn <= 0) {
-        state.truck = { left: TRUCK_WAIT };
-        state.truckIn = TRUCK_GAP_MIN + rng() * (TRUCK_GAP_MAX - TRUCK_GAP_MIN);
-        events.push({ type: 'truck', seconds: state.stockSec });
-      }
-    }
-  }
+  var BOARD_BASE = 20, BOARD_MAX = 30, BOX_MAX = 40, BOX_STEP = 2.5, FEED_SECONDS = 3, FEED_STEP = 0.95, MERGE_SECONDS = 2, AUTO_MERGE_SECONDS = 5;
+  var BOARD_SIZE = BOARD_BASE;      // 옛 이름(화면과 테스트가 쓴다): 기본 칸 수
+  var BOXES = ['고철', '볼트', '철판', '톱니', '베어링', '모터', '변속기', '엔진', '발전기'];
+  function boxName(level) { level = Math.floor(safeNum(level, 0)); if (level < 1) return ''; var tier = Math.floor((level - 1) / BOXES.length), n = BOXES[(level - 1) % BOXES.length]; for (var i = 0; i < tier; i++) n += '★'; return n; }
+  function boxWorth(level) { level = Math.floor(safeNum(level, 0)); return level >= 1 && level <= BOX_MAX ? Math.pow(BOX_STEP, level - 1) : 0; }
   function machineLevels(s) { var n = 0; MACHINES.forEach(function (d) { n += s.machines[d.id] || 0; }); return n; }
   function lineMilestone(levels) { var m = 1; LINE_MILESTONES.forEach(function (t) { if (levels >= t) m *= 2; }); return m; }
   function machineBase(state, def) { var m = mods(state); return def.baseCost * m.cost * m.z3cost; }
   function machineCost(state, id, qty) {
-    var def = findById(MACHINES, id);
-    if (!def || !zoneOpen(state, 2) || state.machines[id] + qty > COUNT_MAX) return Infinity;
-    return seriesCost(machineBase(state, def), GROWTH, state.machines[id], qty);
+    var def = findById(MACHINES, id); qty = Math.floor(qty);
+    if (!def || !zoneOpen(state, 2) || !(qty >= 1) || (state.machines[id] || 0) + qty > def.max) return Infinity;
+    return seriesCost(machineBase(state, def), def.growth, state.machines[id] || 0, qty);
   }
   function maxMachines(state, id) {
     var def = findById(MACHINES, id);
-    return def && zoneOpen(state, 2) ? seriesMax(machineBase(state, def), GROWTH, state.machines[id], state.supplies, COUNT_MAX) : 0;
+    if (!def || !zoneOpen(state, 2)) return 0;
+    return seriesMax(machineBase(state, def), def.growth, state.machines[id] || 0, state.supplies, def.max);
   }
   function buyMachine(state, id, qty) {
-    qty = Math.floor(qty);
-    if (!findById(MACHINES, id) || !(qty >= 1)) return fail('unknown');
+    var def = findById(MACHINES, id); qty = Math.floor(qty);
+    if (!def) return fail('unknown');
     if (!zoneOpen(state, 2)) return fail('locked');
-    return pay(state, machineCost(state, id, qty), function () { state.machines[id] += qty; });
-  }
-  /**
-   * 라인의 지금 상태.
-   *   caps 기계별 초당 처리량, flow 라인의 초당 완제품(병목 기준, 배수 전), bottleneck 가장 느린 기계의 id,
-   *   load 가동률(0~1), steadyAt 정속 가동 기준, steady 정속 가동 중인가, bonus 정속 가동 배수(아니면 1),
-   *   levels 레벨 합계, milestone 레벨 합계 배수, nextMilestone 다음 2배가 되는 합계(없으면 null)
-   */
-  function lineInfo(state) {
-    /*
-     * 3.2.0: 기계 셋은 각자 만들고, 만든 것을 합친다. 전에는 "가장 느린 기계만큼만" 나와서(병목), 사도 숫자가 안 오를 때가 많았고
-     *   마지막 기계(조립기)가 레벨도 값도 가장 많이 들었다. 이제 어느 기계를 사든 그만큼 바로 오르고, 뒤 기계일수록 많이 만든다(레벨당 1 · 2 · 4).
-     *   bottleneck 은 이제 "지금 사면 값에 견줘 가장 많이 오르는 기계"다(한 번에 올리는 단추가 이것을 산다). 맞춰야 할 비율이 없으므로 가동률은 언제나 100%다.
-     */
-    var m = mods(state), caps = {}, sum = 0, bottleneck = null, bestGain = -1, open = zoneOpen(state, 2);
-    MACHINES.forEach(function (d) {
-      var c = open ? machineRate(state, d.id) * (state.machines[d.id] || 0) : 0, gain = machineRate(state, d.id) / machineCost(state, d.id, 1);
-      caps[d.id] = c; sum += c;
-      if (open && gain > bestGain) { bestGain = gain; bottleneck = d.id; }
+    if (!(qty >= 1)) return fail('unknown');
+    return pay(state, machineCost(state, id, qty), function () {
+      state.machines[id] = (state.machines[id] || 0) + qty;
+      // 단조기: 판의 상자도 그만큼 오른다(사는 순간 판이 통째로 바뀌는 것이 보인다)
+      if (id === 'forge') { var b = boardOf(state); for (var i = 0; i < b.length; i++) if (b[i] >= 1) b[i] = Math.min(BOX_MAX, b[i] + qty); state.boxBest = Math.min(BOX_MAX, (state.boxBest || 0) + ((state.boxBest || 0) >= 1 ? qty : 0)); if (state.contract) state.contract.level = Math.min(BOX_MAX, state.contract.level + qty); }
     });
-    var lo = sum, load = sum > 0 ? 1 : 0, steadyAt = Math.max(0.5, STEADY_AT - m.slack), steady = sum > 0;
-    var levels = machineLevels(state), next = null;
-    for (var i = 0; i < LINE_MILESTONES.length; i++) if (levels < LINE_MILESTONES[i]) { next = LINE_MILESTONES[i]; break; }
-    return { caps: caps, flow: lo, bottleneck: bottleneck, load: load, steadyAt: steadyAt, steady: steady,
-      bonus: steady ? 1 + STEADY_BONUS + m.steady : 1, levels: levels, milestone: lineMilestone(levels), nextMilestone: next };
   }
-  /** 완제품 하나의 값(물자). */
+  function feedSeconds(state) { return FEED_SECONDS * Math.pow(FEED_STEP, state.machines.feed || 0); }
+  function spawnLevel(state) { return Math.min(BOX_MAX, 1 + (state.machines.forge || 0)); }
+  function boardSize(state) { return clamp(BOARD_BASE + Math.round(mods(state).boardsize), BOARD_BASE, BOARD_MAX); }
+  function boardOf(state) {
+    if (!Array.isArray(state.board)) state.board = [];
+    while (state.board.length < BOARD_MAX) state.board.push(0);
+    if (state.board.length > BOARD_MAX) state.board.length = BOARD_MAX;
+    return state.board;
+  }
+  function boardSum(state) { var b = boardOf(state), n = 0; for (var i = 0; i < b.length; i++) n += boxWorth(b[i]); return n; }
+  /** 완제품(1단계 상자) 하나가 초당 버는 기준 값. */
+  function productValue(state) { return PRODUCT_VALUE * mods(state).z3 * globalMult(state) * contractMult(state); }
+  /** 줄과 값: { levels 도장 라인 레벨, milestone 2배 구간의 곱, nextMilestone, unit 1단계 상자 하나의 초당 물자, feed 상자 간격(초), spawn 들어오는 단계, size 칸 수 }. */
+  function lineInfo(state) {
+    var paint = state.machines.paint || 0, next = null, open = zoneOpen(state, 2);
+    for (var i = 0; i < LINE_MILESTONES.length; i++) if (paint < LINE_MILESTONES[i]) { next = LINE_MILESTONES[i]; break; }
+    var ms = lineMilestone(paint);
+    return { levels: paint, milestone: ms, nextMilestone: next, unit: open ? (1 + paint) * ms * productValue(state) : 0, feed: feedSeconds(state), spawn: spawnLevel(state), size: boardSize(state),
+      flow: open ? boardSum(state) : 0, steady: open && boardSum(state) > 0, bonus: 1, load: 1 };
+  }
+  /** 상자 하나(level 단계)가 초당 버는 물자. */
+  function boxRate(state, level) { return lineInfo(state).unit * boxWorth(level); }
+  /** 3구역이 초당 버는 물자: 판 위 상자들이 버는 것의 합. */
+  function lineRate(state) { return zoneOpen(state, 2) ? lineInfo(state).unit * boardSum(state) : 0; }
+  function lineNow(state) { return lineRate(state); }
+  /** 의뢰가 찾고 있는 단계(없으면 0). 자동과 '가득 찼을 때의 합치기'는 이 단계를 되도록 건드리지 않는다. */
+  function heldLevel(state) { return state.contract && state.contract.level >= 1 ? state.contract.level : 0; }
+  /** idx 칸의 상자와 합칠 수 있는 다른 칸(없으면 -1). 가까운 칸부터 고른다(눈으로 따라가기 쉽다). */
+  function boxPartner(state, idx) {
+    var b = boardOf(state), lv = b[idx], best = -1, bd = 1e9;
+    if (!(lv >= 1) || lv >= BOX_MAX) return -1;
+    for (var i = 0; i < b.length; i++) if (i !== idx && b[i] === lv) { var d = Math.abs(i % 5 - idx % 5) + Math.abs(Math.floor(i / 5) - Math.floor(idx / 5)); if (d < bd) { bd = d; best = i; } }
+    return best;
+  }
+  /** 가장 낮은 단계의 짝 [a, b] (없으면 null). skip 단계는 건너뛴다. */
+  function lowestPair(state, skip) {
+    var b = boardOf(state), seen = {}, best = null;
+    for (var i = 0; i < b.length; i++) { var lv = b[i]; if (!(lv >= 1) || lv >= BOX_MAX || lv === skip) continue; if (seen[lv] !== undefined) { if (!best || lv < best.lv) best = { lv: lv, a: seen[lv], b: i }; } else seen[lv] = i; }
+    return best ? [best.a, best.b] : null;
+  }
+  function doMerge(state, keep, gone, byHand) {
+    var b = boardOf(state), lv = b[keep], out = { ok: true, at: keep, from: gone, level: lv + 1, gain: 0, hand: !!byHand };
+    b[gone] = 0; b[keep] = lv + 1;
+    if (byHand) { out.gain = boxRate(state, lv + 1) * MERGE_SECONDS * mods(state).mergebonus; state.mergesRun = (state.mergesRun || 0) + 1; }
+    state.mergesAll = (state.mergesAll || 0) + 1;
+    if (lv + 1 > (state.boxBest || 0)) { state.boxBest = lv + 1; out.best = true; }
+    if (out.gain > 0) { earn(state, out.gain); state.lineEarned += out.gain; }
+    return out;
+  }
+  /** 손으로 합친다: idx 칸의 상자를 같은 단계의 가까운 상자와 합쳐 idx 칸에 둔다. */
+  function mergeBox(state, idx) {
+    if (!zoneOpen(state, 2)) return fail('locked');
+    idx = Math.floor(safeNum(idx, -1));
+    var b = boardOf(state);
+    if (!(idx >= 0 && idx < boardSize(state)) || !(b[idx] >= 1)) return fail('empty');
+    var other = boxPartner(state, idx);
+    if (other < 0) return fail('alone');
+    return doMerge(state, idx, other, true);
+  }
+  /** 합칠 수 있는 짝이 있는 칸들. */
+  function mergeable(state) { var b = boardOf(state), cnt = {}, out = []; b.forEach(function (lv) { if (lv >= 1 && lv < BOX_MAX) cnt[lv] = (cnt[lv] || 0) + 1; }); b.forEach(function (lv, i) { if (lv >= 1 && cnt[lv] >= 2) out.push(i); }); return out; }
+  function spawnBox(state, rng, events) {
+    var b = boardOf(state), size = boardSize(state), empty = [];
+    for (var i = 0; i < size; i++) if (!(b[i] >= 1)) empty.push(i);
+    if (!empty.length) {      // 가득 찼다: 가장 낮은 짝을 알아서 합친다(의뢰가 찾는 단계는 되도록 남긴다)
+      var p = lowestPair(state, heldLevel(state)) || lowestPair(state, 0); if (!p) return;
+      var r = doMerge(state, p[0], p[1], false); r.type = 'box-merge'; if (events) events.push(r);
+      empty = [p[1]];
+    }
+    var roll = typeof rng === 'function' ? rng : Math.random;
+    var at = empty[Math.floor(roll() * empty.length) % empty.length], lv = spawnLevel(state);
+    if (mods(state).lucky > 0 && roll() < mods(state).lucky) lv = Math.min(BOX_MAX, lv + 1);      // 행운 상자
+    b[at] = lv; if (lv > (state.boxBest || 0)) state.boxBest = lv;
+    if (events) events.push({ type: 'box-in', at: at, level: lv });
+  }
+  /** 판의 시간을 흘린다. 한 번에 최대 limit 개까지만 넣는다(긴 자리 비움에서도 멈추지 않게). */
+  function stepBoard(state, dt, rng, events, limit) {
+    if (!zoneOpen(state, 2)) return;
+    dt = safeNum(dt, 0); if (!(dt > 0)) return;
+    var fs = feedSeconds(state), n = 0, max = limit || 60, auto = autoOn(state, 2);
+    state.feed = (typeof state.feed === 'number' && isFinite(state.feed) ? state.feed : 1) + dt / fs;
+    if (auto) state.autoMerge = safeNum(state.autoMerge, 0) + dt / autoMergeSeconds(state);
+    while (state.feed >= 1 && n < max) {
+      state.feed -= 1; spawnBox(state, rng, n < 6 ? events : null); n++;
+      // 긴 시간을 한 번에 흘릴 때: 자동 합치기도 상자가 들어오는 사이사이에 일한 것으로 친다
+      if (auto && state.autoMerge >= 1 && n * fs >= autoMergeSeconds(state)) autoMergeOnce(state, events);
+    }
+    if (state.feed >= 1) state.feed = state.feed % 1;
+    for (var g = 0; auto && state.autoMerge >= 1 && g < 400; g++) if (!autoMergeOnce(state, g < 3 ? events : null)) { state.autoMerge = 0; break; }
+  }
+  /** 자동 합치기가 짝 하나를 합치는 간격(초). 영구 특성 '자동화'가 줄여 준다(절반까지). 그래도 투입구를 올리면 상자가 더 빨리 들어와 누를 짝은 남는다. */
+  function autoMergeSeconds(state) { return AUTO_MERGE_SECONDS * assistFactor(state); }
+  function autoMergeOnce(state, events) {
+    state.autoMerge -= 1;
+    var p = lowestPair(state, heldLevel(state)); if (!p) return false;
+    var r = doMerge(state, p[0], p[1], false); r.type = 'box-merge'; r.auto = true; if (events) events.push(r);
+    return true;
+  }
+  /** 이 줄을 하나 더 사면 길게 보아 수입이 몇 배가 되는가(−1). 봇과 '한 번에 올리기'가 고르는 데 쓴다. */
+  function machineGain(state, id) {
+    var lv = state.machines[id] || 0, def = findById(MACHINES, id);
+    if (!def || lv >= def.max) return 0;
+    if (id === 'paint') return (lv + 2) / (lv + 1) * lineMilestone(lv + 1) / lineMilestone(lv) - 1;
+    if (id === 'forge') return BOX_STEP - 1;
+    return Math.pow(1 / FEED_STEP, 1.585) - 1;      // 투입구: 들어온 상자 수의 약 1.6제곱으로 판이 자란다
+  }
+  /** 값에 견줘 가장 이득인 줄을 times 번 산다(살 수 있는 만큼). 봇이 쓴다. */
+  function tuneLine(state, times) {
+    if (!zoneOpen(state, 2)) return fail('locked');
+    times = Math.min(2000, Math.max(1, Math.floor(safeNum(times, 1))));
+    var bought = 0, spent = 0, last = 'supplies';
+    for (var i = 0; i < times; i++) {
+      var best = null, score = -1;
+      MACHINES.forEach(function (d) { var c = machineCost(state, d.id, 1), g = machineGain(state, d.id) / c; if (isFinite(c) && g > score) { score = g; best = d.id; } });
+      var r = best ? buyMachine(state, best, 1) : fail('max');
+      if (!r.ok) { last = r.reason; break; }
+      bought++; spent += r.cost;
+    }
+    return bought ? { ok: true, bought: bought, cost: spent } : fail(last);
+  }
+  function tuneCost() { return Infinity; }
+
   /*
-   * 납품 의뢰(1.0.8, 3구역): 2구역의 단골 주문과 같은 틀이다.
-   *   몇 분마다 거래처 하나가 "완제품 N개를 M초 안에" 달라고 온다. 의뢰가 온 뒤로 라인이 만든 완제품이 차곡차곡 쌓이고(평소 수입은 그대로),
-   *   다 차면 "납품한다"를 눌러 물자(완제품 값의 CONTRACT_PAY 배)와 간식을 받는다. 그 거래처는 도감에 적힌다(철수해도 남는다).
-   *   이번 회차에 채운 의뢰 하나마다 완제품 값이 CONTRACT_BONUS 씩 오른다(CONTRACT_BONUS_MAX 까지). 전력 투입을 쓰면 더 빨리 찬다.
-   *   놓쳐도 잃는 것은 없고, 자리를 비운 동안에는 오지 않는다.
+   * 납품 의뢰(3.5.0): 거래처가 "L단계 상자 N개"를 CONTRACT_SECONDS 안에 달라고 온다. 판에 그 상자가 N개 모이면 넘길 수 있다.
+   *   넘기면 그 상자들은 판에서 나가고, 그 상자들이 CONTRACT_PAY_SECONDS 초 동안 벌 물자와 간식을 받는다. 거래처는 도감에 적힌다.
+   *   이번 회차에 채운 의뢰 하나마다 상자 값이 CONTRACT_BONUS 씩 오른다(CONTRACT_BONUS_MAX 까지).
+   *   찾는 단계는 지금 판에서 만들 만한 것으로 온다(들어오는 단계보다 1~3단계 위).
    */
   var CLIENTS = [
     { id: 'bike',    name: '자전거포',         color: '#3f6f8f', hair: '#2a2a2a', text: '체인이 없어서 못 고친대요.' },
@@ -1471,156 +1491,60 @@
     { id: 'battery', name: '배터리 가게',      color: '#7a9a6a', hair: '#3a2a22', text: '충전은 해 줄 테니 부품을 달래요.' },
     { id: 'radio',   name: '무전기 수리점',    color: '#6a4a8a', hair: '#4a3628', text: '잡음을 줄일 수 있대요.' }
   ];
-  var CONTRACT_SAME = 0.5;      // 의뢰가 지금 만드는 품목으로 올 확률
-  var CONTRACT_SECONDS = 90, CONTRACT_NEED_SECONDS = 50, CONTRACT_GAP_MIN = 150, CONTRACT_GAP_MAX = 270, CONTRACT_PAY = 2, CONTRACT_BONUS = 0.01, CONTRACT_BONUS_MAX = 0.5, CONTRACT_TREATS = 2;
+  var CONTRACT_SECONDS = 90, CONTRACT_PAY_SECONDS = 120, CONTRACT_GAP_MIN = 150, CONTRACT_GAP_MAX = 270, CONTRACT_BONUS = 0.01, CONTRACT_BONUS_MAX = 0.5, CONTRACT_TREATS = 2;
   function contractMult(state) { return 1 + Math.min(CONTRACT_BONUS_MAX, (state.contractsRun || 0) * CONTRACT_BONUS); }
   function clientCount(state) { var n = 0; CLIENTS.forEach(function (c) { if (state.clients[c.id] > 0) n++; }); return n; }
-  function contractReward(state) { return state.contract ? state.contract.need * productValue(state) * CONTRACT_PAY : 0; }
-  /** 라인이 지금 초당 내는 완제품 수(전력 투입은 빼고). */
-  function productFlow(state) { var pv = productValue(state); return pv > 0 ? lineRate(state) / pv : 0; }
+  /** 의뢰가 찾는 단계의 상자가 판에 몇 개 있는가. */
+  function contractHave(state) { var lv = heldLevel(state), n = 0; if (lv) boardOf(state).forEach(function (x) { if (x === lv) n++; }); return n; }
+  function contractReward(state) { return state.contract ? state.contract.need * boxRate(state, state.contract.level) * CONTRACT_PAY_SECONDS : 0; }
   function stepContracts(state, dt, made, rng, events) {
-    if (!zoneOpen(state, 2) || !(productFlow(state) > 0)) return;
+    if (!zoneOpen(state, 2)) return;
     if (state.contract) {
-      // 1.6.1: 자동에 맡겼으면 의뢰가 바라는 품목으로 알아서 바꾼다(전에는 품목이 다르면 의뢰가 차지 않은 채 떠났다)
-      if (false && setRecipe(state, state.contract.item).ok) events.push({ type: 'auto-recipe', item: state.contract.item });
-      // 의뢰가 정한 품목을 만드는 동안에만 찬다(1.5.0). 품목이 없는 옛 저장의 의뢰는 무엇을 만들어도 찬다
-      if (true) state.contract.have = Math.min(state.contract.need, state.contract.have + made);
-      // 자동 제어반이 있으면 다 채운 의뢰를 알아서 넘긴다(1.3.1)
-      if (autoEvents(state, 2) && state.contract.have >= state.contract.need) { var cf = fillContract(state); if (cf.ok) { cf.type = 'contract-filled'; events.push(cf); return; } }
+      state.contract.have = Math.min(state.contract.need, contractHave(state));
+      // 넘기는 것은 언제나 손으로 한다. 자동이 알아서 넘기면 "모아 둘까 합칠까"를 고를 일이 없어진다(놓쳐도 잃는 것은 없다)
       state.contract.left -= dt;
       if (state.contract.left <= 0) { events.push({ type: 'contract-gone', who: state.contract.who }); state.contract = null; }
       return;
     }
+    if (!(boardSum(state) > 0)) return;
     state.contractIn -= dt;
     if (state.contractIn > 0) return;
     rng = typeof rng === 'function' ? rng : Math.random;
     var who = CLIENTS[Math.floor(rng() * CLIENTS.length) % CLIENTS.length];
-    // 품목: 절반은 지금 만드는 것, 절반은 다른 둘 중 하나. 필요한 양은 그 품목으로 돌렸을 때의 속도로 잡는다(바꾸면 채울 수 있게)
-    var others = RECIPES.filter(function (r) { return r.id !== recipeOf(state).id; });
-    var item = rng() < CONTRACT_SAME || (state.zone > 2 && autoEvents(state, 2)) ? recipeOf(state).id :      // 지나온 구역을 자동에 맡겼으면 지금 만드는 품목으로만 온다
-       others[Math.floor(rng() * others.length) % others.length].id;
-    var need = Math.max(5, Math.ceil(productFlow(state) * recipeFactor(state, item) * CONTRACT_NEED_SECONDS));      // 지금의 숙련으로 50초쯤 만들 양
-    state.contract = { who: who.id, item: item, need: need, have: 0, left: CONTRACT_SECONDS };
+    var level = Math.min(BOX_MAX, spawnLevel(state) + 1 + Math.floor(rng() * 3) % 3), need = 2 + Math.floor(rng() * 2) % 2;
+    state.contract = { who: who.id, level: level, need: need, have: 0, left: CONTRACT_SECONDS };
+    state.contract.have = Math.min(need, contractHave(state));
     state.contractIn = (CONTRACT_GAP_MIN + rng() * (CONTRACT_GAP_MAX - CONTRACT_GAP_MIN)) * mods(state).contractgap;
-    events.push({ type: 'contract', who: who.id, name: who.name, need: need, item: item, itemName: findById(RECIPES, item).name });
+    events.push({ type: 'contract', who: who.id, name: who.name, need: need, level: level, itemName: boxName(level) });
   }
-  /** 다 찬 의뢰를 납품한다. 아직 덜 찼으면 실패(의뢰는 남는다). */
+  /** 모인 상자를 넘긴다. 덜 모였으면 실패(의뢰는 남는다). */
   function fillContract(state) {
     if (!state.contract) return fail('none');
-    if (!(state.contract.have >= state.contract.need)) return fail('short');
-    var who = findById(CLIENTS, state.contract.who), gain = contractReward(state), first = !(state.clients[state.contract.who] > 0);
+    var c = state.contract, b = boardOf(state);
+    if (contractHave(state) < c.need) return fail('short');
+    var who = findById(CLIENTS, c.who), gain = contractReward(state), first = !(state.clients[c.who] > 0);
+    for (var i = b.length - 1, left = c.need; i >= 0 && left > 0; i--) if (b[i] === c.level) { b[i] = 0; left--; }
     earn(state, gain);
     state.lineEarned += gain;
     state.treats = Math.min(1e9, state.treats + CONTRACT_TREATS);
-    state.clients[state.contract.who] = Math.min(1e9, (state.clients[state.contract.who] || 0) + 1);
+    state.clients[c.who] = Math.min(1e9, (state.clients[c.who] || 0) + 1);
     state.contractsRun = (state.contractsRun || 0) + 1;
     state.contract = null;
     return { ok: true, gain: gain, treats: CONTRACT_TREATS, first: first, who: who ? who.id : '', name: who ? who.name : '' };
   }
-  function productValue(state) { return PRODUCT_VALUE * LINE_SCALE * mods(state).z3 * globalMult(state) * contractMult(state); }
-  /** 3구역이 초당 버는 물자. */
-  function lineRate(state) {
-    if (!zoneOpen(state, 2)) return 0;
-    var l = lineInfo(state);
-    return l.flow * l.milestone * l.bonus * productValue(state) * boardFactor(state);
-  }
-  /*
-   * ---------- 3.3.0 합치기 판(3구역의 놀이판) ----------
-   * 왜 바꿨나: 3구역은 병목 · 품목 · 숙련 · 고장 · 전력 투입처럼 "읽고 따져야 하는 규칙"이 겹쳐 있었고, 눌러서 바로 좋아지는 것이 없었다.
-   *   1 · 2구역이 재미있었던 까닭은 한눈에 보이는 판 하나(동네 칸, 시세)를 눌러서 바로 버는 데 있었다. 3구역에도 그런 판을 하나 둔다.
-   * 규칙(이것이 전부다):
-   *   - 판은 BOARD_SIZE 칸. FEED_SECONDS 마다 1단계 상자(고철)가 빈칸에 들어온다.
-   *   - 같은 단계 상자 둘을 합치면 윗단계 하나가 된다. 상자 하나가 버는 양은 단계마다 BOX_STEP 배. 둘(2)이 하나(3)가 되므로 합치면 언제나 더 번다.
-   *   - 손으로 합치면 그 자리에서 덤(새 상자가 MERGE_SECONDS 초 동안 버는 양)을 받는다. 누르는 보람이다.
-   *   - 판이 가득 차면 가장 낮은 짝이 알아서 합쳐진다(덤 없음). 그래서 막히지 않고, 안 보고 있어도 판은 자란다.
-   *   - 단계에는 사실상 끝이 없다(BOX_MAX 는 안전장치). 처음에는 맨 윗단계 둘을 '출하'로 내보내게 했는데, 재 보니 합치지 않고 쌓아 두는 쪽이
-   *     12배 더 벌었다(윗단계를 내보내면 그만큼 초당이 깎이므로). 합치면 언제나 이득이어야 하므로 출하는 넣지 않았다.
-   *   - 그래서 한 회차를 오래 끌수록 판이 자란다(들어온 상자 수의 약 1.6제곱). 철수하면 판은 비고 다시 자란다.
-   * 기계 셋(줄)은 "상자 하나의 값"을 올린다. 판의 합계를 BOARD_NORM(가만히 둔 판의 평균)으로 나눠 곱하므로, 길게 보면 버는 속도는 전과 같다.
-   */
-  var BOARD_SIZE = 20, BOX_MAX = 40, BOX_STEP = 3, FEED_SECONDS = 3, MERGE_SECONDS = 10, SHIP_SECONDS = 30, BOARD_NORM = 6561;      // 9단계(발전기) 상자 하나가 기준(×1)이다. 손으로 합치면 17분쯤, 가만히 두면 35분쯤 걸린다
-  /* 3.3.1: 품목은 그림이 있는 아홉 가지. 그 위 단계는 같은 품목에 별이 붙는다(고철★, 볼트★ …). 이름과 그림이 어긋나지 않게 */
-  var BOXES = ['고철', '볼트', '철판', '톱니', '베어링', '모터', '변속기', '엔진', '발전기'];
-  function boxName(level) { level = Math.floor(safeNum(level, 0)); if (level < 1) return ''; var tier = Math.floor((level - 1) / BOXES.length), n = BOXES[(level - 1) % BOXES.length]; for (var i = 0; i < tier; i++) n += '★'; return n; }
-  function boxWorth(level) { level = Math.floor(safeNum(level, 0)); return level >= 1 && level <= BOX_MAX ? Math.pow(BOX_STEP, level - 1) : 0; }
-  function boardOf(state) { if (!Array.isArray(state.board) || state.board.length !== BOARD_SIZE) { state.board = []; for (var i = 0; i < BOARD_SIZE; i++) state.board.push(0); } return state.board; }
-  function boardSum(state) { var b = boardOf(state), n = 0; for (var i = 0; i < b.length; i++) n += boxWorth(b[i]); return n; }
-  function boardFactor(state) { return boardSum(state) / BOARD_NORM; }
-  /** 상자 하나(level 단계)가 초당 버는 물자. */
-  function boxRate(state, level) { var l = lineInfo(state); return l.flow * l.milestone * l.bonus * productValue(state) * boxWorth(level) / BOARD_NORM; }
-  /** 판에서 idx 칸의 상자와 합칠 수 있는 다른 칸(없으면 -1). 가까운 칸부터 고른다(눈으로 따라가기 쉽다). */
-  function boxPartner(state, idx) {
-    var b = boardOf(state), lv = b[idx], best = -1, bd = 1e9;
-    if (!(lv >= 1) || lv >= BOX_MAX) return -1;
-    for (var i = 0; i < b.length; i++) if (i !== idx && b[i] === lv) { var d = Math.abs(i % 5 - idx % 5) + Math.abs(Math.floor(i / 5) - Math.floor(idx / 5)); if (d < bd) { bd = d; best = i; } }
-    return best;
-  }
-  /** 가장 낮은 단계의 짝 [a, b] (없으면 null). 판이 가득 찼을 때 알아서 합치는 데 쓴다. */
-  function lowestPair(state) {
-    var b = boardOf(state), seen = {}, best = null;
-    for (var i = 0; i < b.length; i++) { var lv = b[i]; if (!(lv >= 1) || lv >= BOX_MAX) continue; if (seen[lv] !== undefined) { if (!best || lv < best.lv) best = { lv: lv, a: seen[lv], b: i }; } else seen[lv] = i; }
-    return best ? [best.a, best.b] : null;
-  }
-  function doMerge(state, keep, gone, byHand) {
-    var b = boardOf(state), lv = b[keep], out = { ok: true, at: keep, from: gone, level: lv + 1, gain: 0, shipped: false, hand: !!byHand };
-    b[gone] = 0;
-    b[keep] = lv + 1;
-    if (byHand) out.gain = boxRate(state, lv + 1) * MERGE_SECONDS;
-    if (lv + 1 > (state.boxBest || 0)) { state.boxBest = lv + 1; out.best = true; }
-    if (byHand) state.mergesRun = (state.mergesRun || 0) + 1;
-    state.mergesAll = (state.mergesAll || 0) + 1;      // 손으로 합친 것 + 알아서 합쳐진 것(목표는 이것으로 센다: 자동 제어반을 달아도 목표가 멈추지 않게)
-    if (out.gain > 0) { earn(state, out.gain); state.lineEarned += out.gain; }
-    return out;
-  }
-  /** 손으로 합친다: idx 칸의 상자를 같은 단계의 다른 상자와 합쳐 idx 칸에 둔다. */
-  function mergeBox(state, idx) {
-    if (!zoneOpen(state, 2)) return fail('locked');
-    idx = Math.floor(safeNum(idx, -1));
-    var b = boardOf(state);
-    if (!(idx >= 0 && idx < b.length) || !(b[idx] >= 1)) return fail('empty');
-    var other = boxPartner(state, idx);
-    if (other < 0) return fail('alone');
-    return doMerge(state, idx, other, true);
-  }
-  /** 합칠 수 있는 짝이 있는 칸들(화면에서 테두리를 친다). */
-  function mergeable(state) { var b = boardOf(state), cnt = {}, out = []; b.forEach(function (lv) { if (lv >= 1 && lv < BOX_MAX) cnt[lv] = (cnt[lv] || 0) + 1; }); b.forEach(function (lv, i) { if (lv >= 1 && cnt[lv] >= 2) out.push(i); }); return out; }
-  function spawnBox(state, rng, events) {
-    var b = boardOf(state), empty = [];
-    for (var i = 0; i < b.length; i++) if (!(b[i] >= 1)) empty.push(i);
-    if (!empty.length) {      // 가득 찼다: 가장 낮은 짝을 알아서 합친다(20칸에 8단계뿐이라 짝은 반드시 있다)
-      var p = lowestPair(state); if (!p) return;
-      var r = doMerge(state, p[0], p[1], false); r.type = 'box-merge'; if (events) events.push(r);
-      empty = [p[1]];
-    }
-    var at = empty[Math.floor((typeof rng === 'function' ? rng() : Math.random()) * empty.length) % empty.length];
-    b[at] = 1; if (events) events.push({ type: 'box-in', at: at });
-  }
-  /** 판의 시간을 흘린다. 기계가 하나도 없으면 상자가 들어오지 않는다. 한 번에 최대 limit 개까지만 넣는다(긴 자리 비움에서도 멈추지 않게). */
-  function stepBoard(state, dt, rng, events, limit) {
-    if (!zoneOpen(state, 2) || !(lineInfo(state).flow > 0)) return;
-    state.feed = (typeof state.feed === 'number' && isFinite(state.feed) ? state.feed : 1) + dt / FEED_SECONDS;
-    var n = 0, max = limit || 40;
-    var auto = autoOn(state, 2);      // 자동 제어반: 들어오는 대로 알아서 합친다(덤은 없다). 없으면 판이 가득 찼을 때만 합쳐진다
-    while (state.feed >= 1 && n < max) {
-      state.feed -= 1; spawnBox(state, rng, n < 6 ? events : null); n++;
-      if (auto) for (var p = lowestPair(state), g = 0; p && g < 40; p = lowestPair(state), g++) { var r = doMerge(state, p[0], p[1], false); if (events && n < 6) { r.type = 'box-merge'; events.push(r); } }
-    }
-    if (state.feed >= 1) state.feed = state.feed % 1;
-  }
-  /**
-   * 병목인 기계를 한 단계씩 times 번 올린다(살 수 있는 만큼만). "어느 걸 올려야 하지"를 대신해 주는 단추다.
-   * 돌려주는 값: { ok, bought: 올린 횟수, cost: 쓴 물자 }. 한 번도 못 올리면 실패.
-   */
-  function tuneLine(state, times) {
-    if (!zoneOpen(state, 2)) return fail('locked');
-    times = Math.min(2000, Math.max(1, Math.floor(safeNum(times, 1))));
-    var bought = 0, spent = 0, last = 'supplies';
-    for (var i = 0; i < times; i++) {
-      var r = buyMachine(state, lineInfo(state).bottleneck, 1);
-      if (!r.ok) { last = r.reason; break; }
-      bought++; spent += r.cost;
-    }
-    return bought ? { ok: true, bought: bought, cost: spent } : fail(last);
+  /* 3.5.0 에서 없앤 것들: 품목 · 숙련 · 고장과 정비 · 출하 트럭 · 전력 투입 · 기계 다시 맞추기. 저장과 화면이 부르던 이름만 남겨 둔다. */
+  var RECIPES = [{ id: 'bolt', name: '볼트' }];
+  var JAM_GAP_MAX = 130, JAM_SELF_FIX = 30, TRUCK_GAP_MAX = 130, TRUCK_WAIT = 20, TRUCK_STOCK_MAX = 120;
+  function recipeOf() { return RECIPES[0]; }
+  function setRecipe() { return fail('gone'); }
+  function repairJam() { return fail('gone'); }
+  function loadTruck() { return fail('gone'); }
+  function truckReward() { return 0; }
+  function rebalanceLine() { return fail('gone'); }
+  function stepLineEvents(state, dt, rng, events) {
+    if (!zoneOpen(state, 2)) return;
+    state.jam = null; state.truck = null; state.retool = 0; state.tuneLeft = 0;
+    stepBoard(state, dt, rng, events);
   }
   /*
    * 자동화(영구 특성): 전력 투입과 청신호의 대기 시간을 레벨마다 ASSIST_STEP 씩 줄인다(절반까지).
@@ -1657,72 +1581,7 @@
   function assistFactor(state) { return Math.max(0.5, 1 - ASSIST_STEP * assistLevel(state)); }
   function surgeCooldown(state) { return SURGE_COOLDOWN * assistFactor(state); }
   function greenCooldown(state) { return GREEN_COOLDOWN * assistFactor(state); }
-  /**
-   * 전력 투입: 라인을 SURGE_SECONDS 초 동안 SURGE_MULT 배로 돌린다. 누른 때부터 SURGE_COOLDOWN 초 뒤에 다시 쓸 수 있다.
-   * 늘 챙겨 써도 평균 +17% 정도다: 지켜보는 사람의 작은 덤이고, 안 써도 뒤처지지 않는다. 라인이 서 있으면 쓸 수 없다.
-   */
-  function surge(state) {
-    if (!zoneOpen(state, 2)) return fail('locked');
-    if (true) return fail('gone');      // 3.3.0: 전력 투입은 없앴다
-    if (state.surgeCool > 0) return fail('cooldown');
-    if (!(lineInfo(state).flow > 0)) return fail('stopped');
-    state.surgeLeft = SURGE_SECONDS; state.surgeCool = surgeCooldown(state);
-    return { ok: true, seconds: SURGE_SECONDS };
-  }
-  /** 지금 이 순간 라인이 초당 버는 물자(전력 투입 포함). 화면 표시용이다. 평균 수입 계산에는 lineRate 를 쓴다. */
-  function lineNow(state) { return lineRate(state) * (state.surgeLeft > 0 ? SURGE_MULT : 1) * lineFactor(state); }
-  /*
-   * 기계 다시 맞추기(1.5.1): 기계 하나만 잔뜩 올려 버리면 가동률이 무너지고, 기계 값은 레벨마다 불어나서 나머지를 따라 올리기가 사실상 불가능했다.
-   *   레벨 합계는 그대로 두고 세 기계에 다시 나눈다: 레벨당 처리량이 3·2·1 이므로 2 : 3 : 6 으로 나누면 처리량이 같아진다(가동률 100%).
-   *   합계가 그대로라 2배 문턱(별)은 변하지 않는다. 값은 받지 않고, 대신 REBALANCE_SECONDS 동안 라인이 선다. 가동률이 정속 기준 아래일 때만 쓸 수 있다.
-   */
-  var REBALANCE_SECONDS = 30;
-  /*
-   * 1.6.1: 레벨 합계가 아니라 "기계에 쓴 물자"를 지킨다.
-   *   고친 까닭: 합계를 지키면, 값이 싼 선별기만 사고 다시 맞추기를 되풀이해서 비싼 조립기 레벨을 선별기 값에 얻을 수 있었다.
-   *   이제는 지금 기계들을 사는 데 든 물자(machineSpent)로 살 수 있는 가장 높은 "고르게 나눈 레벨"을 찾는다.
-   *   그래서 다시 맞춰도 이득이 없다. 한쪽만 올린 실수는 여전히 되돌릴 수 있지만, 싼 기계로 채운 만큼 레벨 합계는 줄어든다.
-   */
-  function machineSpent(state, lv) {
-    var sum = 0; lv = lv || state.machines;
-    MACHINES.forEach(function (d) { if (lv[d.id] > 0) sum += seriesCost(machineBase(state, d), GROWTH, 0, lv[d.id]); });
-    return sum;
-  }
-  function rebalancePlan(state) {
-    var have = machineLevels(state);
-    if (have < 3) return splitLevels(have);
-    var budget = machineSpent(state), lo = 3, hi = COUNT_MAX * 3;
-    while (lo < hi) {      // 쓴 물자로 살 수 있는 가장 큰 합계를 이분 탐색으로 찾는다
-      var mid = Math.ceil((lo + hi) / 2), p = splitLevels(mid);
-      var fits = p.sorter <= COUNT_MAX && p.press <= COUNT_MAX && p.assembler <= COUNT_MAX && machineSpent(state, p) <= budget;
-      if (fits) lo = mid; else hi = mid - 1;
-    }
-    return splitLevels(lo);
-  }
-  /** 레벨 합계 total 을 처리량이 같아지게 세 기계에 나눈다(2 : 3 : 6). */
-  function splitLevels(total) {
-    var w = { sorter: 2, press: 3, assembler: 6 }, out = {}, used = 0;
-    MACHINES.forEach(function (d) { out[d.id] = Math.max(total >= 3 ? 1 : 0, Math.floor(total * w[d.id] / 11)); used += out[d.id]; });
-    // 나머지는 그때그때 가장 느린 기계에 하나씩 준다
-    for (var left = total - used; left > 0; left--) { var lo = null, lv = Infinity; MACHINES.forEach(function (d) { var c = d.rate * out[d.id]; if (c < lv) { lv = c; lo = d.id; } }); out[lo]++; }
-    return out;
-  }
-  /** 다시 맞추면 돌려받는 물자: 지금 기계에 쓴 값 − 다시 나눈 기계의 값. */
-  function rebalanceRefund(state) { return machineLevels(state) < 3 ? 0 : Math.max(0, Math.floor(machineSpent(state) - machineSpent(state, rebalancePlan(state)))); }
-  function rebalanceLine(state) {
-    if (!zoneOpen(state, 2)) return fail('locked');
-    var l = lineInfo(state);
-    if (machineLevels(state) < 3) return fail('few');
-    if (l.steady) return fail('steady');
-    // 1.6.3: 다시 나누고 남는 값은 물자로 돌려준다. 전에는 싼 기계에 쓴 물자가 그냥 사라졌다(선별기 80 → 110 으로 올렸는데 80 으로 돌아가는 식).
-    //        돌려주는 것은 가진 물자뿐이고 이번 회차 누적(runEarned)은 늘리지 않는다: 쓴 것을 되받는 것이지 번 것이 아니다.
-    var refund = rebalanceRefund(state);
-    state.machines = rebalancePlan(state); state.retool = Math.max(state.retool || 0, REBALANCE_SECONDS);
-    state.supplies += refund;
-    return { ok: true, machines: state.machines, seconds: REBALANCE_SECONDS, refund: refund };
-  }
-  /** 병목을 한 단계 올리는 값(단추에 보일 값). */
-  function tuneCost(state) { return zoneOpen(state, 2) ? machineCost(state, lineInfo(state).bottleneck, 1) : Infinity; }
+  function surge() { return fail('gone'); }      // 3.3.0: 전력 투입은 없앴다
 
   /* ---------- 4구역: 노선 ---------- */
   /*
@@ -2349,7 +2208,7 @@
       { id: 'z2b2', text: '단골 주문 3번 채우기', need: 3, value: function (s) { return s.ordersRun; } },
       { id: 'z2c2', text: '2구역 개조를 모두 합쳐 15번', need: 15, value: function (s) { return zoneUpgrades(s, 1); } } ],
     [ { id: 'z3a2', text: '3구역 개조를 모두 합쳐 12번', need: 12, value: function (s) { return zoneUpgrades(s, 2); } },
-      { id: 'z3b2', text: '출하 트럭 4번 싣기', need: 4, value: function (s) { return s.trucksRun; } },
+      { id: 'z3b2', text: '도장 라인 25레벨', need: 25, value: function (s) { return s.machines.paint || 0; } },
       { id: 'z3c2', text: '납품 의뢰 3번 채우기', need: 3, value: function (s) { return s.contractsRun; } } ],
     [ { id: 'z4a2', text: '노선 단계 합계 10', need: 10, value: function (s) { return routeLevels(s); } },
       { id: 'z4b2', text: '표류 화물 2번 끌어오기', need: 2, value: function (s) { return s.salvagesRun; } },
@@ -3667,13 +3526,13 @@
     { id: 'z2hand', group: 'z2', name: '북적이는 시장', needs: [20, 150], value: function (s) { return sumOf(s.hands); }, text: function (n) { return '짐꾼과 호객꾼을 합쳐 ' + n + '명 두기'; } },
     { id: 'z2broker', group: 'z2', name: '믿음직한 흥정꾼', needs: [1, 5], value: function (s) { return s.upgrades.broker; }, text: function (n) { return n === 1 ? '흥정꾼 두기' : '흥정꾼을 끝까지 올리기'; } },
     // 3구역 공단
-    { id: 'z3level', group: 'z3', name: '기계공', needs: [10, 50, 150, 300], value: function (s) { return sumOf(s.machines); }, text: function (n) { return '기계 레벨의 합계 ' + n + ' 채우기'; } },
+    { id: 'z3level', group: 'z3', name: '기계공', needs: [10, 50, 150, 300], value: function (s) { return sumOf(s.machines); }, text: function (n) { return '3구역 시설 레벨의 합계 ' + n + ' 채우기'; } },
     { id: 'z3earn', group: 'z3', name: '공장장', needs: [1e13, 1e16, 1e19], value: function (s) { return s.lineEarned; }, text: function (n) { return '한 회차에 라인으로 물자 ' + formatNumber(n) + ' 벌기'; } },
-    { id: 'z3steady', group: 'z3', name: '쉬지 않는 라인', needs: [60, 3600, 36000], value: function (s) { return s.steadySeconds; }, text: function (n) { return '한 회차에 라인 가동 ' + formatDuration(n) + ' 채우기'; } },
+    { id: 'z3steady', group: 'z3', name: '손이 바쁜 공장', needs: [50, 1000, 10000], value: function (s) { return s.mergesRun || 0; }, text: function (n) { return '한 회차에 손으로 ' + n + '번 합치기'; } },
     { id: 'z3up', group: 'z3', name: '정비반', needs: [10, 40], value: function (s) { return zoneUpgrades(s, 2); }, text: function (n) { return '3구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
-    { id: 'z3auto', group: 'z3', name: '손을 뗀 공장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autoline; }, text: function () { return '자동 제어반 달기'; } },
-    { id: 'z3even', group: 'z3', name: '세 박자', tier: 3, needs: [50], value: function (s) { return minMachine(s); }, text: function (n) { return '기계 셋을 모두 ' + n + '레벨 이상으로 올리기'; } },
-    { id: 'z3belt', group: 'z3', name: '끊기지 않는 벨트', tier: 4, needs: [10], value: function (s) { return s.upgrades.belt; }, text: function () { return '컨베이어를 끝까지 올리기'; } },
+    { id: 'z3auto', group: 'z3', name: '손을 뗀 공장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autoline; }, text: function () { return '자동 합치기 달기'; } },
+    { id: 'z3even', group: 'z3', name: '명품', tier: 3, needs: [20], value: function (s) { return s.boxBest || 0; }, text: function (n) { return '상자 ' + n + '단계 만들기'; } },
+    { id: 'z3belt', group: 'z3', name: '넓은 공장', tier: 4, needs: [2], value: function (s) { return s.upgrades.wide; }, text: function () { return '판을 끝까지 넓히기'; } },
     // 4구역 환승역
     { id: 'z4train', group: 'z4', name: '차량 기지장', needs: [5, 20, 50, 100], value: function (s) { return s.trains; }, text: function (n) { return '열차 ' + n + '대 갖추기'; } },
     { id: 'z4earn', group: 'z4', name: '화물왕', needs: [1e20, 1e23, 1e26], value: function (s) { return s.railEarned; }, text: function (n) { return '한 회차에 화물로 물자 ' + formatNumber(n) + ' 벌기'; } },
@@ -3768,8 +3627,6 @@
     if (state.buff) { state.buff.left -= dt; if (state.buff.left <= 0) { state.buff = null; events.push({ type: 'buff-end' }); } }
     if (dt > boosted) { earn(state, searchRate(state) * (dt - boosted)); line += lineRate(state) * (dt - boosted); }
     // 전력 투입 중인 시간만큼은 라인이 SURGE_MULT 배로 돈다(dt 가 길어도 남은 투입 시간까지만 친다)
-    if (line > 0 && state.surgeLeft > 0) line *= 1 + (SURGE_MULT - 1) * Math.min(dt, state.surgeLeft) / dt;
-    line *= lineFactor(state);      // 품목 바꾸는 중(0), 고장(느림), 정비 직후(빠름)
     if (line > 0) { earn(state, line); state.lineEarned += line; if (lineInfo(state).steady) state.steadySeconds += dt; }
     stepContracts(state, dt, line > 0 ? line / productValue(state) : 0, rng, events);
     stepLineEvents(state, dt, rng, events);
@@ -3996,11 +3853,11 @@
     SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
     tuneBand: tuneBand, tunePos: tunePos, tuneGain: tuneGain, tuneHit: tuneHit, tuneNow: tuneNow, TUNE_PERIOD: TUNE_PERIOD, TUNE_COOL: TUNE_COOL, TUNE_MISS_COOL: TUNE_MISS_COOL, TUNE_GAIN_SECONDS: TUNE_GAIN_SECONDS, TUNE_AUTO: TUNE_AUTO,
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
-    BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, SHIP_SECONDS: SHIP_SECONDS, BOARD_NORM: BOARD_NORM, BOXES: BOXES, boxName: boxName,
-    boxWorth: boxWorth, boardSum: boardSum, boardFactor: boardFactor, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
+    BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
+    boxWorth: boxWorth, boardSum: boardSum, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
     CAR_SECONDS: CAR_SECONDS, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, HORDE_MIN: HORDE_MIN, HORDE_MAX: HORDE_MAX, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE,
     stepRail: stepRail, carMult: carMult, carSeconds: carSeconds, railUnits: railUnits, trainInfo: trainInfo, sendTrain: sendTrain, trainGain: trainGain,
-    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
+    totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, JAM_SELF_FIX: JAM_SELF_FIX, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, recipeOf: recipeOf, setRecipe: setRecipe, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, ROUTE_MAX: ROUTE_MAX, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,

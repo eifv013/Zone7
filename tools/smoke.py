@@ -217,7 +217,7 @@ def run_case(browser, name, size, state, mode):
         tap('[data-gender=none]')
         # 0.8.3 자동화 설명: 영구 특성 '자동화' 줄에 전력 투입 대기 시간(초)이 나온다
         tap('[data-mview-set=exped]')
-        if '전력 투입' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
+        if '자동 합치기' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
         tap('[data-mview-set=record]')
         # 0.8.0 기록 화면: 일지의 장 탭과 소설 본문, 도움말 탭, 지난 구역, 설정 단추
         tap('[data-rtab-set=journal]')
@@ -261,41 +261,39 @@ def run_case(browser, name, size, state, mode):
         # 3구역: 기계가 없을 때의 안내 → 병목 올리기 → 직접 사서 병목이 바뀌는지 → 한 화면에 들어오는지
         tap('[data-mview-set=manage]'); tap('[data-tab=z2]')
         if not page.locator('#line').is_visible(): problems.append('3구역 탭에 생산 라인 칸이 없다')
-        if '기계를 사면' not in text('line-note'): problems.append('기계가 없을 때의 안내가 없다: ' + text('line-note'))
-        # 3.2.1: '한 번에 올리기'는 없다. 기계 줄을 직접 눌러 산다
-        if page.locator('#tune').is_visible(): problems.append('없어진 한 번에 올리기 단추가 보인다')
-        for m, n in [('sorter', 4), ('press', 4), ('assembler', 3)]:
-            for _ in range(n):
-                if not tap('#row-%s' % m): problems.append('기계를 살 수 없다: ' + m); break
-        # 3.3.0 합치기 판: 스무 칸, 상자가 들어오고, 같은 상자 둘을 누르면 합쳐지며 덤이 들어온다
-        if page.locator('#mboard button').count() != 20: problems.append('합치기 판이 스무 칸이 아니다')
-        for gone in ['#recipes', '#jam-fix', '#surge', '#belt', '#tune', '#rebalance']:
+        # 3.5.0 3구역: 판(30칸 가운데 20칸이 보인다) → 상자가 들어오고 → 눌러 합치면 덤 → 줄 셋을 사면 판에서 바로 보인다
+        if page.locator('#mboard button').count() != 30: problems.append('합치기 판의 칸이 서른 개가 아니다')
+        if page.locator('#mboard button:visible').count() != 20: problems.append('보이는 칸이 스무 개가 아니다: %d' % page.locator('#mboard button:visible').count())
+        for gone in ['#recipes', '#jam-fix', '#surge', '#belt', '#tune', '#rebalance', '#truck']:
             if page.locator(gone).count() and page.locator(gone).is_visible(): problems.append('없앤 것이 보인다: ' + gone)
         page.wait_for_timeout(7500)      # 상자 둘 이상이 들어올 시간
-        boxes = page.evaluate("[...document.querySelectorAll('#mboard button')].filter(b => b.textContent).length")
-        if boxes < 2: problems.append('상자가 들어오지 않는다: %d개' % boxes)
-        if page.locator('#mboard button.pair').count() < 2: problems.append('합칠 수 있는 짝에 테두리가 없다')
+        boxes = page.evaluate("[...document.querySelectorAll('#mboard button small')].filter(b => b.textContent).length")
+        if boxes < 3: problems.append('상자가 들어오지 않는다: %d개' % boxes)
+        if page.locator('#mboard button.pair').count() < 2: problems.append('합칠 수 있는 짝이 없다')
         if '합쳐져요' not in text('line-note'): problems.append('합치기 안내가 없다: ' + text('line-note'))
-        load0 = text('line-load'); n0 = boxes
         page.locator('#mboard button.pair').first.click(); page.wait_for_timeout(200)
-        merged = page.evaluate("[...document.querySelectorAll('#mboard button b')].map(b => b.textContent)")
-        if not page.evaluate("(() => { const c = document.querySelector('#mboard button.pair canvas, #mboard button canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size >= 6; })()"): problems.append('상자 그림이 그려지지 않았다')
-        if '볼트' not in merged: problems.append('합쳤는데 윗단계 상자가 없다: ' + ' '.join(x or '·' for x in merged))
-        if '1번 합침' not in text('line-note'): problems.append('합친 횟수가 안 오른다: ' + text('line-note'))
+        if not page.evaluate("(() => { const c = document.querySelector('#mboard button.pair canvas, #mboard button canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size >= 3; })()"): problems.append('상자 그림이 그려지지 않았다')
+        if '손으로 1번 합침' not in text('line-note'): problems.append('합친 횟수가 안 오른다: ' + text('line-note'))
         if page.locator('#mboard button i').count() < 1: problems.append('합쳤는데 덤(+물자) 표시가 없다')
-        # 출하 트럭은 그대로다(저장에 심어 둔 것이 떠 있다)
-        if not page.locator('#truck').is_visible(): problems.append('트럭이 왔는데 칸이 없다')
-        tap('#truck-load'); page.wait_for_timeout(150)
-        if page.locator('#truck').is_visible(): problems.append('실었는데 트럭 칸이 남아 있다')
         close_story()
+        # 줄 셋: 도장 라인은 값이 바로 오르고, 단조기는 판의 상자가 모두 오르고, 투입구는 간격이 줄어든다
         load0 = text('line-load')
-        if not tap('#row-sorter'): problems.append('선별기를 살 수 없다')
-        if text('line-load') == load0: problems.append('선별기를 샀는데 판이 버는 양이 그대로다: ' + load0)
-        tap('[data-qty="max"]'); tap('#row-press'); tap('[data-qty="1"]')
-        tap('#row-lube'); tap('#row-belt')
+        if not tap('#row-paint'): problems.append('도장 라인을 살 수 없다')
+        if text('line-load') == load0: problems.append('도장 라인을 샀는데 판이 버는 양이 그대로다: ' + load0)
+        best0 = text('line-mile'); load0 = text('line-load')
+        if not tap('#row-forge'): problems.append('단조기를 살 수 없다')
+        if text('line-mile') == best0 or text('line-load') == load0: problems.append('단조기를 샀는데 판이 그대로다: ' + best0 + ' / ' + load0)
+        if '볼트' not in text('row-forge') : problems.append('단조기 줄에 들어오는 상자가 안 적혀 있다: ' + text('row-forge'))
+        feed0 = text('row-feed')
+        if not tap('#row-feed'): problems.append('투입구를 살 수 없다')
+        if text('row-feed') == feed0 or '초마다' not in text('row-feed'): problems.append('투입구를 샀는데 간격이 그대로다: ' + text('row-feed'))
+        tap('[data-qty="max"]'); tap('#row-paint'); tap('[data-qty="1"]')
+        for up in ['#row-bonus', '#row-lucky', '#row-manual']:
+            if not page.locator(up).count(): problems.append('새 개조가 없다: ' + up)
+        for old in ['#row-lube', '#row-belt', '#row-spare', '#row-sorter']:
+            if page.locator(old).count(): problems.append('옛 줄이나 개조가 남아 있다: ' + old)
         if not fits(): problems.append('한 화면에 들어오지 않는다(3구역)')
-        before = text('supplies'); page.wait_for_timeout(3000)
-        if text('supplies') == before: problems.append('라인이 도는데 물자가 늘지 않는다')
+        if text('line-load').strip().endswith('초당 0'): problems.append('판에 상자가 있는데 버는 양이 0이다: ' + text('line-load'))
         tap('[data-tab=z3]')
         if '아직 열지 않은' not in text('soon'): problems.append('잠긴 4구역 탭에 안내가 없다: ' + text('soon'))
         if page.locator('[data-tab=z4]').is_visible(): problems.append('아직 먼 5구역 탭이 보인다')

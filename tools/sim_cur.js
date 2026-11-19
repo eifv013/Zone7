@@ -56,7 +56,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
     const IDLE = !!process.env.IDLE;      // IDLE=1: 사기만 하고 사건·단추는 손대지 않는 사람(자동 개조가 대신 하는 것만 일어난다)
-    if (!IDLE) { if (s.truck) C.loadTruck(s, false); if (s.zone === 2) for (let m = C.mergeable(s), g = 0; m.length && g < 8; m = C.mergeable(s), g++) C.mergeBox(s, m[0]); }      // 3.3.0: 3구역에 있는 동안은 상자를 손으로 합친다(지나온 뒤에는 가만히 둔다)
+    if (!IDLE) { if (s.zone === 2) { const held = C.heldLevel(s); for (let g = 0; g < 8; g++) { const m = C.mergeable(s).filter(i => s.board[i] !== held || C.contractHave(s) > (s.contract ? s.contract.need : 0) + 1); if (!m.length) break; C.mergeBox(s, m[0]); } } }      // 3.3.0: 3구역에 있는 동안은 상자를 손으로 합친다(지나온 뒤에는 가만히 둔다)
     if (!IDLE && s.zone === 3) { const ti = C.trainInfo(s); if (ti.running && ti.cars >= 1 && ti.horde <= dt + 1) C.sendTrain(s, rng); }      // 3.4.0: 4구역에 있는 동안은 무리가 닿기 직전에 손으로 보낸다      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
     // 4·6·7구역 사건: 배수를 먼저 다 쌓고, 그 뒤로는 바로 받는다. 5구역 밤샘 연구는 되는 대로 누른다
     if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
@@ -93,7 +93,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const toward = {
       z1a: () => C.buyBuilding(s, 'scouts', 1), z1a2: () => C.buyBuilding(s, 'garden', 1), z1b2: cheapestDef, z1c2: () => cheapestUp(0),
       z2a: () => C.buyStall(s, 1), z2a2: cheapestHand, z2c2: () => cheapestUp(1),
-      z3a: () => C.tuneLine(s, 1), z3a2: () => cheapestUp(2), z3b: () => ({ ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
+      z3a: () => C.buyMachine(s, 'forge', 1), z3b2: () => C.buyMachine(s, 'paint', 1), z3a2: () => cheapestUp(2), z3b: () => ({ ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
       z4a: () => C.buyTrain(s, 1), z4a2: cheapestRoute, z4c2: () => cheapestUp(3),
       z5a: () => C.buyStaff(s, 1), z5a2: () => cheapestUp(4),
       z6a: () => C.buyPost(s, 1), z6a2: cheapestDef, z6b: () => cheapestUp(5), z6b2: () => C.buyUpgrade(s, 'booth'),
@@ -113,11 +113,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       const consider = (cost, gain, buy) => { if (cost > s.supplies && gain > 0) cheapest = Math.min(cheapest, cost); if (cost <= s.supplies && gain > 0 && (!best || cost / gain < best.pay)) best = { pay: cost / gain, buy }; };
       for (const b of C.BUILDINGS) consider(C.buildingCost(s, b.id, 1), b.baseRate * C.mods(s).z1 * C.globalMult(s) * C.milestoneMult(s.buildings[b.id] + 1), () => C.buyBuilding(s, b.id, 1));
       if (s.zone >= 1) consider(C.stallCost(s, 1), C.goodsValue(s) * C.priceRange(s).mean * 1.2, () => C.buyStall(s, 1));
-      if (s.zone >= 2) {   // 3구역: 병목 기계를 올렸을 때 늘어나는 산출로 따진다(처음에는 0 이라 조금 얹어 준다)
-        const cost = C.tuneCost(s), before = C.lineRate(s), probe = Object.create(s); probe.machines = Object.assign({}, s.machines);   // 상태를 통째로 베끼지 않고 바뀐 것만 덮어쓴다(빠르다)
-        probe.machines[C.lineInfo(s).bottleneck]++;
-        consider(cost, Math.max(C.lineRate(probe) - before, C.productValue(s) * 0.2), () => C.tuneLine(s, 1));
-      }
+      if (s.zone >= 2) for (const d of C.MACHINES) consider(C.machineCost(s, d.id, 1), Math.max(C.lineRate(s) * C.machineGain(s, d.id), C.lineInfo(s).unit * 0.2), () => C.buyMachine(s, d.id, 1));   // 3.5.0 3구역: 줄 셋을 '길게 보아 느는 수입'으로 따진다
       if (s.zone >= 3) {   // 4구역: 열차를 사거나 노선을 늘렸을 때 늘어나는 평균 수입으로 따진다
         const rate = C.railRate(s), probe = () => { const o = Object.create(s); o.routes = Object.assign({}, s.routes); return o; };
         const t = probe(); t.trains = s.trains + 1;

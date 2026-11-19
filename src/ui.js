@@ -1380,7 +1380,7 @@
       var cell = el('div', 'line-cell'), name = el('div', 'line-name', d.name), cap = el('div', 'line-cap', '0'), track = el('div', 'track'), bar = el('i');
       track.appendChild(bar); cell.appendChild(name); cell.appendChild(cap); cell.appendChild(track);
       rows.cells[d.id] = { cell: cell, cap: cap, bar: bar }; $('line-flow').appendChild(cell);
-      var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - state.machines[d.id])), 'machine'); });
+      var r = buildRow(d, function () { buy(C.buyMachine(state, d.id, qtyFor(C.maxMachines(state, d.id), d.max - (state.machines[d.id] || 0))), 'machine'); });
       rows.machines[d.id] = r; $('rows-z2').appendChild(r.btn);
     });
     // 4구역: 노선 현황(위쪽)과 열차·노선 구매 줄(아래쪽)
@@ -2261,7 +2261,7 @@
     });
     // 3.3.0 합치기 판: 칸 스무 개를 만들고, 누르면 같은 단계의 가까운 상자와 합친다
     var mb = $('mboard');
-    for (var bi = 0; bi < C.BOARD_SIZE; bi++) (function (i) {
+    for (var bi = 0; bi < C.BOARD_MAX; bi++) (function (i) {
       var b = el('button'); b.type = 'button'; b.dataset.box = i; mb.appendChild(b);
       b.addEventListener('click', function () {
         var res = C.mergeBox(state, i);
@@ -2332,18 +2332,20 @@
   function renderBoard() {
     var mb = $('mboard'); if (!mb || !mb.children.length) return;
     drawBoardTop();
-    var board = state.board || [], can = {}; C.mergeable(state).forEach(function (i) { can[i] = true; });
+    var board = state.board || [], can = {}, size = C.boardSize(state), held = C.heldLevel(state); C.mergeable(state).forEach(function (i) { can[i] = true; });
     for (var i = 0; i < mb.children.length; i++) {
       var b = mb.children[i], lv = board[i] || 0, fx = boardFx[i];
+      if (b.hidden !== (i >= size)) b.hidden = i >= size;
+      if (i >= size) continue;
       if (boardSeen && !fx && lv >= 1 && boardSeen[i] !== lv) fx = lv === 1 && !(boardSeen[i] >= 1) ? { 'in': true } : { pop: true };      // 고철이 들어왔거나, 알아서 합쳐졌다
-      var rate = lv ? '+' + fmt(C.boxRate(state, lv)) : '', sig = lv + (can[i] ? 'p' : '') + '|' + rate;
+      var rate = lv ? '+' + fmt(C.boxRate(state, lv)) : '', want = held && lv === held, sig = lv + (can[i] ? 'p' : '') + (want ? 'w' : '') + '|' + rate;
       if (b._sig !== sig || fx) {
         if (!b._cv) { b._cv = document.createElement('canvas'); b._cv.width = 32; b._cv.height = 27; b._name = el('b'); b._rate = el('small'); b.appendChild(b._cv); b.appendChild(b._name); b.appendChild(b._rate); }
         if (b._art !== lv + (can[i] ? 'p' : '')) { b._art = lv + (can[i] ? 'p' : ''); drawBoxCell(b._cv, lv, !!can[i]); }
         b._sig = sig;
-        b.className = lv && can[i] ? 'pair' : '';
+        b.className = (lv && can[i] ? 'pair' : '') + (want ? ' want' : '');
         setText(b._name, lv ? C.boxName(lv) : ''); setText(b._rate, rate);
-        b.setAttribute('aria-label', lv ? C.boxName(lv) + ' ' + lv + '단계' + (can[i] ? ', 합칠 수 있음' : '') : '빈칸');
+        b.setAttribute('aria-label', lv ? C.boxName(lv) + ' ' + lv + '단계' + (can[i] ? ', 합칠 수 있음' : '') + (want ? ', 의뢰가 찾는 상자' : '') : '빈칸');
         var old = b.querySelector('i'); if (old) b.removeChild(old);
         if (fx && lv) {
           void b.offsetWidth; b.classList.add(fx.pop ? 'pop' : 'in');
@@ -2924,82 +2926,41 @@
       });
     }
     if (tab === 'z2' && open) {
-      // 납품 의뢰: 왔을 때만 칸이 보인다. 의뢰가 온 뒤로 만든 완제품이 차고, 다 차면 납품할 수 있다
-      var ct = state.contract, cb = $('contract');
+      // 3.5.0 3구역: 판 + 의뢰 + 줄 셋
+      var line = C.lineInfo(state), ct = state.contract, cb = $('contract'), autoM = C.autoOn(state, 2);
       cb.hidden = !ct;
       if (ct) {
         var cl = null; C.CLIENTS.forEach(function (r) { if (r.id === ct.who) cl = r; });
+        var cHave = Math.min(ct.need, C.contractHave(state)), cdone = cHave >= ct.need, cName = C.boxName(ct.level);
         setText($('contract-left'), clock(ct.left));
-        var cItem = null; C.RECIPES.forEach(function (r) { if (r.id === ct.item) cItem = r; });
-        var cMatch = !cItem || cItem.id === C.recipeOf(state).id;
-        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' ' + (cItem ? cItem.name : '완제품') + ' ' + fmt(ct.need) + '개를 찾아요.\n납품하면 물자 +' + fmt(C.contractReward(state)) + ' · 간식 +' + C.CONTRACT_TREATS);
-        fill($('contract-bar'), ct.have / ct.need);
-        var cdone = ct.have >= ct.need;
+        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' ' + cName + ' 상자 ' + ct.need + '개를 찾아요.\n넘기면 물자 +' + fmt(C.contractReward(state)) + ' · 간식 +' + C.CONTRACT_TREATS);
+        fill($('contract-bar'), cHave / ct.need);
         $('contract-fill').disabled = !cdone;
-        setText($('contract-fill'), cdone ? '납품한다' : !cMatch ? cItem.name + (C.hasBatchim(cItem.name) ? '을' : '를') + ' 만들어야 차요 · ' + fmt(Math.floor(ct.have)) + ' / ' + fmt(ct.need) : '만드는 중 · ' + fmt(Math.floor(ct.have)) + ' / ' + fmt(ct.need));
+        setText($('contract-fill'), cdone ? '넘긴다' : cName + ' 상자 ' + cHave + ' / ' + ct.need + ' · 합치지 말고 모아 두세요');
       }
-      // 품목 단추: 지금 만드는 것은 채워서, 의뢰가 찾는 것은 점선 테두리로 보여 준다
-      C.RECIPES.forEach(function (r) {
-        var rb = rows.recipes[r.id];
-        rb.classList.toggle('on', r.id === C.recipeOf(state).id);
-        setText(rb.__small, '숙련 ' + Math.floor(C.mastery(state, r.id) * 100) + '%');
-        rb.classList.toggle('want', !!ct && ct.item === r.id && r.id !== C.recipeOf(state).id);
-        rb.setAttribute('aria-pressed', r.id === C.recipeOf(state).id ? 'true' : 'false');
-      });
-      // 기계 다시 맞추기: 가동률이 정속 기준 아래로 무너졌을 때만 보인다
-      var rbLine = C.lineInfo(state), rb = $('rebalance');
-      rb.hidden = true;      // 3.2.0: 맞출 비율이 없으므로 '다시 맞추기'는 쓰지 않는다
-      if (!rb.hidden) { var rp = C.rebalancePlan(state); var rf = C.rebalanceRefund(state); setText(rb, '기계 다시 맞추기 · Lv ' + rp.sorter + ' / ' + rp.press + ' / ' + rp.assembler + '로' + (rf > 0 ? ' · 물자 +' + fmt(rf) : '')); }
-      // 고장: 고치면 잠깐 라인이 빨라진다
-      var jf = $('jam-fix'), jamName = '';
-      C.MACHINES.forEach(function (d) { if (state.jam && state.jam.id === d.id) jamName = d.name; });
-      jf.hidden = !state.jam;
-      if (state.jam) setText(jf, jamName + (C.hasBatchim(jamName) ? '이' : '가') + ' 멈칫거려요 · 고친다 (' + C.TUNE_SECONDS + '초 동안 ×' + C.TUNE_MULT + ')');
-      // 출하 트럭
-      var tk = state.truck; $('truck').hidden = !tk;
-      if (tk) {
-        setText($('truck-left'), clock(tk.left));
-        setText($('truck-text'), '출하장에 ' + Math.floor(state.stockSec) + '초분이 쌓였어요.\n실으면 물자 +' + fmt(C.truckReward(state, false)));
-      }
-      setText($('stock-note'), '출하장 ' + Math.floor(state.stockSec) + ' / ' + C.TRUCK_STOCK_MAX + '초분 · 이번 회차 출하 ' + state.trucksRun + '번');
-      setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 이번 회차 의뢰 ' + state.contractsRun + '번 · 완제품 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.CONTRACT_BONUS_MAX * 100) + '%)');
-      var line = C.lineInfo(state), top = 0, names = {};
-      C.MACHINES.forEach(function (d) { top = Math.max(top, line.caps[d.id]); names[d.id] = d.name; });
+      $('truck').hidden = true;
+      setText($('stock-note'), '');
+      setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 이번 회차 의뢰 ' + state.contractsRun + '번 · 상자 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.CONTRACT_BONUS_MAX * 100) + '%)');
       C.MACHINES.forEach(function (d) {
-        var c = rows.cells[d.id], r = rows.machines[d.id], lv = state.machines[d.id];
-        setText(c.cap, '초당 ' + fmt(line.caps[d.id]));
-        // 3.2.1: 막대는 '전체에서 이 기계가 만드는 몫'. 예전에는 가장 빠른 기계에 견준 길이라 병목이 없어진 뒤로는 뜻이 없었다
-        c.bar.style.width = (line.flow > 0 ? line.caps[d.id] / line.flow * 100 : 0).toFixed(1) + '%';
-        c.cell.classList.toggle('slow', false);
-        c.cell.classList.toggle('jam', !!state.jam && state.jam.id === d.id);      // 가장 느린 기계: 이것을 올려야 라인이 빨라진다
-        var q = qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - lv), cost = C.machineCost(state, d.id, q);
-        setText(r.count, 'Lv ' + lv + ' / ' + C.COUNT_MAX);      // 다른 시설처럼 최대 레벨을 함께 적는다(끝이 없는 것처럼 보였다)
-        // 이 기계가 지금 초당 몇 개를 처리하는지와, 한 레벨에 얼마나 느는지(1.4.0). 전에는 "레벨당 초당 3"뿐이라 무슨 수인지 알기 어려웠다
-        setText(r.info, '초당 ' + fmt(lv * C.machineRate(state, d.id)) + ' · 레벨당 +' + C.machineRate(state, d.id) + ' · 상자 값을 올려요');
-        // 별: 기계 레벨 합계의 2배 문턱(세 기계가 함께 채운다). 이 기계를 사서 문턱을 넘으면 "지금 2배"가 뜬다
-        setMile(r, line.levels, q, cost <= state.supplies, C.LINE_MILESTONES);
+        var r = rows.machines[d.id], lv = state.machines[d.id] || 0, q = qtyFor(C.maxMachines(state, d.id), d.max - lv), cost = C.machineCost(state, d.id, q);
+        setText(r.count, 'Lv ' + lv + ' / ' + d.max);
+        // 줄마다 "지금 어떤가 → 사면 어떻게 되나"를 적는다
+        setText(r.info, d.id === 'feed' ? '상자가 ' + line.feed.toFixed(2) + '초마다 들어와요' + (lv < d.max ? ' → ' + (line.feed * C.FEED_STEP).toFixed(2) + '초' : '')
+          : d.id === 'forge' ? '들어오는 상자: ' + C.boxName(line.spawn) + (lv < d.max ? ' → ' + C.boxName(line.spawn + 1) + ' · 판의 상자도 모두 올라요' : '')
+          : '상자 값 ×' + fmt((1 + lv) * line.milestone) + (lv < d.max ? ' · 레벨당 +' + fmt(line.milestone) : ''));
+        if (d.id === 'paint') setMile(r, lv, q, cost <= state.supplies, C.LINE_MILESTONES);
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
       var ld = $('line-load');
       renderBoard();
       setText(ld, '판이 버는 양 · 초당 ' + fmt(C.lineRate(state)));
-      ld.className = 'num' + (line.steady ? ' steady' : '');
-      var surgeShow = state.surgeLeft > 0 && !(state.retool > 0) && line.flow > 0;      // 3.0.1: 전력 투입 중에도 노란 딱지(5 · 6 · 7구역과 같게)
-      $('line-note').classList.toggle('boosted', surgeShow);
-      setText($('line-note'), (surgeShow ? '전력 투입 중 ×' + C.SURGE_MULT + ' · ' : '') + (state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
-        ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '라인 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
-        : '기계를 사면 상자가 들어와요'));
-      setText($('line-note'), line.flow > 0 ? (C.mergeable(state).length ? '숫자가 노란 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 이번 회차 ' + (state.mergesRun || 0) + '번 합침' : '기계를 사면 상자가 들어와요');
+      ld.className = 'num steady';
+      var pairs = C.mergeable(state).length;
+      setText($('line-note'), (pairs ? '숫자가 노란 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 손으로 ' + (state.mergesRun || 0) + '번 합침'
+        + (autoM ? '\n자동 합치기가 ' + C.autoMergeSeconds(state).toFixed(1) + '초마다 하나씩 도와요. 손으로 합치면 덤을 받아요.' : ''));
       $('line-note').classList.remove('boosted');
-      drawBelt(line);
-      var sg = $('surge'), sOn = state.surgeLeft > 0;
-      sg.disabled = sOn || state.surgeCool > 0 || !(line.flow > 0);
-      sg.className = 'surge' + (sOn ? ' on' : '');
-      setText(sg, sOn ? '투입 중 ' + Math.ceil(state.surgeLeft) + '초' : state.surgeCool > 0 ? '다음 투입 ' + clock(state.surgeCool) + (C.autoOn(state, 2) ? ' · 자동' : '') : '전력 투입 ×' + C.SURGE_MULT);
-      // 진행 바: 투입 중에는 남은 시간이 줄어들고, 기다리는 동안은 다음 투입까지 차오른다(단추 바탕을 채운다)
-      fill(sg, sOn ? state.surgeLeft / C.SURGE_SECONDS : state.surgeCool > 0 ? 1 - state.surgeCool / C.surgeCooldown(state) : 0);
-      setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
+      setText($('line-mile'), '가장 높은 상자 ' + (state.boxBest ? C.boxName(state.boxBest) + ' (' + state.boxBest + '단계)' : '-') + ' · 칸 ' + line.size + '개');
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.hidden = true;      // 3.2.1: 기계 줄의 구매 단추와 하는 일이 같아서 뺐다(1 · 2구역에도 없는 단추)
       tb.disabled = !(tc <= state.supplies); afford(tb, tc);
@@ -3219,12 +3180,12 @@
     C.TRAITS.forEach(function (t) {
       var r = rows.traits[t.id], lv = state.traits[t.id], cost = C.traitCost(state, t.id);
       setText(r.count, 'Lv ' + lv + ' / ' + t.max);
-      // 자동화: 전력 투입 대기 시간이 지금 몇 초이고 찍으면 몇 초가 되는지 보여 준다(청신호도 같은 비율로 줄어든다)
+      // 자동화: 3구역 자동 합치기의 간격이 지금 몇 초이고 찍으면 몇 초가 되는지 보여 준다
       var tInfo = '';
       if (t.id === 'auto') {
         var lvNow = state.traits.auto || 0, tp = Object.create(state); tp.traits = Object.create(state.traits); tp.traits.auto = lvNow + 1;
-        var cNow = secs(C.surgeCooldown(state)), cNext = secs(C.surgeCooldown(tp)), gNow = secs(C.greenCooldown(state)), gNext = secs(C.greenCooldown(tp));
-        tInfo = lvNow >= t.max ? '전력 투입 ' + cNow + ' · 청신호 ' + gNow : '전력 투입 ' + cNow + ' → ' + cNext + ' · 청신호 ' + gNow + ' → ' + gNext;
+        var cNow = C.autoMergeSeconds(state).toFixed(1) + '초', cNext = C.autoMergeSeconds(tp).toFixed(1) + '초';
+        tInfo = lvNow >= t.max ? '자동 합치기 ' + cNow + '마다' : '자동 합치기 ' + cNow + ' → ' + cNext + '마다';
       }
       if (!tInfo && lv > 0) tInfo = C.effectNow(t, lv) ? '현재 ' + C.effectNow(t, lv) : t.id === 'pioneer' ? '현재 시작 물자 ' + fmt(100 * Math.pow(10, lv)) : t.id === 'reroll' ? '현재 한 회차에 ' + lv + '번' : '';
       setText(r.info, tInfo);
