@@ -465,7 +465,7 @@
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
-    { id: 'autoline', zone: 2, name: '자동 합치기', desc: '5초마다 짝 하나를 알아서 합친다', key: 'autoline', per: 1, baseCost: 2e12, growth: 1, max: 1 },
+    { id: 'autoline', zone: 2, name: '자동 합치기', desc: '짝을 알아서 합치고, 다 모인 의뢰를 넘긴다 · 올릴수록 빨라진다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
     { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
@@ -1496,7 +1496,8 @@
     if (state.autoMerge > 2 && dt <= autoMergeSeconds(state) * 2) state.autoMerge = 2;
   }
   /** 자동 합치기가 짝 하나를 합치는 간격(초). 영구 특성 '자동화'가 줄여 준다(절반까지). 그래도 투입구를 올리면 상자가 더 빨리 들어와 누를 짝은 남는다. */
-  function autoMergeSeconds(state) { return AUTO_MERGE_SECONDS * assistFactor(state); }
+  var AUTO_MERGE_STEPS = [5, 4, 3, 2.5, 2];      // 개조 '자동 합치기' 1~5레벨의 간격(초). 여기에 특성 '자동화'가 곱해져 가장 빠르면 1초다
+  function autoMergeSeconds(state) { var lv = clamp(Math.round(mods(state).autoline), 1, AUTO_MERGE_STEPS.length); return AUTO_MERGE_STEPS[lv - 1] * assistFactor(state); }
   function autoMergeOnce(state, events) {
     state.autoMerge -= 1;
     var p = lowestPair(state, heldLevel(state)); if (!p) return false;
@@ -1557,7 +1558,9 @@
     if (!zoneOpen(state, 2)) return;
     if (state.contract) {
       state.contract.have = Math.min(state.contract.need, contractHave(state));
-      // 넘기는 것은 언제나 손으로 한다. 자동이 알아서 넘기면 "모아 둘까 합칠까"를 고를 일이 없어진다(놓쳐도 잃는 것은 없다)
+      // 3.8.3: 자동 합치기가 있으면 다 모인 의뢰도 알아서 넘긴다(구역 자동을 켜 두었을 때). 다만 지금 있는 구역에서는 절반만 받는다(autoShare): 손으로 넘기는 쪽이 낫다.
+      //   3.5.0 에서는 넘기는 것을 손으로만 하게 했는데, 지나온 구역의 의뢰가 아무도 받지 않은 채 쌓였다 사라지기만 했다
+      if (autoEvents(state, 2) && state.contract.have >= state.contract.need) { var cf = fillContract(state, true); if (cf.ok) { cf.type = 'contract-filled'; cf.auto = true; events.push(cf); return; } }
       state.contract.left -= dt;
       if (state.contract.left <= 0) { events.push({ type: 'contract-gone', who: state.contract.who }); state.contract = null; }
       return;
@@ -1574,11 +1577,11 @@
     events.push({ type: 'contract', who: who.id, name: who.name, need: need, level: level, itemName: boxName(level) });
   }
   /** 모인 상자를 넘긴다. 덜 모였으면 실패(의뢰는 남는다). */
-  function fillContract(state) {
+  function fillContract(state, auto) {
     if (!state.contract) return fail('none');
     var c = state.contract, b = boardOf(state);
     if (contractHave(state) < c.need) return fail('short');
-    var who = findById(CLIENTS, c.who), gain = contractReward(state), first = !(state.clients[c.who] > 0);
+    var who = findById(CLIENTS, c.who), gain = contractReward(state) * (auto ? autoShare(state, 2) : 1), first = !(state.clients[c.who] > 0);
     for (var i = b.length - 1, left = c.need; i >= 0 && left > 0; i--) if (b[i] === c.level) { b[i] = 0; left--; }
     earn(state, gain);
     state.lineEarned += gain;

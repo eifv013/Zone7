@@ -2112,7 +2112,7 @@ test('개조의 숙련 상한: 철수와 특성이 적으면 상한 위로는 �
   s.retreats = 10; assert.equal(C.upgradeSoftCap(s, 'crowbar'), 12);
   near(C.upgradeCost(s, 'crowbar'), Math.ceil(def.baseCost * Math.pow(def.growth, 7)), '경험이 차면 원래 값');
   // 한 번만 사는 개조는 그대로다
-  assert.equal(C.upgradeSoftCap(fresh(), 'autoline'), 1); assert.equal(C.upgradeSoftCap(fresh(), 'nope'), 0);
+  assert.equal(C.upgradeSoftCap(fresh(), 'autosig'), 1); assert.equal(C.upgradeSoftCap(fresh(), 'nope'), 0);
   C.UPGRADES.forEach((u) => { const cap = C.upgradeSoftCap(fresh(), u.id); assert.ok(cap >= 1 && cap <= u.max, u.id); });
 });
 
@@ -2887,7 +2887,12 @@ test('3구역 납품 의뢰: 찾는 단계의 상자를 모아 두었다가 넘�
   assert.equal(C.fillContract(s).reason, 'none');
   const g = onBoard([1]); g.contract = { who: 'bike', level: 5, need: 2, have: 0, left: 1 }; ev = []; C.stepContracts(g, 2, 0, half, ev); assert.equal(g.contract, null); assert.ok(ev.some(e => e.type === 'contract-gone'));
   const a = onBoard([3, 3]); a.upgrades.autoline = 1; a.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; ev = []; C.stepContracts(a, 1, 0, half, ev);
-  assert.ok(a.contract && a.contract.have === 2, '자동 합치기가 있어도 넘기는 것은 손으로 한다'); assert.ok(!ev.some(e => e.type === 'contract-filled'));
+  const af = ev.find(e => e.type === 'contract-filled'); assert.ok(af && af.auto, '자동 합치기가 있으면 다 모인 의뢰를 알아서 넘긴다'); assert.equal(a.contract, null);
+  const hand2 = onBoard([3, 3]); hand2.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; near(af.gain, C.contractReward(hand2) * C.AUTO_SHARE, '지금 있는 구역에서는 절반만: 손이 낫다');
+  const past = inStation(); past.board = Array(C.BOARD_MAX).fill(0); past.board[0] = 3; past.board[1] = 3; past.upgrades.autoline = 1; past.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; const full2 = C.contractReward(past); ev = []; C.stepContracts(past, 1, 0, half, ev); near(ev.find(e => e.type === 'contract-filled').gain, full2, '지나온 구역에서는 온전히');
+  const off2 = onBoard([3, 3]); off2.upgrades.autoline = 1; C.setAutoEvents(off2, 2, false); off2.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; C.stepContracts(off2, 1, 0, half, []); assert.ok(off2.contract, '구역 자동을 끄면 손을 기다린다');
+  // 자동 합치기 간격: 개조 5레벨 + 특성 자동화로 1초까지
+  const sp = onBoard([]); sp.upgrades.autoline = 1; assert.equal(C.autoMergeSeconds(sp), 5); sp.upgrades.autoline = 5; assert.equal(C.autoMergeSeconds(sp), 2); sp.traits.auto = C.ASSIST_MAX; near(C.autoMergeSeconds(sp), 1);
   const e = onBoard([]); e.contractIn = 0; C.stepContracts(e, 1, 0, half, []); assert.equal(e.contract, null, '판이 비어 있으면 의뢰가 오지 않는다');
 });
 

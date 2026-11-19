@@ -2770,7 +2770,7 @@
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
       $('auto-ev').checked = C.autoEvents(state, aeZone);
-      setText($('auto-ev-text'), ['', '단골 주문 자동', '자동 합치기', '역무원 · 표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + (aeZone === 2 ? '' : ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%'));
+      setText($('auto-ev-text'), ['', '단골 주문 자동', '자동 합치기 · 의뢰 넘기기', '역무원 · 표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
     }
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-now').hidden = tab !== 'wall';
