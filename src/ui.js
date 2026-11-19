@@ -2598,7 +2598,7 @@
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setMile(rows.stall, state.stalls, q2, sc <= state.supplies);
-      setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 평균 초당 물자 ' + fmt(C.tradeRate(state)));
+      setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 초당 물자 ' + fmt(C.tradeRate(state)));
       setText(rows.stall.cost, isFinite(sc) ? '×' + q2 + ' ' + fmt(sc) : '최대');
       rows.stall.btn.disabled = !(sc <= state.supplies); afford(rows.stall.cost, sc);
       C.HANDS.forEach(function (d) {
@@ -2704,7 +2704,7 @@
         var v = rows.railRows[d.id], r = rows.routes[d.id], lv = state.routes[d.id], trip = C.tripSeconds(state, d.id), on = plan.riders[d.id];
         v.row.classList.toggle('off', !lv);
         setText(v.small, clock(trip) + ' · 화물 ×' + d.mult);
-        setText(v.side, !lv ? '끊김' : on ? on + ' / ' + plan.slots[d.id] + '대 · ' + clock(trip - state.routeClock[d.id]) : state.routeLoad[d.id] > 0 ? '돌아오는 중 · ' + clock(trip - state.routeClock[d.id]) : '0 / ' + plan.slots[d.id] + '대');
+        setText(v.side, !lv ? '끊김' : on ? '운행 ' + on + '대 · 최대 ' + plan.slots[d.id] + '대 · ' + clock(trip - state.routeClock[d.id]) : state.routeLoad[d.id] > 0 ? '돌아오는 중 · ' + clock(trip - state.routeClock[d.id]) : '운행 0대 · 최대 ' + plan.slots[d.id] + '대');
         v.bar.style.width = (lv && (on || state.routeLoad[d.id] > 0) ? Math.min(100, state.routeClock[d.id] / trip * 100) : 0).toFixed(1) + '%';
         var cost = C.routeCost(state, d.id);
         setText(r.count, lv ? lv + ' / ' + C.ROUTE_MAX + '단계' : '끊김');
@@ -2719,7 +2719,7 @@
       setText(gb, state.greenCool > 0 ? '다음 청신호 ' + clock(state.greenCool) + (C.autoOn(state, 3) ? ' · 자동' : '') : running ? '청신호 · 열차들이 ' + C.GREEN_SECONDS + '초 앞서 달려요' : '청신호 · 달리는 열차가 없어요');
       fill(gb, state.greenCool > 0 ? 1 - state.greenCool / C.greenCooldown(state) : 0);
       setText($('rail-note'), !state.trains ? '열차가 없어요. 열차를 사고 노선을 복구하면 운행이 시작돼요.'
-        : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 평균 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 돌아올 때 들어와요');
+        : '열차 ' + state.trains + '대' + (plan.idle ? ' · 쉬는 열차 ' + plan.idle + '대(노선을 늘리면 달려요)' : '') + ' · 초당 물자 ' + fmt(C.railRate(state)) + ' · 화물은 달리는 동안 들어와요');
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
       setText(rows.train.count, state.trains + ' / ' + C.TRAIN_MAX);
       setMile(rows.train, state.trains, tq, tcost <= state.supplies, C.FLEET_MILESTONES);
@@ -3036,7 +3036,7 @@
         case 'surge': if (tab === 'z2' && pane === 'play') sfx('surge'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'train':
           railFlash[ev.route] = Date.now();
-          if (ev.long) { toast('4구역 ' + ev.name + ' 도착 · 물자 +' + fmt(ev.gain)); sfx('defended'); }
+          if (ev.long) { toast('4구역 ' + ev.name + ' 한 바퀴 · 이번 운행 물자 ' + fmt(ev.gain)); sfx('defended'); }
           else if (tab === 'z3' && pane === 'play') sfx('buy');        // 짧은 노선은 자주 오므로 4구역을 보고 있을 때만 소리를 낸다
           break;
         case 'ending':
@@ -3474,7 +3474,7 @@
      * 끝에서는 더 넘어가지 않는다(처음으로 돌아가지 않는다).
      */
     (function () {
-      var sx = 0, sy = 0, st = 0, ok = false, strip = null, stripAt = 0;
+      var sx = 0, sy = 0, st = 0, ok = false, strip = null, stripAt = 0, onZoneTabs = false;
       function vis(el) { return !!el && !el.hidden && el.getClientRects().length > 0; }
       function group() {
         if (vis($('hub'))) return Array.prototype.slice.call(document.querySelectorAll('#hub [data-hub]'));
@@ -3497,15 +3497,23 @@
         return false;
       }
       /** dir: 1 다음, -1 앞. 넘겼으면 true. 테스트와 다른 입력(키보드)도 쓸 수 있게 밖에 둔다. */
-      function turn(dir) {
+      function turn(dir, zonesOnly) {
         var g = group(); if (!g) return false;
-        g = g.filter(function (b) { return vis(b) && !b.disabled; });
+        // 2.9.1: 구역 화면에서는 먼저 운영 · 개조 · 목표를 넘긴다. 끝(목표에서 다음, 운영에서 앞)에서는 옆 구역으로 간다.
+        //        구역 탭 줄 위에서 밀면(zonesOnly) 바로 구역을 넘긴다.
+        if (!zonesOnly && g.length && g[0].parentElement === $('zone-tabs') && vis($('zone-panes'))) {
+          var ps = Array.prototype.slice.call($('zone-panes').children).filter(vis), pa = -1;
+          ps.forEach(function (b, i) { if (b.getAttribute('aria-pressed') === 'true') pa = i; });
+          if (pa >= 0 && pa + dir >= 0 && pa + dir < ps.length) { ps[pa + dir].click(); try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) { /* 넘어가기만 하면 된다 */ } return true; }
+        }
+        g = g.filter(function (b) { return vis(b) && !b.disabled && !b.hasAttribute('data-locked'); });
         var at = -1; g.forEach(function (b, i) { if (b.getAttribute('aria-pressed') === 'true') at = i; });
         var to = at + dir;
         if (at < 0 || to < 0 || to >= g.length) return false;
         g[to].click();
-        // 2.8.7: 초점도 같이 옮긴다. 손으로 눌렀던 탭에 흰 테두리(초점 표시)가 남아, 밀어서 넘겨도 테두리가 따라오지 않았다
-        try { g[to].focus({ preventScroll: true }); } catch (e) { /* 초점을 못 옮겨도 탭은 넘어갔다 */ }
+        // 2.9.1: 밀어서 넘긴 뒤에는 초점을 어디에도 두지 않는다. 2.8.7 에서 넘어간 탭으로 초점을 옮겼더니 그 탭에 초점 테두리가 새로 생겼다
+        //        (남아 있던 테두리의 진짜 까닭은 :hover 였고 2.8.9 에서 고쳤다).
+        try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) { /* 초점은 그대로 둬도 된다 */ }
         try { g[to].scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) { /* 줄이 길 때 고른 탭이 보이게만 한다 */ }
         return true;
       }
@@ -3513,6 +3521,7 @@
       document.addEventListener('touchstart', function (e) {
         var t = e.touches && e.touches.length === 1 ? e.touches[0] : null;
         ok = !!t && !blocked(e.target);
+        onZoneTabs = !!(e.target && e.target.closest && e.target.closest('#zone-tabs'));
         if (t) { sx = t.clientX; sy = t.clientY; st = Date.now(); }
       }, { passive: true });
       // 옆으로 미는 중이라는 것이 분명해지면 브라우저의 기본 동작을 막는다. 일부 브라우저는 옆으로 미는 것을 '앞 페이지로 가기'로 받아서,
@@ -3530,7 +3539,7 @@
         var dx = t.clientX - sx, dy = t.clientY - sy;
         if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 2 || Date.now() - st > 600) return;
         if (strip && Math.abs(strip.scrollLeft - stripAt) > 2) return;      // 줄이 움직였다: 줄을 민 것이지 탭을 넘긴 것이 아니다
-        turn(dx < 0 ? 1 : -1);
+        turn(dx < 0 ? 1 : -1, onZoneTabs);
       }, { passive: true });
     })();
 

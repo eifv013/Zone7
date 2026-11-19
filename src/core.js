@@ -561,7 +561,7 @@
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
-      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0,
+      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
@@ -736,6 +736,7 @@
       s.routeClock[d.id] = clamp(safeNum(rc, 0), 0, d.seconds);
       s.routeLoad[d.id] = clamp(safeNum(rl, 0), 0, TRAIN_MAX * d.seconds);      // 한 번의 운행에 실릴 수 있는 양을 넘지 않는다
     });
+    s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
     s.perks = counts(PERKS, raw.perks, 999);
     s.traits = counts(TRAITS, raw.traits, function (t) { return t.max; });
@@ -1612,7 +1613,7 @@
     return { ok: true, gain: gain, treats: SALVAGE_TREATS, first: first, who: who ? who.id : '', name: who ? who.name : '' };
   }
   function cargoValue(state) { return zoneOpen(state, 3) ? TRAIN_VALUE * fleetMilestone(state.trains) * mods(state).z4 * globalMult(state) * salvageMult(state) * (1 + (state.railBoost || 0)) : 0; }
-  /** 4구역이 평균적으로 초당 버는 물자(운행 중인 열차 기준). 실제로는 열차가 돌아올 때 한꺼번에 들어온다. */
+  /** 4구역이 초당 버는 물자(운행 중인 열차 기준). 2.9.1 부터 실제로도 이 속도로 들어온다. */
   function railRate(state) {
     if (!zoneOpen(state, 3)) return 0;
     var plan = railPlan(state), sum = 0;
@@ -1626,10 +1627,26 @@
   function stepRail(state, dt, events) {
     if (!zoneOpen(state, 3) || !state.trains) return;
     var plan = railPlan(state), value = cargoValue(state);
+    /*
+     * 2.9.1: 화물은 달리는 동안 조금씩 들어온다. 전에는 열차가 돌아올 때 한꺼번에 들어와서,
+     *   "초당 +6경"이라고 적혀 있는데 물자는 멈춰 있다가 몇십 초(먼 노선은 몇십 분)에 한 번 뛰었다. 표류 화물도 150초 안에 채워야 하는데
+     *   먼 노선에 열차가 몰려 있으면 그 사이에 돌아오는 열차가 없어서 채울 수가 없었다.
+     *   버는 양은 같다(열차 × 초 × 노선 배수 × 화물 값). routeLoad 는 이제 "이번 운행에 벌어 온 양"을 보여 주는 데만 쓴다.
+     * 옛 저장: 싣고 달리던 화물(아직 못 받은 것)은 처음 한 번 그대로 내려 준다(railFlow 가 없는 저장).
+     */
+    if (!state.railFlow) {
+      ROUTES.forEach(function (d) { var owed = (state.routeLoad[d.id] || 0) * d.mult * value; if (owed > 0) { earn(state, owed); state.railEarned += owed; } });
+      state.railFlow = true;
+    }
     ROUTES.forEach(function (d) {
       var n = plan.riders[d.id];
       if (!n && !(state.routeLoad[d.id] > 0)) return;
       var trip = tripSeconds(state, d.id);
+      var flow = n * dt * d.mult * value;
+      if (flow > 0) {
+        earn(state, flow); state.railEarned += flow;
+        if (state.salvage) state.salvage.have = Math.min(state.salvage.need, state.salvage.have + flow);      // 표류 화물: 달리는 동안 번 화물 값이 쌓인다
+      }
       state.routeLoad[d.id] += n * dt;
       state.routeClock[d.id] += dt;
       if (state.routeClock[d.id] < trip) return;
@@ -1641,9 +1658,7 @@
       var gain = state.routeLoad[d.id] * share * d.mult * value;
       state.routeLoad[d.id] *= 1 - share;
       state.routeClock[d.id] = n ? state.routeClock[d.id] - trips * trip : 0;
-      earn(state, gain);
-      state.railEarned += gain;
-      if (state.salvage) state.salvage.have = Math.min(state.salvage.need, state.salvage.have + gain);      // 표류 화물: 돌아온 열차의 화물 값이 쌓인다
+      // gain 은 이미 달리는 동안 받았다: 여기서는 "이번 운행에 얼마를 벌어 왔나"를 알리기만 한다
       if (d.id === 'express') state.expressRuns += trips;
       events.push({ type: 'train', route: d.id, name: d.name, gain: gain, trips: trips, long: d.seconds >= 900 });
     });

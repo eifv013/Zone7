@@ -376,7 +376,7 @@ def run_case(browser, name, size, state, mode):
         if not tap('#green'): problems.append('청신호를 누를 수 없다')
         if '다음 청신호' not in text('green') or not page.is_disabled('#green'): problems.append('청신호 표시가 이상하다: ' + text('green'))
         rows_text = page.evaluate("[...document.querySelectorAll('#rail-list .rail-row')].map(e => e.textContent).join(' | ')")
-        if '끊김' not in rows_text or '/ 2대' not in rows_text: problems.append('노선 현황이 이상하다: ' + rows_text)
+        if '끊김' not in rows_text or '최대 2대' not in rows_text: problems.append('노선 현황이 이상하다: ' + rows_text)
         if not fits(): problems.append('한 화면에 들어오지 않는다(4구역)')
         # 운행: 남은 시간이 줄다가, 한 바퀴(약 30초)를 돌면 다시 처음부터 센다. (들어온 물자의 양은 단위 테스트가 확인한다)
         def loop_left():

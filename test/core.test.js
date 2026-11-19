@@ -847,14 +847,14 @@ test('노선: 열차는 배수가 높은 노선부터 채워 탄다', () => {
   near(C.railRate(s), (2 * byId('express') + 2 * byId('river') + 3 * byId('loop')) * C.cargoValue(s));
 });
 
-test('노선: 화물은 열차가 돌아왔을 때 한꺼번에 들어온다', () => {
+test('노선: 화물은 달리는 동안 조금씩 들어오고, 돌아오면 한 바퀴를 알린다(2.9.1)', () => {
   const s = inStation();
   s.trains = 2; s.routes.loop = 1; s.defenses.rail = 1e9; s.signalIn = 1e9; s.autoSell = false;
   s.achClock = -1e9;      // 이 시험 도중에 업적이 달성되어 생산 배수가 바뀌지 않게 한다(값을 정확히 비교하므로)
   const loop = C.ROUTES.find(r => r.id === 'loop'), value = C.cargoValue(s);
   let ev = C.tick(s, loop.seconds - 1, half);
-  assert.ok(!ev.some(e => e.type === 'train'), '돌아오기 전에는 들어오지 않는다');
-  assert.equal(s.railEarned, 0);
+  assert.ok(!ev.some(e => e.type === 'train'), '돌아오기 전에는 도착을 알리지 않는다');
+  near(s.railEarned, 2 * (loop.seconds - 1) * loop.mult * value);      // 달린 만큼은 이미 들어와 있다
   near(s.routeLoad.loop, 2 * (loop.seconds - 1));
   ev = C.tick(s, 1, half);
   const arrived = ev.find(e => e.type === 'train');
@@ -862,8 +862,14 @@ test('노선: 화물은 열차가 돌아왔을 때 한꺼번에 들어온다', (
   assert.equal(arrived.route, 'loop');
   assert.equal(arrived.long, false);
   near(arrived.gain, 2 * loop.seconds * loop.mult * value);
-  near(s.railEarned, arrived.gain);
+  near(s.railEarned, arrived.gain);      // 한 바퀴에 번 양 = 알림에 적힌 양(두 번 받지 않는다)
   near(s.routeLoad.loop, 0); near(s.routeClock.loop, 0);
+  // 옛 저장(railFlow 없음): 싣고 달리던 화물을 처음 한 번 내려 준다
+  const old = inStation(); old.trains = 1; old.routes.loop = 1; old.defenses.rail = 1e9; old.signalIn = 1e9; old.achClock = -1e9;
+  old.routeLoad.loop = 10; old.routeClock.loop = 10; old.railFlow = false;
+  const v2 = C.cargoValue(old); C.tick(old, 1, half);
+  near(old.railEarned, (10 + 1) * loop.mult * v2); assert.equal(old.railFlow, true);
+  const back = C.deserialize(C.serialize(old), 0); assert.equal(back.railFlow, true);
 });
 
 test('노선: 운행 도중에 탄 열차는 달린 만큼만 싣는다', () => {
@@ -885,7 +891,7 @@ test('노선: 긴 시간을 한 번에 진행해도 다녀온 횟수만큼만 �
   assert.equal(ev[0].trips, 3);
   near(s.routeClock.loop, loop.seconds * 0.5);
   near(s.routeLoad.loop, loop.seconds * 0.5);
-  assert.ok(Math.abs(s.railEarned - 3 * loop.seconds * loop.mult * value) / s.railEarned < 0.05);   // 막아낸 밤 보너스가 도중에 조금 붙는다
+  assert.ok(Math.abs(s.railEarned - 3.5 * loop.seconds * loop.mult * value) / s.railEarned < 0.05);   // 막아낸 밤 보너스가 도중에 조금 붙는다
 });
 
 test('노선: 심야 급행 도착을 세고, 시간표는 운행 시간을 줄인다', () => {
@@ -1352,7 +1358,7 @@ test('청신호: 달리는 열차가 정해진 시간만큼 앞서 달리고 화
   assert.equal(C.greenSignal(s).reason, 'cooldown');
   // 도착 직전의 열차는 청신호로 바로 들어온다
   C.tick(s, river.seconds - C.GREEN_SECONDS - 10, half);
-  assert.equal(s.railEarned, 0);
+  assert.ok(s.railEarned > 0);      // 2.9.1: 달리는 동안 이미 들어온다
   s.greenCool = 0;
   r = C.greenSignal(s);
   assert.equal(r.arrivals.length, 1);
