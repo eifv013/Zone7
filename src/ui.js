@@ -135,7 +135,7 @@
         if (!home) state.lastSeen = Date.now();      // 스테이지 중에는 본 게임의 '마지막으로 본 때'를 건드리지 않는다(들어간 때로 남는다)
         localStorage.setItem(SAVE_KEY, C.serialize(mainState()));
         // 3.0.1: 원정 중이면 원정 판도 따로 적어 둔다. 전에는 원정 판을 어디에도 적지 않아서, 도중에 업데이트되거나 창이 닫히면 원정이 처음(0)으로 돌아갔다
-        try { if (home) localStorage.setItem(STAGE_KEY, JSON.stringify({ stage: state.stage, text: C.serialize(state) })); else localStorage.removeItem(STAGE_KEY); } catch (e2) { /* 원정만 못 이어 갈 뿐이다 */ }
+        try { if (home && state.stage && !state.stage.hard) localStorage.setItem(STAGE_KEY, JSON.stringify({ stage: state.stage, text: C.serialize(state) })); else localStorage.removeItem(STAGE_KEY); } catch (e2) { /* 원정만 못 이어 갈 뿐이다 */ }
         return true;
       } catch (e) { return false; }
     },
@@ -1428,7 +1428,7 @@
   }
   /** 모험 창을 연다. 아래 탭과 상황 화면의 단추가 같이 쓴다. 스테이지 중에는 열지 않는다. */
   function openHub() { if (home) { toast('원정 중에는 열 수 없어요'); return; } $('hub').hidden = false; renderChallenges(); renderStages(); }
-  var hubTab = 'chal', MARK_NAME = { clear: '클리어', speed: '스피드', hard: '하드' };
+  var hubTab = 'chal', MARK_NAME = { clear: '클리어', speed: '스피드', hard: '하드', hardSpeed: '하드 스피드' };
   function setHubTab(t) {
     hubTab = t;
     Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.hub === t)); });
@@ -1450,7 +1450,7 @@
     C.STAGES.forEach(function (d, i) {
       var r = rows.stages[d.id], m = C.stageMarks(state, d.id), why = C.stageBlock(state, d.id, false);
       r.g.setAttribute('class', 'zm-node st-node' + (why ? ' locked' : '') + (m.clear ? ' won' : '') + (d.id === stagePick ? ' pick' : '') + (!why && !m.clear ? ' next' : ''));
-      ['clear', 'speed', 'hard'].forEach(function (k, n) { r.dots[n].setAttribute('class', 'st-dot' + (m[k] ? ' on' : '')); });
+      ['clear', 'speed', 'hard', 'hardSpeed'].forEach(function (k, n) { r.dots[n].setAttribute('class', 'st-dot' + (n >= 2 ? ' hd' : '') + (m[k] ? ' on' : '')); });      // 노란 둘은 일반, 붉은 둘은 하드
       if (i > 0) rows.stages[d.id].road.setAttribute('class', 'zm-road' + (C.stageMarks(state, C.STAGES[i - 1].id).clear ? ' zm-road-open' : ''));
     });
     var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0], m = C.stageMarks(state, d.id), why = C.stageBlock(state, d.id, false), idx = C.STAGES.indexOf(d);
@@ -1463,9 +1463,13 @@
     }
     setText($('stage-d-no'), d.boss ? '지역 보스' : '스테이지 ' + C.REGIONS[0].no + '-' + (idx + 1));
     setText($('stage-d-name'), d.name);
-    setText($('stage-d-sub'), '규칙 · ' + (C.stageRuleTexts(d, false).join(', ') || '없음') + '\n목표 · ' + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit) + '\n하드 · ' + C.STAGE_RULES[d.hard] + ' 추가' + (d.boss ? '\n보상 · 지역 휘장 · 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
+    setText($('stage-d-sub'), '규칙 · ' + (C.stageRuleTexts(d, false).join(', ') || '없음') + '\n목표 · ' + C.stageGoalText(d) + ' · 제한 ' + clock(d.limit) + '\n하드 · ' + C.STAGE_RULES[d.hard] + ' 추가 · 닫으면 처음부터' + (d.boss ? '\n보상 · 지역 휘장 · 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
     // 한 줄로: 창이 화면보다 길어져 위아래로 밀리지 않게(1.8.4)
-    setText($('stage-d-marks'), ['clear', 'speed', 'hard'].map(function (k) { return (m[k] ? '● ' : '○ ') + MARK_NAME[k] + (k === 'speed' ? ' ' + clock(d.speed) : ''); }).join('  ') + (m.best ? '  · 최고 ' + clock(m.best) : ''));
+    // 3.0.2: 별은 일반 둘(클리어 · 스피드)과 하드 둘(하드 클리어 · 하드 스피드)을 따로 센다. 못 끝낸 원정은 가장 멀리 간 정도가 남는다
+    var star = function (on) { return on ? '★' : '☆'; }, bonus = C.stageRetryBonus(state, d.id, false);
+    setText($('stage-d-marks'), '일반 ' + star(m.clear) + star(m.speed) + ' · 하드 ' + star(m.hard) + star(m.hardSpeed) + ' · 스피드 ' + clock(d.speed)
+      + (m.best ? ' · 최고 ' + clock(m.best) : m.pct > 0 ? ' · 최고 ' + Math.floor(m.pct * 100) + '%' : '')
+      + (bonus > 0 ? '\n다시 도전 · 시작 물자 +' + fmt(bonus) + ' (하드 제외)' : ''));
     $('stage-go').disabled = !!why; $('stage-hard').disabled = !!C.stageBlock(state, d.id, true);
   }
   /*
@@ -1537,7 +1541,7 @@
       g.appendChild(svgEl('circle', { cx: x, cy: y, r: rad, 'class': 'st-pad' + (d.boss ? ' boss' : '') }));
       if (d.boss) { r(-6, -8, 12, 9, 'st-skull'); r(-4, -5, 3, 3, 'st-eye'); r(1, -5, 3, 3, 'st-eye'); r(-4, 1, 8, 4, 'st-skull'); r(-2, 2, 1, 3, 'st-eye'); r(1, 2, 1, 3, 'st-eye'); }
       else g.appendChild(svgEl('text', { x: x, y: y + 4.5, 'text-anchor': 'middle', 'class': 'st-num' }, String(i + 1)));
-      var dots = [0, 1, 2].map(function (n) { var c = svgEl('circle', { cx: x - 7 + n * 7, cy: y + rad + 7, r: 2.4, 'class': 'st-dot' }); g.appendChild(c); return c; });
+      var dots = [0, 1, 2, 3].map(function (n) { var c = svgEl('circle', { cx: x - 11 + n * 7 + (n >= 2 ? 1 : 0), cy: y + rad + 7, r: 2.4, 'class': 'st-dot' }); g.appendChild(c); return c; });
       g.appendChild(svgEl('text', { x: x, y: y + rad + 21, 'text-anchor': 'middle', 'class': 'zm-name st-name' }, d.name));
       function pick() { stagePick = d.id; sfx('tab'); renderStages(); }
       g.addEventListener('click', pick);
@@ -1717,7 +1721,7 @@
   /** 스테이지를 끝내고 본 게임으로 돌아간다. giveUp 이면 결과를 적지 않는다. */
   function endStage(giveUp) {
     if (!home) return;
-    var st = state, def = C.stageDef(st), res = giveUp ? { ok: true, won: false, got: [], treats: 0 } : C.finishStage(home, st);
+    var st = state, def = C.stageDef(st), res = C.finishStage(home, st);      // 3.0.2: 포기해도 간 만큼의 기록과 구간 간식은 남는다
     var away = Math.max(0, (Date.now() - stageEnter) / 1000);
     state = home; home = null;
     var rep = C.applyOffline(state, away);      // 스테이지를 하는 동안 본 게임은 자리 비움처럼 돌았다
@@ -1730,8 +1734,15 @@
       if (res.flags && res.flags.length) { log(res.flags.join(', ') + (C.hasBatchim(res.flags[res.flags.length - 1]) ? '을' : '를') + ' 받았다. 옷장에서 달 수 있다.', 'good'); toast('새 깃발 · ' + res.flags.join(', ')); }
       if (fxShow) fxShow('클리어', def.name + (res.badge ? ' · 지역 휘장' : gotText ? ' · ' + gotText : ''), 1, -1, -1);
     } else {
-      log('원정 〈' + def.name + '〉' + (giveUp ? '에서 돌아왔다.' : ' 실패. 시간이 다 됐다.'), giveUp ? '' : 'bad');
-      if (!giveUp) { toast('원정 실패 · ' + def.name); sfx('breached'); if (fxShow) fxShow('원정 실패', def.name, -1, -1, -1); }
+      // 3.0.2: 실패해도 흔적이 남는다. 어디까지 갔는지, 왜 못 끝냈는지, 무엇을 받았는지, 다음에는 무엇이 달라지는지
+      var pctText = Math.floor((res.pct || 0) * 100) + '%', whyText = res.why === 'breach' ? '방어 실패 ' + res.breaches + '번' : '시간이 모자랐어요';
+      var extra = (res.record && res.pct > 0 ? ' 최고 기록.' : '') + (res.stepTreats ? ' 간식 ' + res.stepTreats + '개.' : '');
+      log('원정 〈' + def.name + '〉' + (res.why === 'quit' ? '에서 돌아왔다. 목표의 ' + pctText + '까지 갔다.' : ' 실패. ' + (res.why === 'breach' ? '방어 실패가 ' + res.breaches + '번 있었다.' : '시간이 다 됐다.') + ' 목표의 ' + pctText + '까지 갔다.') + extra, res.why === 'quit' ? '' : 'bad');
+      if (res.why !== 'quit') {
+        toast('원정 실패 · ' + whyText + ' · 목표의 ' + pctText + (res.record ? ' · 최고 기록' : '') + (res.stepTreats ? ' · 간식 +' + res.stepTreats : ''));
+        if (res.retry > 0 && !st.stage.hard) toast('다시 도전하면 시작 물자 +' + fmt(res.retry));
+        sfx('breached'); if (fxShow) fxShow('원정 실패', def.name + ' · ' + pctText + (res.record ? ' · 최고 기록' : ''), -1, -1, -1);
+      } else if (res.stepTreats) toast('원정 · 목표의 ' + pctText + ' · 간식 +' + res.stepTreats);
     }
     if (rep && rep.gain > 0) log('그동안 거점은 물자 ' + fmt(rep.gain) + '을 벌었다.', '');
     Store.save(); Cloud.flush();
