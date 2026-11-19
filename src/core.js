@@ -1535,8 +1535,9 @@
    * 기계 셋(줄)은 "상자 하나의 값"을 올린다. 판의 합계를 BOARD_NORM(가만히 둔 판의 평균)으로 나눠 곱하므로, 길게 보면 버는 속도는 전과 같다.
    */
   var BOARD_SIZE = 20, BOX_MAX = 40, BOX_STEP = 3, FEED_SECONDS = 3, MERGE_SECONDS = 10, SHIP_SECONDS = 30, BOARD_NORM = 6561;      // 9단계(발전기) 상자 하나가 기준(×1)이다. 손으로 합치면 17분쯤, 가만히 두면 35분쯤 걸린다
-  var BOXES = ['고철', '볼트', '철판', '톱니', '베어링', '모터', '변속기', '엔진', '발전기', '펌프', '용접기', '선반', '프레스', '크레인', '보일러', '터빈'];
-  function boxName(level) { level = Math.floor(safeNum(level, 0)); return level < 1 ? '' : level <= BOXES.length ? BOXES[level - 1] : '설비 ' + (level - BOXES.length); }
+  /* 3.3.1: 품목은 그림이 있는 아홉 가지. 그 위 단계는 같은 품목에 별이 붙는다(고철★, 볼트★ …). 이름과 그림이 어긋나지 않게 */
+  var BOXES = ['고철', '볼트', '철판', '톱니', '베어링', '모터', '변속기', '엔진', '발전기'];
+  function boxName(level) { level = Math.floor(safeNum(level, 0)); if (level < 1) return ''; var tier = Math.floor((level - 1) / BOXES.length), n = BOXES[(level - 1) % BOXES.length]; for (var i = 0; i < tier; i++) n += '★'; return n; }
   function boxWorth(level) { level = Math.floor(safeNum(level, 0)); return level >= 1 && level <= BOX_MAX ? Math.pow(BOX_STEP, level - 1) : 0; }
   function boardOf(state) { if (!Array.isArray(state.board) || state.board.length !== BOARD_SIZE) { state.board = []; for (var i = 0; i < BOARD_SIZE; i++) state.board.push(0); } return state.board; }
   function boardSum(state) { var b = boardOf(state), n = 0; for (var i = 0; i < b.length; i++) n += boxWorth(b[i]); return n; }

@@ -2189,19 +2189,75 @@
    * boardFx: 방금 일어난 일(합쳐짐 pop, 새로 들어옴 in, 덤 gain)을 칸 번호로 적어 두었다가 한 번 보여 주고 지운다.
    */
   var boardFx = {}, boardSeen = null;
+  /*
+   * 3.3.1 합치기 판의 도트 그림. 칸 하나는 32×27 도트: 철판 바닥 + 나무 팔레트 + 품목 그림(14×14).
+   *   왜: 색 네모에 글자만 적힌 판은 "보는 재미"가 없었다. 품목이 눈으로 구분되고, 합칠수록 물건이 그럴듯해져야 한다.
+   *   품목 그림은 BOX_ART[단계 - 1](g, x, y) 가 그린다. 아홉 가지를 돌려 쓰고, 한 바퀴 돌 때마다 팔레트가 금빛이 된다(이름의 ★과 같다).
+   */
+  function px(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+  function spr(g, x, y, rows, pal) { for (var j = 0; j < rows.length; j++) for (var i = 0; i < rows[j].length; i++) { var c = pal[rows[j].charAt(i)]; if (c) px(g, x + i, y + j, 1, 1, c); } }
+  var BK = '#17180f';
+  var BOX_ART = [
+    function (g, x, y) { spr(g, x, y + 3, ['....aa....b...', '..aAAa..bBb...', '.aAAAAa.bBBb.c', 'aAAaAAAabBBbcC', 'AAaAAaAAABBbCC', 'aAAAAAAaBBBBCC', 'kkkkkkkkkkkkkk'], { a: '#b0b0a8', A: '#8a8a82', b: '#a86a3a', B: '#7a4a2a', c: '#9a9a92', C: '#6a6a64', k: BK }); },
+    function (g, x, y) { spr(g, x + 2, y, ['..hhhhhh..', '.hHHHHHHh.', 'hHHhhhhHHh', 'hHHHHHHHHh', '.hhhhhhhh.', '...sSSs...', '...sSss...', '...sSSs...', '...sSss...', '...sSSs...', '...sSss...', '...sSSs...', '....ss....'], { h: '#c9c7ba', H: '#e8e6dc', s: '#8a8a82', S: '#b0b0a8' }); },
+    function (g, x, y) { for (var k = 0; k < 4; k++) { px(g, x + 1 + k, y + 10 - k * 3, 12, 2, '#7a9ab8'); px(g, x + 1 + k, y + 10 - k * 3, 12, 1, '#a8c4dc'); px(g, x + 1 + k, y + 12 - k * 3, 12, 1, '#4a6a88'); px(g, x + 3 + k, y + 10 - k * 3, 1, 1, '#e8f2fa'); } },
+    function (g, x, y) { var c = '#5fb37a', d = '#3a8a56', l = '#8fd8a6'; px(g, x + 4, y + 2, 6, 10, c); px(g, x + 2, y + 4, 10, 6, c); px(g, x + 3, y + 3, 8, 8, c); [[6, 0], [6, 12], [0, 6], [12, 6]].forEach(function (t) { px(g, x + t[0], y + t[1], 2, 2, c); }); [[2, 2], [10, 2], [2, 10], [10, 10]].forEach(function (t) { px(g, x + t[0], y + t[1], 2, 2, d); }); px(g, x + 5, y + 5, 4, 4, BK); px(g, x + 6, y + 6, 2, 2, '#2a2c28'); px(g, x + 4, y + 3, 5, 1, l); px(g, x + 3, y + 4, 1, 4, l); px(g, x + 4, y + 11, 6, 1, d); px(g, x + 11, y + 5, 1, 5, d); },
+    function (g, x, y) { var o = '#d8d8d0', d = '#8a8a82'; px(g, x + 4, y + 1, 6, 12, o); px(g, x + 2, y + 3, 10, 8, o); px(g, x + 1, y + 5, 12, 4, o); px(g, x + 5, y + 5, 4, 4, BK); px(g, x + 4, y + 6, 6, 2, BK); px(g, x + 6, y + 4, 2, 6, BK); [[6, 2], [10, 4], [11, 7], [9, 10], [5, 11], [2, 8], [3, 4]].forEach(function (t) { px(g, x + t[0], y + t[1], 2, 2, '#f0b400'); }); px(g, x + 4, y + 1, 5, 1, '#fff'); px(g, x + 5, y + 12, 5, 1, d); px(g, x + 12, y + 6, 1, 3, d); },
+    function (g, x, y) { px(g, x + 1, y + 3, 10, 9, '#3f7fb8'); px(g, x + 1, y + 3, 10, 2, '#6aa8de'); px(g, x + 1, y + 10, 10, 2, '#2a5a88'); for (var k = 2; k < 10; k += 2) px(g, x + k, y + 5, 1, 5, '#2a5a88'); px(g, x + 11, y + 6, 3, 3, '#b0b0a8'); px(g, x + 11, y + 6, 3, 1, '#e8e6dc'); px(g, x, y + 5, 1, 5, '#2a5a88'); px(g, x + 2, y + 12, 3, 1, BK); px(g, x + 7, y + 12, 3, 1, BK); px(g, x + 4, y + 1, 4, 2, '#55564e'); },
+    function (g, x, y) { px(g, x + 2, y + 2, 10, 10, '#e98a3c'); px(g, x + 2, y + 2, 10, 2, '#f8b070'); px(g, x + 2, y + 10, 10, 2, '#b0602a'); px(g, x, y + 4, 2, 3, '#b0b0a8'); px(g, x + 12, y + 7, 2, 3, '#b0b0a8'); px(g, x + 4, y + 5, 4, 4, BK); px(g, x + 5, y + 6, 2, 2, '#e98a3c'); px(g, x + 8, y + 4, 3, 3, BK); px(g, x + 9, y + 5, 1, 1, '#f8b070'); [[3, 3], [10, 3], [3, 10], [10, 10]].forEach(function (t) { px(g, x + t[0], y + t[1], 1, 1, '#7a3a1a'); }); px(g, x + 3, y + 12, 2, 1, BK); px(g, x + 9, y + 12, 2, 1, BK); },
+    function (g, x, y) { px(g, x + 1, y + 5, 12, 7, '#c4402e'); px(g, x + 1, y + 5, 12, 1, '#e8684e'); px(g, x + 1, y + 10, 12, 2, '#8a2a20'); [2, 6, 10].forEach(function (k) { px(g, x + k, y + 1, 3, 4, '#8a8a82'); px(g, x + k, y + 1, 3, 1, '#d8d8d0'); px(g, x + k + 1, y, 1, 1, '#55564e'); }); px(g, x + 3, y + 7, 2, 2, BK); px(g, x + 7, y + 7, 2, 2, BK); px(g, x + 11, y + 7, 1, 2, BK); px(g, x, y + 7, 1, 3, '#55564e'); px(g, x + 13, y + 6, 1, 4, '#55564e'); px(g, x + 2, y + 12, 3, 1, BK); px(g, x + 9, y + 12, 3, 1, BK); },
+    function (g, x, y) { px(g, x + 1, y + 2, 12, 10, '#f0b400'); px(g, x + 1, y + 2, 12, 2, '#ffd95a'); px(g, x + 1, y + 10, 12, 2, '#b88600'); px(g, x + 2, y + 4, 10, 5, BK); spr(g, x + 5, y + 4, ['..yy', '.yy.', 'yyyy', '.yy.', 'yy..'], { y: '#ffd95a' }); for (var k = 2; k < 12; k += 2) px(g, x + k, y + 10, 1, 1, BK); px(g, x + 3, y, 2, 2, '#55564e'); px(g, x + 9, y, 2, 2, '#55564e'); px(g, x + 3, y, 1, 1, '#ff5a4a'); px(g, x + 2, y + 12, 3, 1, BK); px(g, x + 9, y + 12, 3, 1, BK); }
+  ];
+  /** 칸 하나를 그린다: 바닥 → (상자가 있으면) 팔레트와 품목 → (짝이 있으면) 노란 모서리. */
+  function drawBoxCell(cv, lv, pair) {
+    var g = cv.getContext('2d'), W = 32, H = 27;
+    px(g, 0, 0, W, H, '#4a4d54'); px(g, 0, 0, W, 1, '#5c6068'); px(g, 0, H - 1, W, 1, '#2e3036'); px(g, 0, 0, 1, H, '#5c6068'); px(g, W - 1, 0, 1, H, '#2e3036');
+    [[2, 2], [W - 3, 2], [2, H - 3], [W - 3, H - 3]].forEach(function (t) { px(g, t[0], t[1], 1, 1, '#2e3036'); });
+    for (var k = 6; k < W - 6; k += 5) { px(g, k, 8, 1, 1, '#44474e'); px(g, k + 2, 15, 1, 1, '#44474e'); }
+    if (!(lv >= 1)) return;
+    var tier = Math.floor((lv - 1) / BOX_ART.length), wood = tier > 0 ? ['#f0b400', '#ffd95a', '#b88600'] : ['#a8743a', '#c9924e', '#7a4f24'];
+    px(g, 6, 16, 20, 2, wood[0]); px(g, 6, 16, 20, 1, wood[1]); px(g, 7, 18, 3, 2, wood[2]); px(g, 14, 18, 4, 2, wood[2]); px(g, 22, 18, 3, 2, wood[2]);
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(5, 20, 22, 1);
+    BOX_ART[(lv - 1) % BOX_ART.length](g, 9, 2);
+    if (pair) {
+      var c = '#f0b400';
+      [[0, 0, 5, 1], [0, 0, 1, 5], [W - 5, 0, 5, 1], [W - 1, 0, 1, 5], [0, H - 1, 5, 1], [0, H - 5, 1, 5], [W - 5, H - 1, 5, 1], [W - 1, H - 5, 1, 5]].forEach(function (t) { px(g, t[0], t[1], t[2], t[3], c); });
+      g.fillStyle = 'rgba(240,180,0,.10)'; g.fillRect(1, 1, W - 2, H - 2);
+    }
+  }
+  /** 판 위의 공장 벽: 높은 창, 천장 크레인, 고철이 떨어지는 투입구, 경광등. 한 번만 그린다. */
+  function drawBoardTop() {
+    var cv = $('mboard-top'); if (!cv || cv._done) return; cv._done = true;
+    var g = cv.getContext('2d');
+    px(g, 0, 0, 184, 30, '#22242a');
+    for (var y = 0; y < 30; y += 5) for (var x = (y / 5 % 2) * 6 - 6; x < 184; x += 12) { px(g, x, y, 11, 4, '#2e3038'); px(g, x, y, 1, 1, '#3a3c46'); }
+    [8, 150].forEach(function (wx) { px(g, wx, 4, 26, 16, BK); for (var i = 0; i < 4; i++) for (var j = 0; j < 2; j++) px(g, wx + 1 + i * 6, 5 + j * 7, 5, 6, j ? '#f0b878' : '#e89a62'); px(g, wx + 3, 7, 1, 1, '#fff2d0'); px(g, wx + 13, 12, 5, 6, '#3a2c30'); });
+    px(g, 0, 0, 184, 2, BK); px(g, 0, 2, 184, 1, '#f0b400'); for (var rx = 0; rx < 184; rx += 8) px(g, rx, 2, 4, 1, BK);
+    px(g, 118, 3, 10, 4, '#f0b400'); px(g, 118, 3, 10, 1, '#ffd95a'); px(g, 122, 7, 1, 8, '#8a8a82'); spr(g, 120, 15, ['.###.', '#...#', '#....', '.#..#', '..##.'], { '#': '#b0b0a8' });
+    px(g, 44, 4, 34, 3, '#55564e'); px(g, 46, 7, 30, 2, '#3c4048');
+    spr(g, 50, 9, ['hhhhhhhhhhhhhhhhhhhhhh', '.hHHHHHHHHHHHHHHHHHHh.', '..hHHHHHHHHHHHHHHHHh..', '...hHHHHHHHHHHHHHHh...', '....hhhhhhhhhhhhhh....'], { h: '#3c4048', H: '#6a707c' });
+    px(g, 57, 14, 8, 6, '#30343c'); px(g, 58, 20, 6, 3, BK); px(g, 60, 10, 1, 1, '#b0b0a8'); px(g, 64, 11, 1, 1, '#a86a3a'); px(g, 68, 10, 1, 1, '#9a9a92'); px(g, 56, 11, 1, 1, '#8a8a82');
+    px(g, 60, 24, 1, 1, '#b0b0a8'); px(g, 62, 26, 1, 1, '#a86a3a'); px(g, 61, 28, 1, 1, '#8a8a82');
+    px(g, 88, 5, 24, 13, BK); px(g, 89, 6, 22, 11, '#f0b400'); px(g, 89, 6, 22, 1, '#ffd95a'); spr(g, 97, 8, ['#####', '....#', '....#', '.####', '....#', '....#', '#####'], { '#': BK }); px(g, 92, 10, 2, 3, BK); px(g, 106, 10, 2, 3, BK);
+    px(g, 36, 6, 3, 3, BK); px(g, 37, 7, 1, 1, '#ff5a4a'); g.fillStyle = 'rgba(255,90,74,.2)'; g.fillRect(33, 3, 9, 9);
+    px(g, 4, 29, 176, 1, '#f0b400'); for (var sx = 4; sx < 180; sx += 6) px(g, sx + 3, 29, 3, 1, BK);
+  }
   function renderBoard() {
     var mb = $('mboard'); if (!mb || !mb.children.length) return;
+    drawBoardTop();
     var board = state.board || [], can = {}; C.mergeable(state).forEach(function (i) { can[i] = true; });
     for (var i = 0; i < mb.children.length; i++) {
       var b = mb.children[i], lv = board[i] || 0, fx = boardFx[i];
       if (boardSeen && !fx && lv >= 1 && boardSeen[i] !== lv) fx = lv === 1 && !(boardSeen[i] >= 1) ? { 'in': true } : { pop: true };      // 고철이 들어왔거나, 알아서 합쳐졌다
-      var sig = lv + (can[i] ? 'p' : '') + '|' + (lv ? fmt(C.boxRate(state, lv)) : '');
+      var rate = lv ? '+' + fmt(C.boxRate(state, lv)) : '', sig = lv + (can[i] ? 'p' : '') + '|' + rate;
       if (b._sig !== sig || fx) {
+        if (!b._cv) { b._cv = document.createElement('canvas'); b._cv.width = 32; b._cv.height = 27; b._name = el('b'); b._rate = el('small'); b.appendChild(b._cv); b.appendChild(b._name); b.appendChild(b._rate); }
+        if (b._art !== lv + (can[i] ? 'p' : '')) { b._art = lv + (can[i] ? 'p' : ''); drawBoxCell(b._cv, lv, !!can[i]); }
         b._sig = sig;
-        b.className = lv ? 't' + (lv % 8) + (lv > 8 ? ' hi' : '') + (can[i] ? ' pair' : '') : '';
-        b.textContent = '';
-        if (lv) { b.appendChild(document.createTextNode(C.boxName(lv))); b.appendChild(el('small', '', '+' + fmt(C.boxRate(state, lv)))); }
+        b.className = lv && can[i] ? 'pair' : '';
+        setText(b._name, lv ? C.boxName(lv) : ''); setText(b._rate, rate);
         b.setAttribute('aria-label', lv ? C.boxName(lv) + ' ' + lv + '단계' + (can[i] ? ', 합칠 수 있음' : '') : '빈칸');
+        var old = b.querySelector('i'); if (old) b.removeChild(old);
         if (fx && lv) {
           void b.offsetWidth; b.classList.add(fx.pop ? 'pop' : 'in');
           if (fx.gain > 0) b.appendChild(el('i', '', '+' + fmt(fx.gain)));
@@ -2847,7 +2903,7 @@
       setText($('line-note'), (surgeShow ? '전력 투입 중 ×' + C.SURGE_MULT + ' · ' : '') + (state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
         ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '라인 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
         : '기계를 사면 상자가 들어와요'));
-      setText($('line-note'), line.flow > 0 ? (C.mergeable(state).length ? '노란 테두리 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 이번 회차 ' + (state.mergesRun || 0) + '번 합침' : '기계를 사면 상자가 들어와요');
+      setText($('line-note'), line.flow > 0 ? (C.mergeable(state).length ? '노란 모서리 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 이번 회차 ' + (state.mergesRun || 0) + '번 합침' : '기계를 사면 상자가 들어와요');
       $('line-note').classList.remove('boosted');
       drawBelt(line);
       var sg = $('surge'), sOn = state.surgeLeft > 0;

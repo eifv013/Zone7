@@ -278,7 +278,8 @@ def run_case(browser, name, size, state, mode):
         if '합쳐져요' not in text('line-note'): problems.append('합치기 안내가 없다: ' + text('line-note'))
         load0 = text('line-load'); n0 = boxes
         page.locator('#mboard button.pair').first.click(); page.wait_for_timeout(200)
-        merged = page.evaluate("[...document.querySelectorAll('#mboard button')].map(b => b.firstChild ? b.firstChild.textContent : '')")
+        merged = page.evaluate("[...document.querySelectorAll('#mboard button b')].map(b => b.textContent)")
+        if not page.evaluate("(() => { const c = document.querySelector('#mboard button.pair canvas, #mboard button canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size >= 6; })()"): problems.append('상자 그림이 그려지지 않았다')
         if '볼트' not in merged: problems.append('합쳤는데 윗단계 상자가 없다: ' + ' '.join(x or '·' for x in merged))
         if '1번 합침' not in text('line-note'): problems.append('합친 횟수가 안 오른다: ' + text('line-note'))
         if page.locator('#mboard button i').count() < 1: problems.append('합쳤는데 덤(+물자) 표시가 없다')
