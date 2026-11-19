@@ -217,7 +217,7 @@ def run_case(browser, name, size, state, mode):
         tap('[data-gender=none]')
         # 0.8.3 자동화 설명: 영구 특성 '자동화' 줄에 전력 투입 대기 시간(초)이 나온다
         tap('[data-mview-set=exped]')
-        if '자동 합치기' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
+        if '조립공' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
         tap('[data-mview-set=record]')
         # 0.8.0 기록 화면: 일지의 장 탭과 소설 본문, 도움말 탭, 지난 구역, 설정 단추
         tap('[data-rtab-set=journal]')

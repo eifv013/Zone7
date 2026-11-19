@@ -2770,7 +2770,7 @@
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
       $('auto-ev').checked = C.autoEvents(state, aeZone);
-      setText($('auto-ev-text'), ['', '단골 주문 자동', '자동 합치기 · 의뢰 넘기기', '역무원 · 표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
+      setText($('auto-ev-text'), ['', '단골 주문 자동', '조립공 · 의뢰 넘기기', '역무원 · 표류·특별 화물 자동', '밤샘 연구 자동', '순찰·행렬 자동', '방송·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
     }
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-now').hidden = tab !== 'wall';
@@ -2966,7 +2966,7 @@
       });
       var ld = $('line-load');
       renderBoard();
-      setText(ld, '판이 버는 양 · 초당 ' + fmt(C.lineRate(state)));
+      setText(ld, '초당 ' + fmt(C.lineRate(state)));
       ld.className = 'num steady';
       var pairs = C.mergeable(state).length;
       var fullB = C.boardFull(state);
@@ -2974,13 +2974,11 @@
          누르는 법은 처음 몇 번만 알려 주고, 그 뒤로는 판이 가득 찼을 때만 한 줄 적는다 */
       setText($('line-note'), fullB ? '판이 가득 찼어요 · 상자를 눌러 자리를 내세요' : (state.mergesAll || 0) < 10 ? '상자를 누르면 같은 상자끼리 합쳐져요' : '');
       $('line').setAttribute('data-merges', state.mergesRun || 0);      // 화면 테스트가 읽는다(글에서 횟수를 뺐다)
-      var ab = $('auto-merge'), aOn = !!autoM && C.autoEvents(state, 2);
-      ab.hidden = !autoM;
-      if (autoM) {
-        setText($('auto-merge-sec'), aOn ? C.autoMergeSeconds(state).toFixed(1) + '초' : '꺼짐');
-        $('auto-merge-fill').style.width = (aOn ? Math.round(Math.max(0, Math.min(1, state.autoMerge || 0)) * 100) : 0) + '%';
-        ab.classList.toggle('off', !aOn);
-      }
+      // 3.8.5 조립공: 1구역 순찰조와 같은 틀(글 한 줄 + .autobar, fill 이 부드럽게 채운다)
+      var aOn = !!autoM && C.autoEvents(state, 2);
+      $('merge-bar').hidden = !aOn;
+      setText($('merge-note'), !autoM ? '개조에서 조립공을 사요' : aOn ? '조립공 · ' + secs(C.autoMergeSeconds(state)) + '마다' : '조립공이 쉬고 있어요');
+      fill($('merge-bar'), aOn ? state.autoMerge || 0 : 0);
       $('line-note').classList.toggle('boosted', fullB);
       setText($('line-mile'), '가장 높은 상자 ' + (state.boxBest ? C.boxName(state.boxBest) + ' (' + state.boxBest + '단계)' : '-'));
       var tb = $('tune'), tc = C.tuneCost(state);
@@ -3222,7 +3220,7 @@
       if (t.id === 'auto') {
         var lvNow = state.traits.auto || 0, tp = Object.create(state); tp.traits = Object.create(state.traits); tp.traits.auto = lvNow + 1;
         var cNow = C.autoMergeSeconds(state).toFixed(1) + '초', cNext = C.autoMergeSeconds(tp).toFixed(1) + '초';
-        tInfo = lvNow >= t.max ? '자동 합치기 ' + cNow + '마다' : '자동 합치기 ' + cNow + ' → ' + cNext + '마다';
+        tInfo = lvNow >= t.max ? '조립공 ' + cNow + '마다' : '조립공 ' + cNow + ' → ' + cNext + '마다';
       }
       if (!tInfo && lv > 0) tInfo = C.effectNow(t, lv) ? '현재 ' + C.effectNow(t, lv) : t.id === 'pioneer' ? '현재 시작 물자 ' + fmt(100 * Math.pow(10, lv)) : t.id === 'reroll' ? '현재 한 회차에 ' + lv + '번' : '';
       setText(r.info, tInfo);

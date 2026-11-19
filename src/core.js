@@ -465,7 +465,7 @@
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
-    { id: 'autoline', zone: 2, name: '자동 합치기', desc: '가장 많이 쌓인 상자를 알아서 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
+    { id: 'autoline', zone: 2, name: '조립공', desc: '가장 많이 쌓인 상자를 알아서 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
     { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
@@ -509,7 +509,7 @@
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
     { id: 'reroll',  name: '다시 뽑기', desc: '특전 후보를 한 회차에 1번 더 다시 뽑을 수 있다', key: 'reroll', per: 1, baseCost: 3, growth: 1.8, max: 5 },
-    { id: 'auto',    name: '자동화',    desc: '자동 합치기가 일하는 간격 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
+    { id: 'auto',    name: '자동화',    desc: '조립공이 일하는 간격 -6%', key: 'assist', per: 1, baseCost: 2, growth: 1.6, max: ASSIST_MAX }
   ];
 
   /*
@@ -3647,7 +3647,7 @@
     { id: 'z3earn', group: 'z3', name: '공장장', needs: [1e13, 1e16, 1e19], value: function (s) { return s.lineEarned; }, text: function (n) { return '한 회차에 라인으로 물자 ' + formatNumber(n) + ' 벌기'; } },
     { id: 'z3steady', group: 'z3', name: '손이 바쁜 공장', needs: [50, 1000, 10000], value: function (s) { return s.mergesRun || 0; }, text: function (n) { return '한 회차에 손으로 ' + n + '번 합치기'; } },
     { id: 'z3up', group: 'z3', name: '정비반', needs: [10, 40], value: function (s) { return zoneUpgrades(s, 2); }, text: function (n) { return '3구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
-    { id: 'z3auto', group: 'z3', name: '손을 뗀 공장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autoline; }, text: function () { return '자동 합치기 달기'; } },
+    { id: 'z3auto', group: 'z3', name: '손을 뗀 공장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autoline; }, text: function () { return '조립공 들이기'; } },
     { id: 'z3even', group: 'z3', name: '명품', tier: 3, needs: [20], value: function (s) { return s.boxBest || 0; }, text: function (n) { return '상자 ' + n + '단계 만들기'; } },
     { id: 'z3belt', group: 'z3', name: '넓은 공장', tier: 4, needs: [2], value: function (s) { return s.upgrades.wide; }, text: function () { return '판을 끝까지 넓히기'; } },
     // 4구역 환승역
