@@ -465,8 +465,8 @@
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
-    { id: 'autoline', zone: 2, name: '조립공', desc: '가장 많이 쌓인 상자를 알아서 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
-    { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
+    { id: 'autoline', zone: 2, name: '조립공', desc: '판이 차면 가장 많이 쌓인 상자를 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
+    { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 보낸다 · 돌진은 못 끊는다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
     { id: 'autoguard', zone: 5, name: '초소장',     desc: '순찰을 알아서 돌고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
@@ -1496,11 +1496,16 @@
     if (state.autoMerge > 2 && dt <= autoMergeSeconds(state) * 2) state.autoMerge = 2;
   }
   /** 자동 합치기가 짝 하나를 합치는 간격(초). 영구 특성 '자동화'가 줄여 준다(절반까지). 그래도 투입구를 올리면 상자가 더 빨리 들어와 누를 짝은 남는다. */
+  var AUTO_MERGE_ROOM = 5;      // 조립공이 일을 시작하는 빈칸 수(한 줄)
+  function boardRoom(state) { var b = boardOf(state), n = boardSize(state), room = 0; for (var i = 0; i < n; i++) if (!(b[i] >= 1)) room++; return room; }
   var AUTO_MERGE_STEPS = [5, 4, 3, 2.5, 2];      // 개조 '자동 합치기' 1~5레벨의 간격(초). 여기에 특성 '자동화'가 곱해져 가장 빠르면 1초다
   function autoMergeSeconds(state) { var lv = clamp(Math.round(mods(state).autoline), 1, AUTO_MERGE_STEPS.length); return AUTO_MERGE_STEPS[lv - 1] * assistFactor(state); }
   function autoMergeOnce(state, events) {
     state.autoMerge -= 1;
     /* 고르는 단계: 상자가 가장 많이 쌓인 단계(같으면 낮은 쪽). 가장 낮은 짝부터 고르면 새로 들어오는 상자만 치우느라 위에 쌓인 같은 상자들에 끝내 손이 닿지 않았다 */
+    /* 3.8.9: 조립공은 판이 거의 찼을 때(빈칸이 AUTO_MERGE_ROOM 칸 이하)만 일한다. 3.8.4 처럼 쉬지 않고 합치면 판이 반쯤 빈 채로 남고
+       손으로 누를 짝도 남지 않았다. 판이 차 있어야 버는 양도 많고(판의 합), 누를 것도 있다 */
+    if (boardRoom(state) > AUTO_MERGE_ROOM) { state.autoMerge = Math.max(1, state.autoMerge + 1); return false; }
     var held = heldLevel(state), cnt = {}, pick = 0; boardOf(state).forEach(function (v) { if (v >= 1 && v < BOX_MAX && v !== held) cnt[v] = (cnt[v] || 0) + 1; });
     Object.keys(cnt).forEach(function (k) { k = +k; if (cnt[k] >= 2 && (!pick || cnt[k] > cnt[pick] || (cnt[k] === cnt[pick] && k < pick))) pick = k; });
     if (!pick) return false;
@@ -1792,7 +1797,7 @@
   var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
   var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
   var TEST = { rush: 1 };      // 화면 테스트용 손잡이: 돌진이 오는 확률에 곱한다(0 이면 오지 않는다). 게임에서는 늘 1
-  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.1, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
+  var HORDE_SECONDS = 45, HORDE_SPRINT = 0.03, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
   var CAR_MULTS = [0, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.95, 2.25, 2.6, 3];
   function carMult(n) { n = clamp(Math.floor(safeNum(n, 0)), 0, CAR_MAX); return CAR_MULTS[n]; }
@@ -1893,7 +1898,11 @@
       if (!p.rush && before.cars >= HORDE_RUSH_CARS && roll() < HORDE_SPRINT * TEST.rush * h) { p.rush = 1; p.warn = HORDE_WARN; if (events) events.push({ type: 'horde-sprint', near: Math.max(0, p.pos) }); }
       else if (p.rush > 0) { if (p.warn > 0) p.warn = Math.max(0, p.warn - h); else p.pos -= HORDE_RUSH_SPEED * h; }
       var info = trainInfo(state);
-      if (auto && info.cars >= 1 && (info.full || p.pos <= AUTO_NEAR)) departTrain(state, 'auto', events);      // 역무원이 먼저 본다(긴 dt 한 걸음에 돌진이 끝까지 닿아도 떼이지 않게)
+      /* 3.8.9 역무원과 돌진: 역무원은 돌진을 끊지 못한다. 경고가 도는 동안은 기다리고(그 사이에 손으로 경적을 울릴 수 있다),
+         경고가 끝나면 뒤쪽을 떼고 떠난다(무리에 닿은 것과 같다 — 튼튼한 연결기가 여기서 쓸모가 있다).
+         3.8.6 에서는 돌진이 오자마자 역무원이 보내 버려 경적을 울릴 틈이 없었고, 떼이는 일이 없어 연결기가 쓸모없었다 */
+      if (auto && p.rush > 0 && !(p.warn > 0) && !info.full) departTrain(state, 'horde', events);
+      else if (auto && info.cars >= 1 && (info.full || (p.pos <= AUTO_NEAR && !(p.rush > 0)))) departTrain(state, 'auto', events);
       else if (p.pos <= 0) departTrain(state, 'horde', events);
     }
     if (rest > 0) { var flat = railRate(state) * rest; earn(state, flat); state.railEarned += flat; }
@@ -3975,7 +3984,7 @@
     SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
     tuneBand: tuneBand, tunePos: tunePos, tuneGain: tuneGain, tuneHit: tuneHit, tuneNow: tuneNow, TUNE_PERIOD: TUNE_PERIOD, TUNE_COOL: TUNE_COOL, TUNE_MISS_COOL: TUNE_MISS_COOL, TUNE_GAIN_SECONDS: TUNE_GAIN_SECONDS, TUNE_AUTO: TUNE_AUTO,
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
-    BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, boardFull: boardFull, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
+    AUTO_MERGE_ROOM: AUTO_MERGE_ROOM, boardRoom: boardRoom, BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, boardFull: boardFull, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
     boxWorth: boxWorth, boardSum: boardSum, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
     CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, TEST: TEST, HORDE_SECONDS: HORDE_SECONDS, HORDE_WARN: HORDE_WARN, HORDE_RUSH_SPEED: HORDE_RUSH_SPEED, HORDE_RUSH_CARS: HORDE_RUSH_CARS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, GRADE_STEP: GRADE_STEP, CREW_STEP: CREW_STEP, PULL_SECONDS: PULL_SECONDS, HORN_PUSH: HORN_PUSH, pullCar: pullCar, blowHorn: blowHorn, hornMax: hornMax, carMax: carMax,
     stepRail: stepRail, carMult: carMult, carSeconds: carSeconds, railUnits: railUnits, trainInfo: trainInfo, sendTrain: sendTrain, trainGain: trainGain,

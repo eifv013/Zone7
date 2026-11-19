@@ -2984,7 +2984,7 @@
       // 3.8.5 조립공: 1구역 순찰조와 같은 틀(글 한 줄 + .autobar, fill 이 부드럽게 채운다)
       var aOn = !!autoM && C.autoEvents(state, 2);
       $('merge-bar').hidden = !aOn;
-      setText($('merge-note'), !autoM ? '개조에서 조립공을 사요' : aOn ? '조립공 · ' + secs(C.autoMergeSeconds(state)) + '마다' : '조립공이 쉬고 있어요');
+      setText($('merge-note'), !autoM ? '개조에서 조립공을 사요' : !aOn ? '조립공이 쉬고 있어요' : C.boardRoom(state) > C.AUTO_MERGE_ROOM ? '조립공 · 판이 차면 일해요' : '조립공 · ' + secs(C.autoMergeSeconds(state)) + '마다');
       fill($('merge-bar'), aOn ? state.autoMerge || 0 : 0);
       $('line-note').classList.toggle('boosted', fullB);
       setText($('line-mile'), '가장 높은 상자 ' + (state.boxBest ? C.boxName(state.boxBest) + ' (' + state.boxBest + '단계)' : '-'));

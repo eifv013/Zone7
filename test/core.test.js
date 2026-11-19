@@ -2854,15 +2854,18 @@ test('3구역 판: 상자는 간격마다 들어오고, 가득 차면 들어오�
 });
 
 test('3구역 자동 합치기: 몇 초마다 가장 많이 쌓인 상자를 모두 합친다(3.8.4). 가만히 둔 판 < 자동 < 손', () => {
-  const a = onBoard([1, 1, 1, 1, 2, 2]); a.upgrades.autoline = 1; let ev = [];
+  // 3.8.9: 조립공은 판이 거의 찼을 때(빈칸 5칸 이하)만 일한다. packed 는 서로 다른 높은 상자로 나머지를 채워 빈칸을 5칸만 남긴다
+  const packed = (lv) => { const s = onBoard(lv); for (let i = lv.length, k = 0; i < 15; i++, k++) s.board[i] = 20 + k; return s; }, low = (s) => s.board.filter(x => x && x < 20);
+  const roomy = onBoard([1, 1, 1, 1]); roomy.upgrades.autoline = 1; C.stepBoard(roomy, C.AUTO_MERGE_SECONDS * 3, half, []); assert.equal(roomy.mergesAll, 0, '판이 비어 있으면 쉰다'); assert.ok(roomy.autoMerge >= 1, '막대는 찬 채로 기다린다');
+  const a = packed([1, 1, 1, 1, 2, 2]); a.upgrades.autoline = 1; let ev = [];
   C.stepBoard(a, C.AUTO_MERGE_SECONDS, half, ev);
-  assert.equal(ev.filter(e => e.type === 'box-merge' && e.auto).length, 2, '손으로 누를 때처럼 같은 상자를 모두 합친다'); assert.equal(a.mergesRun, 0); assert.deepEqual(a.board.filter(x => x), [2, 2, 2, 2], '한 번에 한 단계만: 윗단계 짝은 다음 박자에'); assert.equal(a.runEarned, 0, '자동은 덤을 받지 못한다');
-  const many = onBoard([1, 1, 5, 5, 5, 5, 5]); many.upgrades.autoline = 1; C.stepBoard(many, C.AUTO_MERGE_SECONDS, half, []); assert.deepEqual(many.board.filter(x => x).sort(), [1, 1, 5, 6, 6], '가장 많이 쌓인 단계부터');
+  assert.equal(ev.filter(e => e.type === 'box-merge' && e.auto).length, 2, '손으로 누를 때처럼 같은 상자를 모두 합친다'); assert.equal(a.mergesRun, 0); assert.deepEqual(low(a), [2, 2, 2, 2], '한 번에 한 단계만: 윗단계 짝은 다음 박자에'); assert.equal(a.runEarned, 0, '자동은 덤을 받지 못한다');
+  const many = packed([1, 1, 5, 5, 5, 5, 5]); many.upgrades.autoline = 1; C.stepBoard(many, C.AUTO_MERGE_SECONDS, half, []); assert.deepEqual(low(many).sort(), [1, 1, 5, 6, 6], '가장 많이 쌓인 단계부터');
   const sw = onBoard([1, 1, 1, 1]); sw.upgrades.autoline = 1; C.setAutoEvents(sw, 2, false); C.stepBoard(sw, C.AUTO_MERGE_SECONDS * 3, half, []); assert.equal(sw.mergesAll, 0, '구역 자동을 끄면 자동 합치기도 쉰다');
-  const h = onBoard([1, 1, 3, 3]); h.upgrades.autoline = 1; h.contract = { who: 'bike', level: 1, need: 2, have: 2, left: 50 };
+  const h = packed([1, 1, 3, 3]); h.upgrades.autoline = 1; h.contract = { who: 'bike', level: 1, need: 2, have: 2, left: 50 };
   C.stepBoard(h, C.AUTO_MERGE_SECONDS, half, []); assert.deepEqual(h.board.slice(0, 4).filter(x => x), [1, 1, 4], '의뢰가 찾는 단계는 건드리지 않는다');
   // 가득 찬 판에서도 자동이 자리를 내서 상자가 계속 들어온다
-  const f = onBoard(Array(20).fill(1)); f.feed = 1; f.upgrades.autoline = 1; C.stepBoard(f, C.AUTO_MERGE_SECONDS, half, []); assert.equal(f.mergesAll, 10); assert.ok(f.board.filter(x => x === 1).length >= 1, '낸 자리에 새 상자가 들어왔다'); assert.equal(C.boardFull(f), false);
+  const f = onBoard(Array(20).fill(1)); f.feed = 1; f.upgrades.autoline = 1; C.stepBoard(f, C.AUTO_MERGE_SECONDS, half, []); assert.equal(f.mergesAll, 10); assert.ok(f.board.filter(x => x === 1).length >= 1, '낸 자리에 새 상자가 들어왔다');
   // 30분 뒤
   const mk3 = (auto) => { const s = onBoard([]); s.feed = 1; s.upgrades.autoline = auto ? 1 : 0; return s; };
   const idle = mk3(false), auto = mk3(true), hand = mk3(false); let seed = 9; const rng = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
@@ -2960,7 +2963,7 @@ test('4구역 무리: 닿으면 뒤쪽 절반을 떼고 떠난다. 가끔 달려
   const times = [1, 2, 3, 4, 5, 6, 7, 8].map(when); assert.ok(Math.max(...times) - Math.min(...times) >= 8, times.join(',')); assert.ok(times.every(t => t > 8 && t < 200), times.join(','));
 });
 
-test('4구역 역무원: 꽉 차면, 또는 무리가 가까워지면 보낸다. 떼이지 않는다. 가만히 둔 것 < 역무원 < 손', () => {
+test('4구역 역무원: 꽉 차면, 또는 무리가 가까워지면 보낸다. 돌진은 못 끊는다. 가만히 둔 것 < 역무원 < 손', () => {
   const s = onPlatform(); s.upgrades.autosig = 1; s.upgrades.fence = 5; let ev = [];
   const sup = s.supplies; C.stepRail(s, C.CAR_SECONDS * C.CAR_BASE, ev, calm);
   const a = ev.find(e => e.type === 'train'); assert.equal(a.why, 'auto'); assert.equal(a.kept, C.CAR_BASE, '꽉 차면 보낸다'); near(s.supplies - sup, C.railRate(s) * C.CAR_SECONDS * C.CAR_BASE * C.carMult(C.CAR_BASE) / C.CAR_NORM);
@@ -2969,9 +2972,15 @@ test('4구역 역무원: 꽉 차면, 또는 무리가 가까워지면 보낸다.
   const off = onPlatform(); off.upgrades.autosig = 1; off.upgrades.fence = 5; C.setAutoEvents(off, 3, false); ev = []; C.stepRail(off, C.CAR_SECONDS * C.CAR_BASE + 1, ev, calm); assert.ok(!ev.some(x => x.type === 'train'), '구역 자동을 끄면 손을 기다린다');
   const run = (up, policy, seed) => { const z = onPlatform(); Object.assign(z.upgrades, up); const r = lcg(seed), rate = C.railRate(z), e0 = z.railEarned; for (let t = 0; t < 7200; t++) { C.stepRail(z, 1, [], r); if (policy) { C.pullCar(z); C.pullCar(z); } let i = C.trainInfo(z); if (policy && i.rush && i.horn > 0) { C.blowHorn(z); i = C.trainInfo(z); } if (policy && i.cars >= 1 && (i.rush || policy(i))) C.sendTrain(z); }      /* 손: 돌진은 경적으로 끊고, 경적이 없으면 바로 보낸다 */ return { speed: (z.railEarned - e0) / 7200 / rate, hits: z.hordeHits, long: z.longRuns }; };
   const idle = run({}, null, 5), auto = run({ autosig: 1 }, null, 5), hand = run({ longplat: 2 }, (i) => i.full || i.near < 0.25, 5);
-  assert.ok(idle.speed < auto.speed * 0.6, '가만히 ' + idle.speed.toFixed(2) + ' / 역무원 ' + auto.speed.toFixed(2)); assert.equal(auto.hits, 0, '역무원은 떼이지 않는다');
+  assert.ok(idle.speed < auto.speed * 0.6, '가만히 ' + idle.speed.toFixed(2) + ' / 역무원 ' + auto.speed.toFixed(2)); 
   const autoLong = run({ autosig: 1, longplat: 2 }, null, 5);
-  assert.ok(hand.speed > autoLong.speed, '손 ' + hand.speed.toFixed(2) + ' / 역무원 ' + autoLong.speed.toFixed(2)); assert.ok(hand.long > autoLong.long, '손이 긴 열차를 더 자주 보낸다'); assert.equal(autoLong.hits, 0);
+  assert.ok(hand.speed > autoLong.speed, '손 ' + hand.speed.toFixed(2) + ' / 역무원 ' + autoLong.speed.toFixed(2)); assert.ok(hand.long > autoLong.long, '손이 긴 열차를 더 자주 보낸다');
+  // 3.8.9 역무원과 돌진: 경고 동안은 기다리고(손으로 경적을 울릴 틈), 끝나면 뒤쪽을 떼고 떠난다. 튼튼한 연결기가 덜 떼이게 한다
+  const mkRush = (up) => { const z = onPlatform(); Object.assign(z.upgrades, { autosig: 1 }, up); z.plat.t = C.CAR_SECONDS * 6; z.plat.bank = 9; z.plat.rush = 1; z.plat.warn = C.HORDE_WARN; return z; };
+  const w = mkRush({}); ev = []; C.stepRail(w, C.HORDE_WARN - 0.2, ev, calm); assert.ok(!ev.some(x => x.type === 'train'), '경고 동안은 보내지 않는다');
+  C.stepRail(w, 0.3, ev, calm); const cut1 = ev.find(x => x.type === 'train'); assert.equal(cut1.why, 'horde'); assert.equal(cut1.kept, 3, '절반을 떼고 떠난다');
+  const w2 = mkRush({ coupler: 1 }); ev = []; C.stepRail(w2, C.HORDE_WARN + 0.1, ev, calm); assert.equal(ev.find(x => x.type === 'train').kept, 4, '연결기: 3분의 1만');
+  const w3 = mkRush({ horn: 1 }); C.stepRail(w3, 0.5, [], calm); assert.ok(C.blowHorn(w3).broke); ev = []; C.stepRail(w3, 3, ev, calm); assert.ok(!ev.some(x => x.why === 'horde'), '경적으로 끊으면 떼이지 않는다');
 });
 
 test('4구역: 긴 시간 · 이상한 값 · 저장 · 자리 비움 · 철수 · 목표', () => {
