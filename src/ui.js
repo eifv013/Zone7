@@ -3271,7 +3271,7 @@
       var r = C.openZone(state);
       if (!r.ok) return;
       if (r.soon) log(r.zone.no + '구역 ' + r.zone.name + '의 문 앞에 닿았다. 문은 아직 열리지 않는다.', 'good');
-      else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; moveFx(r.zone.no + '구역', r.zone.name, 1, r.index - 1, r.index); }
+      else { log(r.zone.no + '구역 ' + r.zone.name + '의 문을 열었다. 앞 구역은 그대로 남아 물자를 보낸다.', 'good'); tab = 'z' + r.index; pane = 'play';      /* 2.8.9: 새 구역은 운영 화면부터. 목표 화면에서 넘어가면 새 구역의 목표 화면에 그대로 서 있었다 */ moveFx(r.zone.no + '구역', r.zone.name, 1, r.index - 1, r.index); }
       sfx('relocate'); Store.save(); Cloud.flush(); render();
     });
     // 5구역: 점수를 조금 내고 과제 셋을 다시 뽑는다.

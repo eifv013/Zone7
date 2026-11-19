@@ -575,6 +575,8 @@
     // 든 것이 우비와 비슷한 색이면(빨간 우비에 빨간 구급 상자) 묻혀서 보이지 않았다(2.7.7). 그럴 때는 든 것의 몸 색과 밝은 색을 맞바꿔 그린다
     if (colorNear(bag.c, coat.j)) bag = { c: bag.C, C: bag.c, rows: bag.rows };
     var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
+    // 2.8.9: 무늬 색이 우비 색과 비슷하면(흰 우비에 흰 무늬, 노란 우비에 노란 별) 보이지 않았다. 그럴 때는 우비를 어둡게 한 색으로 그린다
+    if (pat && pat !== 'none' && colorNear(patCol, coat.j)) patCol = darker(coat.j, 0.55);
     var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
