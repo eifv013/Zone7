@@ -2159,11 +2159,17 @@
     });
   }
   function wirePerkReroll() {
+    // 2.8.5: 다시 뽑기도 한 번 더 묻는다. 횟수가 정해져 있는데, 화면을 막 누르다 창이 뜨면 그대로 눌려 한 번을 날렸다.
+    // 확인 창은 뜬 뒤 0.5초 동안 "다시 뽑기"를 받지 않는다(특전 고르기와 같은 보호).
     $('perk-reroll').addEventListener('click', function () {
-      var r = C.rerollPerks(state, Math.random);
-      if (!r.ok) return;
-      log('특전 후보를 다시 뽑았다.', '');
-      sfx('click'); Store.save(); render();
+      var left = C.rerollsLeft(state);
+      if (!(left > 0)) return;
+      confirmBox('특전 다시 뽑기', '후보 셋을 새로 뽑을까요? 이번 회차에 ' + left + '번 남았어요.', '취소', '다시 뽑기', function () {
+        var r = C.rerollPerks(state, Math.random);
+        if (!r.ok) return;
+        log('특전 후보를 다시 뽑았다.', '');
+        sfx('click'); Store.save(); render();
+      }, 500);
     });
   }
   /* ---------- 특전 고르기 ---------- */
