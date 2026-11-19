@@ -275,7 +275,7 @@
           "반장은 철망을 잡고 흔들지 않았다. 그냥 서서 강 쪽을 보고 있었다. 내가 이름을 불렀다. 고개가 아주 천천히 돌아왔다. 입이 한 번 움직였다. 소리는 없었지만 나는 그 모양을 안다. {hero}. 그리고 내 노란 우비를 한참 봤다. 나는 그 눈이 나를 알아봤다고 지금도 생각한다.",
           "철망 사이로 반장의 손이 나와 내 왼쪽 소매를 잡았다. 망을 보던 사람들이 소리를 질렀다. 놈들은 산 사람을 잡으면 문다. 그런데 반장은 물지 않았다. 소매에 코를 대고 한참 있다가, 놓았다. 아무도 그 까닭을 묻지 않았고 나도 말하지 않았다.",
           "새벽에 무리가 움직이자 반장도 따라갔다. 선로 쪽으로. 열일곱 명 중에 몇이나 건넜을까. 나는 쪽지 뒷면의 이름 하나에 줄을 그었다. 선로를 따라가면 환승역이다."] }] },
-    { no: 4, name: '환승역', kind: 'rail', cost: 1e19, lead: '끊긴 노선을 잇고 열차를 보낸다',
+    { no: 4, name: '환승역', kind: 'rail', cost: 1e19, lead: '화물칸을 모아 열차를 보낸다',
       story: [
         { title: "행선지", text: [
           "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
@@ -430,7 +430,7 @@
     { id: 'belt',    zone: 2, name: '컨베이어',  desc: '라인 가동 보너스 +10%p', key: 'steady',  per: 0.1,  baseCost: 6e11, growth: 3.5, max: 10 },
     { id: 'spare',   zone: 2, name: '예비 부품', desc: '완제품 값 +4%', key: 'z3', per: 0.04,      /* 3.2.0: 예전에는 정속 가동 기준을 낮췄다. 맞출 비율이 없어져 값을 올리는 것으로 바꿨다 */ baseCost: 3e11, growth: 4, max: 5 },
     { id: 'signal',  zone: 3, name: '신호기',    desc: '화물 값 +25%',           key: 'z4',      per: 0.25, baseCost: 1e18, growth: 2.4, max: 40 },
-    { id: 'timetable', zone: 3, name: '시간표',  desc: '운행 시간 -5%',          key: 'trip',    per: -0.05, baseCost: 3e18, growth: 4,  max: 8 },
+    { id: 'timetable', zone: 3, name: '시간표',  desc: '화물칸이 붙는 시간 -5%',          key: 'trip',    per: -0.05, baseCost: 3e18, growth: 4,  max: 8 },
     { id: 'tracks',  zone: 3, name: '선로 정비', desc: '노선 값 -6%',            key: 'routecost', per: -0.06, baseCost: 3e18, growth: 3, max: 12 },
     { id: 'depot',   zone: 3, name: '차량 기지', desc: '열차 값 -4%',            key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
     { id: 'scope',   zone: 4, name: '현미경',    desc: '연구 속도 +25%',         key: 'lab',     per: 0.25, baseCost: 1e23, growth: 2.4, max: 40 },
@@ -455,7 +455,7 @@
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
     { id: 'autoline', zone: 2, name: '자동 제어반', desc: '전력 투입이 알아서 들어간다', key: 'autoline', per: 1, baseCost: 1.5e13, growth: 1, max: 1 },
-    { id: 'autosig', zone: 3, name: '자동 신호',  desc: '청신호가 알아서 켜진다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
+    { id: 'autosig', zone: 3, name: '역무원',  desc: '8칸이 차면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
     { id: 'autoguard', zone: 5, name: '초소장',     desc: '순찰을 알아서 돌고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
@@ -517,7 +517,7 @@
       { id: 'z3b', text: '상자 합치기 누적 40번', need: 40, value: function (s) { return s.mergesAll || 0; } },      /* 3.3.0: 예전에는 '라인 가동 누적 2분'(기다리면 차는 목표)이었다 */
       { id: 'z3c', text: '완제품으로 번 물자 누적 10경', need: 1e17, value: function (s) { return s.lineEarned; } } ],
     [ { id: 'z4a', text: '열차 11대', need: 11, value: function (s) { return s.trains; } },
-      { id: 'z4b', text: '심야 급행 2번 도착', need: 2, value: function (s) { return s.expressRuns; } },
+      { id: 'z4b', text: '열차 20번 보내기', need: 20, value: function (s) { return s.trainsSent || 0; } },
       { id: 'z4c', text: '화물로 번 물자 누적 10해', need: 1e21, value: function (s) { return s.railEarned; } } ],
     [ { id: 'z5a', text: '연구원 28명', need: 28, value: function (s) { return s.staff; } },
       { id: 'z5b', text: '연구 과제 10개 끝내기', need: 10, value: function (s) { return s.projectsDone; } },
@@ -562,7 +562,7 @@
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
-      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true,
+      trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, plat: { t: 0, bank: 0, horde: 60 }, trainsSent: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0,
@@ -742,7 +742,7 @@
     ROUTES.forEach(function (d) {
       var rc = raw.routeClock && typeof raw.routeClock === 'object' ? raw.routeClock[d.id] : 0, rl = raw.routeLoad && typeof raw.routeLoad === 'object' ? raw.routeLoad[d.id] : 0;
       s.routeClock[d.id] = clamp(safeNum(rc, 0), 0, d.seconds);
-      s.routeLoad[d.id] = clamp(safeNum(rl, 0), 0, TRAIN_MAX * d.seconds);      // 한 번의 운행에 실릴 수 있는 양을 넘지 않는다
+      s.routeLoad[d.id] = 0; s.routeClock[d.id] = 0;      // 3.4.0: 노선마다 따로 달리던 시계는 쓰지 않는다
     });
     // 3.2.0 옛 저장: 예전에는 가장 느린 기계만큼(선별 3 · 가공 2 · 조립 1) 나왔다. 새 셈(합)으로 처리량이 줄지 않게, 모자라는 만큼 선별기(가장 싼 기계) 레벨을 얹어 준다
     if (raw.lineV !== 2 && s.zone >= 2) {
@@ -752,6 +752,10 @@
     }
     s.lineV = 2;
     s.railFlow = raw.railFlow === true;      // 없으면 옛 저장: 싣고 달리던 화물을 stepRail 이 처음 한 번 내려 준다
+    // 3.4.0 승강장의 열차. 깨진 값이나 옛 저장은 새 열차로 시작한다
+    var rp = raw.plat && typeof raw.plat === 'object' ? raw.plat : {};
+    s.plat = { t: clamp(safeNum(rp.t, 0), 0, HORDE_MAX), bank: clamp(safeNum(rp.bank, 0), 0, 1e300), horde: clamp(safeNum(rp.horde, (HORDE_MIN + HORDE_MAX) / 2), HORDE_MIN, HORDE_MAX) };
+    s.trainsSent = clamp(safeCount(raw.trainsSent), 0, 1e12);
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
     s.perks = counts(PERKS, raw.perks, 999);
     s.traits = counts(TRAITS, raw.traits, function (t) { return t.max; });
@@ -1835,55 +1839,83 @@
     return { ok: true, gain: gain, treats: SALVAGE_TREATS, first: first, who: who ? who.id : '', name: who ? who.name : '' };
   }
   function cargoValue(state) { return zoneOpen(state, 3) ? TRAIN_VALUE * fleetMilestone(state.trains) * mods(state).z4 * globalMult(state) * salvageMult(state) * (1 + (state.railBoost || 0)) : 0; }
-  /** 4구역이 초당 버는 물자(운행 중인 열차 기준). 2.9.1 부터 실제로도 이 속도로 들어온다. */
-  function railRate(state) {
-    if (!zoneOpen(state, 3)) return 0;
-    var plan = railPlan(state), sum = 0;
-    ROUTES.forEach(function (d) { sum += plan.riders[d.id] * d.mult; });
-    return sum * cargoValue(state);
-  }
-  /**
-   * 열차를 dt 초 운행한다. 돌아온 노선이 있으면 그동안 실은 화물을 물자로 바꾸고 'train' 사건을 남긴다.
-   * 열차 수가 운행 도중에 바뀌어도 실제로 달린 만큼(열차 × 초)만 실린다.
+  /*
+   * ---------- 3.4.0 4구역을 새로 만들었다: 승강장의 열차 ----------
+   * 왜: 전에는 열차가 노선 자리(1/10, 2/4)에 알아서 배차되고 화물이 흘러 들어왔다. 자리 수를 따져야 했고, 사도 숫자가 안 오르는 구매가 있었고,
+   *   눌러서 좋아지는 것은 청신호 하나뿐이었다. 4구역의 손맛은 "모았다가 한 번에 보내기"로 잡는다(2구역의 '때 맞춰 팔기'와 다른 박자).
+   * 규칙(이것이 전부다):
+   *   - 승강장에 열차가 서 있고, 화물칸이 carSeconds 마다 하나씩 붙는다(CAR_MAX 칸까지). 그동안 번 화물은 열차에 실려 있다(plat.bank).
+   *   - 열차를 보내면 실린 화물을 한꺼번에 받는다. 길수록 한 칸의 값이 뛴다: 배수 carMult(n) = 1 + CAR_STEP × (n - 1).
+   *   - 무리가 선로를 따라 다가온다(plat.horde 초에 닿는다. 화면에 남은 시간이 보인다). 닿으면 열차는 뒤쪽 절반을 떼고 떠난다.
+   *   - CAR_MAX 칸이 차면 알아서 떠난다. 개조 '역무원'이 있으면 AUTO_CARS 칸에서(또는 무리가 닿기 직전에) 알아서 보낸다.
+   * 버는 속도: 열차는 "실린 화물 × carMult(보낸 칸 수) ÷ CAR_NORM" 을 준다. CAR_NORM = carMult(AUTO_CARS) 이므로 역무원에게 맡기면 railRate 그대로,
+   *   손으로 끝까지 끌면 그보다 조금 더(최대 carMult(12)/carMult(8) ≈ 1.26배), 내버려 둬서 무리에 닿으면 덜 번다.
+   * 줄(열차 · 노선)은 모두 "초당 실리는 화물"을 올린다. 각자 더해지므로 무엇을 사든 그만큼 오른다(3구역 기계와 같은 생각).
    */
-  function stepRail(state, dt, events) {
-    if (!zoneOpen(state, 3) || !state.trains) return;
-    var plan = railPlan(state), value = cargoValue(state);
-    /*
-     * 2.9.1: 화물은 달리는 동안 조금씩 들어온다. 전에는 열차가 돌아올 때 한꺼번에 들어와서,
-     *   "초당 +6경"이라고 적혀 있는데 물자는 멈춰 있다가 몇십 초(먼 노선은 몇십 분)에 한 번 뛰었다. 표류 화물도 150초 안에 채워야 하는데
-     *   먼 노선에 열차가 몰려 있으면 그 사이에 돌아오는 열차가 없어서 채울 수가 없었다.
-     *   버는 양은 같다(열차 × 초 × 노선 배수 × 화물 값). routeLoad 는 이제 "이번 운행에 벌어 온 양"을 보여 주는 데만 쓴다.
-     * 옛 저장: 싣고 달리던 화물(아직 못 받은 것)은 처음 한 번 그대로 내려 준다(railFlow 가 없는 저장).
-     */
-    if (!state.railFlow) {
-      ROUTES.forEach(function (d) { var owed = (state.routeLoad[d.id] || 0) * d.mult * value; if (owed > 0) { earn(state, owed); state.railEarned += owed; } });
-      state.railFlow = true;
+  var CAR_SECONDS = 5, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 8, HORDE_MIN = 30, HORDE_MAX = 90, RAIL_SCALE = 0.5;
+  function carMult(n) { n = clamp(Math.floor(safeNum(n, 0)), 0, CAR_MAX); return n < 1 ? 0 : 1 + CAR_STEP * (n - 1); }
+  var CAR_NORM = carMult(AUTO_CARS);
+  function carSeconds(state) { return CAR_SECONDS * mods(state).trip; }
+  /** 화물을 싣는 힘: 열차 한 대가 1, 노선 한 단계가 ROUTE_SLOTS × 배수. */
+  function railUnits(state) {
+    if (!zoneOpen(state, 3)) return 0;
+    var n = state.trains || 0;
+    ROUTES.forEach(function (d) { n += (state.routes[d.id] || 0) * ROUTE_SLOTS * d.mult; });
+    return n;
+  }
+  /** 4구역이 초당 싣는 물자. 역무원에게 맡겨 보낼 때 실제로 버는 속도와 같다. */
+  function railRate(state) { return railUnits(state) * RAIL_SCALE * cargoValue(state); }
+  function platOf(state) {
+    var p = state.plat;
+    if (!p || typeof p !== 'object') p = state.plat = { t: 0, bank: 0, horde: (HORDE_MIN + HORDE_MAX) / 2 };
+    return p;
+  }
+  /** 지금 승강장의 열차: { cars 붙은 칸 수, next 다음 칸까지 남은 초, horde 무리가 닿기까지 남은 초, mult 지금 보내면 곱해지는 값, gain 지금 보내면 받는 물자 }. */
+  function trainInfo(state) {
+    var p = platOf(state), cs = carSeconds(state), cars = Math.min(CAR_MAX, Math.floor(p.t / cs + 1e-9));
+    return { cars: cars, max: CAR_MAX, next: cars >= CAR_MAX ? 0 : cs - (p.t - cars * cs), horde: Math.max(0, p.horde - p.t), hordeAt: p.horde,
+      mult: carMult(cars), gain: trainGain(state, cars, cars), bank: p.bank, running: railUnits(state) > 0 };
+  }
+  /** cars 칸이 붙은 열차를 kept 칸만 달고 보낼 때 받는 물자. */
+  function trainGain(state, cars, kept) { var p = platOf(state); return cars >= 1 && kept >= 1 ? p.bank * (kept / cars) * carMult(kept) / CAR_NORM : 0; }
+  function departTrain(state, why, rng, events) {
+    var p = platOf(state), info = trainInfo(state), cars = info.cars, kept = why === 'horde' ? Math.ceil(cars / 2) : cars;
+    var gain = cars >= 1 ? trainGain(state, cars, kept) : p.bank / CAR_NORM;      // 한 칸도 못 붙이고 쫓겨난 열차도 실은 만큼은 받는다
+    if (gain > 0) {
+      earn(state, gain); state.railEarned += gain;
+      if (state.salvage) state.salvage.have = Math.min(state.salvage.need, state.salvage.have + gain);      // 표류 화물: 보낸 열차의 화물 값이 쌓인다
     }
-    ROUTES.forEach(function (d) {
-      var n = plan.riders[d.id];
-      if (!n && !(state.routeLoad[d.id] > 0)) return;
-      var trip = tripSeconds(state, d.id);
-      var flow = n * dt * d.mult * value;
-      if (flow > 0) {
-        earn(state, flow); state.railEarned += flow;
-        if (state.salvage) state.salvage.have = Math.min(state.salvage.need, state.salvage.have + flow);      // 표류 화물: 달리는 동안 번 화물 값이 쌓인다
-      }
-      state.routeLoad[d.id] += n * dt;
-      state.routeClock[d.id] += dt;
-      if (state.routeClock[d.id] < trip) return;
-      // dt 가 길어 여러 번 다녀왔을 수도 있다: 다녀온 횟수만큼의 몫을 내리고, 남은 시간의 몫은 실은 채로 둔다
-      var trips = Math.floor(state.routeClock[d.id] / trip), share = trips * trip / state.routeClock[d.id];
-      // 2.3.3: 열차가 다른 노선으로 옮겨 가 0대가 된 노선은, 싣고 있던 것을 이번에 다 내리고 멈춘다.
-      // 전에는 남은 시간의 몫(1 - share)이 조금씩 남아 0이 되지 않았고, 그래서 열차 없는 노선이 끝없이 혼자 돌았다(막대만 차고 그림에는 열차가 없었다).
-      if (!n) share = 1;
-      var gain = state.routeLoad[d.id] * share * d.mult * value;
-      state.routeLoad[d.id] *= 1 - share;
-      state.routeClock[d.id] = n ? state.routeClock[d.id] - trips * trip : 0;
-      // gain 은 이미 달리는 동안 받았다: 여기서는 "이번 운행에 얼마를 벌어 왔나"를 알리기만 한다
-      if (d.id === 'express') state.expressRuns += trips;
-      events.push({ type: 'train', route: d.id, name: d.name, gain: gain, trips: trips, long: d.seconds >= 900 });
-    });
+    state.trainsSent = (state.trainsSent || 0) + 1;
+    if (kept >= CAR_MAX) state.expressRuns = (state.expressRuns || 0) + 1;      // 만차(12칸)로 보낸 횟수. 옛 이름을 그대로 쓴다(저장 호환)
+    var r = typeof rng === 'function' ? rng() : Math.random();
+    state.plat = { t: 0, bank: 0, horde: HORDE_MIN + r * (HORDE_MAX - HORDE_MIN) };
+    var ev = { type: 'train', why: why, cars: cars, kept: kept, gain: gain, full: kept >= CAR_MAX, name: kept + '칸 열차' };
+    if (events) events.push(ev);
+    return ev;
+  }
+  /** 손으로 보낸다. 한 칸이라도 붙어 있어야 한다. */
+  function sendTrain(state, rng) {
+    if (!zoneOpen(state, 3)) return fail('locked');
+    if (!(railUnits(state) > 0)) return fail('stopped');
+    if (trainInfo(state).cars < 1) return fail('empty');
+    var ev = departTrain(state, 'hand', rng, null); ev.ok = true;
+    return ev;
+  }
+  /** 승강장의 시간을 dt 초 흘린다. 긴 dt 는 1초씩 나눠서 본다(칸이 차거나 무리가 닿는 때를 지나치지 않게). 너무 길면 남는 시간은 평균 속도로 친다. */
+  function stepRail(state, dt, events, rng) {
+    if (!zoneOpen(state, 3)) return;
+    dt = safeNum(dt, 0); if (!(dt > 0)) return;
+    if (!(railUnits(state) > 0)) return;
+    var auto = autoOn(state, 3) && autoEvents(state, 3), steps = Math.min(900, Math.ceil(dt)), h = Math.min(dt, steps) / steps, rest = dt - h * steps;
+    for (var i = 0; i < steps; i++) {
+      var p = platOf(state);
+      p.t += h; p.bank += railRate(state) * h;
+      var info = trainInfo(state);
+      if (info.cars >= CAR_MAX) departTrain(state, 'full', rng, events);
+      else if (p.t >= p.horde) departTrain(state, 'horde', rng, events);
+      else if (auto && info.cars >= 1 && (info.cars >= AUTO_CARS || p.horde - p.t <= 1)) departTrain(state, 'auto', rng, events);
+    }
+    if (rest > 0) { var flat = railRate(state) * rest; earn(state, flat); state.railEarned += flat; }
   }
 
   /* ---------- 5구역: 연구 ---------- */
@@ -2005,6 +2037,7 @@
    */
   function greenSignal(state) {
     if (!zoneOpen(state, 3)) return fail('locked');
+    if (true) return fail('gone');      // 3.4.0: 청신호는 없앴다(열차를 손으로 보내는 것이 4구역의 손맛이 됐다)
     if (state.greenCool > 0) return fail('cooldown');
     var plan = railPlan(state), running = 0;
     ROUTES.forEach(function (d) { running += plan.riders[d.id]; });
@@ -3644,10 +3677,10 @@
     // 4구역 환승역
     { id: 'z4train', group: 'z4', name: '차량 기지장', needs: [5, 20, 50, 100], value: function (s) { return s.trains; }, text: function (n) { return '열차 ' + n + '대 갖추기'; } },
     { id: 'z4earn', group: 'z4', name: '화물왕', needs: [1e20, 1e23, 1e26], value: function (s) { return s.railEarned; }, text: function (n) { return '한 회차에 화물로 물자 ' + formatNumber(n) + ' 벌기'; } },
-    { id: 'z4express', group: 'z4', name: '심야 급행', needs: [1, 20, 200], value: function (s) { return s.expressRuns; }, text: function (n) { return '한 회차에 심야 급행을 ' + n + '번 맞이하기'; } },
+    { id: 'z4express', group: 'z4', name: '만차', needs: [1, 20, 200], value: function (s) { return s.expressRuns; }, text: function (n) { return '한 회차에 12칸 열차를 ' + n + '번 보내기'; } },
     { id: 'z4route', group: 'z4', name: '선로 복구반', needs: [5, 20], value: function (s) { return sumOf(s.routes); }, text: function (n) { return '노선 단계를 모두 합쳐 ' + n + ' 올리기'; } },
     { id: 'z4up', group: 'z4', name: '역무원', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 3); }, text: function (n) { return '4구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
-    { id: 'z4auto', group: 'z4', name: '알아서 켜지는 신호', tier: 2, needs: [1], value: function (s) { return s.upgrades.autosig; }, text: function () { return '자동 신호 달기'; } },
+    { id: 'z4auto', group: 'z4', name: '맡겨 둔 승강장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autosig; }, text: function () { return '역무원 두기'; } },
     // 5구역 대학 병원
     { id: 'z5staff', group: 'z5', name: '연구실장', needs: [5, 25, 100, 250], value: function (s) { return s.staff; }, text: function (n) { return '연구원 ' + n + '명 뽑기'; } },
     { id: 'z5done', group: 'z5', name: '끝낸 과제', needs: [1, 10, 30, 60], value: function (s) { return s.projectsDone; }, text: function (n) { return '한 회차에 과제 ' + n + '개 끝내기'; } },
@@ -3763,9 +3796,9 @@
     stepTrade(state, dt, rng, events);
     stepOrders(state, dt, rng, events);
     stepSalvage(state, dt, rng, events);
-    stepRail(state, dt, events);
+    stepRail(state, dt, events, rng);
     if (state.greenCool > 0) state.greenCool = Math.max(0, state.greenCool - dt);
-    if (autoOn(state, 3) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
+    if (false && autoOn(state, 3) && zoneOpen(state, 3) && !(state.greenCool > 0)) { var auto = greenSignal(state); if (auto.ok) { events.push({ type: 'green' }); auto.arrivals.forEach(function (e) { events.push(e); }); } }
     stepLab(state, dt, rng);
 
     if (state.signalLeft > 0) {
@@ -3824,12 +3857,10 @@
     state.guardEarned += guardAway;
     if (line > 0 && lineInfo(state).steady) state.steadySeconds += counted;     // 정속으로 맞춰 두고 나갔으면 그 시간도 친다
     // 4구역 열차: 자리를 비운 동안에도 다닌다. 돌아온 열차의 화물은 자리 비움 효율로 쳐서 받는다.
-    var railEvents = [], before = state.supplies, earnedBefore = state.railEarned;
-    stepRail(state, counted, railEvents);
-    var railFull = state.railEarned - earnedBefore, cut = railFull * (1 - rate);
-    if (cut > 0) { state.supplies -= cut; state.runEarned -= cut; state.lifetimeEarned -= cut; state.railEarned -= cut; }
-    report.gain += state.supplies - before;
-    report.trains = railEvents.length;
+    // 3.4.0: 자리를 비운 동안은 역무원이 보낸 것으로 친다(railRate 그대로). 돌아오면 승강장에는 새 열차가 서 있다
+    var railAway = railRate(state) * counted * rate;
+    if (railAway > 0) { earn(state, railAway); state.railEarned += railAway; report.gain += railAway; report.trains = Math.floor(counted / (carSeconds(state) * AUTO_CARS)); state.trainsSent = (state.trainsSent || 0) + report.trains; }
+    if (elapsed >= 60) state.plat = { t: 0, bank: 0, horde: (HORDE_MIN + HORDE_MAX) / 2 };
     // 5구역 연구: 점수도 자리 비움 효율로 모인다
     report.points = researchRate(state) * counted * rate;
     state.points += report.points;
@@ -3967,6 +3998,8 @@
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
     BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, SHIP_SECONDS: SHIP_SECONDS, BOARD_NORM: BOARD_NORM, BOXES: BOXES, boxName: boxName,
     boxWorth: boxWorth, boardSum: boardSum, boardFactor: boardFactor, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
+    CAR_SECONDS: CAR_SECONDS, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, HORDE_MIN: HORDE_MIN, HORDE_MAX: HORDE_MAX, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE,
+    stepRail: stepRail, carMult: carMult, carSeconds: carSeconds, railUnits: railUnits, trainInfo: trainInfo, sendTrain: sendTrain, trainGain: trainGain,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,

@@ -698,6 +698,19 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 #line-mile { margin-bottom: 8px; }
 /* 4구역 노선: 노선마다 한 줄. 왼쪽에 이름과 운행 시간, 오른쪽에 탄 열차 수, 아래에 운행 진행 막대. */
 .rail-list { display: grid; gap: 6px; margin-bottom: 8px; }
+/* 3.4.0 승강장. 예전 노선도 · 노선 막대 · 청신호는 쓰지 않아 감춘다 */
+#railmap, #rail-list, #green { display: none !important; }
+.plat-head { margin-bottom: 6px; } .plat-head .num { color: var(--safe); font-weight: 700; }
+canvas.plat { background: #2a2228; margin-bottom: 6px; }
+.plat-pips { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; margin-bottom: 8px; }
+.plat-pips i { height: 7px; border-radius: 2px; background: var(--soft); } .plat-pips i.on { background: var(--hazard); } .plat-pips i.next { background: linear-gradient(to right, var(--hazard) var(--p, 0%), var(--soft) 0); }
+.plat-horde { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; } .plat-horde .label { white-space: nowrap; margin: 0; }
+.plat-horde .track { flex: 1; height: 10px; border-radius: 5px; background: var(--soft); overflow: hidden; } .plat-horde .track i { display: block; height: 100%; background: var(--blood); }
+.plat-horde b { min-width: 34px; text-align: right; color: var(--blood); }
+.plat-horde.near b { animation: jam-shake .4s steps(2) infinite; }
+.plat-go:not(:disabled) { background: var(--hazard); color: var(--on-hazard); border-color: var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.plat-go { width: 100%; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; padding: 13px 14px; }
+@media (prefers-reduced-motion: reduce) { .plat-horde.near b { animation: none; } }
 .rail-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; }
 .rail-row .track { grid-column: 1 / -1; }
 .rail-row.off { opacity: .45; }
@@ -1317,7 +1330,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 3.3.1</div>
+  <div class="boot-ver">7구역 알파 3.4.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1547,6 +1560,13 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       </div>
       <div class="trade rail" id="rail" hidden>
         <!-- 노선도: 왼쪽이 환승역, 오른쪽으로 갈수록 먼 노선. 열차가 갔다가 돌아오는 것이 보인다. 그림은 ui.js 의 drawRail 이 그린다. -->
+        <!-- 3.4.0 승강장의 열차: 화물칸이 하나씩 붙고, 무리가 닿기 전에 보낸다. 그림은 ui.js 의 drawPlatform 이 그린다 -->
+        <div class="order-head plat-head"><span class="label">승강장의 열차</span><span class="num" id="plat-cars"></span></div>
+        <canvas class="belt plat" id="platform" width="184" height="84" role="img" aria-label="승강장에 선 화물 열차"></canvas>
+        <div class="plat-pips" id="plat-pips" aria-hidden="true"></div>
+        <div class="plat-horde"><span class="label">무리 도착까지</span><div class="track"><i id="plat-horde-bar"></i></div><b class="num" id="plat-horde-left"></b></div>
+        <button type="button" class="fortify sell plat-go" id="train-go"></button>
+        <div class="label" id="plat-note"></div>
         <canvas class="belt" id="railmap" width="320" height="92" aria-hidden="true"></canvas>
         <div class="rail-list" id="rail-list"></div>
         <div class="order" id="salvage" hidden>
@@ -1752,7 +1772,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 3.3.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 3.4.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
