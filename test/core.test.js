@@ -963,6 +963,16 @@ test('저장: 열차와 노선을 안전하게 읽는다', () => {
   for (const junk of [null, 'x', 7, []]) assert.doesNotThrow(() => C.sanitizeState({ version: 2, zone: 3, routes: junk, routeClock: junk, routeLoad: junk }, 0));
 });
 
+test('항체: 4구역 뒤로는 완만하게 늘고, 항체 정제는 3번까지(2.9.6)', () => {
+  const at = (e) => { const s = C.createState(0); s.zone = 3; s.runEarned = Math.pow(10, e); return C.antibodiesOnRetreat(s); };
+  assert.equal(at(17), Math.floor(2 + 4 * Math.pow(9, 1.3)), '4구역 전까지는 예전 그대로');
+  assert.ok(at(28) < 200 && at(28) > at(19), '뒤 구역: ' + at(28));
+  assert.ok(at(33) - at(28) <= 21, '자릿수 다섯에 스무 개 안팎');
+  const s = C.createState(0); s.zone = 4; s.research.refine = 3;
+  for (let i = 0; i < 200; i++) { let k = i; assert.ok(!C.drawOffers(() => ((k = (k * 7919 + 13) % 1000) / 1000), s).includes('refine')); }
+  s.offers = ['refine', 'serum', 'drill']; s.points = 1e30; assert.equal(C.runProject(s, 'refine', () => 0.5).reason, 'max');
+});
+
 test('과제: 지나온 구역의 과제는 나오지 않는다(2.9.5)', () => {
   const seen = (zone) => { const out = new Set(); for (let i = 0; i < 300; i++) { let k = i; C.drawOffers(() => ((k = (k * 7919 + 13) % 1000) / 1000), { zone }).forEach(id => out.add(id)); } return out; };
   const z5 = seen(4);

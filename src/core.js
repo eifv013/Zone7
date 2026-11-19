@@ -399,7 +399,7 @@
     { id: 'transit', name: '운행 분석', desc: '화물 값 2배',           key: 'z4',       mult: 2 },
     { id: 'drill',   name: '방어 교범', desc: '방어력 1.5배',          key: 'defense',  mult: 1.5 },
     { id: 'serum',   name: '혈청 배양', desc: '전체 생산 1.3배',       key: 'prod',     mult: 1.3 },
-    { id: 'refine',  name: '항체 정제', desc: '철수 항체 샘플 1.15배', key: 'antibody', mult: 1.15 },
+    { id: 'refine',  name: '항체 정제', desc: '철수 항체 샘플 1.15배', key: 'antibody', mult: 1.15, max: 3 },      // 2.9.6: 3번까지. 끝없이 겹쳐 항체가 두 배 넘게 불었다
     { id: 'drop',    name: '보급 요청', desc: '생산 10분치 물자를 바로 받는다', key: 'drop', mult: 1 }
   ];
   // 방벽: 구역과 상관없이 거점 전체를 지킨다
@@ -1732,7 +1732,7 @@
   var PROJECT_ZONE = { z1: 0, z2: 1, z3: 2, z4: 3 };
   function drawOffers(rng, state) {
     var at = state && typeof state.zone === 'number' ? state.zone : -1;
-    var pool = PROJECTS.filter(function (p) { return !(at >= 0 && PROJECT_ZONE[p.key] !== undefined && at - PROJECT_ZONE[p.key] >= 1); }).map(function (p) { return p.id; }), out = [];
+    var pool = PROJECTS.filter(function (p) { return !(at >= 0 && PROJECT_ZONE[p.key] !== undefined && at - PROJECT_ZONE[p.key] >= 1) && !(p.max > 0 && state && state.research && state.research[p.id] >= p.max); }).map(function (p) { return p.id; }), out = [];
     rng = typeof rng === 'function' ? rng : Math.random;
     while (out.length < OFFER_COUNT && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length) % pool.length, 1)[0]);
     return out;
@@ -1746,6 +1746,7 @@
     if (!def) return fail('unknown');
     if (!zoneOpen(state, 4)) return fail('locked');
     if (state.offers.indexOf(id) < 0) return fail('not-offered');
+    if (def.max > 0 && state.research[id] >= def.max) return fail('max');      // 다 끝낸 과제(항체 정제 3번)
     var cost = projectCost(state);
     if (cost > state.points) return fail('points');
     state.points -= cost;
@@ -2594,11 +2595,14 @@
    *   샘플 = RETREAT_K + ANTI_STEP × (자릿수)^ANTI_CURVE × 배수.   자릿수 = log10(이번 회차 누적 물자 ÷ RETREAT_MIN)
    *   1억 → 2개, 1,000억 → 18개, 1,000경 → 90개쯤. 물자를 10배 더 모을 때마다 몇 개씩 더 받는 셈이다.
    */
-  var ANTI_STEP = 4, ANTI_CURVE = 1.3;
+  var ANTI_STEP = 4, ANTI_CURVE = 1.3, ANTI_KNEE = 11, ANTI_LATE = 4;
   function antibodiesFor(run, mult) {
     if (!(run >= RETREAT_MIN)) return 0;
     var d = Math.log(run / RETREAT_MIN) / Math.LN10;
-    return Math.floor((RETREAT_K + ANTI_STEP * Math.pow(d, ANTI_CURVE)) * mult);
+    // 2.9.6: 자릿수 ANTI_KNEE(4구역 무렵) 뒤로는 자릿수 하나에 ANTI_LATE 개씩만 는다. 전에는 뒤 구역으로 갈수록 가파르게 불어서,
+    //        6구역까지 간 한 회차(+412)가 그 앞의 여섯 회차를 합친 것(420)만큼 줬다. 4구역까지의 양은 그대로다.
+    var raw = d <= ANTI_KNEE ? ANTI_STEP * Math.pow(d, ANTI_CURVE) : ANTI_STEP * Math.pow(ANTI_KNEE, ANTI_CURVE) + ANTI_LATE * (d - ANTI_KNEE);
+    return Math.floor((RETREAT_K + raw) * mult);
   }
   function antibodiesOnRetreat(state) { return antibodiesFor(state.runEarned, mods(state).antibody); }
   /**
