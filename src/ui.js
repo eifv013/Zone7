@@ -1451,8 +1451,10 @@
       if (!(slot >= 0 && slot < n)) return;
       var r = C.harvestTube(state, slot);
       if (!r.ok) return;
-      tubeFx[slot] = { at: Date.now(), kind: r.fan ? 'fan' : r.peak ? 'peak' : r.burnt ? 'burnt' : 'pop' };
+      tubeFx[slot] = { at: Date.now(), kind: r.boil ? 'burnt' : r.fan ? 'fan' : r.peak ? 'peak' : r.burnt ? 'burnt' : 'pop' };
+      if (r.boil) { toast('끓어 넘쳤다'); sfx('rush'); buzz([30, 40, 30]); Store.save(); render(); return; }      // 과열: 한 관을 너무 연달아 올렸다
       if (r.fan) { sfx('click'); buzz(8); render(); return; }      // 불 올리기: 가볍게
+      if (r.chain > 0) toast('연속 절정 ' + (r.chain + 1) + '개 · +' + Math.round(r.chain * C.CHAIN_STEP * 100) + '%');
       if (r.gain > 0) popNumber('+' + fmt(r.gain));
       sfx(r.peak ? 'signal' : r.burnt ? 'click' : 'buy'); buzz(r.peak ? 25 : 10); Store.save(); render();
     });
@@ -2367,11 +2369,14 @@
     for (var s0 = 0; s0 < n; s0++) R(Math.round(8 + sp * s0 + sp / 2) - 1, 77, 2, 8, '#30343c');      // 받침 다리
     for (var i = 0; i < n; i++) {
       var t = tubes[i], st = on ? C.tubeStage(state, t) : 0, x = Math.round(8 + sp * i + (sp - 10) / 2), fx = tubeFx[i], peak = st === 5, burnt = st === 6;
-      if (peak) { g.fillStyle = 'rgba(255,217,90,' + (0.16 + 0.08 * (Math.floor(now / 200) % 2)).toFixed(2) + ')'; g.fillRect(x - 2, top - 4, 14, h + 10); }
+      var richF = peak ? Math.max(0, Math.min(1, ((t.t || 0) - grow) / C.peakSeconds(state))) : 0, hot = on && st <= 4 ? (t.heat || 0) : 0;
+      if (peak) { g.fillStyle = 'rgba(255,217,90,' + (0.14 + 0.22 * richF + 0.06 * (Math.floor(now / 200) % 2)).toFixed(2) + ')'; g.fillRect(x - 2, top - 4, 14, h + 10); }      // 농축: 둘수록 빛이 진해진다
+      if (hot >= C.TUBE_HEAT_MAX - 1) { g.fillStyle = 'rgba(255,90,74,' + (hot >= C.TUBE_HEAT_MAX ? (Math.floor(now / 110) % 2 ? '.34' : '.16') : '.14') + ')'; g.fillRect(x - 2, top - 4, 14, h + 16); }      // 과열: 한 번 더 올리면 넘친다
       R(x, top, 10, h, '#0e1618'); R(x + 1, top, 8, h - 1, '#22343a'); R(x, top - 1, 10, 2, '#8ab0b4'); R(x + 1, top + h - 1, 8, 1, '#8ab0b4'); R(x + 1, top, 1, h - 1, '#8ab0b4'); R(x + 8, top, 1, h - 1, '#5a7e84');      // 유리관
       if (st > 0) {
         var lv = burnt ? 10 : 6 + Math.round(Math.min(1, (t.t || 0) / grow) * 37);
         R(x + 2, top + h - 1 - lv, 6, lv, LAB_COL[st]); R(x + 2, top + h - 1 - lv, 6, 1, burnt ? '#55564e' : '#fff2c0');
+        if (peak && richF > 0.05) { var rh = Math.round(lv * richF); g.fillStyle = 'rgba(255,250,224,.55)'; g.fillRect(x + 2, top + h - 1 - rh, 6, rh); }      // 농축된 만큼 아래부터 하얗게 진해진다
         if (!burnt) for (var k = 0; k < st; k++) { var by = top + h - 4 - ((k * 9 + Math.floor(now / (peak ? 90 : 220)) * 2) % Math.max(2, lv - 3)); R(x + 3 + (k * 3) % 5, by, 1, 1, '#fff2c0'); }      // 올라가는 방울
         if (peak) {      // 3.9.6: 절정이 얼마나 남았는지 관 위의 금빛 줄로 보인다(다 줄면 탄다)
           var leftP = Math.max(0, Math.min(1, 1 - ((t.t || 0) - grow) / C.peakSeconds(state)));
@@ -2383,7 +2388,7 @@
       R(x + 2, top + 3, 1, 1, '#e8f2fa'); R(x + 2, top + 5, 1, 1, '#e8f2fa');
       R(x + 3, 78, 4, 3, '#30343c');      // 버너
       if (fx && fx.kind === 'fan' && now - fx.at < 220) { R(x + 3, 72, 4, 5, '#9ad0e8'); R(x + 4, 70, 2, 3, '#e8f6ff'); R(x + 2, 75, 1, 2, '#6aaede'); R(x + 7, 75, 1, 2, '#6aaede'); }      // 불을 올린 순간: 불꽃이 크게 인다
-      else if (st >= 1 && st <= 5) { var fl = Math.floor(now / 120 + i) % 2; R(x + 4, 76 - fl, 1, 1 + fl, '#6aaede'); R(x + 5, 75 + fl, 1, 2 - fl, '#9ad0e8'); R(x + 4, 77, 2, 1, '#3f7fb8'); }
+      else if (st >= 1 && st <= 5) { var fl = Math.floor(now / 120 + i) % 2, hc = hot >= 3 ? ['#ff8a4a', '#ffd95a', '#d8452e'] : hot >= 1.5 ? ['#9ad0e8', '#e8f6ff', '#6aaede'] : ['#6aaede', '#9ad0e8', '#3f7fb8'], fh = Math.min(3, Math.floor(hot)); R(x + 4, 76 - fl - fh, 1, 1 + fl + fh, hc[0]); R(x + 5, 75 + fl - fh, 1, 2 - fl + fh, hc[1]); R(x + 4, 77, 2, 1, hc[2]); }      // 열이 쌓일수록 불꽃이 커지고 붉어진다
       for (var p5 = 0; p5 < 5; p5++) R(x + p5 * 2, 88, 1, 3, burnt ? '#55564e' : p5 < st ? (peak ? '#ffd95a' : '#e98a3c') : '#22343a');      // 단계 눈금
       if (fx && fx.kind !== 'fan' && now - fx.at < 500) { var up = Math.round((now - fx.at) / 500 * 14); spr(g, x + 3, top - 6 - up, ['.#.', '###', '.#.'], { '#': fx.kind === 'burnt' ? '#8a8a82' : '#ffd95a' }); R(x + 1, top + 2 - up, 1, 1, '#fff2c0'); R(x + 8, top + 6 - up, 1, 1, '#fff2c0'); }      // 거둔 것이 위로 솟는다
       if (fx && fx.kind !== 'fan' && now - fx.at < 260) { g.fillStyle = 'rgba(' + (fx.kind === 'peak' ? '255,217,90' : fx.kind === 'burnt' ? '160,160,150' : '255,255,255') + ',' + (0.55 * (1 - (now - fx.at) / 260)).toFixed(2) + ')'; g.fillRect(x - 1, top - 2, 12, h + 4); }      // 거둔 순간의 번쩍임
@@ -3199,7 +3204,11 @@
       drawLab();
       $('labscene').setAttribute('data-stages', tubeList.map(function (t) { return state.staff > 0 ? C.tubeStage(state, t) : 0; }).join(','));
       $('labscene').classList.toggle('tappable', state.staff > 0);
-      setText($('lab-note'), state.staff > 0 && (state.harvestsRun || 0) < 5 ? '시험관을 누르면 불이 세져 빨리 달여져요 · 금빛이 되면 눌러서 거둬요' : '');
+      var lch = state.labChain && state.labChain.left > 0 ? state.labChain : null;
+      setText($('lab-note'), !(state.staff > 0) ? '' : lch ? '연속 절정 · 다음 것 +' + Math.round(Math.min(C.CHAIN_MAX, lch.n + 1) * C.CHAIN_STEP * 100) + '%'
+        : (state.harvestsRun || 0) < 3 ? '눌러서 불을 올려요 · 금빛이 되면 거둬요'
+        : (state.harvestsRun || 0) < 12 ? '금빛은 둘수록 진해져요 · 넘기면 타요 · 한 관만 계속 올리면 끓어 넘쳐요' : '');
+      $('lab-note').classList.toggle('boosted', !!lch);
       // 갈림길: 연구 점수가 차면 둘 가운데 하나를 고른다
       setText($('fork-cost'), fmt(Math.floor(state.points)) + ' / ' + fmt(pc));
       fill($('fork-bar'), pc > 0 ? state.points / pc : 0);

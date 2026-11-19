@@ -577,7 +577,7 @@
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
-      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, tubes: [], labEarned: 0, peaksRun: 0, burntRun: 0, harvestsRun: 0, fansRun: 0, labV: 2,
+      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, tubes: [], labEarned: 0, peaksRun: 0, burntRun: 0, harvestsRun: 0, fansRun: 0, boilsRun: 0, chainBest: 0, labChain: { n: 0, left: 0 }, labV: 2,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
@@ -720,7 +720,8 @@
     s.staff = Math.min(s.staff, COUNT_MAX);
     // 3.9.0 시험관
     s.racks = clamp(safeCount(raw.racks), 0, TUBE_MAX - TUBE_BASE); s.reagent = clamp(safeCount(raw.reagent), 0, REAGENT_MAX);
-    s.tubes = []; (Array.isArray(raw.tubes) ? raw.tubes : []).slice(0, TUBE_MAX).forEach(function (t) { t = t && typeof t === 'object' ? t : {}; s.tubes.push({ t: clamp(safeNum(t.t, 0), 0, 600), age: clamp(safeNum(t.age, 0), 0, 600), r: clamp(safeNum(t.r, 1), 0.5, 1.5) }); });
+    s.tubes = []; (Array.isArray(raw.tubes) ? raw.tubes : []).slice(0, TUBE_MAX).forEach(function (t) { t = t && typeof t === 'object' ? t : {}; s.tubes.push({ t: clamp(safeNum(t.t, 0), 0, 600), age: clamp(safeNum(t.age, 0), 0, 600), r: clamp(safeNum(t.r, 1), 0.5, 1.5), heat: clamp(safeNum(t.heat, 0), 0, 9) }); });
+    s.boilsRun = clamp(safeCount(raw.boilsRun), 0, 1e12); s.chainBest = clamp(safeCount(raw.chainBest), 0, 99); var rlc = raw.labChain && typeof raw.labChain === 'object' ? raw.labChain : {}; s.labChain = { n: clamp(safeCount(rlc.n), 0, 99), left: clamp(safeNum(rlc.left, 0), 0, 60) };
     s.labEarned = clamp(safeNum(raw.labEarned, 0), 0, 1e300); s.peaksRun = clamp(safeCount(raw.peaksRun), 0, 1e12); s.burntRun = clamp(safeCount(raw.burntRun), 0, 1e12); s.harvestsRun = clamp(safeCount(raw.harvestsRun), 0, 1e12); s.fansRun = clamp(safeCount(raw.fansRun), 0, 1e12);
     /* 옛 저장(labV 2 미만): 없앤 개조 '현미경'에 쓴 물자만큼 시약 등급과 시험관을 사 준 것으로 한다(시약 먼저, 그보다 훨씬 싼 동안은 시험관도). 내민 과제는 둘로 줄인다 */
     if (raw.labV !== 2 && s.zone >= 4) {
@@ -2002,14 +2003,14 @@
    * 자동(3.9.4): 연구 조교는 절정이 거의 끝날 때(TUBE_AUTO_LATE) 타기 직전에 거둔다. 서툴러서 TUBE_AUTO_MULT 배만 받는다(손으로 절정에 거두면 2배).
    *   3.9.2 에서는 3단계에서 거뒀는데, 그러면 시험관이 금빛이 되기 전에 다 비워져서 조교를 사고 나면 손이 할 일이 없었다. 가만히 둠 < 조교 < 손.
    */
-  var TUBE_BASE = 4, TUBE_MAX = 12, TUBE_STAGE_SECONDS = 4, TUBE_PEAK_SECONDS = 4, TUBE_BURNT_SECONDS = 10, TUBE_MULTS = [0, 0.4, 0.7, 1, 1.4, 2], TUBE_BURNT = 0.25, TUBE_AUTO_STAGE = 3, TUBE_AUTO_MULT = 1.25, TUBE_AUTO_LATE = 0.75, TUBE_FAN = 0.8, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
+  var TUBE_BASE = 4, TUBE_MAX = 12, TUBE_STAGE_SECONDS = 4, TUBE_PEAK_SECONDS = 4, TUBE_BURNT_SECONDS = 10, TUBE_MULTS = [0, 0.4, 0.7, 1, 1.4, 2], TUBE_BURNT = 0.25, TUBE_AUTO_STAGE = 3, TUBE_AUTO_MULT = 1.25, TUBE_AUTO_LATE = 0.75, TUBE_FAN = 0.8, TUBE_RICH = 1, TUBE_HEAT_MAX = 4, TUBE_COOL_SECONDS = 1.5, CHAIN_SECONDS = 3, CHAIN_STEP = 0.1, CHAIN_MAX = 10, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
   var RACK_COST = 2e23, RACK_GROWTH = 6, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
   function tubeCount(state) { return clamp(TUBE_BASE + Math.floor(safeNum(state.racks, 0)), TUBE_BASE, TUBE_MAX); }
   function peakSeconds(state) { return TUBE_PEAK_SECONDS + mods(state).peak; }
   function tubesOf(state) {
     if (!Array.isArray(state.tubes)) state.tubes = [];
     var n = tubeCount(state);
-    while (state.tubes.length < n) state.tubes.push({ t: 0, age: 0, r: 0.8 + (state.tubes.length * 7 % 5) * 0.1 });      // 처음 놓일 때는 관마다 빠르기를 조금씩 다르게
+    while (state.tubes.length < n) state.tubes.push({ t: 0, age: 0, r: 0.8 + (state.tubes.length * 7 % 5) * 0.1, heat: 0 });      // 처음 놓일 때는 관마다 빠르기를 조금씩 다르게
     if (state.tubes.length > n) state.tubes.length = n;
     return state.tubes;
   }
@@ -2028,7 +2029,11 @@
   function tubeYield(state, i) {
     var tubes = tubesOf(state), tube = tubes[i];
     if (!tube) return { stage: 0, mult: 0, gain: 0, points: 0 };
-    var st = tubeStage(state, tube), mult = st === 6 ? TUBE_BURNT + mods(state).sterile : TUBE_MULTS[st], n = tubes.length;
+    /* 3.9.8 누르기만 하던 것에 고를 것을 셋 넣었다.
+       ① 농축: 절정은 오래 둘수록 진해진다(2배에서 시작해 타기 직전에 2 + TUBE_RICH 배). 지금 거둘지, 조금 더 둘지.
+       ② 과열: 한 관의 불을 연달아 올리면 열이 쌓이고(TUBE_COOL_SECONDS 초에 하나씩 식는다), TUBE_HEAT_MAX 를 넘기면 끓어 넘쳐 타 버린다. 한 관만 두드릴 수 없다.
+       ③ 연속: CHAIN_SECONDS 초 안에 절정을 잇달아 거두면 하나마다 CHAIN_STEP 씩 더 받는다. 불을 올려 여러 관의 때를 맞출 까닭이 생긴다 */
+    var st = tubeStage(state, tube), rich = st === 5 ? TUBE_RICH * clamp((tube.t - TUBE_STAGE_SECONDS * 4) / peakSeconds(state), 0, 1) : 0, mult = st === 6 ? TUBE_BURNT + mods(state).sterile : TUBE_MULTS[st] + rich, n = tubes.length;
     return { stage: st, mult: mult, gain: labRate(state) / n * tube.age * mult, points: researchRate(state) / n * tube.age * mult };
   }
   function resetTube(tube, rng) { tube.t = 0; tube.age = 0; tube.r = 0.75 + (typeof rng === 'function' ? rng() : Math.random()) * 0.5; }
@@ -2042,27 +2047,36 @@
        전에는 덜 익은 관을 눌러도 거둬졌는데, 덜 익었을 때 거둘 까닭이 없으니 절정을 기다리는 동안 손이 놀았다. 이제는 기다리는 대신 불을 올린다 */
     if (!auto && tubeStage(state, tube) <= 4) {
       var grow0 = TUBE_STAGE_SECONDS * 4, add = Math.min(TUBE_FAN, grow0 - tube.t);
-      tube.t += add; tube.age += add; state.fansRun = (state.fansRun || 0) + 1;
-      return { ok: true, at: i, fan: true, stage: tubeStage(state, tube), peak: false, burnt: false, gain: 0, points: 0 };
+      tube.heat = (tube.heat || 0) + 1; state.fansRun = (state.fansRun || 0) + 1;
+      if (tube.heat > TUBE_HEAT_MAX) { tube.t = grow0 + peakSeconds(state); tube.heat = 0; state.boilsRun = (state.boilsRun || 0) + 1; return { ok: true, at: i, fan: true, boil: true, stage: 6, peak: false, burnt: true, gain: 0, points: 0 }; }      // 끓어 넘쳤다
+      tube.t += add; tube.age += add;
+      return { ok: true, at: i, fan: true, heat: tube.heat, stage: tubeStage(state, tube), peak: false, burnt: false, gain: 0, points: 0 };
     }
     var y = tubeYield(state, i);
     if (auto === 'aide') { var am = TUBE_AUTO_MULT / (y.mult || 1); y = { stage: y.stage, mult: TUBE_AUTO_MULT, gain: y.gain * am, points: y.points * am }; }      // 조교가 거둔 것: 단계와 상관없이 조교의 몫
+    var chain = 0;
+    if (!auto && y.stage === 5) {      // 연속 절정
+      var lc = state.labChain || (state.labChain = { n: 0, left: 0 }); lc.n = lc.left > 0 ? Math.min(CHAIN_MAX, lc.n + 1) : 0; lc.left = CHAIN_SECONDS; chain = lc.n;
+      var cm = 1 + CHAIN_STEP * chain; y = { stage: y.stage, mult: y.mult * cm, gain: y.gain * cm, points: y.points * cm }; if (chain > (state.chainBest || 0)) state.chainBest = chain;
+    }
     if (y.gain > 0) { earn(state, y.gain); state.labEarned = (state.labEarned || 0) + y.gain; }
     state.points += y.points;
     if (y.stage === 5 && !auto) state.peaksRun = (state.peaksRun || 0) + 1;      // 절정 횟수(목표)는 손으로 잡은 것만 센다
     if (y.stage === 6 && auto !== 'aide') state.burntRun = (state.burntRun || 0) + 1;
     if (!auto) state.harvestsRun = (state.harvestsRun || 0) + 1;
-    resetTube(tube, rng);
-    return { ok: true, at: i, stage: y.stage, peak: y.stage === 5, burnt: y.stage === 6, gain: y.gain, points: y.points, auto: !!auto };
+    resetTube(tube, rng); tube.heat = 0;
+    return { ok: true, at: i, chain: chain, mult: y.mult, stage: y.stage, peak: y.stage === 5, burnt: y.stage === 6, gain: y.gain, points: y.points, auto: !!auto };
   }
   /** 시험관의 시간을 흘린다. 절정에 닿으면 더 달여지지 않는다(받을 것이 더 늘지 않는다). 탄 관은 TUBE_BURNT_SECONDS 뒤에 저절로 비워진다. */
   function stepTubes(state, dt, rng, events) {
     if (!zoneOpen(state, 4) || !(state.staff > 0)) return;
     dt = safeNum(dt, 0); if (!(dt > 0)) return;
     var tubes = tubesOf(state), auto = autoEvents(state, 4), grow = TUBE_STAGE_SECONDS * 4, peak = peakSeconds(state), steps = Math.min(600, Math.ceil(dt)), h = Math.min(dt, steps) / steps, rest = dt - h * steps;
+    if (state.labChain && state.labChain.left > 0) state.labChain.left = Math.max(0, state.labChain.left - dt);
     for (var k = 0; k < steps; k++) {
       for (var i = 0; i < tubes.length; i++) {
         var tube = tubes[i], was = tubeStage(state, tube);
+        if (tube.heat > 0) tube.heat = Math.max(0, tube.heat - h / TUBE_COOL_SECONDS);
         if (tube.t < grow) tube.age += Math.min(h, (grow - tube.t) / tube.r);      // 절정에 닿는 걸음까지만 달여진 시간으로 친다
         tube.t += h * tube.r;
         var st = tubeStage(state, tube);
@@ -4069,7 +4083,7 @@
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
-    TUBE_BASE: TUBE_BASE, TUBE_MAX: TUBE_MAX, TUBE_STAGE_SECONDS: TUBE_STAGE_SECONDS, TUBE_PEAK_SECONDS: TUBE_PEAK_SECONDS, TUBE_BURNT_SECONDS: TUBE_BURNT_SECONDS, TUBE_MULTS: TUBE_MULTS, TUBE_BURNT: TUBE_BURNT, TUBE_AUTO_STAGE: TUBE_AUTO_STAGE, TUBE_AUTO_MULT: TUBE_AUTO_MULT, TUBE_FAN: TUBE_FAN, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
+    TUBE_BASE: TUBE_BASE, TUBE_MAX: TUBE_MAX, TUBE_STAGE_SECONDS: TUBE_STAGE_SECONDS, TUBE_PEAK_SECONDS: TUBE_PEAK_SECONDS, TUBE_BURNT_SECONDS: TUBE_BURNT_SECONDS, TUBE_MULTS: TUBE_MULTS, TUBE_BURNT: TUBE_BURNT, TUBE_AUTO_STAGE: TUBE_AUTO_STAGE, TUBE_AUTO_MULT: TUBE_AUTO_MULT, TUBE_FAN: TUBE_FAN, TUBE_RICH: TUBE_RICH, TUBE_HEAT_MAX: TUBE_HEAT_MAX, TUBE_COOL_SECONDS: TUBE_COOL_SECONDS, CHAIN_SECONDS: CHAIN_SECONDS, CHAIN_STEP: CHAIN_STEP, CHAIN_MAX: CHAIN_MAX, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
     tubeCount: tubeCount, peakSeconds: peakSeconds, tubesOf: tubesOf, tubeStage: tubeStage, tubeYield: tubeYield, harvestTube: harvestTube, stepTubes: stepTubes, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,

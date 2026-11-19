@@ -3021,7 +3021,7 @@ test('5구역 시험관: 단계마다 익고, 절정을 넘기면 탄다. 누르
   assert.equal(C.tubeStage(f, f.tubes[0]), 3); assert.equal(C.tubeStage(f, f.tubes[1]), 2); near(f.tubes[0].age, S * 2);
   C.stepTubes(f, S * 2 + 2, calm, []); assert.equal(C.tubeStage(f, f.tubes[0]), 5); near(f.tubes[0].age, S * 4, '절정에서 멈춘다');
   // 거두기: 물자와 연구 점수. 단계가 높을수록 곱이 크다(3단계 1배 · 절정 2배)
-  const y = C.tubeYield(f, 0); assert.equal(y.stage, 5); assert.equal(y.mult, 2); near(y.gain, C.labRate(f) / 4 * S * 4 * 2); near(y.points, C.researchRate(f) / 4 * S * 4 * 2);
+  const y = C.tubeYield(f, 0), m5 = 2 + C.TUBE_RICH * 2 / C.TUBE_PEAK_SECONDS; assert.equal(y.stage, 5); near(y.mult, m5, '절정에 든 지 2초: 농축'); near(y.gain, C.labRate(f) / 4 * S * 4 * m5); near(y.points, C.researchRate(f) / 4 * S * 4 * m5);
   const sup = f.supplies, pts = f.points, r = C.harvestTube(f, 0, calm);
   assert.ok(r.ok && r.peak); near(f.supplies - sup, y.gain); near(f.points - pts, y.points); assert.equal(f.peaksRun, 1); assert.equal(f.harvestsRun, 1);
   assert.equal(f.tubes[0].t, 0); assert.equal(f.tubes[0].age, 0); near(f.tubes[0].r, 1, '굴림 0.5 → 빠르기 1');
@@ -3081,7 +3081,7 @@ test('5구역: 저장 · 옛 저장 옮기기 · 자리 비움 · 철수 · 목�
   const s = onBench(6); s.reagent = 2; s.tubes[2].t = 9; s.tubes[2].age = 9; s.peaksRun = 3; s.burntRun = 1; s.harvestsRun = 8; s.labEarned = 55;
   const back = C.deserialize(C.serialize(s), 0); assert.deepEqual(back.tubes, s.tubes); assert.equal(back.racks, 2); assert.equal(back.reagent, 2); assert.equal(back.peaksRun, 3); assert.equal(back.labEarned, 55);
   const raw = JSON.parse(C.serialize(s)); raw.tubes = [{ t: 'x', age: -4, r: 99 }, null, 7]; raw.racks = 1e9; raw.reagent = -3;
-  const fixed = C.deserialize(JSON.stringify(raw), 0); assert.equal(fixed.racks, C.TUBE_MAX - C.TUBE_BASE); assert.equal(fixed.reagent, 0); assert.deepEqual(fixed.tubes[0], { t: 0, age: 0, r: 1.5 }); assert.equal(C.tubesOf(fixed).length, C.TUBE_MAX);
+  const fixed = C.deserialize(JSON.stringify(raw), 0); assert.equal(fixed.racks, C.TUBE_MAX - C.TUBE_BASE); assert.equal(fixed.reagent, 0); assert.deepEqual(fixed.tubes[0], { t: 0, age: 0, r: 1.5, heat: 0 }); assert.equal(C.tubesOf(fixed).length, C.TUBE_MAX);
   // 3.9.0 이전 저장: 없앤 현미경에 쓴 물자만큼 시약 등급과 시험관을 사 준다. 내민 과제는 둘로 줄인다
   const old = JSON.parse(C.serialize(inLab())); delete old.labV; delete old.tubes; old.staff = 30; old.upgrades.scope = 12; old.offers = ['drill', 'serum', 'drop']; old.supplies = 9;
   const m = C.deserialize(JSON.stringify(old), 0); assert.ok(m.reagent >= 1, 'reagent ' + m.reagent); assert.ok(m.racks >= 1); assert.equal(m.upgrades.scope, undefined); assert.equal(m.supplies, 9); assert.equal(m.offers.length, 2); assert.equal(m.staff, 30);
@@ -3093,4 +3093,21 @@ test('5구역: 저장 · 옛 저장 옮기기 · 자리 비움 · 철수 · 목�
   assert.equal(C.goals(s, 4)[2].text, '절정에서 20번 거두기');
   // 철수하면 실험대는 처음부터
   away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(next.racks, 0); assert.equal(next.reagent, 0); assert.equal(next.peaksRun, 0); assert.equal(next.staff, 0);
+});
+
+test('5구역 3.9.8: 농축(절정은 둘수록 진해진다) · 과열(연달아 불을 올리면 끓어 넘친다) · 연속 절정', () => {
+  const S = C.TUBE_STAGE_SECONDS, G = S * 4;
+  // 농축: 절정 첫 순간 2배 → 타기 직전 2 + TUBE_RICH 배
+  const a = onBench(4); a.tubes[0].t = G; a.tubes[0].age = G; near(C.tubeYield(a, 0).mult, 2);
+  a.tubes[0].t = G + C.TUBE_PEAK_SECONDS - 0.01; assert.ok(C.tubeYield(a, 0).mult > 2 + C.TUBE_RICH - 0.05); a.tubes[0].t = G + C.TUBE_PEAK_SECONDS; assert.equal(C.tubeYield(a, 0).mult, C.TUBE_BURNT, '넘기면 탄다');
+  // 과열: 한 관을 쉬지 않고 올리면 끓어 넘친다. 식으면 다시 올릴 수 있다
+  const h = onBench(4); let r; for (let i = 0; i < C.TUBE_HEAT_MAX; i++) { r = C.harvestTube(h, 0, calm); assert.ok(r.fan && !r.boil); }
+  assert.equal(h.tubes[0].heat, C.TUBE_HEAT_MAX); r = C.harvestTube(h, 0, calm); assert.ok(r.boil && r.burnt); assert.equal(C.tubeStage(h, h.tubes[0]), 6); assert.equal(h.boilsRun, 1);
+  const c = onBench(4); for (let i = 0; i < C.TUBE_HEAT_MAX; i++) C.harvestTube(c, 0, calm); C.stepTubes(c, C.TUBE_COOL_SECONDS * 2, calm, []); assert.ok(c.tubes[0].heat <= C.TUBE_HEAT_MAX - 1.9); assert.ok(!C.harvestTube(c, 0, calm).boil, '식은 뒤에는 넘치지 않는다');
+  // 연속 절정: 3초 안에 잇달아 거두면 하나마다 10%씩 더
+  const k = onBench(4); k.tubes.forEach((t) => { t.t = G; t.age = G; });
+  const g0 = C.harvestTube(k, 0, calm), g1 = C.harvestTube(k, 1, calm), g2 = C.harvestTube(k, 2, calm);
+  assert.equal(g0.chain, 0); assert.equal(g1.chain, 1); assert.equal(g2.chain, 2); near(g1.gain, g0.gain * (1 + C.CHAIN_STEP)); near(g2.gain, g0.gain * (1 + C.CHAIN_STEP * 2)); assert.equal(k.chainBest, 2);
+  C.stepTubes(k, C.CHAIN_SECONDS + 0.5, calm, []); k.tubes[3].t = G; assert.equal(C.harvestTube(k, 3, calm).chain, 0, '늦으면 처음부터');
+  const back = C.deserialize(C.serialize(h), 0); assert.equal(back.boilsRun, 1); assert.deepEqual(back.tubes, h.tubes);
 });
