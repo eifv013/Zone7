@@ -452,6 +452,18 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 .auto-def[aria-pressed="true"] { background: var(--hazard); color: var(--on-hazard); border-color: var(--hazard); }
 .retreat-bar { margin: 6px 0; color: var(--ink-soft); }
 .retreat-bar[hidden] { display: none; }
+/* 철수 칸(2.9.9) */
+.rt-gain { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin: 4px 0 6px; border: 2px solid var(--safe); border-radius: var(--r-s, 6px); }
+.rt-gain[hidden], .rt-two[hidden] { display: none; }
+.rt-gain b { font-size: 30px; line-height: 1; color: var(--safe); }
+.rt-gain span { font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
+.rt-gain strong { color: var(--ink); font-size: 14px; }
+.rt-next { display: flex; justify-content: space-between; font-size: 12.5px; margin-top: 6px; }
+.rt-next span:last-child { color: var(--ink-soft); }
+.rt-two { display: flex; gap: 8px; margin: 8px 0; }
+.rt-two > div { flex: 1 1 0; min-width: 0; padding: 8px 10px; font-size: 12px; line-height: 1.55; border: 1px solid var(--edge, var(--ink-soft)); border-radius: var(--r-s, 6px); }
+.rt-two b { display: block; font-size: 13px; margin-bottom: 2px; }
+.rt-keep b { color: var(--safe); } .rt-lose b { color: var(--blood); }
 #retreat-sub:empty { display: none; }
 .oz-bar i { display: block; height: 100%; width: 0; background: currentColor; border-radius: 999px; }
 @keyframes mile-pop { from { transform: scale(1); } to { transform: scale(1.08); } }
@@ -1236,7 +1248,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 2.9.8</div>
+  <div class="boot-ver">7구역 알파 2.9.9</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1369,8 +1381,15 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     </section>
     <section class="panel" aria-labelledby="h-retreat">
       <div class="panel-head"><h2 id="h-retreat">철수</h2><span class="label" id="retreat-count"></span></div>
-      <p class="hint num" id="retreat-hint"></p>
+      <!-- 2.9.9: 철수 칸을 다시 짰다. 큰 숫자(이번 회차 누적 1.35구 …)를 빼고, 받는 샘플 · 지난번과 비교 · 다음 샘플까지 남은 시간 · 남는 것과 돌아가는 것만 보인다 -->
+      <div class="rt-gain" id="rt-gain" hidden><b class="num" id="rt-num">+0</b><span>지금 철수하면 받는<br><strong>항체 샘플</strong></span></div>
+      <p class="hint" id="retreat-hint"></p>
+      <div class="rt-next"><span id="rt-next-label"></span><span id="rt-next-eta"></span></div>
       <div class="oz-bar retreat-bar" id="retreat-bar" hidden><i></i></div>
+      <div class="rt-two" id="rt-two" hidden>
+        <div class="rt-keep"><b>남는 것</b>항체 샘플과 특성<br>업적 · 도감 · 일지<br>동물 친구 · 외형</div>
+        <div class="rt-lose"><b>처음으로 돌아가는 것</b>물자와 시설<br>구역 (1구역부터)<br>이번 회차 특전</div>
+      </div>
       <p class="hint" id="retreat-sub"></p>
       <div id="danger-row" hidden><div class="danger-pick"><span class="label">다음 회차</span><button type="button" id="danger-down" aria-label="위험 단계 내리기">−</button><b class="num" id="danger-val"></b><button type="button" id="danger-up" aria-label="위험 단계 올리기">+</button></div><p class="hint" id="danger-text"></p></div>
       <button type="button" class="relocate" id="retreat" disabled>아직 철수할 수 없다</button>
@@ -1648,7 +1667,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 2.9.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 2.9.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

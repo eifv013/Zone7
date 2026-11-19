@@ -2343,11 +2343,17 @@
     var gain = C.antibodiesOnRetreat(state), rb = $('retreat'), can = C.canRetreat(state);
     rb.disabled = !can;
     setText($('retreat-count'), state.retreats ? state.retreats + '번 철수함' : '');
-    setText(rb, can ? '철수한다 · 항체 샘플 +' + fmt(gain) : '아직 철수할 수 없다');
+    setText(rb, can ? '철수하고 +' + fmt(gain) + ' 받기' : '아직 철수할 수 없다');
     // 철수의 기준은 "이번 회차에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
-    setText($('retreat-hint'), can
-      ? '이번 회차 누적 ' + fmt(state.runEarned) + ' · ' + (function (t) { return t + (C.hasBatchim(t) ? '을' : '를'); })(fmt(C.nextAntibodyAt(state))) + ' 넘기면 샘플 +' + fmt(gain + 1)
-      : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '이번 회차 누적 ' + fmt(state.runEarned) + ' / ' + fmt(C.RETREAT_MIN));
+    // 2.9.9: 물자 숫자("1.35구")는 적지 않는다. 받는 샘플을 크게, 지난번과 견준 한 줄, 다음 샘플(또는 철수 문턱)까지는 막대와 남은 시간으로.
+    $('rt-gain').hidden = !can; $('rt-two').hidden = !can;
+    setText($('rt-num'), '+' + fmt(gain));
+    var lastRun = state.runLog && state.runLog.length ? state.runLog[state.runLog.length - 1] : null, cmp = '';
+    if (can && lastRun && lastRun.antibodies > 0) cmp = gain > lastRun.antibodies ? '지난번 철수보다 ' + fmt(gain - lastRun.antibodies) + '개 많아요.' : gain < lastRun.antibodies ? '지난번 철수(+' + fmt(lastRun.antibodies) + ')보다 ' + fmt(lastRun.antibodies - gain) + '개 적어요.' : '지난번 철수와 같아요.';
+    setText($('retreat-hint'), can ? cmp : state.pendingPerks.length ? '아직 고르지 않은 특전이 있어요.' : '');
+    var rtGoal = can ? C.nextAntibodyAt(state) : C.RETREAT_MIN, rtRate = C.incomePerSec(state), rtLeft = rtRate > 0 ? Math.max(0, rtGoal - state.runEarned) / rtRate : Infinity;
+    setText($('rt-next-label'), can ? '다음 샘플 +1까지' : state.pendingPerks.length ? '' : '철수할 수 있을 때까지');
+    setText($('rt-next-eta'), (!can && state.pendingPerks.length) ? '' : !isFinite(rtLeft) ? '' : rtLeft < 60 ? '1분 안쪽' : rtLeft < 3600 ? '약 ' + Math.ceil(rtLeft / 60) + '분' : rtLeft < 86400 ? '약 ' + Math.ceil(rtLeft / 3600) + '시간' : '');      // 하루가 넘으면 적지 않는다(막 시작한 사람에게 "하루 넘게"는 겁만 준다)
     // 위험 단계(2.1.0): 끝을 본 뒤에 보인다. 다음 회차에 걸 단계를 − / + 로 고른다
     var dMax = C.dangerMax(state), dRow = $('danger-row');
     dRow.hidden = !(dMax > 0);
@@ -2357,8 +2363,7 @@
       $('danger-down').disabled = dn <= 0; $('danger-up').disabled = dn >= dMax;
       setText($('danger-text'), dn > 0 ? '무리 ×' + C.dangerHorde(dn).toFixed(2) + ' · 문 값 ×' + fmt(C.dangerCost(dn)) + '\n철수 항체 +' + Math.round(dn * C.DANGER_ANTIBODY * 100) + '% · 끝을 보면 뽑기권 +' + dn * C.DANGER_TICKETS : '다음 회차의 위험 단계를 올리면 더 어렵고, 보상이 커요.\n처음 돌파한 단계마다 전체 생산이 ' + Math.round((C.DANGER_PROD - 1) * 100) + '% 늘어요.');
     }
-    setText($('retreat-sub'), can ? '물자를 더 모으면 샘플이 늘어요.'
-      : state.pendingPerks.length ? '' : '물자를 다 모으면 철수할 수 있어요.');
+    setText($('retreat-sub'), can ? '' : state.pendingPerks.length ? '' : '물자를 더 모으면 철수할 수 있어요. 철수하면 항체 샘플을 받아요.');
     // 막대: 철수 전에는 철수 문턱까지, 철수할 수 있게 된 뒤에는 다음 샘플까지
     $('retreat-bar').hidden = !!state.pendingPerks.length && !can;
     $('retreat-bar').firstChild.style.width = Math.min(100, state.runEarned / (can ? C.nextAntibodyAt(state) : C.RETREAT_MIN) * 100).toFixed(1) + '%';
