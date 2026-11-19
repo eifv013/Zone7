@@ -320,9 +320,14 @@ body { word-break: keep-all; }
 .stage-no { padding: 1px 7px; background: #f0b400; color: #17180f; font: 700 12px/1.5 var(--font-mono); }
 .stage-sub, .stage-marks { font-size: 13px; line-height: 1.5; color: #b9b8ab; white-space: pre-line; }
 .stage-marks { font-family: var(--font-mono); font-size: 12px; color: #e6e5db; }
-.stage-acts { display: grid; grid-template-columns: 2fr 1fr; gap: 6px; }
+.stage-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stage-mode { display: grid; grid-template-columns: 1fr 1fr; }
+.story-card .stage-mode button { background: transparent; color: #e6e5db; border: 2px solid #7a7a6a; padding: 8px 2px; }
+.story-card .stage-mode button + button { border-left: 0; }
+.story-card .stage-mode button[aria-pressed="true"] { background: #e6e5db; color: #17180f; border-color: #e6e5db; }
+.story-card .stage-mode #stage-hard[aria-pressed="true"] { background: #d8483a; color: #fff; border-color: #d8483a; }
+.stage-acts.hard #stage-go { background: #d8483a; color: #fff; border-color: #d8483a; }
 .story-card .stage-acts button { align-self: auto; padding: 8px; }
-.story-card .stage-acts .stage-hard { background: transparent; color: #e6e5db; border-color: #e6e5db; }
 .story-card .stage-acts button:disabled { opacity: .4; cursor: default; }
 /* 1.8.4: 모험 창이 화면보다 길어져 위아래로 밀리던 것을 막는다. 지도는 화면 높이에 맞춰 줄어들고(정사각형), 창은 스크롤 없이 한 화면에 든다 */
 #stage-map { width: min(100%, calc(100dvh - 475px)); min-width: 150px; margin: 0 auto; }
@@ -1248,7 +1253,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 3.0.2</div>
+  <div class="boot-ver">7구역 알파 3.0.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1667,7 +1672,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 3.0.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 3.0.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1736,7 +1741,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="stage-head"><span class="stage-no" id="stage-d-no"></span><b id="stage-d-name"></b></div>
         <div class="stage-sub" id="stage-d-sub"></div>
         <div class="stage-marks" id="stage-d-marks"></div>
-        <div class="stage-acts"><button type="button" id="stage-go">출발</button><button type="button" class="stage-hard" id="stage-hard">하드</button></div>
+        <!-- 3.0.3: 일반과 하드를 칸으로 나눈다. 고른 쪽의 규칙 · 별 · 기록만 보이고, 출발 단추는 하나다 -->
+        <div class="stage-acts"><div class="stage-mode" role="group" aria-label="난이도"><button type="button" id="stage-normal" aria-pressed="true">일반</button><button type="button" id="stage-hard" aria-pressed="false">하드</button></div><button type="button" id="stage-go">출발</button></div>
       </div>
     </div>
     <div class="hub-pane" id="shop-panel" hidden>

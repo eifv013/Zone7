@@ -711,7 +711,7 @@
     s.endedRun = !!raw.endedRun && s.zone >= 6;
     s.medals = {}; CHALLENGES.forEach(function (d) { var n = raw.medals && typeof raw.medals === 'object' ? clamp(safeCount(raw.medals[d.id]), 0, 1e6) : 0; if (n > 0) s.medals[d.id] = n; });
     s.challengeStreak = clamp(safeCount(raw.challengeStreak), 0, 1e6);
-    s.stageMarks = {}; STAGES.forEach(function (d) { var m = raw.stageMarks && typeof raw.stageMarks === 'object' ? raw.stageMarks[d.id] : null; if (m && typeof m === 'object' && (m.clear || m.speed || m.hard || m.pct > 0 || m.fails > 0)) s.stageMarks[d.id] = { clear: !!m.clear, speed: !!m.speed, hard: !!m.hard, hardSpeed: !!m.hardSpeed, best: clamp(safeCount(m.best), 0, 1e6), pct: clamp(safeNum(m.pct, 0), 0, 1), steps: clamp(safeCount(m.steps), 0, STAGE_STEPS), fails: clamp(safeCount(m.fails), 0, STAGE_RETRY_MAX) }; });
+    s.stageMarks = {}; STAGES.forEach(function (d) { var m = raw.stageMarks && typeof raw.stageMarks === 'object' ? raw.stageMarks[d.id] : null; if (m && typeof m === 'object' && (m.clear || m.speed || m.hard || m.pct > 0 || m.fails > 0)) s.stageMarks[d.id] = { clear: !!m.clear, speed: !!m.speed, hard: !!m.hard, hardSpeed: !!m.hardSpeed, safe: !!m.safe, hardSafe: !!m.hardSafe, best: clamp(safeCount(m.best), 0, 1e6), pct: clamp(safeNum(m.pct, 0), 0, 1), steps: clamp(safeCount(m.steps), 0, STAGE_STEPS), fails: clamp(safeCount(m.fails), 0, STAGE_RETRY_MAX) }; });
     s.bestDanger = clamp(safeCount(raw.bestDanger), 0, DANGER_MAX); s.danger = clamp(safeCount(raw.danger), 0, DANGER_MAX); s.dangerNext = clamp(safeCount(raw.dangerNext), 0, DANGER_MAX); s.rescued = clamp(safeNum(raw.rescued, 0), 0, 1e18);
     s.bests = { time: 0, byDanger: {} };
     if (raw.bests && typeof raw.bests === 'object') { s.bests.time = clamp(safeCount(raw.bests.time), 0, 1e9); if (raw.bests.byDanger && typeof raw.bests.byDanger === 'object') for (var dk = 0; dk <= DANGER_MAX; dk++) { var dv = clamp(safeCount(raw.bests.byDanger[dk]), 0, 1e9); if (dv > 0) s.bests.byDanger[dk] = dv; } }
@@ -2781,6 +2781,8 @@
     { id: 'flag-black',  slot: 'flag', name: '검은 깃발',   rarity: 1, reward: true, look: '#2b2d33' },
     { id: 'flag-pink',   slot: 'flag', name: '분홍 깃발',   rarity: 2, reward: true, look: '#ff7fb0' },
     { id: 'flag-glow',   slot: 'flag', name: '야광 깃발',   rarity: 2, reward: true, look: 'glow' },        // 밤에 빛난다
+    { id: 'flag-orange', slot: 'flag', name: '주황 깃발',   rarity: 1, reward: true, look: '#e8862e' },
+    { id: 'flag-purple', slot: 'flag', name: '보라 깃발',   rarity: 2, reward: true, look: '#8a5fd0' },
     { id: 'flag-rainbow', slot: 'flag', name: '무지개 깃발', rarity: 2, reward: true, look: 'rainbow' }     // 네 줄이 천천히 흐른다
   ];
   var COS_SLOTS = ['coat', 'hood', 'pat', 'bag', 'fx', 'pet', 'flag'], COS_BASE = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' };
@@ -2788,11 +2790,14 @@
   var FLAG_REWARDS = [
     { id: 'flag-red',   text: '도전 훈장 1개', has: function (s) { return medalCount(s) >= 1; } },
     { id: 'flag-blue',  text: '도전 훈장 3개', has: function (s) { return medalCount(s) >= 3; } },
-    { id: 'flag-green', text: '원정 표시 6개', has: function (s) { return stageMarkCount(s).have >= 6; } },
+    { id: 'flag-green', text: '원정 별 6개', has: function (s) { return stageMarkCount(s).have >= 6; } },
     { id: 'flag-white', text: '도전 훈장 6개', has: function (s) { return medalCount(s) >= 6; } },
     { id: 'flag-black', text: '지역 휘장 1개', has: function (s) { return badgeCount(s) >= 1; } },
     { id: 'flag-pink',  text: '도전 훈장 8개', has: function (s) { return medalCount(s) >= 8; } },
-    { id: 'flag-glow',  text: '원정 표시 12개', has: function (s) { return stageMarkCount(s).have >= 12; } },
+    { id: 'flag-glow',  text: '원정 별 12개', has: function (s) { return stageMarkCount(s).have >= 12; } },
+    // 3.0.3: 별이 원정마다 여섯(일반 셋 · 하드 셋)으로 늘어서 보상을 둘 더 둔다
+    { id: 'flag-orange', text: '원정 별 20개', has: function (s) { return stageMarkCount(s).have >= 20; } },
+    { id: 'flag-purple', text: '원정 별 30개', has: function (s) { return stageMarkCount(s).have >= 30; } },
     { id: 'flag-rainbow', text: '이야기의 끝 보기', has: function (s) { return (s.ended || 0) >= 1; } }
   ];
   /** 조건을 채운 깃발을 준다. 새로 받은 것의 이름들을 돌려준다. */
@@ -2867,7 +2872,7 @@
    *   열림   : 본 게임에서 3구역에 닿은 뒤(STAGE_OPEN_ZONE). 스테이지는 앞의 것을 클리어해야 다음이 열린다.
    *   시간   : 스테이지의 시간은 접속해 있을 때만 흐른다(자리 비움 정산을 하지 않는다).
    */
-  var STAGE_OPEN_ZONE = 2, STAGE_TREATS = { clear: 5, speed: 5, hard: 10, hardSpeed: 10 }, TAP5 = 5, BOSS_BADGE_LOOT = 1.1;
+  var STAGE_OPEN_ZONE = 2, STAGE_TREATS = { clear: 5, speed: 5, safe: 5, hard: 10, hardSpeed: 10, hardSafe: 10 }, STAGE_STARS = { normal: ['clear', 'speed', 'safe'], hard: ['hard', 'hardSpeed', 'hardSafe'] }, TAP5 = 5, BOSS_BADGE_LOOT = 1.1;
   var STAGE_GOALS = {
     earn:   { text: function (n) { return '누적 물자 ' + formatNumber(n); },  value: function (s) { return s.runEarned; } },
     build:  { text: function (n) { return '시설 ' + n + '채'; },              value: function (s) { return totalBuildings(s); } },
@@ -2906,10 +2911,10 @@
    *   pct    지금까지 가장 멀리 간 정도(0 ~ 1). 실패해도 남는다.
    *   steps  목표의 25 · 50 · 75%를 처음 넘을 때마다 간식 STAGE_STEP_TREATS 개(원정마다 한 번씩, 0 ~ STAGE_STEPS)
    *   fails  시간이 다 돼 실패한 횟수(연속, 최대 STAGE_RETRY_MAX). 다음 시도는 그만큼 시작 물자를 얹어 준다. 클리어하면 0. 하드에는 얹지 않는다.
-   *   hardSpeed  하드를 스피드 기준 안에 끝냈다(하드의 두 번째 별). 일반 별 둘(clear · speed)과 하드 별 둘(hard · hardSpeed)은 따로 센다.
+   *   별은 일반 셋(clear 클리어 · speed 스피드 · safe 무결)과 하드 셋(hard · hardSpeed · hardSafe)을 따로 센다(3.0.3). 무결 = 방어 실패 없이 클리어.
    */
   var STAGE_STEPS = 3, STAGE_STEP_TREATS = 2, STAGE_RETRY_MAX = 3, STAGE_RETRY_SUPPLIES = 150;
-  function stageMarks(main, id) { var m = main.stageMarks && main.stageMarks[id]; return { clear: !!(m && m.clear), speed: !!(m && m.speed), hard: !!(m && m.hard), hardSpeed: !!(m && m.hardSpeed), best: m && m.best > 0 ? m.best : 0, pct: m && m.pct > 0 ? Math.min(1, m.pct) : 0, steps: m && m.steps > 0 ? m.steps : 0, fails: m && m.fails > 0 ? m.fails : 0 }; }
+  function stageMarks(main, id) { var m = main.stageMarks && main.stageMarks[id]; return { clear: !!(m && m.clear), speed: !!(m && m.speed), hard: !!(m && m.hard), hardSpeed: !!(m && m.hardSpeed), safe: !!(m && m.safe), hardSafe: !!(m && m.hardSafe), best: m && m.best > 0 ? m.best : 0, pct: m && m.pct > 0 ? Math.min(1, m.pct) : 0, steps: m && m.steps > 0 ? m.steps : 0, fails: m && m.fails > 0 ? m.fails : 0 }; }
   function stageRetryBonus(main, id, hard) { return hard ? 0 : stageMarks(main, id).fails * STAGE_RETRY_SUPPLIES; }
   function stageBlock(main, id, hard) {
     var i = -1; STAGES.forEach(function (d, k) { if (d.id === id) i = k; });
@@ -2951,7 +2956,7 @@
     var stt = stageStatus(stage);
     if (!stt) return fail('none');
     if (!main.stageMarks) main.stageMarks = {};
-    var m = main.stageMarks[stt.def.id] || (main.stageMarks[stt.def.id] = { clear: false, speed: false, hard: false, hardSpeed: false, best: 0, pct: 0, steps: 0, fails: 0 }), got = [], treats = 0;
+    var m = main.stageMarks[stt.def.id] || (main.stageMarks[stt.def.id] = { clear: false, speed: false, safe: false, hard: false, hardSpeed: false, hardSafe: false, best: 0, pct: 0, steps: 0, fails: 0 }), got = [], treats = 0;
     // 흔적: 가장 멀리 간 정도와 구간 간식(이기든 지든 적는다)
     var frac = stt.won ? 1 : Math.max(0, Math.min(1, stt.need > 0 ? stt.value / stt.need : 0)), before = m.pct > 0 ? m.pct : 0;
     var reach = Math.min(STAGE_STEPS, Math.floor(frac * (STAGE_STEPS + 1) + 1e-9)), stepTreats = Math.max(0, reach - (m.steps || 0)) * STAGE_STEP_TREATS;
@@ -2970,7 +2975,9 @@
     mark('clear');
     if (stt.seconds <= stt.def.speed) mark('speed');
     if (stt.hard) mark('hard');
+    if (!(stage.breaches > 0)) mark('safe');      // 무결: 방어 실패 없이 끝냈다
     if (stt.hard && stt.seconds <= stt.def.speed) mark('hardSpeed');
+    if (stt.hard && !(stage.breaches > 0)) mark('hardSafe');
     if (!(m.best > 0) || stt.seconds < m.best) m.best = stt.seconds;
     main.treats = Math.min(1e9, (main.treats || 0) + treats);
     var tickets = addTickets(main, got.length);
@@ -2980,7 +2987,7 @@
   /** 얻은 표시의 수와 전체 수(지역 하나 또는 전부). */
   function stageMarkCount(main, region) {
     var have = 0, all = 0;
-    STAGES.forEach(function (d) { if (region && d.region !== region) return; var m = stageMarks(main, d.id); all += 4; have += (m.clear ? 1 : 0) + (m.speed ? 1 : 0) + (m.hard ? 1 : 0) + (m.hardSpeed ? 1 : 0); });
+    STAGES.forEach(function (d) { if (region && d.region !== region) return; var m = stageMarks(main, d.id); all += 6; STAGE_STARS.normal.concat(STAGE_STARS.hard).forEach(function (k) { if (m[k]) have++; }); });
     return { have: have, all: all };
   }
   /** 보스를 잡은 지역의 수: 지역 휘장. 하나마다 방어 성공 시 전리품이 BOSS_BADGE_LOOT 배. */
@@ -3692,7 +3699,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    stageRetryBonus: stageRetryBonus, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
+    stageRetryBonus: stageRetryBonus, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,
     zoneOpen: zoneOpen, priceRange: priceRange, stallCost: stallCost, maxStalls: maxStalls, buyStall: buyStall, goodsRate: goodsRate, goodsCap: goodsCap,

@@ -2971,13 +2971,13 @@ test('1.8.0 원정: 스테이지는 따로 만든 새 판이고, 본 게임에�
   const ev = C.tick(st, 0.1, () => 0.5).find(e => e.type === 'stage-won'); assert.ok(ev && ev.speed);
   st.runEarned = 0; C.tick(st, 0.1, () => 0.5); assert.ok(C.stageStatus(st).won, '한 번 정해진 결과는 바뀌지 않는다');
   const t0 = main.treats, r = C.finishStage(main, st);
-  assert.deepEqual(r.got, ['clear', 'speed']); assert.equal(main.treats, t0 + C.STAGE_TREATS.clear + C.STAGE_TREATS.speed + r.stepTreats);
+  assert.deepEqual(r.got, ['clear', 'speed', 'safe']); assert.equal(main.treats, t0 + C.STAGE_TREATS.clear + C.STAGE_TREATS.speed + C.STAGE_TREATS.safe + r.stepTreats);
   assert.deepEqual(C.finishStage(main, st).got, [], '같은 표시는 다시 받지 않는다');
   assert.equal(C.stageBlock(main, 's1-2', false), ''); assert.equal(C.stageBlock(main, 's1-1', true), '');
   // 하드: 규칙이 하나 더 걸리고 하드 표시를 준다
   const hd = C.createStage(main, 's1-1', true, 0); assert.ok(C.stageRule(hd, 'lean')); hd.runEarned = 5e6; hd.runSeconds = 400; C.tick(hd, 0.1, () => 0.5);
-  assert.deepEqual(C.finishStage(main, hd).got, ['hard']); assert.equal(C.stageMarks(main, 's1-1').best, 201, '최고 기록은 더 빠른 쪽');
-  assert.deepEqual(C.stageMarkCount(main), { have: 3, all: 24 });
+  assert.deepEqual(C.finishStage(main, hd).got, ['hard', 'hardSafe']); assert.equal(C.stageMarks(main, 's1-1').best, 201, '최고 기록은 더 빠른 쪽');
+  assert.deepEqual(C.stageMarkCount(main), { have: 5, all: 36 });
   // 표시는 저장과 철수를 거쳐도 남고, 스테이지 판 자체는 저장되지 않는다
   const back = C.deserialize(C.serialize(main), 0); assert.deepEqual(C.stageMarks(back, 's1-1'), C.stageMarks(main, 's1-1')); assert.equal(back.stage, null);
   assert.equal(C.deserialize(C.serialize(st), 0).stage, null);
@@ -3005,10 +3005,10 @@ test('3.0.2 원정의 흔적: 최고 기록, 구간 간식, 다시 도전 물자
   const q = C.createStage(main, id, false, 0); q.runEarned = def.need * 0.1; assert.equal(C.finishStage(main, q).why, 'quit'); assert.equal(C.stageMarks(main, id).fails, 2);
   // 클리어하면 남은 구간 간식을 마저 받고 실패 횟수는 0
   const c = C.createStage(main, id, false, 0); c.runEarned = def.need; c.runSeconds = def.speed + 50; C.tick(c, 0.1, () => 0.5);
-  const r3 = C.finishStage(main, c); assert.deepEqual(r3.got, ['clear']); assert.equal(r3.stepTreats, C.STAGE_STEP_TREATS); assert.equal(C.stageMarks(main, id).fails, 0); assert.equal(C.stageMarks(main, id).pct, 1);
+  c.breaches = 1; const r3 = C.finishStage(main, c); assert.deepEqual(r3.got, ['clear'], '방어 실패가 있으면 무결은 못 받는다'); assert.equal(r3.stepTreats, C.STAGE_STEP_TREATS); assert.equal(C.stageMarks(main, id).fails, 0); assert.equal(C.stageMarks(main, id).pct, 1);
   // 하드 별 둘: 하드 클리어, 하드를 스피드 기준 안에
   const h = C.createStage(main, id, true, 0); h.runEarned = def.need; h.runSeconds = def.speed - 10; C.tick(h, 0.1, () => 0.5);
-  assert.deepEqual(C.finishStage(main, h).got, ['speed', 'hard', 'hardSpeed']);
+  assert.deepEqual(C.finishStage(main, h).got, ['speed', 'hard', 'safe', 'hardSpeed', 'hardSafe']);
   const back = C.deserialize(C.serialize(main), 0); assert.deepEqual(C.stageMarks(back, id), C.stageMarks(main, id));
   // 실패 기록만 있는 원정도 저장을 거쳐 남는다
   const only = C.createState(0); only.stageMarks[id] = { pct: 0.4, steps: 1, fails: 2 };
@@ -3052,7 +3052,7 @@ test('1.9.0 뽑기: 화면의 확률표와 실제 추첨이 같고, 보장·중�
 test('1.9.0 뽑기권: 원정의 새 표시, 도전 성공, 변이체를 막은 밤에 받는다', () => {
   const main = C.createState(0); main.bestZone = 2;
   const st = C.createStage(main, 's1-1', false, 0); st.runEarned = 5e6; st.runSeconds = 100; C.tick(st, 0.1, () => 0.5);
-  const r = C.finishStage(main, st); assert.equal(r.tickets, 2); assert.equal(main.tickets, 2);
+  const r = C.finishStage(main, st); assert.equal(r.tickets, 3); assert.equal(main.tickets, 3);      // 클리어 · 스피드 · 무결
   const c = C.createState(0); c.bestZone = 6; C.startChallenge(c, 'frugal'); c.zone = C.CHALLENGES.find(d => d.id === 'frugal').goal; C.tick(c, 0.1, () => 0.5); assert.equal(c.tickets, 3);
 });
 
