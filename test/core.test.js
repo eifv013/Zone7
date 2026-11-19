@@ -2177,6 +2177,8 @@ test('7구역 송신탑: 안테나가 생존자를 모으고, 모인 만큼 전�
   const closed = inLab(); closed.supplies = 1e60;
   assert.equal(C.buyAntenna(closed, 1).reason, 'locked'); assert.equal(C.buySerum(closed).reason, 'locked'); assert.equal(C.towerMult(closed), 1);
   // 혈청 세 단계
+  // 3.1.0: 혈청은 정착지의 가운데 줄 건물이 있어야 만든다
+  assert.equal(C.buySerum(s).reason, 'settle'); C.SETTLE.forEach(d => { s.settle[d.id] = true; });
   const costs = []; for (let i = 0; i < 3; i++) { costs.push(C.serumCost(s)); assert.ok(C.buySerum(s).ok); }
   assert.ok(costs[0] < costs[1] && costs[1] < costs[2]);
   assert.equal(s.serumStage, 3); assert.equal(C.buySerum(s).reason, 'done'); assert.equal(C.serumCost(s), Infinity);
@@ -2529,16 +2531,16 @@ test('6구역 순찰과 7구역 직접 방송: 누르면 잠깐 그 구역이 �
   const g = C.guardRate(s), v = C.survivorRate(s);
   let e0 = s.guardEarned, p0 = s.survivors; C.tick(s, 1, () => 0.99);
   near(s.survivors - p0, v); const base = (s.guardEarned - e0) / C.guardRate(s);      // 통행 물자는 다리 안전도에 따라 달라지므로 비율로 본다
-  assert.ok(C.pushZone(s, 'guard').ok); assert.ok(C.pushZone(s, 'tower').ok); assert.equal(C.pushZone(s, 'guard').reason, 'cooldown');
+  assert.ok(C.pushZone(s, 'guard').ok); assert.equal(C.pushZone(s, 'tower').reason, 'gone', '직접 방송은 주파수 맞추기로 바뀌었다(3.1.0)'); assert.equal(C.pushZone(s, 'guard').reason, 'cooldown');
   e0 = s.guardEarned; p0 = s.survivors; C.tick(s, 1, () => 0.99);
-  const ratio = (s.guardEarned - e0) / C.guardRate(s) / base; assert.ok(ratio > C.PUSH_MULT * 0.9 && ratio < C.PUSH_MULT * 1.1, '순찰 중에는 배로(' + ratio.toFixed(2) + ')'); near(s.survivors - p0, v * C.PUSH_MULT);
+  const ratio = (s.guardEarned - e0) / C.guardRate(s) / base; assert.ok(ratio > C.PUSH_MULT * 0.9 && ratio < C.PUSH_MULT * 1.1, '순찰 중에는 배로(' + ratio.toFixed(2) + ')'); near(s.survivors - p0, v);
   // 긴 시간을 한 번에 흘려도 남은 시간까지만 배로 친다
-  p0 = s.survivors; C.tick(s, 30, () => 0.99); near(s.survivors - p0, v * (30 + (C.PUSH_MULT - 1) * (C.PUSH_SECONDS - 1)));
+  p0 = s.survivors; C.tick(s, 30, () => 0.99); near(s.survivors - p0, v * 30);
   assert.equal(s.push.tower.left, 0);
   for (let i = 0; i < C.PUSH_COOL; i++) C.tick(s, 1, () => 0.99);
   assert.equal(s.push.guard.cool, 0); assert.ok(C.pushZone(s, 'guard').ok);
   const closed = inLab(); assert.equal(C.pushZone(closed, 'guard').reason, 'locked'); assert.equal(C.pushZone(closed, 'nope').reason, 'unknown');
-  const empty = inLab(); empty.zone = 6; assert.equal(C.pushZone(empty, 'tower').reason, 'stopped');
+  const empty = inLab(); empty.zone = 6; assert.equal(C.pushZone(empty, 'tower').reason, 'gone');
   const bad = C.sanitizeState({ version: 2, zone: 2, push: { guard: { left: 9, cool: 999 }, tower: 'x' } }, 0);
   assert.deepEqual(bad.push, { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } });
 });
@@ -2550,7 +2552,7 @@ test('5·6·7구역의 자동 개조: 단추는 알아서 누르고, 사건은 �
   ['autolab', 'autoguard', 'autotower'].forEach((id) => assert.ok(C.buyUpgrade(s, id).ok, id));
   assert.ok(C.autoOn(s, 4) && C.autoOn(s, 5) && C.autoOn(s, 6));
   const ev = C.tick(s, 1, () => 0.99).filter((e) => e.type === 'auto-push').map((e) => e.id).sort();
-  assert.deepEqual(ev, ['guard', 'lab', 'tower']); assert.ok(s.focusLeft > 0 && s.push.guard.left > 0 && s.push.tower.left > 0);
+  assert.deepEqual(ev, ['guard', 'lab']); assert.ok(s.focusLeft > 0 && s.push.guard.left > 0); assert.ok(s.tune.cool > 0, '송신 기사는 주파수를 알아서 맞춘다(3.1.0)');
   // 사건: 3초 뒤에 알아서 받고, 절반만 받는다
   s.zev.guard = { left: C.ZEV_WAIT }; s.zev.tower = { left: C.ZEV_WAIT };
   const full = C.zevReward(s, 'guard', false), auto5 = C.zevReward(s, 'guard', true), auto6 = C.zevReward(s, 'tower', true);
@@ -2705,7 +2707,7 @@ test('구역마다 주문·사건 자동을 끌 수 있다: 꺼 두면 자동 �
   const off = mk(); assert.ok(C.setAutoEvents(off, 5, false).ok); assert.equal(C.autoEvents(off, 5), false); assert.ok(C.autoOn(off, 5), '개조는 그대로 있다');
   off.zev.guard = { left: C.ZEV_WAIT }; got = []; for (let i = 0; i < 5; i++) got = got.concat(C.tick(off, 1, () => 0.99));
   assert.ok(!got.some((e) => e.type === 'zev-auto' && e.id === 'guard')); assert.ok(!got.some((e) => e.type === 'auto-push' && e.id === 'guard')); assert.ok(off.zev.guard, '사건은 손을 기다린다');
-  assert.ok(got.some((e) => e.type === 'auto-push' && e.id === 'tower'), '다른 구역의 자동은 그대로 돈다');
+  assert.ok(got.some((e) => e.type === 'tune' && e.auto), '다른 구역의 자동은 그대로 돈다');
   // 3구역: 꺼 두면 고장과 트럭도 손을 기다린다. 전력 투입 같은 늘 도는 자동은 그대로다
   const l = mk(); l.machines = { sorter: 10, press: 15, assembler: 30 }; C.setAutoEvents(l, 2, false); l.jam = { id: 'press', left: C.JAM_SELF_FIX }; l.truck = { left: C.TRUCK_WAIT }; l.stockSec = 30;
   got = []; for (let i = 0; i < 8; i++) got = got.concat(C.tick(l, 1, () => 0.99));
@@ -3285,4 +3287,63 @@ test('3.0.6 원정 목표는 다녀올 때마다 다른 것으로 바뀐다', ()
   main.stageGoal[id] = 99; assert.equal(C.stageGoalIndex(main, id), 0); assert.equal(C.stageGoalIndex(C.deserialize(C.serialize(main), 0), id), 0);
   // 목표 글과 수치는 후보를 따른다
   assert.notEqual(C.stageGoalText(def, false, 0), C.stageGoalText(def, false, 1)); assert.equal(C.stageNeed(def, true, 1), def.goals[1].hardNeed);
+});
+
+test('3.1.0 7구역 정착지: 사람을 맡겨 짓고, 줄을 따라 열리고, 혈청의 문턱이 된다', () => {
+  const s = inLab(); s.zone = 6; s.antennas = 10; s.supplies = 1e60; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 };
+  const cost = id => C.SETTLE.find(d => d.id === id).cost, fin = () => { s.build.left = 0.01; return C.tick(s, 0.1, () => 0.5); };
+  assert.equal(C.SETTLE.length, 9);
+  assert.equal(C.settleBlock(inLab(), 'farm'), 'locked');
+  assert.equal(C.settleBlock(s, 'farm'), 'people'); assert.equal(C.settleBlock(s, 'mess'), 'prev'); assert.equal(C.buildSettle(s, 'nope').reason, 'unknown');
+  s.survivors = cost('farm') + cost('clinic'); const prod0 = C.mods(s).prod, mult0 = C.towerMult(s);
+  // 맡기면 공사가 시작된다. 사람은 바로 맡긴 것으로 세고, 효과는 다 지은 뒤부터
+  const r = C.buildSettle(s, 'farm'); assert.ok(r.ok); assert.equal(r.seconds, C.settleTime(C.SETTLE.find(d => d.id === 'farm')));
+  assert.equal(C.settleBlock(s, 'farm'), 'building'); assert.equal(C.settleBlock(s, 'clinic'), 'busy', '한 번에 한 채만');
+  assert.equal(Math.round(C.settleFree(s)), cost('clinic')); near(C.mods(s).prod, prod0, '짓는 중에는 효과가 없다'); assert.equal(C.settleCount(s), 0);
+  const left0 = s.build.left; C.tick(s, 5, () => 0.5); near(s.build.left, left0 - 5);
+  const ev = fin(); assert.ok(ev.some(e => e.type === 'settle-done' && e.id === 'farm')); assert.equal(s.build, null);
+  near(C.mods(s).prod / prod0, 1.5); assert.equal(C.settleBlock(s, 'farm'), 'done'); assert.equal(C.buildSettle(s, 'farm').reason, 'done');
+  assert.ok(C.towerMult(s) >= mult0, '맡긴 사람도 생존자다: 생산 배수는 줄지 않는다');
+  // 주파수를 맞추면 공사가 앞당겨진다
+  assert.ok(C.buildSettle(s, 'clinic').ok); s.tune.cool = 0; s.tune.band = C.tunePos(s); const before = s.build.left;
+  assert.ok(C.tuneNow(s, () => 0.5).hit); near(s.build.left, before - C.TUNE_BUILD);
+  fin();
+  // 혈청: 단계마다 가운데 줄의 건물이 있어야 한다
+  assert.equal(C.serumNeeds(s), null); assert.ok(C.buySerum(s).ok); assert.equal(C.serumNeeds(s).id, 'lab7'); assert.equal(C.buySerum(s).reason, 'settle');
+  // 건물의 효과
+  const d0 = C.mods(s).defense, z0 = C.mods(s).z7, b0 = C.tuneBand(s);
+  s.survivors = 1e12; ['guard7', 'mess', 'watch'].forEach(id => { assert.ok(C.buildSettle(s, id).ok, id); fin(); });
+  near(C.mods(s).defense / d0, 2); near(C.mods(s).z7 / z0, 2); assert.ok(C.tuneBand(s) > b0);
+  assert.equal(C.settleCount(s), 5);
+  // 저장을 거쳐도 남고(짓는 중인 것도), 자리를 비운 동안에도 공사는 가고, 철수하면 처음으로
+  assert.ok(C.buildSettle(s, 'lab7').ok);
+  const back = C.deserialize(C.serialize(s), 0); assert.equal(C.settleCount(back), 5); assert.equal(back.build.id, 'lab7'); near(back.build.left, s.build.left);
+  C.applyOffline(back, 3 * 3600); assert.ok(C.settleHas(back, 'lab7')); assert.equal(back.build, null);
+  s.runEarned = 1e40; s.pendingPerks = []; s.perkOwed = 0; const fresh2 = C.retreat(s, 0, () => 0.5).state; assert.equal(C.settleCount(fresh2), 0); assert.equal(fresh2.build, null);
+});
+
+test('3.1.0 7구역 주파수: 바늘이 띠 안에 있을 때 맞추면 먼 무리가 온다', () => {
+  const s = inLab(); s.zone = 6; s.antennas = 10; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 };
+  assert.equal(C.tuneNow(inLab(), () => 0.5).reason, 'locked');
+  const idle = inLab(); idle.zone = 6; assert.equal(C.tuneNow(idle, () => 0.5).reason, 'idle');
+  // 바늘은 끝에서 끝으로 오간다
+  s.tune.t = 0; near(C.tunePos(s), 0); s.tune.t = C.TUNE_PERIOD; near(C.tunePos(s), 1); s.tune.t = C.TUNE_PERIOD * 1.5; near(C.tunePos(s), 0.5);
+  // 띠 안: 맞는다
+  s.tune.band = 0.5; const p0 = s.survivors, gain = C.tuneGain(s);
+  near(gain, C.survivorRate(s) * C.TUNE_GAIN_SECONDS);
+  const hit = C.tuneNow(s, () => 0.5); assert.ok(hit.ok && hit.hit); near(s.survivors - p0, gain); near(s.tune.cool, C.TUNE_COOL); assert.equal(s.tuneHits, 1);
+  assert.equal(C.tuneNow(s, () => 0.5).reason, 'cooldown');
+  // 띠 밖: 빗나가고 짧게 쉰다
+  s.tune.cool = 0; s.tune.t = 0; s.tune.band = 0.8; const p1 = s.survivors;
+  const miss = C.tuneNow(s, () => 0.5); assert.ok(miss.ok && !miss.hit); assert.equal(s.survivors, p1); near(s.tune.cool, C.TUNE_MISS_COOL);
+  // 시간이 흐르면 바늘이 움직이고 쉬는 시간이 준다. 송신 기사가 없으면 알아서 맞추지 않는다
+  const t0 = s.tune.t; const ev = C.tick(s, 1, () => 0.5); assert.ok(s.tune.t !== t0); near(s.tune.cool, C.TUNE_MISS_COOL - 1); assert.ok(!ev.some(e => e.type === 'tune'));
+  // 송신 기사: 쉴 때마다 절반
+  s.upgrades.autotower = 1; s.tune.cool = 0; const p2 = s.survivors, r = C.survivorRate(s);
+  const ev2 = C.tick(s, 1, () => 0.5).filter(e => e.type === 'tune'); assert.equal(ev2.length, 1); assert.ok(ev2[0].auto);
+  near(s.survivors - p2, r * 1 + C.tuneGain(s) * C.TUNE_AUTO);
+  // 저장
+  const back = C.deserialize(C.serialize(s), 0); near(back.tune.band, s.tune.band); near(back.tune.cool, s.tune.cool);
+  const bad = JSON.parse(C.serialize(s)); bad.tune = { t: 'x', band: 9, cool: -5 }; const fixed = C.deserialize(JSON.stringify(bad), 0);
+  assert.ok(fixed.tune.band <= 0.85 && fixed.tune.cool === 0 && fixed.tune.t === 0);
 });

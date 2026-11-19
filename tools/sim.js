@@ -61,6 +61,12 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
     if (!IDLE) { if (s.zone >= 4 && !(s.focusCool > 0)) C.focusLab(s); if (s.zone >= 5) C.pushZone(s, 'guard'); if (s.zone >= 6) C.pushZone(s, 'tower'); }
     if (!IDLE) { if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s); }
+    // 7구역 정착지와 주파수(3.1.0): 지을 수 있는 건물은 짓되 혈청 줄(가운데)을 먼저. 주파수는 바늘이 띠 안에 있을 때만 누른다
+    if (s.zone >= 6) {
+      const need = C.serumNeeds(s); if (need && C.settleBlock(s, need.id) === '') C.buildSettle(s, need.id);
+      C.SETTLE.forEach(d => { if (C.settleBlock(s, d.id) === '' && !(need && C.settleFree(s) - d.cost < need.cost && C.settleBlock(s, need.id) !== 'prev')) C.buildSettle(s, d.id); });
+      if (!(s.tune.cool > 0) && C.tuneHit(s)) C.tuneNow(s, rng);
+    }
     if (s.zone >= 6 && C.serumCost(s) <= s.supplies * 0.5) C.buySerum(s);      // 7구역: 혈청은 가진 물자의 절반으로 살 수 있을 때 산다
     for (let zi = 1; zi <= s.zone; zi++) if (!marks.some(m => m.enter === zi)) marks.push({ enter: zi, day: day + 1, hours: active / 3600, retreats: s.retreats, pps: C.productionPerSec(s) });
     for (let k = 0; k < taps * dt; k++) C.scavenge(s);

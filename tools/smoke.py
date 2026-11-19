@@ -67,6 +67,9 @@ def tower(**over):
     s = guard(zone=6, supplies=5e45, runEarned=5e45, posts=40, runSeconds=1e5)      # runSeconds: 길 정찰(1.6.2)이 이미 끝난 판
     s["goalsDone"].update({"z6a": True, "z6b": True, "z6c": True})
     s["story"].update({"z6-1": True, "z6-2": True, "z7-0": True})
+    # 3.1.0: 정착지는 여덟 채를 지어 두고 마지막 한 채(학교)만 남긴다: 화면에서 짓는 것과 혈청의 문턱을 같이 본다
+    s["settle"] = {k: True for k in ["farm", "mess", "store", "clinic", "lab7", "ward", "guard7", "watch"]}
+    s["build"] = {"id": "school", "left": 1}
     s.update(over)
     return s
 
@@ -298,10 +301,16 @@ def run_case(browser, name, size, state, mode):
         # 7구역: 안테나를 사면 생존자가 모이고 → 혈청 세 단계를 끝내고 목표를 채우면 → 일지 뒤에 끝 화면이 뜨고 → 닫으면 게임이 이어진다
         tap('[data-mview-set=manage]'); tap('[data-tab=z6]')
         if not page.locator('#tower').is_visible(): problems.append('7구역 탭에 송신탑 칸이 없다')
+        # 3.1.0: 주파수 맞추기와 정착지
+        if not page.locator('#t7-dial').is_visible() or not page.locator('#t7-tune').is_visible(): problems.append('주파수 맞추기가 보이지 않는다')
+        tap('#zone-panes [data-pane=up]'); page.wait_for_timeout(1500)      # 남은 1초짜리 공사(학교)가 끝난다
+        cells = page.evaluate("[...document.querySelectorAll('#settle-grid button')].map(b => b.className.split(' ')[0])")
+        if len(cells) != 9 or cells.count('done') != 9: problems.append('정착지 아홉 채가 다 서지 않았다: ' + ','.join(cells))
         for _ in range(3):      # 혈청부터(안테나를 한꺼번에 사면 물자가 바닥난다)
             if not tap('#serum'): break
             page.wait_for_timeout(150)
         if '완성' not in text('serum'): problems.append('혈청 세 단계를 끝내지 못했다: ' + text('serum'))
+        tap('#zone-panes [data-pane=play]')
         tap('[data-qty="10"]')
         for _ in range(4): tap('#row-antenna'); page.wait_for_timeout(120)
         if text('row-antenna').find('40 / 500') < 0: problems.append('안테나를 40기 사지 못했다: ' + text('row-antenna')[:40].replace(chr(10), ' '))

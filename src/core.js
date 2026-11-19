@@ -458,7 +458,7 @@
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
     { id: 'autoguard', zone: 5, name: '초소장',     desc: '순찰을 알아서 돌고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
-    { id: 'autotower', zone: 6, name: '송신 기사',  desc: '직접 방송을 알아서 하고, 무전에 알아서 응답한다(절반)', key: 'autotower', per: 1, baseCost: 5e31, growth: 1, max: 1 }
+    { id: 'autotower', zone: 6, name: '송신 기사',  desc: '주파수를 알아서 맞추고, 무전에 알아서 응답한다(절반)', key: 'autotower', per: 1, baseCost: 5e31, growth: 1, max: 1 }
   ];
   /*
    * 특전: 구역의 목표를 달성할 때마다 셋 중 하나를 고른다. 이번 판에만 유효하고 철수하면 사라진다.
@@ -573,6 +573,7 @@
       // 구조 신호
       signalIn: SIGNAL_FIRST, signalLeft: 0, signalsAnswered: 0, buff: null,
       // 특전(이번 판)
+      settle: {}, build: null, tune: { t: 0, band: 0.6, cool: 0 }, tuneHits: 0,      // 7구역 정착지와 주파수(3.1.0)
       zev: { rail: null, guard: null, tower: null }, zevIn: { rail: 60, guard: 60, tower: 60 }, railBoost: 0, guardBoost: 0, zevRun: 0, focusLeft: 0, focusCool: 0, push: { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } },      // 4·6·7구역 사건과 5구역 밤샘 연구
       autoOff: {},      // 구역 index → true 면 그 구역의 주문·사건 자동을 꺼 둔 것(철수해도 남는다)
       goalExt: {},      // 목표 id → 채운 연장 단계 수(이번 회차)
@@ -756,6 +757,12 @@
     s.zevRun = clamp(safeCount(raw.zevRun), 0, 1e9);
     s.focusLeft = s.zone >= 4 ? clamp(safeNum(raw.focusLeft, 0), 0, FOCUS_SECONDS) : 0; s.focusCool = s.zone >= 4 ? clamp(safeNum(raw.focusCool, 0), 0, FOCUS_COOL) : 0;
     var rp = raw.push && typeof raw.push === 'object' ? raw.push : {};
+    s.settle = {}; SETTLE.forEach(function (d) { if (raw.settle && typeof raw.settle === 'object' && raw.settle[d.id] && s.zone >= 6) s.settle[d.id] = true; });
+    var rt = raw.tune && typeof raw.tune === 'object' ? raw.tune : {};
+    s.tune = { t: clamp(safeNum(rt.t, 0), 0, TUNE_PERIOD * 2), band: clamp(safeNum(rt.band, 0.6), 0.15, 0.85), cool: clamp(safeNum(rt.cool, 0), 0, TUNE_COOL) };
+    s.tuneHits = safeCount(raw.tuneHits);
+    var rb = raw.build && typeof raw.build === 'object' ? findById(SETTLE, raw.build.id) : null;
+    s.build = rb && s.zone >= 6 && !s.settle[rb.id] ? { id: rb.id, left: clamp(safeNum(raw.build.left, 0), 0, settleTime(rb)) } : null;
     PUSHES.forEach(function (d) { var q = rp[d.id] && typeof rp[d.id] === 'object' ? rp[d.id] : {}, openZ = s.zone >= d.zone; s.push[d.id] = { left: openZ ? clamp(safeNum(q.left, 0), 0, PUSH_SECONDS) : 0, cool: openZ ? clamp(safeNum(q.cool, 0), 0, PUSH_COOL) : 0 }; });
     s.edge = clamp(safeNum(raw.edge, 0), 0, 1); s.nightEase = raw.nightEase === NIGHT_EASE ? NIGHT_EASE : 1; s.counterAt = clamp(safeCount(raw.counterAt), 0, 99);
     s.defStreak = clamp(safeCount(raw.defStreak), 0, 1e6); s.perkOwed = clamp(safeCount(raw.perkOwed), 0, PERK_OWED_MAX); s.bossPerks = clamp(safeCount(raw.bossPerks), 0, BOSS_PERKS_MAX); s.perkFrom = raw.perkFrom === 'boss' ? 'boss' : 'goal';
@@ -854,6 +861,8 @@
     var pe = petEffect(state); if (pe) m[pe.key] *= 1 + pe.bonus;      // 동물 친구
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
+    // 7구역 정착지의 건물(3.1.0)
+    if (state.settle) SETTLE.forEach(function (d) { if (d.key && d.mult && state.settle[d.id]) m[d.key] *= d.mult; });
     m.labcost = Math.max(0.3, m.labcost); m.staffcost = Math.max(0.2, m.staffcost);
     m.cost = Math.max(0.2, m.cost);
     m.defcost = Math.max(0.2, m.defcost);
@@ -888,11 +897,120 @@
     return pay(state, antennaCost(state, qty), function () { state.antennas += qty; });
   }
   function survivorRate(state) { return zoneOpen(state, 6) && state.antennas > 0 ? state.antennas * milestoneMult(state.antennas) * mods(state).z7 : 0; }
+  /*
+   * ---------- 7구역 정착지와 주파수(3.1.0) ----------
+   * 전에는 7구역이 안테나 한 줄과 "15초 동안 2배" 단추 하나뿐이라, 닿고 20분이면 이야기가 끝났다. 구역만의 재화(생존자)를 쓰는 곳을 만든다.
+   *
+   * 정착지: 건물 아홉(SETTLE). 세 줄(col)이 위에서 아래로(row) 이어진다. 앞 건물을 지어야 다음 건물을 지을 수 있다.
+   *   건물을 지으려면 사람을 맡겨야 한다(cost 명). 맡긴 사람은 사라지지 않는다: 생존자 수와 그에 따른 생산 배수는 그대로이고,
+   *   "맡길 수 있는 사람"(settleFree = 생존자 − 맡긴 사람)만 준다. 그래서 무엇부터 지을지가 선택이 된다.
+   *   가운데 줄(진료소 → 실험동 → 격리동)은 혈청의 문턱이다: 혈청 n단계는 그 줄의 n번째 건물이 있어야 만들 수 있다.
+   * 주파수 맞추기: 바늘이 TUNE_PERIOD 초마다 끝에서 끝으로 오간다. 바늘이 띠 안에 있을 때 맞추면 먼 무리가 한꺼번에 온다
+   *   (초당 모이는 수의 TUNE_GAIN_SECONDS 초분). 맞추면 TUNE_COOL, 빗나가면 TUNE_MISS_COOL 초 쉬고 띠가 자리를 옮긴다.
+   *   '송신 기사'(autotower)가 있으면 쉴 때마다 알아서 맞추되 절반만 온다. 예전의 '직접 방송'(15초 2배)을 대신한다.
+   * 회차에 딸린 것이라 철수하면 처음으로 돌아간다.
+   */
+  var SETTLE = [
+    { id: 'farm',   col: 0, row: 0, name: '텃밭',   cost: 200,   desc: '전체 생산 ×1.5',          key: 'prod',     mult: 1.5 },
+    { id: 'mess',   col: 0, row: 1, name: '식당',   cost: 1500,  desc: '모이는 속도 ×2',          key: 'z7',       mult: 2 },
+    { id: 'store',  col: 0, row: 2, name: '창고',   cost: 10000, desc: '전체 생산 ×2',            key: 'prod',     mult: 2 },
+    { id: 'clinic', col: 1, row: 0, name: '진료소', cost: 500,   desc: '혈청 1단계',              serum: 1 },
+    { id: 'lab7',   col: 1, row: 1, name: '실험동', cost: 4000,  desc: '혈청 2단계',              serum: 2 },
+    { id: 'ward',   col: 1, row: 2, name: '격리동', cost: 20000, desc: '혈청 3단계',              serum: 3 },
+    { id: 'guard7', col: 2, row: 0, name: '경비대', cost: 400,   desc: '방어력 ×2',               key: 'defense',  mult: 2 },
+    { id: 'watch',  col: 2, row: 1, name: '망루',   cost: 3000,  desc: '주파수 띠가 넓어진다',    band: 0.07 },
+    { id: 'school', col: 2, row: 2, name: '학교',   cost: 15000, desc: '철수 항체 +10%',          key: 'antibody', mult: 1.1 }
+  ];
+  var SETTLE_SCALE = 100;      // 건물 값 전체에 곱하는 수(밸런스를 맞출 때 이것 하나만 만진다)
+  SETTLE.forEach(function (d) { d.cost = Math.round(d.cost * SETTLE_SCALE); });
+  var TUNE_PERIOD = 3.2, TUNE_BAND = 0.14, TUNE_GAIN_SECONDS = 20, TUNE_COOL = 15, TUNE_MISS_COOL = 5, TUNE_MIN = 5, TUNE_AUTO = 0.5;
+  /*
+   * 공사(3.1.0): 건물은 맡기는 즉시 서지 않는다. 줄(row)에 따라 SETTLE_BUILD 초가 걸리고, 한 번에 한 채만 짓는다.
+   *   사람 수만으로 막으면 강한 사람은 20분, 약한 사람은 16시간이 걸렸다(재 보니 그랬다). 공사 시간은 누구에게나 같다.
+   *   주파수를 맞출 때마다 공사가 TUNE_BUILD 초 앞당겨진다(송신 기사는 절반). 자리를 비운 동안에도 공사는 간다.
+   *   state.build = { id, left } 또는 null. 짓는 중인 건물의 사람은 이미 맡긴 것으로 센다. 효과는 다 지은 뒤부터.
+   */
+  var SETTLE_BUILD = [8 * 60, 20 * 60, 40 * 60], TUNE_BUILD = 20;
+  function settleTime(def) { return SETTLE_BUILD[def.row] || SETTLE_BUILD[0]; }
+  function settleHas(state, id) { return !!(state.settle && state.settle[id]); }
+  function settleUsed(state) { var n = 0; SETTLE.forEach(function (d) { if (settleHas(state, d.id) || (state.build && state.build.id === d.id)) n += d.cost; }); return n; }
+  function settleFree(state) { return Math.max(0, Math.floor(state.survivors || 0) - settleUsed(state)); }
+  function settleCount(state) { var n = 0; SETTLE.forEach(function (d) { if (settleHas(state, d.id)) n++; }); return n; }
+  /** 이 건물을 지금 지을 수 없는 까닭: ''(지을 수 있다) | unknown | locked(7구역이 아니다) | done | building(이 건물을 짓는 중) | prev(앞 건물이 없다) | busy(다른 건물을 짓는 중) | people(맡길 사람이 모자란다) */
+  function settleBlock(state, id) {
+    var def = findById(SETTLE, id);
+    if (!def) return 'unknown';
+    if (!zoneOpen(state, 6)) return 'locked';
+    if (settleHas(state, id)) return 'done';
+    if (state.build && state.build.id === id) return 'building';
+    var prev = SETTLE.filter(function (d) { return d.col === def.col && d.row === def.row - 1; })[0];
+    if (prev && !settleHas(state, prev.id)) return 'prev';
+    if (state.build) return 'busy';
+    return settleFree(state) >= def.cost ? '' : 'people';
+  }
+  function buildSettle(state, id) {
+    var why = settleBlock(state, id);
+    if (why) return fail(why);
+    var def = findById(SETTLE, id);
+    state.build = { id: id, left: settleTime(def) };      // 공사를 시작한다. 다 되면 stepBuild 가 세운다
+    return { ok: true, id: id, name: def.name, seconds: state.build.left };
+  }
+  /** 공사를 dt 초만큼 진행한다. 다 되면 건물이 서고 알린다. */
+  function stepBuild(state, dt, events) {
+    var b = state.build;
+    if (!b) return;
+    b.left -= dt;
+    if (b.left > 0) return;
+    if (!state.settle) state.settle = {};
+    state.settle[b.id] = true; state.build = null;
+    var def = findById(SETTLE, b.id);
+    if (events && def) events.push({ type: 'settle-done', id: def.id, name: def.name, desc: def.desc });
+  }
+  /** 혈청의 다음 단계에 필요한 건물(없으면 null). 이미 있으면 null. */
+  function serumNeeds(state) {
+    var stage = (state.serumStage || 0) + 1, d = SETTLE.filter(function (x) { return x.serum === stage; })[0];
+    if (d && !settleHas(state, d.id)) return d;
+    // 마지막 단계는 정착지가 다 서야 한다: 가운데 줄만 짓고 끝내지 못하게(이야기의 끝은 정착지를 다 지은 다음이다)
+    if (stage === SERUM_COSTS.length) { var rest = SETTLE.filter(function (x) { return !settleHas(state, x.id); })[0]; if (rest) return rest; }
+    return null;
+  }
+  function tuneBand(state) { var b = TUNE_BAND; SETTLE.forEach(function (d) { if (d.band && settleHas(state, d.id)) b += d.band; }); return b; }
+  /** 바늘의 자리(0 ~ 1): 끝에서 끝으로 오간다. */
+  function tunePos(state) { var x = (((state.tune && state.tune.t) || 0) / TUNE_PERIOD) % 2; return x <= 1 ? x : 2 - x; }
+  function tuneGain(state) { return Math.max(TUNE_MIN, survivorRate(state) * TUNE_GAIN_SECONDS); }
+  function tuneHit(state) { return Math.abs(tunePos(state) - state.tune.band) <= tuneBand(state) / 2 + 1e-9; }
+  /** 주파수를 맞춘다. { ok, hit, gain }. 실패 이유: locked, idle(안테나가 없다), cooldown */
+  function tuneNow(state, rng) {
+    if (!zoneOpen(state, 6)) return fail('locked');
+    if (!(survivorRate(state) > 0)) return fail('idle');
+    if (state.tune.cool > 0) return fail('cooldown');
+    var hit = tuneHit(state), gain = hit ? tuneGain(state) : 0;
+    if (hit) { state.survivors = Math.min(1e15, (state.survivors || 0) + gain); if (state.build) state.build.left -= TUNE_BUILD; }      // 맞추면 공사도 앞당겨진다
+    state.tune.cool = hit ? TUNE_COOL : TUNE_MISS_COOL;
+    state.tune.band = 0.15 + (typeof rng === 'function' ? rng() : Math.random()) * 0.7;      // 띠가 자리를 옮긴다
+    state.tuneHits = (state.tuneHits || 0) + (hit ? 1 : 0);
+    return { ok: true, hit: hit, gain: gain };
+  }
+  /** 시간마다: 바늘이 움직이고 쉬는 시간이 준다. 송신 기사가 있으면 쉴 때마다 알아서 맞춘다(절반). */
+  function stepTune(state, dt, rng, events) {
+    if (!zoneOpen(state, 6)) return;
+    stepBuild(state, dt, events);
+    var t = state.tune;
+    t.t = (t.t + dt) % (TUNE_PERIOD * 2);
+    t.cool = Math.max(0, t.cool - dt);
+    if (t.cool > 0 || !(mods(state).autotower > 0) || !autoEvents(state, 6) || !(survivorRate(state) > 0)) return;      // 7구역의 자동을 꺼 두면 손을 기다린다
+    var gain = tuneGain(state) * TUNE_AUTO;
+    state.survivors = Math.min(1e15, (state.survivors || 0) + gain);
+    t.cool = TUNE_COOL; t.band = 0.15 + rng() * 0.7;
+    if (state.build) state.build.left -= TUNE_BUILD * TUNE_AUTO;
+    events.push({ type: 'tune', auto: true, gain: gain });
+  }
   function serumCost(state) { return state.serumStage < SERUM_COSTS.length && zoneOpen(state, 6) ? Math.ceil(SERUM_COSTS[state.serumStage] * mods(state).cost * dangerSerum(dangerOf(state))) : Infinity; }
   /** 혈청을 한 단계 진행한다. 마지막 단계를 끝내면 last 가 참이다. */
   function buySerum(state) {
     if (!zoneOpen(state, 6)) return fail('locked');
     if (state.serumStage >= SERUM_COSTS.length) return fail('done');
+    if (serumNeeds(state)) return fail('settle');      // 3.1.0: 그 단계의 건물(진료소 · 실험동 · 격리동)이 있어야 한다
     return pay(state, serumCost(state), function () { state.serumStage++; });
   }
 
@@ -2159,6 +2277,7 @@
   var PUSH_SECONDS = 15, PUSH_MULT = 2, PUSH_COOL = 60;
   var PUSHES = [ { id: 'guard', zone: 5, name: '순찰' }, { id: 'tower', zone: 6, name: '직접 방송' } ];
   function pushZone(state, id) {
+    if (id === 'tower') return fail('gone');      // 3.1.0: 직접 방송은 주파수 맞추기로 바뀌었다(예전 저장의 남은 효과만 흘러간다)
     var def = findById(PUSHES, id);
     if (!def) return fail('unknown');
     if (!zoneOpen(state, def.zone)) return fail('locked');
@@ -3524,6 +3643,7 @@
     if (autoEvents(state, 4) && !(state.focusCool > 0) && focusLab(state).ok) events.push({ type: 'auto-push', id: 'lab' });
     PUSHES.forEach(function (d) { if (autoEvents(state, d.zone) && !(state.push[d.id].cool > 0) && pushZone(state, d.id).ok) events.push({ type: 'auto-push', id: d.id }); });      // 3구역 납품 의뢰: 이번 틱에 만든 완제품 수를 넘긴다
     if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * dt * pushFactor(state, 'tower', dt));      // 7구역: 방송을 듣고 생존자가 모인다(직접 방송 중이면 더 빨리)
+    stepTune(state, dt, rng, events);      // 7구역 주파수(3.1.0): 바늘이 움직이고, 송신 기사가 있으면 알아서 맞춘다
     var guard = guardRate(state) * dt * pushFactor(state, 'guard', dt);      // 6구역 통행 물자(순찰 중이면 더 많이)
     if (guard > 0) { earn(state, guard); state.guardEarned += guard; }
     var drug = labRate(state) * dt;      // 5구역 약품(1.5.9)
@@ -3588,7 +3708,10 @@
     state.focusCool = Math.max(0, (state.focusCool || 0) - elapsed);      // 고장·트럭·정비는 접속해 있을 때만의 일이다(잠깐 새로 고친 정도로는 지우지 않는다)      // 전력 투입은 자리를 비우면 끝난 것으로 친다
     var trade = tradeRate(state) * counted * rate, line = lineRate(state) * counted * rate;
     report.gain = (searchRate(state) + sweepRate(state)) * counted * rate + trade + line;      // 순찰조는 자리를 비운 동안에도 돈다
-    if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * counted * rate);
+    // 자리를 비운 동안에도 공사는 간다(여러 채를 이어 짓지는 않는다: 다음 건물은 돌아와서 고른다). 송신 기사가 있으면 그만큼 더 빨리
+    if (state.zone >= 6) stepBuild(state, counted * (1 + (mods(state).autotower > 0 ? TUNE_AUTO * TUNE_BUILD / TUNE_COOL : 0)), null);
+    // 자리를 비운 동안: 송신 기사가 있으면 주파수도 알아서 맞춘 것으로 친다(쉴 때마다 절반씩)
+    if (state.zone >= 6) state.survivors = Math.min(1e15, (state.survivors || 0) + survivorRate(state) * counted * rate * (1 + (mods(state).autotower > 0 ? TUNE_AUTO * TUNE_GAIN_SECONDS / TUNE_COOL : 0)));
     var guardAway = guardRate(state) * counted * rate;
     report.gain += guardAway + labRate(state) * counted * rate;      // 약품도 자리를 비운 동안 쌓인다
     earn(state, report.gain);
@@ -3734,6 +3857,9 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
+    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD,
+    SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
+    tuneBand: tuneBand, tunePos: tunePos, tuneGain: tuneGain, tuneHit: tuneHit, tuneNow: tuneNow, TUNE_PERIOD: TUNE_PERIOD, TUNE_COOL: TUNE_COOL, TUNE_MISS_COOL: TUNE_MISS_COOL, TUNE_GAIN_SECONDS: TUNE_GAIN_SECONDS, TUNE_AUTO: TUNE_AUTO,
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, productFlow: productFlow, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, RETOOL_SECONDS: RETOOL_SECONDS, JAM_SLOW: JAM_SLOW, JAM_SELF_FIX: JAM_SELF_FIX, JAM_AUTO_FIX: JAM_AUTO_FIX, TUNE_SECONDS: TUNE_SECONDS, TUNE_MULT: TUNE_MULT, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, TRUCK_SHARE: TRUCK_SHARE, TRUCK_AUTO: TRUCK_AUTO, MASTERY_MIN: MASTERY_MIN, MASTERY_SECONDS: MASTERY_SECONDS, MASTERY_ALL: MASTERY_ALL, mastery: mastery, masteredAll: masteredAll, recipeFactor: recipeFactor, recipeOf: recipeOf, machineRate: machineRate, setRecipe: setRecipe, lineFactor: lineFactor, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, REBALANCE_SECONDS: REBALANCE_SECONDS, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, rebalancePlan: rebalancePlan, rebalanceRefund: rebalanceRefund, ROUTE_MAX: ROUTE_MAX, machineSpent: machineSpent, splitLevels: splitLevels, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,

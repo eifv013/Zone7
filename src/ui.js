@@ -1036,7 +1036,7 @@
       var pick = function () { zmapPick = zi; renderZoneMap(); };
       g.addEventListener('click', pick);
       g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
-      rows.zmap.push({ g: g, rate: rate });
+      rows.zmap.push({ g: g, rate: rate, name: name });
       svg.appendChild(g);
     });
     // 지금 있는 곳: 우비 소년의 노란 표시
@@ -1059,6 +1059,7 @@
     rows.zmap.forEach(function (r, zi) {
       r.g.setAttribute('class', 'zm-node' + (zi <= state.zone ? ' open' : ' locked') + (zi === state.zone ? ' here' : '') + (zi === zmapPick ? ' pick' : ''));
       setText(r.rate, zmapRate(zi, rates));
+      setText(r.name, C.ZONES[zi].no + '구역 ' + (zoneSeen(zi) ? C.ZONES[zi].name : HID));
     });
     rows.zmapRoad.forEach(function (seg, k) { seg.setAttribute('class', 'zm-road' + (k < state.zone ? ' zm-road-open' : '')); });
     // 라라: 지금 있는 구역에 서 있다. 지도를 닫아 둔 사이에 구역을 넘어갔으면, 열었을 때 길을 따라 걸어간다
@@ -1072,8 +1073,8 @@
     }
     // 아래 카드: 고른 구역의 설명
     var z = C.ZONES[zmapPick], open = zmapPick <= state.zone, soon = z.kind === 'soon';
-    setText($('zmap-name'), z.no + '구역 ' + z.name + (zmapPick === state.zone ? ' · 현재' : ''));
-    setText($('zmap-lead'), soon ? '다음 버전에서 열려요.' : open ? z.lead + '.' : '아직 열지 않았어요. ' + z.lead + '.');
+    setText($('zmap-name'), z.no + '구역 ' + (zoneSeen(zmapPick) ? z.name : HID) + (zmapPick === state.zone ? ' · 현재' : ''));
+    setText($('zmap-lead'), soon ? '다음 버전에서 열려요.' : open ? z.lead + '.' : zoneSeen(zmapPick) ? '아직 열지 않았어요. ' + z.lead + '.' : '아직 가 보지 못한 곳이에요.');
     setText($('zmap-rate'), zmapRate(zmapPick, rates));
     fill($('zmap-share'), open && zmapPick < rates.length && total > 0 ? rates[zmapPick] / total : 0);
     setText($('zmap-share-note'), open && zmapPick < rates.length && total > 0 ? '전체 생산의 ' + (rates[zmapPick] > 0 && rates[zmapPick] / total < 0.01 ? '1% 미만' : Math.round(rates[zmapPick] / total * 100) + '%') : '');      // 1.6.3: 0%로 보이던 앞 구역은 "1% 미만"으로
@@ -1408,7 +1409,7 @@
         var b = el('button', 'chal'), side = el('span', 'chal-side'), name = el('b', '', d.name), sub = el('span', 'chal-sub');
         b.type = 'button'; b.appendChild(side); b.appendChild(name); b.appendChild(sub);
         b.addEventListener('click', function () { clickChallenge(d); });
-        rows.chal[d.id] = { btn: b, side: side, sub: sub };
+        rows.chal[d.id] = { btn: b, side: side, sub: sub, name: name };
         $('chal-list').appendChild(b);
       });
     }
@@ -1422,6 +1423,7 @@
       r.btn.classList.toggle('on', on); r.btn.classList.toggle('won', won);
       r.btn.disabled = !on && !!why;
       setText(r.side, on ? '진행 중' : won ? '훈장 ×' + state.medals[d.id] : open ? '' : '잠김');
+      setText(r.name, open ? d.name : HID);
       setText(r.sub, !open ? C.challengeGoalText(d).replace(' 도착', '에 닿으면 열려요').replace('이야기의 끝', '이야기를 끝내면 열려요')
         : d.rule + ' · 목표 ' + C.challengeGoalText(d) + '\n' + (won ? '받은 보상 · ' : '보상 · ') + d.perk.text + (on ? ' · 누르면 포기' : mine ? ' · ' + mine : why && CHAL_WHY[why] ? '\n' + CHAL_WHY[why] : ''));
     });
@@ -1443,14 +1445,15 @@
     tabBtn.disabled = false; setText(tabBtn, '원정');
     var all = C.stageMarkCount(state);
     setText($('stage-count'), open ? '별 ' + all.have + ' / ' + all.all + ' · 지역 휘장 ' + C.badgeCount(state) + ' / ' + C.REGIONS.length : '');
-    setText($('stage-hint'), open ? '맨손으로 시작하는 짧은 수색이에요.\n목표는 다녀올 때마다 바뀌어요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
+    setText($('stage-hint'), open ? '맨손으로 시작해요. 목표는 다녀올 때마다 바뀌어요.' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요.');
     if (!rows.stages) buildStageMap();
     // 고른 스테이지가 없으면: 아직 클리어하지 않은 것 가운데 맨 앞
     if (!stagePick || !rows.stages[stagePick]) { stagePick = C.STAGES[0].id; C.STAGES.some(function (d) { if (!C.stageMarks(state, d.id).clear) { stagePick = d.id; return true; } return false; }); }
     C.STAGES.forEach(function (d, i) {
       var r = rows.stages[d.id], m = C.stageMarks(state, d.id), why = C.stageBlock(state, d.id, false);
+      setText(r.name, why ? HID : d.name);
       r.g.setAttribute('class', 'zm-node st-node' + (why ? ' locked' : '') + (m.clear ? ' won' : '') + (d.id === stagePick ? ' pick' : '') + (!why && !m.clear ? ' next' : ''));
-      C.STAGE_STARS.normal.concat(C.STAGE_STARS.hard).forEach(function (k, n) { r.dots[n].setAttribute('class', 'st-dot' + (n >= 3 ? ' hd' : '') + (m[k] ? ' on' : '')); });      // 윗줄 노란 셋은 일반, 아랫줄 붉은 셋은 하드
+      C.STAGE_STARS[stageHard ? 'hard' : 'normal'].forEach(function (k, n) { r.dots[n].setAttribute('class', 'st-dot' + (stageHard ? ' hd' : '') + (m[k] ? ' on' : '')); });      // 일반을 고르면 노란 별, 하드를 고르면 붉은 별
       if (i > 0) rows.stages[d.id].road.setAttribute('class', 'zm-road' + (C.stageMarks(state, C.STAGES[i - 1].id).clear ? ' zm-road-open' : ''));
     });
     var d = C.STAGES.filter(function (x) { return x.id === stagePick; })[0], m = C.stageMarks(state, d.id), why = C.stageBlock(state, d.id, false), idx = C.STAGES.indexOf(d);
@@ -1462,7 +1465,8 @@
       rows.stageAt = idx;
     }
     setText($('stage-d-no'), d.boss ? '지역 보스' : '스테이지 ' + C.REGIONS[0].no + '-' + (idx + 1));
-    setText($('stage-d-name'), d.name);
+    setText($('stage-d-name'), why ? HID : d.name);
+    $('stage-normal').hidden = !!why; $('stage-hard').hidden = !!why;      // 아직 못 여는 원정은 규칙도 목표도 보이지 않는다
     // 3.0.3: 일반 · 하드 칸. 고른 쪽의 규칙과 별 셋, 기록만 보인다. 하드를 아직 못 여는 원정에서는 일반으로 되돌린다
     var whyHard = C.stageBlock(state, d.id, true);
     if (stageHard && whyHard && !why) stageHard = false;
@@ -1474,10 +1478,10 @@
     setText($('stage-go'), hardOn ? '하드 출발' : bonus > 0 ? '출발 · 시작 물자 +' + fmt(bonus) : '출발');
     // 위: 이 원정이 무엇인지(일반 규칙이 없으면 그 줄은 적지 않는다). 아래 두 줄: 일반과 하드. 누르면 그쪽으로 고른다
     var baseRules = C.stageRuleTexts(d, false).join(', ');
-    setText($('stage-d-sub'), (baseRules ? baseRules + '\n' : '') + C.stageGoalText(d, hardOn, gi) + ' · 제한 ' + clock(d.limit)
+    setText($('stage-d-sub'), why ? (why === 'prev' ? '앞 스테이지를 클리어하면 열려요' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요') : (baseRules ? baseRules + '\n' : '') + C.stageGoalText(d, hardOn, gi) + ' · 제한 ' + clock(d.limit)
       + (d.boss ? '\n보상 · 지역 휘장 · 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
     setText($('stage-n-info'), m.best ? '최고 ' + clock(m.best) : m.pct > 0 ? '가장 멀리 ' + Math.floor(m.pct * 100) + '%' : '');
-    setText($('stage-h-info'), whyHard && !why ? '일반을 클리어하면 열려요' : C.STAGE_RULES[d.hard] + ' · 닫으면 처음부터');
+    setText($('stage-h-info'), whyHard && !why ? HID + ' · 일반을 클리어하면 열려요' : C.STAGE_RULES[d.hard] + ' · 닫으면 처음부터');
     setText($('stage-n-stars'), starOf(C.STAGE_STARS.normal)); setText($('stage-h-stars'), starOf(C.STAGE_STARS.hard));
     // 별마다 조건을 붙여 적는다(고른 줄에서만 펼쳐진다)
     var safeText = function (n) { return n > 0 ? '방어 실패 ' + n + '번까지' : '방어 실패 없이'; };
@@ -1560,13 +1564,13 @@
       g.appendChild(svgEl('circle', { cx: x, cy: y, r: rad, 'class': 'st-pad' + (d.boss ? ' boss' : '') }));
       if (d.boss) { r(-6, -8, 12, 9, 'st-skull'); r(-4, -5, 3, 3, 'st-eye'); r(1, -5, 3, 3, 'st-eye'); r(-4, 1, 8, 4, 'st-skull'); r(-2, 2, 1, 3, 'st-eye'); r(1, 2, 1, 3, 'st-eye'); }
       else g.appendChild(svgEl('text', { x: x, y: y + 4.5, 'text-anchor': 'middle', 'class': 'st-num' }, String(i + 1)));
-      var dots = [0, 1, 2, 3, 4, 5].map(function (n) { var c = svgEl('circle', { cx: x - 7 + (n % 3) * 7, cy: y + rad + 6 + (n >= 3 ? 6 : 0), r: 2.2, 'class': 'st-dot' }); g.appendChild(c); return c; });
-      g.appendChild(svgEl('text', { x: x, y: y + rad + 21, 'text-anchor': 'middle', 'class': 'zm-name st-name' }, d.name));
+      var dots = [0, 1, 2].map(function (n) { var c = svgEl('circle', { cx: x - 7 + n * 7, cy: y - rad - 6, r: 2.6, 'class': 'st-dot' }); g.appendChild(c); return c; });      // 3.1.0: 별 셋은 숫자 위에. 카드에서 고른 쪽(일반 · 하드)의 별을 보여 준다
+      var nameEl = svgEl('text', { x: x, y: y + rad + 14, 'text-anchor': 'middle', 'class': 'zm-name st-name' }, d.name); g.appendChild(nameEl);
       function pick() { stagePick = d.id; sfx('tab'); renderStages(); }
       g.addEventListener('click', pick);
       g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
       svg.appendChild(g);
-      rows.stages[d.id] = { g: g, dots: dots, road: roads[i] };
+      rows.stages[d.id] = { g: g, dots: dots, road: roads[i], name: nameEl };
     });
     $('stage-map').appendChild(svg);
     rows.stageLara = mapLara($('stage-map'), STAGE_VB[0], STAGE_VB[1]); rows.stageAt = -1;
@@ -2187,6 +2191,7 @@
       });
     });
     C.PUSHES.forEach(function (def) {
+      if (!$('push-' + def.id)) return;      // 7구역의 직접 방송 단추는 주파수 맞추기로 바뀌었다(3.1.0)
       $('push-' + def.id).addEventListener('click', function () {
         var r = C.pushZone(state, def.id);
         if (!r.ok) return;
@@ -2199,6 +2204,69 @@
       if (!r.ok) return;
       log('밤샘 연구를 시작했다. ' + r.seconds + '초 동안 연구가 ' + C.FOCUS_MULT + '배로 빨라진다.', 'good'); sfx('staff'); buzz(25); Store.save(); render();
     });
+  }
+  /*
+   * ---------- 7구역: 주파수와 정착지(3.1.0) ----------
+   * 주파수: 바늘은 0.1초마다 그려진다(frame). 띠 안에 있을 때 "지금 맞춘다"를 누르면 먼 무리가 온다.
+   * 정착지: 건물 아홉을 3 × 3 으로 놓는다. 세로 줄이 한 줄기다. 아직 앞 건물을 짓지 않은 칸은 이름도 효과도 '???'.
+   */
+  function renderTune() {
+    var rate = C.survivorRate(state), t = state.tune, cool = t.cool > 0, band = C.tuneBand(state), dial = $('t7-dial'), btn = $('t7-tune');
+    $('t7-needle').style.left = (C.tunePos(state) * 100).toFixed(2) + '%';
+    $('t7-band').style.left = ((t.band - band / 2) * 100).toFixed(1) + '%'; $('t7-band').style.width = (band * 100).toFixed(1) + '%';
+    dial.classList.toggle('cool', cool || !(rate > 0));
+    setText($('t7-freq'), (87.5 + C.tunePos(state) * 20.5).toFixed(1) + ' MHz');
+    setText($('t7-gain'), rate > 0 ? '맞추면 먼 무리 +' + fmt(Math.floor(C.tuneGain(state))) + '명' + (C.mods(state).autotower > 0 && C.autoEvents(state, 6) ? ' · 자동은 절반' : '') : '');
+    btn.disabled = cool || !(rate > 0);
+    setText(btn, !(rate > 0) ? '안테나를 먼저 세워요' : cool ? '다시 잡는 중 ' + Math.ceil(t.cool) + '초' : '지금 맞춘다');
+    fill(btn, cool ? 1 - t.cool / C.TUNE_COOL : 0);
+  }
+  function wireTower() {
+    $('t7-tune').addEventListener('click', function () {
+      var r = C.tuneNow(state, Math.random), dial = $('t7-dial');
+      if (!r.ok) return;
+      dial.classList.remove('hit', 'miss'); void dial.offsetWidth; dial.classList.add(r.hit ? 'hit' : 'miss');
+      if (r.hit) { toast('먼 무리가 응답했어요 · 생존자 +' + fmt(Math.floor(r.gain)) + '명' + (state.build ? ' · 공사 −' + C.TUNE_BUILD + '초' : '')); log('주파수를 맞췄다. 먼 무리가 응답했다. 생존자 ' + fmt(Math.floor(r.gain)) + '명.', 'good'); sfx('answer'); buzz(25); }
+      else { toast('잡음뿐이에요 · 다시 잡는 중'); sfx('tab'); }
+      Store.save(); render();
+    });
+  }
+  var settleBuilt = '';      // 방금 지은 건물(한 번 반짝인다)
+  function renderSettle() {
+    var grid = $('settle-grid'), freeP = C.settleFree(state);
+    if (!rows.settle) {
+      rows.settle = {};
+      // 화면의 줄 순서: 위에서 아래로 row 0 · 1 · 2, 왼쪽에서 오른쪽으로 col 0 · 1 · 2
+      C.SETTLE.slice().sort(function (a, b) { return a.row - b.row || a.col - b.col; }).forEach(function (d) {
+        var b = el('button', ''), name = el('b', '', d.name), sub = el('small', '', '');
+        b.type = 'button'; b.appendChild(name); b.appendChild(sub);
+        b.addEventListener('click', function () {
+          var r = C.buildSettle(state, d.id);
+          if (!r.ok) { if (r.reason === 'people') toast('맡길 사람이 모자라요 · ' + fmt(d.cost) + '명 필요'); else if (r.reason === 'busy') toast('다른 건물을 짓는 중이에요'); return; }
+          log(d.name + ' 공사를 시작했다. ' + fmt(d.cost) + '명에게 일을 맡겼다.', '');
+          toast(d.name + ' 공사 시작 · ' + clock(r.seconds) + ' · 주파수를 맞추면 빨라져요'); sfx('fortify'); buzz(20);
+          Store.save(); render();
+        });
+        rows.settle[d.id] = { btn: b, name: name, sub: sub }; grid.appendChild(b);
+      });
+    }
+    C.SETTLE.forEach(function (d) {
+      var r = rows.settle[d.id], why = C.settleBlock(state, d.id);
+      r.btn.className = (why === 'done' ? 'done' : why === 'building' ? 'building' : why === '' ? 'can' : why === 'people' || why === 'busy' ? 'wait' : 'hid') + (settleBuilt === d.id ? ' built' : '');
+      r.btn.disabled = why === 'done' || why === 'building' || why === 'prev' || why === 'locked';
+      setText(r.name, why === 'prev' || why === 'locked' ? HID : d.name);
+      setText(r.sub, why === 'prev' || why === 'locked' ? HID : why === 'done' ? d.desc : why === 'building' ? '짓는 중 ' + clock(Math.max(0, state.build.left)) : fmt(d.cost) + '명 · ' + clock(C.settleTime(d)) + '\n' + d.desc);
+      fill(r.btn, why === 'building' ? 1 - Math.max(0, state.build.left) / C.settleTime(d) : 0);
+    });
+    settleBuilt = '';
+    setText($('settle-count'), C.settleCount(state) + ' / ' + C.SETTLE.length);
+    setText($('settle-free'), '맡길 수 있는 사람 ' + fmt(freeP) + '명 · 한 번에 한 채씩 지어요');
+    // 혈청: 가운데 줄의 건물이 문턱이다
+    var stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state), need = C.serumNeeds(state), rNext = C.rescueNext(state);
+    Array.prototype.forEach.call($('serum-steps').children, function (i, n) { i.className = n < stage ? 'on' : ''; });
+    setText($('serum'), stage >= sMax ? '혈청을 완성했다' : need ? '혈청 ' + (stage + 1) + '단계 · ' + (stage + 1 >= sMax && !need.serum ? '정착지를 다 지어야 해요' : '가운데 줄의 다음 건물이 필요해요') : '혈청 ' + (stage + 1) + '단계 · 물자 ' + fmt(sCost));
+    $('serum').disabled = stage >= sMax || !!need || !(sCost <= state.supplies);
+    setText($('serum-note'), '혈청 ' + stage + ' / ' + sMax + '단계' + ((state.ended || 0) >= 1 ? '\n구조한 생존자 누적 ' + fmt(Math.floor(state.rescued)) + '명 · 생산 +' + Math.round((C.rescueMult(state) - 1) * 100) + '%' + (rNext ? ' · 다음 ' + fmt(rNext) + '명' : ' · 최대') : ''));
   }
   /** 순찰·직접 방송 단추를 그린다(밤샘 연구와 같은 모양). */
   function renderPush(id, label) {
@@ -2463,6 +2531,9 @@
     var nz = C.nextZone(state);
     return zi === state.zone && !!nz && nz.ready && nz.enough && !(nz.wait > 0);
   }
+  /** 3.1.0: 아직 열어 본 적 없는 것은 이름도 내용도 '???'로 가린다(구역, 원정, 도전, 정착지 모두 같은 규칙). */
+  var HID = '???';
+  function zoneSeen(zi) { return zi <= Math.max(state.zone, state.bestZone || 0); }
   function renderZone(m) {
     var zi = tab === 'wall' ? -1 : Number(tab.slice(1));
     Object.keys(rows.tabs).forEach(function (id) {
@@ -2479,7 +2550,7 @@
       b.classList.toggle('upready', zUp && !b.classList.contains('avail'));      // 그 구역에 지금 할 일이 있으면 점(1.2.4)
     });
     var open = zi >= 0 && zi <= state.zone, soon = zi >= 0 && C.ZONES[zi].kind === 'soon';
-    setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳'));
+    setText($('tab-hint'), tab === 'wall' ? HINTS.wall : open ? HINTS[tab] : zoneSeen(zi) ? (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · ' + (C.ZONES[zi].lead || '아직 닿지 못한 곳') : (zi + 1) + '구역 ' + HID + ' · 아직 가 보지 못한 곳이에요');
     // 구역 화면은 한 번에 한 가지만 보인다: 운영(놀이 화면 + 주된 구매), 강화, 목표
     var play = pane === 'play', zoneTab = zi >= 0 && open;
     $('zone-panes').hidden = !zoneTab;
@@ -2497,6 +2568,8 @@
     $('guard').hidden = !(tab === 'z5' && open);
     $('rows-z6').hidden = !(tab === 'z6' && open);
     $('tower').hidden = !(tab === 'z6' && open);
+    $('settle').hidden = !(tab === 'z6' && open && pane === 'up');
+    if (tab === 'z6' && open && pane === 'up') renderSettle();
     var aeZone = /^z\d$/.test(tab) ? Number(tab.slice(1)) : -1, aeShow = aeZone >= 1 && aeZone <= state.zone && C.autoOn(state, aeZone);
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
@@ -2789,19 +2862,15 @@
       rows.train.btn.disabled = !(tcost <= state.supplies); afford(rows.train.cost, tcost);
     }
     if (tab === 'z6' && open) {
-      renderZoneEvent('tower'); renderPush('tower', '직접 방송');
-      // 7구역: 모인 생존자와 전체 배수, 혈청, 안테나
-      var sRate = C.survivorRate(state), stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state);
-      setText($('tower-people'), fmt(Math.floor(state.survivors)) + '명');
-      // 2.9.8: 직접 방송 중에는 숫자가 실제로 두 배로 보이고 노란 딱지가 붙는다. 전에는 눌러도 화면에 달라지는 것이 없어서 무엇을 하는 단추인지 알 수 없었다
-      var tOn = state.push.tower.left > 0;
-      setText($('tower-rate'), sRate > 0 ? '초당 +' + fmt(sRate * (tOn ? C.PUSH_MULT : 1)) + '명' + (tOn ? ' · 방송 중 ×' + C.PUSH_MULT : '') : '안테나를 세우면 사람이 모여요');
-      $('tower-rate').classList.toggle('boosted', tOn && sRate > 0);
+      renderZoneEvent('tower');
+      // 7구역 운영(3.1.0): 생존자, 맡긴 사람과 맡길 수 있는 사람, 주파수
+      var sRate = C.survivorRate(state), people = Math.floor(state.survivors), used = Math.min(people, C.settleUsed(state)), freeP = C.settleFree(state);
+      setText($('tower-people'), fmt(people) + '명');
+      setText($('tower-rate'), sRate > 0 ? '초당 +' + fmt(sRate) + '명' : '안테나를 세우면 사람이 모여요');
       setText($('tower-mult'), '모든 구역의 생산 ×' + C.towerMult(state).toFixed(2));
-      setText($('serum'), stage >= sMax ? '혈청을 완성했다' : '혈청 ' + (stage + 1) + '단계 · 물자 ' + fmt(sCost));
-      $('serum').disabled = stage >= sMax || !(sCost <= state.supplies);
-      var rNext = C.rescueNext(state);
-      setText($('serum-note'), '혈청 ' + stage + ' / ' + sMax + '단계' + ((state.ended || 0) >= 1 ? '\n구조한 생존자 누적 ' + fmt(Math.floor(state.rescued)) + '명 · 생산 +' + Math.round((C.rescueMult(state) - 1) * 100) + '%' + (rNext ? ' · 다음 ' + fmt(rNext) + '명' : ' · 최대') : ''));
+      $('t7-busy').style.width = (people > 0 ? used / people * 100 : 0).toFixed(1) + '%'; $('t7-free').style.width = (people > 0 ? freeP / people * 100 : 0).toFixed(1) + '%';
+      setText($('t7-busy-text'), state.build ? C.SETTLE.filter(function (x) { return x.id === state.build.id; })[0].name + ' 짓는 중 ' + clock(Math.max(0, state.build.left)) : '일하는 중 ' + fmt(used) + '명'); setText($('t7-free-text'), '맡길 수 있는 사람 ' + fmt(freeP) + '명');
+      renderTune();
       var aq = qtyFor(C.maxAntennas(state), C.COUNT_MAX - state.antennas), acost = C.antennaCost(state, aq);
       setText(rows.antenna.count, state.antennas + ' / ' + C.COUNT_MAX);
       setMile(rows.antenna, state.antennas, aq, acost <= state.supplies);
@@ -3043,6 +3112,7 @@
       expedition: null, buff: !!state.buff, signal: state.signalLeft > 0, horde: state.zone >= 1 ? 'swarm' : 'walker', special: C.nightSpecials(state, state.day),
       research: { maps: state.upgrades.maps > 0, ration: state.upgrades.stock > 0, shift: state.upgrades.shifts > 0 },
       upgrades: { crowbar: state.upgrades.crowbar > 0, backpack: state.upgrades.cart > 0 }, gear: {},
+      settle: state.settle || null,      // 7구역 정착지의 지은 건물(3.1.0)
       still: prefs.shake === 'off',
       pet: (function () { var p = C.petInfo(state); return p ? { kind: p.kind, body: p.breed.body, patch: p.breed.patch } : null; })() };
   }
@@ -3101,6 +3171,10 @@
           toast('목표 달성 · ' + ev.text); sfx('goal');
           break;
         case 'surge': if (tab === 'z2' && pane === 'play') sfx('surge'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
+        case 'settle-done':      // 7구역: 건물이 다 지어졌다(3.1.0)
+          settleBuilt = ev.id; log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 다 지어졌다. ' + ev.desc + '.', 'good');
+          toast('정착지 · ' + ev.name + ' 완공 · ' + ev.desc); sfx('goal'); buzz(30); if (fxShow) fxShow('완공', ev.name, 1, -1, -1);
+          break;
         case 'train':
           railFlash[ev.route] = Date.now();
           if (ev.long) { toast('4구역 ' + ev.name + ' 한 바퀴 · 이번 운행 물자 ' + fmt(ev.gain)); sfx('defended'); }
@@ -3675,7 +3749,7 @@
     wirePrefs();
     wireNotify();
     wireMultiTouch();
-    wirePerkReroll();
+    wirePerkReroll(); wireTower();
     wireOrder();
     wireContract(); wireLineExtras(); wireZoneEvents();
     wireSalvage();
