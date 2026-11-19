@@ -596,7 +596,7 @@
       remember(VERSION_KEY, Update.current);
       if (seen && seen !== Update.current) {
         var name = PATCH_NOTES.length ? PATCH_NOTES[0].ver : Update.current;
-        notice(name + (C.hasBatchim(name) && !/[178]$/.test(name) ? '으로' : '로') + ' 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.');
+        notice(name + (C.hasBatchim(name) && !/[178]$/.test(name) ? '으로' : '로') + ' 업데이트됐다. 기록 > 패치에서 바뀐 점을 볼 수 있다.', 14000);      // 시작 화면이 6초쯤 가리므로, 보이기 시작한 뒤로 8초쯤 남는다
       }
     }
   };
@@ -725,9 +725,16 @@
     box.appendChild(t);
     while (box.children.length > 3) box.removeChild(box.firstChild); // 한꺼번에 쏟아져도 3장까지만
   }
-  function notice(text) {
+  /**
+   * 화면 위 알림 띠. ms 를 주면 그 시간 뒤에 스스로 닫힌다(2.8.8: "업데이트됐다"는 읽고 나면 닫을 일만 남는 알림이었다).
+   * ms 가 없으면 닫기를 누를 때까지 남는다: 오류처럼 꼭 봐야 하는 알림은 사라지면 안 된다.
+   */
+  var noticeTimer = null;
+  function notice(text, ms) {
     setText($('notice-text'), text);
     $('notice').hidden = false;
+    if (noticeTimer) { clearTimeout(noticeTimer); noticeTimer = null; }      // 뒤에 온 알림을 앞 알림의 시계가 닫지 않게
+    if (ms > 0) noticeTimer = setTimeout(function () { noticeTimer = null; if ($('notice-text').textContent === text) $('notice').hidden = true; }, ms);
   }
 
   /* ---------- 목록 만들기 (최초 1회) ---------- */
