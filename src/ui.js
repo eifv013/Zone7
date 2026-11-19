@@ -2788,7 +2788,8 @@
       C.MACHINES.forEach(function (d) {
         var c = rows.cells[d.id], r = rows.machines[d.id], lv = state.machines[d.id];
         setText(c.cap, '초당 ' + fmt(line.caps[d.id]));
-        c.bar.style.width = (top > 0 ? line.caps[d.id] / top * 100 : 0).toFixed(1) + '%';
+        // 3.2.1: 막대는 '전체에서 이 기계가 만드는 몫'. 예전에는 가장 빠른 기계에 견준 길이라 병목이 없어진 뒤로는 뜻이 없었다
+        c.bar.style.width = (line.flow > 0 ? line.caps[d.id] / line.flow * 100 : 0).toFixed(1) + '%';
         c.cell.classList.toggle('slow', false);
         c.cell.classList.toggle('jam', !!state.jam && state.jam.id === d.id);      // 가장 느린 기계: 이것을 올려야 라인이 빨라진다
         var q = qtyFor(C.maxMachines(state, d.id), C.COUNT_MAX - lv), cost = C.machineCost(state, d.id, q);
@@ -2817,6 +2818,7 @@
       fill(sg, sOn ? state.surgeLeft / C.SURGE_SECONDS : state.surgeCool > 0 ? 1 - state.surgeCool / C.surgeCooldown(state) : 0);
       setText($('line-mile'), '기계 레벨 합계 ' + line.levels + ' · 배수 ×' + line.milestone + (line.nextMilestone ? ' · ' + line.nextMilestone + '에서 2배' : ''));
       var tb = $('tune'), tc = C.tuneCost(state);
+      tb.hidden = true;      // 3.2.1: 기계 줄의 구매 단추와 하는 일이 같아서 뺐다(1 · 2구역에도 없는 단추)
       tb.disabled = !(tc <= state.supplies); afford(tb, tc);
       setText(tb, isFinite(tc) ? '한 번에 올리기 · ' + names[line.bottleneck] + ' · 물자 ' + fmt(tc) + (qtyMode === 1 ? '' : qtyMode === 'max' ? ' · 되는 만큼' : ' · ' + qtyMode + '번') : '기계가 모두 최대다');
     }

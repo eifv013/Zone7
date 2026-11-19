@@ -262,8 +262,11 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=manage]'); tap('[data-tab=z2]')
         if not page.locator('#line').is_visible(): problems.append('3구역 탭에 생산 라인 칸이 없다')
         if '기계를 사면' not in text('line-note'): problems.append('기계가 없을 때의 안내가 없다: ' + text('line-note'))
-        for _ in range(11):
-            if not tap('#tune'): problems.append('병목 올리기를 누를 수 없다'); break
+        # 3.2.1: '한 번에 올리기'는 없다. 기계 줄을 직접 눌러 산다
+        if page.locator('#tune').is_visible(): problems.append('없어진 한 번에 올리기 단추가 보인다')
+        for m, n in [('sorter', 4), ('press', 4), ('assembler', 3)]:
+            for _ in range(n):
+                if not tap('#row-%s' % m): problems.append('기계를 살 수 없다: ' + m); break
         levels = [text('row-%s' % m) for m in ['sorter', 'press', 'assembler']]
         # 3.2.0: 기계는 각자 만들고 합친다. 열한 번 사면 레벨 합이 11이고, 합친 초당 개수가 보인다
         import re as _re
@@ -293,7 +296,7 @@ def run_case(browser, name, size, state, mode):
         if page.locator('.line-cell.slow').count() != 0: problems.append('없어진 병목 표시가 남아 있다')
         if text('line-load') == load0: problems.append('선별기를 샀는데 초당 개수가 그대로다: ' + load0)
         if page.locator('#rebalance').count() and page.locator('#rebalance').is_visible(): problems.append('없어진 다시 맞추기 단추가 보인다')
-        tap('[data-qty="max"]'); tap('#tune'); tap('[data-qty="1"]')
+        tap('[data-qty="max"]'); tap('#row-press'); tap('[data-qty="1"]')
         tap('#row-lube'); tap('#row-belt')
         if not fits(): problems.append('한 화면에 들어오지 않는다(3구역)')
         before = text('supplies'); page.wait_for_timeout(3000)
