@@ -968,8 +968,8 @@ test('특전: 아직 열지 않은 구역의 특전은 나오지 않는다', () 
   assert.equal(z4.size, 7);
   // 현장 일손: 현재 있는 구역의 생산에만 붙고, 구역을 옮기면 따라간다
   const h = inMarket(); const m0 = C.mods(h); h.perks.local = 2; const m1 = C.mods(h);
-  assert.ok(Math.abs(m1.z2 / m0.z2 - 1.8) < 1e-9); assert.equal(m1.z1, m0.z1); assert.equal(m1.z3, m0.z3);
-  h.zone = 2; assert.ok(Math.abs(C.mods(h).z3 / m0.z3 - 1.8) < 1e-9); assert.equal(C.mods(h).z2, m0.z2);
+  assert.ok(Math.abs(m1.z2 / m0.z2 - 1.4) < 1e-9); assert.equal(m1.z1, m0.z1); assert.equal(m1.z3, m0.z3);
+  h.zone = 2; assert.ok(Math.abs(C.mods(h).z3 / m0.z3 - 1.4) < 1e-9); assert.equal(C.mods(h).z2, m0.z2);
   // 이미 고른 옛 특전의 효과는 남는다
   const old = inMarket(); old.perks.bargain = 1; assert.ok(Math.abs(C.mods(old).z2 / m0.z2 - 1.4) < 1e-9);
   assert.equal(C.drawPerks(half, fresh()).length, C.PERK_CHOICES);

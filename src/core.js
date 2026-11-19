@@ -475,7 +475,7 @@
     { id: 'driver',  name: '기관사',    desc: '화물 값 +40%',    key: 'z4',      per: 0.4, zone: 3, retired: true },
     { id: 'aide',    name: '조교',      desc: '연구 속도 +40%',  key: 'lab',     per: 0.4, zone: 4, retired: true },
     // 대신 어느 구역에서나 듣는 둘: 현재 있는 구역을 따라다니는 생산, 그리고 철수 항체
-    { id: 'local',   name: '현장 일손', desc: '현재 구역 생산 +40%', key: 'here', per: 0.4 },
+    { id: 'local',   name: '현장 일손', desc: '현재 구역 생산 +20%', key: 'here', per: 0.2 },
     { id: 'sample',  name: '채혈',      desc: '철수 항체 샘플 +10%', key: 'antibody', per: 0.1 },
     { id: 'spoils',  name: '전리품 수거', desc: '밤 전리품 +60%', key: 'loot',    per: 0.6 },
     { id: 'frugal',  name: '알뜰함',    desc: '모든 구매 비용 -6%',     key: 'cost',    per: -0.06 }
