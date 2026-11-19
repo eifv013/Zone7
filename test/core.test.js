@@ -2960,52 +2960,60 @@ test('3구역 줄 셋: 투입구는 더 자주, 단조기는 한 단계 높게(�
   for (const junk of [NaN, -3, 'x', undefined, 1e99]) { const u = inFactory(); u.supplies = 1e13; assert.doesNotThrow(() => C.tuneLine(u, junk)); }
 });
 
-test('3구역 판: 같은 단계 둘을 누르면 윗단계 하나, 그 자리에서 덤. 합치면 언제나 더 번다', () => {
+test('3구역 판: 상자 하나를 누르면 같은 단계의 짝이 모두 합쳐지고, 합쳐질 때마다 덤을 받는다', () => {
   assert.equal(C.boxWorth(1), 1); near(C.boxWorth(3), C.BOX_STEP * C.BOX_STEP); for (const junk of [0, -1, NaN, 'x', C.BOX_MAX + 1, undefined]) assert.equal(C.boxWorth(junk), 0);
-  const s = onBoard([1, 0, 1, 2, 3]);
-  assert.deepEqual(C.mergeable(s), [0, 2]);
+  const s = onBoard([1, 0, 1, 2, 3, 1, 1, 1]);      // 1단계가 다섯: 두 짝이 합쳐지고 하나가 남는다
+  assert.deepEqual(C.mergeable(s), [0, 2, 5, 6, 7]);
   const rate0 = C.lineRate(s), sup0 = s.supplies, r = C.mergeBox(s, 2);
-  assert.ok(r.ok); assert.equal(r.level, 2); assert.deepEqual(s.board.slice(0, 5), [0, 0, 2, 2, 3]);
-  near(r.gain, C.boxRate(s, 2) * C.MERGE_SECONDS); near(s.supplies - sup0, r.gain); assert.equal(s.mergesRun, 1); assert.ok(C.lineRate(s) > rate0);
-  assert.ok(C.mergeBox(s, 3).ok); assert.ok(C.mergeBox(s, 4).ok); assert.deepEqual(s.board.slice(0, 5), [0, 0, 0, 0, 4]); assert.equal(s.boxBest, 4);
-  assert.equal(C.mergeBox(s, 4).reason, 'alone'); assert.equal(C.mergeBox(s, 0).reason, 'empty');
-  for (const junk of [-1, 99, NaN, 'x', undefined]) assert.equal(C.mergeBox(s, junk).reason, 'empty');
+  assert.ok(r.ok); assert.equal(r.level, 2); assert.equal(r.count, 2); assert.equal(r.merges.length, 2); assert.equal(r.merges[0].at, 2, '누른 칸에 첫 결과가 남는다');
+  assert.equal(s.board.filter(x => x === 1).length, 1); assert.equal(s.board.filter(x => x === 2).length, 3); assert.equal(s.board[2], 2);
+  near(r.gain, 2 * C.boxRate(s, 2) * C.MERGE_SECONDS); near(s.supplies - sup0, r.gain); assert.equal(s.mergesRun, 2); assert.ok(C.lineRate(s) > rate0, '합치면 언제나 더 번다');
+  // 윗단계끼리 또 짝이 맞아도 이어서 합치지는 않는다: 다음에 누를 거리다
+  assert.equal(s.board.filter(x => x === 3).length, 1); const r2 = C.mergeBox(s, 3); assert.equal(r2.count, 1); assert.equal(r2.level, 3); assert.equal(s.board.filter(x => x === 3).length, 2);
+  assert.ok(C.mergeBox(s, 4).best, '처음 만든 단계'); assert.equal(s.boxBest, 4);
+  // 안 되는 경우
+  const a = onBoard([4, 0, 2]); assert.equal(C.mergeBox(a, 0).reason, 'alone'); assert.equal(C.mergeBox(a, 1).reason, 'empty');
+  for (const junk of [-1, 99, NaN, 'x', undefined]) assert.equal(C.mergeBox(a, junk).reason, 'empty');
+  const top = onBoard([C.BOX_MAX, C.BOX_MAX]); assert.equal(C.mergeBox(top, 0).reason, 'alone');
   const b = onBoard([1, 1]); b.upgrades.bonus = 2; near(C.mergeBox(b, 0).gain, C.boxRate(b, 2) * C.MERGE_SECONDS * 2, '손맛: 덤이 커진다');
   const w = onBoard([]); assert.equal(C.boardSize(w), 20); w.upgrades.wide = 1; assert.equal(C.boardSize(w), 25); w.upgrades.wide = 2; assert.equal(C.boardSize(w), C.BOARD_MAX);
   const bad = onBoard([]); bad.board = 'x'; assert.equal(C.boardSum(bad), 0); assert.equal(bad.board.length, C.BOARD_MAX);
 });
 
-test('3구역 판: 상자는 간격마다 들어오고, 가득 차면 가장 낮은 짝이 알아서 합쳐진다. 행운 상자', () => {
+test('3구역 판: 상자는 간격마다 들어오고, 가득 차면 들어오지 못하고 기다린다(알아서 합쳐지지 않는다)', () => {
   const s = onBoard([]); s.feed = 1; let ev = [];
   C.stepBoard(s, 0.01, half, ev); assert.equal(s.board.filter(x => x === 1).length, 1, '첫 상자는 바로'); assert.ok(ev.some(e => e.type === 'box-in'));
   C.stepBoard(s, C.FEED_SECONDS * 2, half, []); assert.equal(s.board.filter(x => x === 1).length, 3);
   assert.ok(s.board.slice(C.boardSize(s)).every(x => x === 0), '칸 수 밖에는 놓지 않는다');
-  const full = onBoard(Array(20).fill(1)); full.board[5] = 3; full.board[6] = 3; full.feed = 1; const sup = full.supplies; ev = [];
-  C.stepBoard(full, 0.01, half, ev);
-  assert.ok(ev.some(e => e.type === 'box-merge' && e.level === 2 && !e.hand)); assert.equal(full.supplies, sup, '알아서 합쳐진 것에는 덤이 없다');
-  assert.equal(full.board.slice(0, 20).filter(x => x >= 1).length, 20); assert.equal(full.mergesRun, 0); assert.equal(full.mergesAll, 1);
-  // 의뢰가 찾는 단계는 남기고 다른 짝을 합친다
-  const held = onBoard(Array(20).fill(1)); held.board[5] = 3; held.board[6] = 3; held.feed = 1; held.contract = { who: 'bike', level: 1, need: 3, have: 3, left: 50 };
-  C.stepBoard(held, 0.01, half, []); assert.ok(held.board.includes(4), '3단계 짝이 합쳐졌다'); assert.equal(held.board.filter(x => x === 1).length, 19);
+  // 가득 찬 판: 아무 일도 없다. 손으로 자리를 내면 다시 들어온다
+  const full = onBoard(Array(20).fill(1)); full.feed = 1; assert.equal(C.boardFull(full), true);
+  C.stepBoard(full, 600, half, []); assert.equal(full.mergesAll, 0); assert.equal(full.board.slice(0, 20).filter(x => x === 1).length, 20); assert.equal(full.feed, 1, '다음 상자는 문 앞에서 기다린다');
+  const r = C.mergeBox(full, 0); assert.equal(r.count, 10); assert.equal(C.boardFull(full), false);
+  C.stepBoard(full, 0.01, half, []); assert.equal(full.board.filter(x => x === 1).length, 1, '자리가 나면 바로 들어온다');
+  // 가만히 둔 판은 가득 찬 뒤로 더 자라지 않는다(그래도 번다)
+  const idle = onBoard([]); idle.feed = 1; for (let t = 0; t < 600; t++) C.stepBoard(idle, 1, half, []);
+  assert.equal(C.boardSum(idle), 20); assert.ok(C.lineRate(idle) > 0);
   const lucky = onBoard([]); lucky.feed = 1; lucky.upgrades.lucky = 5; C.stepBoard(lucky, 0.01, () => 0.01, []); assert.equal(Math.max(...lucky.board), 2, '행운 상자');
-  const idle = onBoard([]), hand = onBoard([]); idle.feed = hand.feed = 1; let seed = 3; const rng = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
-  for (let t = 0; t < 1800; t++) { C.stepBoard(idle, 1, rng, []); C.stepBoard(hand, 1, rng, []); for (let m = C.mergeable(hand), g = 0; m.length && g < 50; m = C.mergeable(hand), g++) C.mergeBox(hand, m[0]); }
-  assert.ok(C.boardSum(idle) > 1000); assert.ok(C.boardSum(hand) > C.boardSum(idle));
   for (const junk of [NaN, -5, 'x', undefined, 1e99]) assert.doesNotThrow(() => C.stepBoard(onBoard([1, 1]), junk, half, []));
 });
 
-test('3구역 자동 합치기: 5초에 짝 하나만. 그래서 자동을 사도 누를 짝이 남고, 손이 언제나 더 낫다', () => {
+test('3구역 자동 합치기: 몇 초에 짝 하나씩 자리를 낸다. 가만히 둔 판 < 자동 < 손', () => {
   const a = onBoard([1, 1, 1, 1, 2, 2]); a.upgrades.autoline = 1; let ev = [];
   C.stepBoard(a, C.AUTO_MERGE_SECONDS, half, ev);
   assert.equal(ev.filter(e => e.type === 'box-merge' && e.auto).length, 1); assert.equal(a.mergesRun, 0); assert.ok(C.mergeable(a).length >= 2, '누를 짝이 남아 있다');
   const sw = onBoard([1, 1, 1, 1]); sw.upgrades.autoline = 1; C.setAutoEvents(sw, 2, false); C.stepBoard(sw, C.AUTO_MERGE_SECONDS * 3, half, []); assert.equal(sw.mergesAll, 0, '구역 자동을 끄면 자동 합치기도 쉰다');
   const h = onBoard([1, 1, 3, 3]); h.upgrades.autoline = 1; h.contract = { who: 'bike', level: 1, need: 2, have: 2, left: 50 };
   C.stepBoard(h, C.AUTO_MERGE_SECONDS, half, []); assert.deepEqual(h.board.slice(0, 4).filter(x => x), [1, 1, 4], '의뢰가 찾는 단계는 건드리지 않는다');
+  // 가득 찬 판에서도 자동이 자리를 내서 상자가 계속 들어온다
+  const f = onBoard(Array(20).fill(1)); f.feed = 1; f.upgrades.autoline = 1; C.stepBoard(f, C.AUTO_MERGE_SECONDS, half, []); assert.equal(f.mergesAll, 1); assert.equal(C.boardFull(f), true, '낸 자리에 새 상자가 들어왔다');
+  // 30분 뒤
   const mk3 = (auto) => { const s = onBoard([]); s.feed = 1; s.upgrades.autoline = auto ? 1 : 0; return s; };
   const idle = mk3(false), auto = mk3(true), hand = mk3(false); let seed = 9; const rng = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
   for (let t = 0; t < 1800; t++) { C.stepBoard(idle, 1, rng, []); C.stepBoard(auto, 1, rng, []); C.stepBoard(hand, 1, rng, []); for (let m = C.mergeable(hand), g = 0; m.length && g < 50; m = C.mergeable(hand), g++) C.mergeBox(hand, m[0]); }
-  assert.ok(C.boardSum(auto) >= C.boardSum(idle), '자동 ' + C.boardSum(auto) + ' / 가만히 ' + C.boardSum(idle)); assert.ok(C.boardSum(hand) > C.boardSum(auto));
-  assert.ok(C.mergeable(auto).length > 0, '자동을 달아도 누를 짝이 있다');
+  assert.ok(C.boardSum(auto) > C.boardSum(idle) * 10, '자동 ' + C.boardSum(auto) + ' / 가만히 ' + C.boardSum(idle)); assert.ok(C.boardSum(hand) > C.boardSum(auto));
+  // 긴 자리 비움: 자동이 있으면 그동안 자라고, 없으면 가득 찬 채로 있다
+  const away = mk3(true); C.stepBoard(away, 8 * 3600, rng, null, 30000); assert.ok(C.boardSum(away) > 1000);
+  const stay = mk3(false); C.stepBoard(stay, 8 * 3600, rng, null, 30000); assert.equal(C.boardSum(stay), 20);
 });
 
 test('3구역 납품 의뢰: 찾는 단계의 상자를 모아 두었다가 넘기면 크게 받는다. 놓쳐도 잃는 것은 없다', () => {
@@ -3044,7 +3052,7 @@ test('3구역: 저장 · 옛 저장 옮기기 · 자리 비움 · 철수 · 없�
   const low = JSON.parse(C.serialize(onBoard([1, 2, 9]))); low.machines = { feed: 0, forge: 3, paint: 0 }; assert.deepEqual(C.deserialize(JSON.stringify(low), 0).board.slice(0, 3), [4, 4, 9], '들어오는 단계보다 낮은 상자는 올려 준다');
   const early = JSON.parse(C.serialize(inMarket())); delete early.lineV; delete early.board; assert.equal(C.boardSum(C.deserialize(JSON.stringify(early), 0)), 0);
   const away = onBoard([9]); away.feed = 0; away.defenses.rail = 1e5;
-  const rate = C.lineRate(away); C.applyOffline(away, 3000); near(away.lineEarned, rate * 3000 * C.OFFLINE_RATE); assert.ok(C.boardSum(away) > C.boxWorth(9), '판은 그동안 자란다');
+  const rate = C.lineRate(away); C.applyOffline(away, 3000); near(away.lineEarned, rate * 3000 * C.OFFLINE_RATE); assert.ok(C.boardSum(away) > C.boxWorth(9), '그동안 상자가 들어온다');
   away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(C.boardSum(next), 0); assert.equal(next.mergesRun, 0); assert.equal(next.machines.paint, 0);
   const g = onBoard([1]); for (const f of [C.setRecipe, C.surge, C.repairJam, C.loadTruck, C.rebalanceLine]) assert.equal(f(g, 'x').reason, 'gone');
 });

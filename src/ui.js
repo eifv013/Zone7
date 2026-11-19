@@ -2266,8 +2266,10 @@
       b.addEventListener('click', function () {
         var res = C.mergeBox(state, i);
         if (!res.ok) return;
-        boardFx[i] = { pop: true, gain: res.gain }; if (res.best && res.level >= 4) log(C.boxName(res.level) + ' 상자가 처음 나왔다.', 'good');
-        sfx(res.best ? 'goal' : 'buy'); buzz(res.best ? 30 : 12); Store.save(); render();
+        // 3.6.0: 같은 단계의 짝이 모두 합쳐진다. 누른 칸부터 차례로(60ms 간격) 튀어 오르게 해서 주루룩 번지는 것이 보이게 한다
+        res.merges.forEach(function (m, k) { boardFx[m.at] = { pop: true, gain: m.gain, delay: Math.min(k, 12) * 60 }; });
+        if (res.best && res.level >= 4) log(C.boxName(res.level) + ' 상자가 처음 나왔다.', 'good');
+        sfx(res.best ? 'goal' : res.count >= 4 ? 'upgrade' : 'buy'); buzz(res.best ? 30 : Math.min(40, 10 + res.count * 4)); Store.save(); render();
       });
     })(bi);
     $('truck-load').addEventListener('click', function () {
@@ -2348,8 +2350,9 @@
         b.setAttribute('aria-label', lv ? C.boxName(lv) + ' ' + lv + '단계' + (can[i] ? ', 합칠 수 있음' : '') + (want ? ', 의뢰가 찾는 상자' : '') : '빈칸');
         var old = b.querySelector('i'); if (old) b.removeChild(old);
         if (fx && lv) {
+          b._cv.style.animationDelay = (fx.delay || 0) + 'ms';
           void b.offsetWidth; b.classList.add(fx.pop ? 'mb-pop' : 'mb-in');      // 'pop' · 'in' 은 다른 곳(떠오르는 숫자)의 클래스라 칸이 통째로 투명해졌다. 판만의 이름을 쓴다
-          if (fx.gain > 0) b.appendChild(el('i', '', '+' + fmt(fx.gain)));
+          if (fx.gain > 0) { var gi = el('i', '', '+' + fmt(fx.gain)); gi.style.animationDelay = (fx.delay || 0) + 'ms'; b.appendChild(gi); }
         }
       }
     }
@@ -2957,9 +2960,10 @@
       setText(ld, '판이 버는 양 · 초당 ' + fmt(C.lineRate(state)));
       ld.className = 'num steady';
       var pairs = C.mergeable(state).length;
-      setText($('line-note'), (pairs ? '숫자가 노란 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 손으로 ' + (state.mergesRun || 0) + '번 합침'
+      var fullB = C.boardFull(state);
+      setText($('line-note'), (fullB ? '판이 가득 찼어요. 상자를 눌러 자리를 내야 새 상자가 들어와요' : pairs ? '상자를 누르면 같은 상자끼리 모두 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 손으로 ' + (state.mergesRun || 0) + '번 합침'
         + (autoM && C.autoEvents(state, 2) ? '\n자동 합치기가 ' + C.autoMergeSeconds(state).toFixed(1) + '초마다 하나씩 도와요. 손으로 합치면 덤을 받아요.' : ''));
-      $('line-note').classList.remove('boosted');
+      $('line-note').classList.toggle('boosted', fullB);
       setText($('line-mile'), '가장 높은 상자 ' + (state.boxBest ? C.boxName(state.boxBest) + ' (' + state.boxBest + '단계)' : '-') + ' · 칸 ' + line.size + '개');
       var tb = $('tune'), tc = C.tuneCost(state);
       tb.hidden = true;      // 3.2.1: 기계 줄의 구매 단추와 하는 일이 같아서 뺐다(1 · 2구역에도 없는 단추)

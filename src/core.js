@@ -458,7 +458,7 @@
     { id: 'rumor',   zone: 0, name: '소문',      desc: '은닉처가 나올 확률 +3%p',  key: 'rumor',   per: 3,    baseCost: 3000, growth: 5,  max: 8 },
     { id: 'patrol',  zone: 0, name: '순찰조',    desc: '수색조가 알아서 동네를 수색한다 · 올릴수록 빨라진다', key: 'patrol', per: 1, baseCost: 2000, growth: 10, max: 5 },
     { id: 'broker',  zone: 1, name: '흥정꾼',    desc: '시세가 평균 이상이면 알아서 판다 · 올릴수록 자주 판다', key: 'broker', per: 1, baseCost: 5e6, growth: 8, max: 5 },
-    { id: 'autoline', zone: 2, name: '자동 합치기', desc: '5초마다 짝 하나를 알아서 합친다', key: 'autoline', per: 1, baseCost: 1.5e13, growth: 1, max: 1 },
+    { id: 'autoline', zone: 2, name: '자동 합치기', desc: '5초마다 짝 하나를 알아서 합친다', key: 'autoline', per: 1, baseCost: 2e12, growth: 1, max: 1 },
     { id: 'autosig', zone: 3, name: '역무원',  desc: '8칸이 차면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '밤샘 연구를 알아서 시작한다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
@@ -1314,7 +1314,8 @@
    * 이번에는 한 덩어리로 맞췄다. 기준은 "간단하다 · 누르는 재미 · 보는 재미 · 선택의 긴장감".
    *
    * 판:   boardSize 칸. feedSeconds 마다 상자(spawnLevel 단계)가 빈칸에 들어온다. 같은 단계 둘을 합치면 윗단계 하나(값은 BOX_STEP 배).
-   *       손으로 합치면 덤(새 상자의 MERGE_SECONDS 초분 × 손맛)을 받는다. 가득 차면 가장 낮은 짝이 알아서 합쳐져 막히지 않는다.
+   *       상자 하나를 누르면 같은 단계의 짝이 모두 합쳐지고, 합쳐질 때마다 덤(새 상자의 MERGE_SECONDS 초분 × 손맛)을 받는다.
+   *       가득 차면 새 상자는 들어오지 못하고 기다린다(3.6.0). 손으로 자리를 내야 판이 자란다.
    * 줄:   투입구(더 자주) · 단조기(시작 단계 +1, 사는 순간 판의 상자도 모두 +1) · 도장 라인(상자 값, LINE_MILESTONES 마다 2배).
    * 개조: 손맛(덤) · 행운 상자(가끔 한 단계 높게) · 판 넓히기 · 정비 교범(값) · 견본 상자(의뢰 간격) · 자동 합치기.
    * 의뢰: 거래처가 "N단계 상자 몇 개"를 시간 안에 달라고 온다. 그 상자들을 판에 모아 두었다가 넘기면 크게 받는다.
@@ -1400,46 +1401,72 @@
     if (out.gain > 0) { earn(state, out.gain); state.lineEarned += out.gain; }
     return out;
   }
-  /** 손으로 합친다: idx 칸의 상자를 같은 단계의 가까운 상자와 합쳐 idx 칸에 둔다. */
+  /**
+   * 손으로 합친다(3.6.0): idx 칸의 상자를 누르면 같은 단계의 상자가 둘씩 모두 합쳐진다(가까운 것부터, 누른 칸에 첫 결과가 남는다).
+   *   왜: 투입구를 올리면 상자가 1초에 하나 넘게 들어온다. 하나씩 눌러서는 손이 못 따라가고 일이 된다.
+   *       한 번 눌러 주루룩 합쳐지면 누를 일은 줄고, "어느 단계를 터뜨릴까"가 고를 거리가 된다(낮은 단계는 자리가 많이 나고, 높은 단계는 덤이 크다).
+   *   윗단계끼리 또 짝이 맞아도 이어서 합치지는 않는다: 그것은 다음에 누를 거리다.
+   * 돌려주는 값: { ok, at, level 새 단계, count 합친 짝 수, gain 덤의 합, merges: [{ at, from, gain }], best }
+   */
   function mergeBox(state, idx) {
     if (!zoneOpen(state, 2)) return fail('locked');
     idx = Math.floor(safeNum(idx, -1));
     var b = boardOf(state);
     if (!(idx >= 0 && idx < boardSize(state)) || !(b[idx] >= 1)) return fail('empty');
-    var other = boxPartner(state, idx);
-    if (other < 0) return fail('alone');
-    return doMerge(state, idx, other, true);
+    var lv = b[idx];
+    if (lv >= BOX_MAX) return fail('alone');
+    var cells = [];
+    for (var i = 0; i < b.length; i++) if (b[i] === lv) cells.push(i);
+    if (cells.length < 2) return fail('alone');
+    var dist = function (c) { return Math.abs(c % 5 - idx % 5) + Math.abs(Math.floor(c / 5) - Math.floor(idx / 5)); };
+    cells.sort(function (x, y) { return dist(x) - dist(y) || x - y; });      // 누른 칸이 맨 앞
+    var out = { ok: true, at: idx, level: lv + 1, count: 0, gain: 0, merges: [], hand: true, best: false };
+    for (var k = 0; k + 1 < cells.length; k += 2) {
+      var r = doMerge(state, cells[k], cells[k + 1], true);
+      out.count++; out.gain += r.gain; out.merges.push({ at: r.at, from: r.from, gain: r.gain }); if (r.best) out.best = true;
+    }
+    return out;
   }
   /** 합칠 수 있는 짝이 있는 칸들. */
   function mergeable(state) { var b = boardOf(state), cnt = {}, out = []; b.forEach(function (lv) { if (lv >= 1 && lv < BOX_MAX) cnt[lv] = (cnt[lv] || 0) + 1; }); b.forEach(function (lv, i) { if (lv >= 1 && cnt[lv] >= 2) out.push(i); }); return out; }
+  /** 빈칸에 상자 하나를 넣는다. 빈칸이 없으면 넣지 못한다(false). */
   function spawnBox(state, rng, events) {
     var b = boardOf(state), size = boardSize(state), empty = [];
     for (var i = 0; i < size; i++) if (!(b[i] >= 1)) empty.push(i);
-    if (!empty.length) {      // 가득 찼다: 가장 낮은 짝을 알아서 합친다(의뢰가 찾는 단계는 되도록 남긴다)
-      var p = lowestPair(state, heldLevel(state)) || lowestPair(state, 0); if (!p) return;
-      var r = doMerge(state, p[0], p[1], false); r.type = 'box-merge'; if (events) events.push(r);
-      empty = [p[1]];
-    }
+    if (!empty.length) return false;
     var roll = typeof rng === 'function' ? rng : Math.random;
     var at = empty[Math.floor(roll() * empty.length) % empty.length], lv = spawnLevel(state);
     if (mods(state).lucky > 0 && roll() < mods(state).lucky) lv = Math.min(BOX_MAX, lv + 1);      // 행운 상자
     b[at] = lv; if (lv > (state.boxBest || 0)) state.boxBest = lv;
     if (events) events.push({ type: 'box-in', at: at, level: lv });
+    return true;
   }
-  /** 판의 시간을 흘린다. 한 번에 최대 limit 개까지만 넣는다(긴 자리 비움에서도 멈추지 않게). */
+  function boardFull(state) { var b = boardOf(state), size = boardSize(state); for (var i = 0; i < size; i++) if (!(b[i] >= 1)) return false; return true; }
+  /**
+   * 판의 시간을 흘린다.
+   *   3.6.0: 가득 찬 판은 알아서 합쳐지지 않는다. 자리가 없으면 새 상자는 들어오지 못하고 기다린다(판 위의 상자는 계속 번다).
+   *     전에는 가득 차면 가장 낮은 짝이 알아서 합쳐졌다. 투입구를 올리면 판이 늘 가득 차서 0.6초마다 혼자 합쳐졌고, 손이 할 일이 없었다.
+   *   자동 합치기(개조)는 autoMergeSeconds 마다 짝 하나를 합쳐 자리를 낸다. 손보다 훨씬 느리다.
+   *   긴 dt(자리 비움)는 상자 하나씩 따라가며 본다. 한 번에 최대 limit 개까지만 넣는다.
+   */
   function stepBoard(state, dt, rng, events, limit) {
     if (!zoneOpen(state, 2)) return;
     dt = safeNum(dt, 0); if (!(dt > 0)) return;
-    var fs = feedSeconds(state), n = 0, max = limit || 60, auto = autoEvents(state, 2);      // 구역 자동 스위치를 끄면 자동 합치기도 쉰다(짝을 손으로 다 합치고 싶을 때)
+    var fs = feedSeconds(state), n = 0, max = limit || 60, auto = autoEvents(state, 2);      // 구역 자동 스위치를 끄면 자동 합치기도 쉰다
     state.feed = (typeof state.feed === 'number' && isFinite(state.feed) ? state.feed : 1) + dt / fs;
-    if (auto) state.autoMerge = safeNum(state.autoMerge, 0) + dt / autoMergeSeconds(state);
+    if (auto) state.autoMerge = Math.min(safeNum(state.autoMerge, 0) + dt / autoMergeSeconds(state), Math.max(2, dt / autoMergeSeconds(state) + 1));
     while (state.feed >= 1 && n < max) {
-      state.feed -= 1; spawnBox(state, rng, n < 6 ? events : null); n++;
-      // 긴 시간을 한 번에 흘릴 때: 자동 합치기도 상자가 들어오는 사이사이에 일한 것으로 친다
-      if (auto && state.autoMerge >= 1 && n * fs >= autoMergeSeconds(state)) autoMergeOnce(state, events);
+      if (!spawnBox(state, rng, n < 6 ? events : null)) {
+        // 가득 찼다: 자동 합치기가 일할 몫이 남아 있으면 짝 하나를 합쳐 자리를 내고, 없으면 기다린다
+        if (auto && state.autoMerge >= 1 && autoMergeOnce(state, n < 6 ? events : null)) continue;
+        state.feed = 1; break;
+      }
+      state.feed -= 1; n++;
     }
-    if (state.feed >= 1) state.feed = state.feed % 1;
-    for (var g = 0; auto && state.autoMerge >= 1 && g < 400; g++) if (!autoMergeOnce(state, g < 3 ? events : null)) { state.autoMerge = 0; break; }
+    if (state.feed > 1 && n >= max) state.feed = 1;
+    // 자리가 남아 있어도 자동 합치기는 제 박자로 하나씩 합친다(짧은 dt 에서는 한 번에 하나)
+    if (auto && state.autoMerge >= 1 && dt <= autoMergeSeconds(state) * 2) { if (!autoMergeOnce(state, events)) state.autoMerge = Math.min(state.autoMerge, 1); }
+    if (state.autoMerge > 2 && dt <= autoMergeSeconds(state) * 2) state.autoMerge = 2;
   }
   /** 자동 합치기가 짝 하나를 합치는 간격(초). 영구 특성 '자동화'가 줄여 준다(절반까지). 그래도 투입구를 올리면 상자가 더 빨리 들어와 누를 짝은 남는다. */
   function autoMergeSeconds(state) { return AUTO_MERGE_SECONDS * assistFactor(state); }
@@ -3855,7 +3882,7 @@
     SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
     tuneBand: tuneBand, tunePos: tunePos, tuneGain: tuneGain, tuneHit: tuneHit, tuneNow: tuneNow, TUNE_PERIOD: TUNE_PERIOD, TUNE_COOL: TUNE_COOL, TUNE_MISS_COOL: TUNE_MISS_COOL, TUNE_GAIN_SECONDS: TUNE_GAIN_SECONDS, TUNE_AUTO: TUNE_AUTO,
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
-    BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
+    BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, boardFull: boardFull, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
     boxWorth: boxWorth, boardSum: boardSum, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
     CAR_SECONDS: CAR_SECONDS, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, HORDE_MIN: HORDE_MIN, HORDE_MAX: HORDE_MAX, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE,
     stepRail: stepRail, carMult: carMult, carSeconds: carSeconds, railUnits: railUnits, trainInfo: trainInfo, sendTrain: sendTrain, trainGain: trainGain,

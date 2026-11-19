@@ -277,7 +277,7 @@ def run_case(browser, name, size, state, mode):
         page.wait_for_timeout(1300)
         ghost = page.evaluate("(() => { const m = document.getElementById('mboard').getBoundingClientRect(); return [...document.querySelectorAll('#mboard button')].filter(b => !b.hidden && b.querySelector('small') && b.querySelector('small').textContent).filter(b => { const r = b.getBoundingClientRect(), cs = getComputedStyle(b); return cs.opacity !== '1' || cs.position !== 'relative' || r.top < m.top - 1 || r.bottom > m.bottom + 1; }).length; })()")
         if ghost: problems.append('상자가 있는데 안 보이는 칸이 %d개 있다' % ghost)
-        if '손으로 1번 합침' not in text('line-note'): problems.append('합친 횟수가 안 오른다: ' + text('line-note'))
+        if '손으로 0번 합침' in text('line-note') or '손으로' not in text('line-note'): problems.append('합친 횟수가 안 오른다: ' + text('line-note'))
         if page.locator('#mboard button i').count() < 1: problems.append('합쳤는데 덤(+물자) 표시가 없다')
         close_story()
         # 줄 셋: 도장 라인은 값이 바로 오르고, 단조기는 판의 상자가 모두 오르고, 투입구는 간격이 줄어든다

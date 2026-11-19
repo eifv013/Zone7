@@ -56,7 +56,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
     const IDLE = !!process.env.IDLE;      // IDLE=1: 사기만 하고 사건·단추는 손대지 않는 사람(자동 개조가 대신 하는 것만 일어난다)
-    if (!IDLE) { if (s.zone === 2) { const held = C.heldLevel(s); for (let g = 0; g < 8; g++) { const m = C.mergeable(s).filter(i => s.board[i] !== held || C.contractHave(s) > (s.contract ? s.contract.need : 0) + 1); if (!m.length) break; C.mergeBox(s, m[0]); } } }      // 3.3.0: 3구역에 있는 동안은 상자를 손으로 합친다(지나온 뒤에는 가만히 둔다)
+    if (!IDLE) { if (s.zone === 2) { const held = C.heldLevel(s); for (let g = 0; g < 3; g++) { const m = C.mergeable(s).filter(i => s.board[i] !== held); if (!m.length) break; const lo = Math.min(...m.map(i => s.board[i])); C.mergeBox(s, m.find(i => s.board[i] === lo)); } } }      // 3.3.0: 3구역에 있는 동안은 상자를 손으로 합친다(지나온 뒤에는 가만히 둔다)
     if (!IDLE && s.zone === 3) { const ti = C.trainInfo(s); if (ti.running && ti.cars >= 1 && ti.horde <= dt + 1) C.sendTrain(s, rng); }      // 3.4.0: 4구역에 있는 동안은 무리가 닿기 직전에 손으로 보낸다      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
     // 4·6·7구역 사건: 배수를 먼저 다 쌓고, 그 뒤로는 바로 받는다. 5구역 밤샘 연구는 되는 대로 누른다
     if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
