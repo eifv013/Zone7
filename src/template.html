@@ -645,13 +645,13 @@ html, body, button, .row, .panel { touch-action: manipulation; }
 /* 3구역: 품목 고르기, 고장, 출하 트럭 */
 /* 3.3.0 합치기 판. 예전 컨베이어 그림 · 기계 칸 · 품목 · 고장 · 전력 투입은 쓰지 않아 감춘다 */
 #belt, #line-flow, #recipes, #jam-fix, #line .line-acts { display: none !important; }
-.mboard-wrap { margin-bottom: 8px; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; background: #3a3c40; }
+.mboard-wrap { margin-bottom: 8px; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; background: #1f2126; }
 .mboard-top { display: block; width: 100%; height: auto; image-rendering: pixelated; }
 .mboard { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; padding: 4px 5px 6px; }
 .mboard button { position: relative; aspect-ratio: 32 / 27; min-height: 0; padding: 0; border: 0; border-radius: 0; background: #4a4d54; color: #e8e6dc; overflow: visible; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .mboard button canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
-.mboard button b { position: absolute; left: 3px; top: 2px; font: 700 9.5px/1 var(--font-body, inherit); color: #c9c7ba; text-shadow: 0 1px 0 #17180f; pointer-events: none; }
-.mboard button small { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font: 700 10px/1 var(--font-mono); color: #e8e6dc; text-shadow: 0 1px 0 #17180f, 1px 0 0 #17180f, -1px 0 0 #17180f; pointer-events: none; white-space: nowrap; }
+.mboard button b { display: none; position: absolute; left: 3px; top: 2px; font: 700 9.5px/1 var(--font-body, inherit); color: #c9c7ba; text-shadow: 0 1px 0 #17180f; pointer-events: none; }
+.mboard button small { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font: 500 10px/1 var(--font-mono); color: #a9a79c; text-shadow: 0 1px 0 #17180f, 1px 0 0 #17180f, -1px 0 0 #17180f; pointer-events: none; white-space: nowrap; }
 .mboard button.pair small { color: #ffd95a; }
 .mboard button.pop canvas { animation: box-pop .28s ease-out; }
 .mboard button.in canvas { animation: box-in .25s ease-out; }

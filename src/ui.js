@@ -2190,9 +2190,9 @@
    */
   var boardFx = {}, boardSeen = null;
   /*
-   * 3.3.1 합치기 판의 도트 그림. 칸 하나는 32×27 도트: 철판 바닥 + 나무 팔레트 + 품목 그림(14×14).
+   * 3.3.1 합치기 판의 도트 그림. 칸 하나는 32×27 도트: 어두운 바닥 + 품목 그림(14×14).
    *   왜: 색 네모에 글자만 적힌 판은 "보는 재미"가 없었다. 품목이 눈으로 구분되고, 합칠수록 물건이 그럴듯해져야 한다.
-   *   품목 그림은 BOX_ART[단계 - 1](g, x, y) 가 그린다. 아홉 가지를 돌려 쓰고, 한 바퀴 돌 때마다 팔레트가 금빛이 된다(이름의 ★과 같다).
+   *   품목 그림은 BOX_ART[단계 - 1](g, x, y) 가 그린다. 아홉 가지를 돌려 쓰고, 한 바퀴 돌 때마다 모서리에 별이 하나 붙는다(이름의 ★과 같다).
    */
   function px(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
   function spr(g, x, y, rows, pal) { for (var j = 0; j < rows.length; j++) for (var i = 0; i < rows[j].length; i++) { var c = pal[rows[j].charAt(i)]; if (c) px(g, x + i, y + j, 1, 1, c); } }
@@ -2211,19 +2211,14 @@
   /** 칸 하나를 그린다: 바닥 → (상자가 있으면) 팔레트와 품목 → (짝이 있으면) 노란 모서리. */
   function drawBoxCell(cv, lv, pair) {
     var g = cv.getContext('2d'), W = 32, H = 27;
-    px(g, 0, 0, W, H, '#4a4d54'); px(g, 0, 0, W, 1, '#5c6068'); px(g, 0, H - 1, W, 1, '#2e3036'); px(g, 0, 0, 1, H, '#5c6068'); px(g, W - 1, 0, 1, H, '#2e3036');
-    [[2, 2], [W - 3, 2], [2, H - 3], [W - 3, H - 3]].forEach(function (t) { px(g, t[0], t[1], 1, 1, '#2e3036'); });
-    for (var k = 6; k < W - 6; k += 5) { px(g, k, 8, 1, 1, '#44474e'); px(g, k + 2, 15, 1, 1, '#44474e'); }
+    // 바닥은 어둡고 잔무늬 없이: 품목만 눈에 들어오게 한다(나무 팔레트와 바닥 무늬를 넣었더니 화면이 어수선했다)
+    px(g, 0, 0, W, H, '#2b2d33'); px(g, 0, 0, W, 1, '#383b42'); px(g, 0, 0, 1, H, '#383b42'); px(g, 0, H - 1, W, 1, '#1f2126'); px(g, W - 1, 0, 1, H, '#1f2126');
     if (!(lv >= 1)) return;
-    var tier = Math.floor((lv - 1) / BOX_ART.length), wood = tier > 0 ? ['#f0b400', '#ffd95a', '#b88600'] : ['#a8743a', '#c9924e', '#7a4f24'];
-    px(g, 6, 16, 20, 2, wood[0]); px(g, 6, 16, 20, 1, wood[1]); px(g, 7, 18, 3, 2, wood[2]); px(g, 14, 18, 4, 2, wood[2]); px(g, 22, 18, 3, 2, wood[2]);
-    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(5, 20, 22, 1);
-    BOX_ART[(lv - 1) % BOX_ART.length](g, 9, 2);
-    if (pair) {
-      var c = '#f0b400';
-      [[0, 0, 5, 1], [0, 0, 1, 5], [W - 5, 0, 5, 1], [W - 1, 0, 1, 5], [0, H - 1, 5, 1], [0, H - 5, 1, 5], [W - 5, H - 1, 5, 1], [W - 1, H - 5, 1, 5]].forEach(function (t) { px(g, t[0], t[1], t[2], t[3], c); });
-      g.fillStyle = 'rgba(240,180,0,.10)'; g.fillRect(1, 1, W - 2, H - 2);
-    }
+    var tier = Math.floor((lv - 1) / BOX_ART.length);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(9, 17, 14, 1);      // 물건 밑의 옅은 그림자
+    BOX_ART[(lv - 1) % BOX_ART.length](g, 9, 3);
+    for (var st = 0; st < Math.min(tier, 3); st++) spr(g, W - 7 - st * 6, 2, ['..#..', '#####', '.###.', '#.#.#'], { '#': '#ffd95a' });      // 한 바퀴 돌 때마다 별 하나
+    // 짝 표시는 그림에 넣지 않는다: 대부분의 칸에 짝이 있어서 모서리 표시가 판을 뒤덮었다. 합칠 수 있는 상자는 아래 숫자가 노랗다
   }
   /** 판 위의 공장 벽: 높은 창, 천장 크레인, 고철이 떨어지는 투입구, 경광등. 한 번만 그린다. */
   function drawBoardTop() {
@@ -2903,7 +2898,7 @@
       setText($('line-note'), (surgeShow ? '전력 투입 중 ×' + C.SURGE_MULT + ' · ' : '') + (state.retool > 0 ? '품목을 바꾸는 중 · ' + Math.ceil(state.retool) + '초' : line.flow > 0
         ? (C.masteredAll(state) ? '전 품목 숙련 ×' + C.MASTERY_ALL + ' · ' : C.mastery(state, C.recipeOf(state).id) < 1 ? '손에 익히는 중 ×' + C.recipeFactor(state, C.recipeOf(state).id).toFixed(2) + ' · ' : '') + (state.tuneLeft > 0 ? '정비 직후 ×' + C.TUNE_MULT + ' · ' + Math.ceil(state.tuneLeft) + '초 · ' : state.jam ? '고장으로 느려짐 · ' : '') + (line.steady ? '라인 가동 · 산출 +' + Math.round((line.bonus - 1) * 100) + '%' : '세 기계의 속도를 비슷하게 맞춰 가동률이 ' + Math.round(line.steadyAt * 100) + '%를 넘으면 정속 가동(산출 보너스)이 돼요') + ' · 초당 물자 ' + fmt(C.lineNow(state))
         : '기계를 사면 상자가 들어와요'));
-      setText($('line-note'), line.flow > 0 ? (C.mergeable(state).length ? '노란 모서리 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 이번 회차 ' + (state.mergesRun || 0) + '번 합침' : '기계를 사면 상자가 들어와요');
+      setText($('line-note'), line.flow > 0 ? (C.mergeable(state).length ? '숫자가 노란 상자를 누르면 합쳐져요' : '같은 상자 둘이 모이면 합칠 수 있어요') + ' · 이번 회차 ' + (state.mergesRun || 0) + '번 합침' : '기계를 사면 상자가 들어와요');
       $('line-note').classList.remove('boosted');
       drawBelt(line);
       var sg = $('surge'), sOn = state.surgeLeft > 0;
