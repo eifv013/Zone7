@@ -963,6 +963,16 @@ test('저장: 열차와 노선을 안전하게 읽는다', () => {
   for (const junk of [null, 'x', 7, []]) assert.doesNotThrow(() => C.sanitizeState({ version: 2, zone: 3, routes: junk, routeClock: junk, routeLoad: junk }, 0));
 });
 
+test('과제: 두 구역 넘게 지나온 구역의 과제는 나오지 않는다(2.9.2)', () => {
+  const seen = (zone) => { const out = new Set(); for (let i = 0; i < 300; i++) { let k = i; C.drawOffers(() => ((k = (k * 7919 + 13) % 1000) / 1000), { zone }).forEach(id => out.add(id)); } return out; };
+  const z5 = seen(4);
+  for (const id of ['soil', 'ledger', 'process']) assert.ok(!z5.has(id), id);
+  for (const id of ['transit', 'drill', 'serum', 'refine', 'drop']) assert.ok(z5.has(id), id);
+  const z7 = seen(6); assert.ok(!z7.has('transit')); assert.equal(z7.size, 4);
+  assert.equal(C.drawOffers(() => 0.5, { zone: 6 }).length, 3);
+  assert.equal(new Set(C.drawOffers(() => 0.5)).size, 3, '상태 없이 부르면 전체에서 뽑는다');
+});
+
 test('특전: 아직 열지 않은 구역의 특전은 나오지 않는다', () => {
   const seen = (state) => { const out = new Set(); for (let i = 0; i < 400; i++) { let k = i; C.drawPerks(() => ((k = (k * 7919 + 13) % 1000) / 1000), state).forEach(id => out.add(id)); } return out; };
   const z1 = seen(fresh());

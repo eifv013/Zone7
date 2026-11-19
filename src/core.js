@@ -280,7 +280,7 @@
           "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
           "승강장에 열차 한 대가 문을 연 채 서 있다. 좌석마다 가방이 놓여 있다. 사람은 없다. 가방들만 줄 맞춰 앉아서 출발을 기다리고 있다.",
           "맨 앞 칸에서 기관사를 찾았다. 살아 있었다. 운전석에 앉아서 컵라면을 먹고 있었다. “손님이네. 표는 없어도 돼. 이름이 뭐야?” {hero}라고 했더니 승무 일지에 그대로 받아 적었다.",
-          "{driver:은} 열이틀째 여기 있었다고 했다. 전기가 나갔는데 왜 안 떠났느냐고 물으니 전광판을 가리켰다. “저게 안 꺼지잖아. 저게 켜져 있는 동안은 운행 중인 거야. 내가 정한 건 아니고.”",
+          "{driver:은} 전기가 나간 날부터 여기 있었다고 했다. 전기가 나갔는데 왜 안 떠났느냐고 물으니 전광판을 가리켰다. “저게 안 꺼지잖아. 저게 켜져 있는 동안은 운행 중인 거야. 내가 정한 건 아니고.”",
           "아저씨가 변전실을 보러 갔다. 나는 {driver} 옆에 앉아서 전광판을 봤다. --분. 숫자가 들어갈 자리가 비어 있다."] },
         { title: "막차", text: [
           "역무실 칠판에 분필 글씨가 남아 있다. “막차는 7구역행. 못 탄 사람은 선로를 따라 걸을 것. 터널 안에서는 소리 내지 말 것.” 마지막 줄에는 밑줄이 세 번 그어져 있다.",
@@ -311,7 +311,7 @@
           "나는 왼쪽 소매를 걷었다. 이번에는 내 손으로, 모두의 앞에서. 이빨 자국은 하얗게 아물어 있다. 아저씨는 한참 보다가 소매를 도로 내려 주었다. “그래서 비도 안 오는데 맨날 우비를 입고 있었구나.”",
           "쌍둥이 중 하나가 물었다. “그럼 {sib:은} 안 변해?” 나는 모른다고 했다. 엄마도 몰랐을 것이다. 그래서 병원에 온 것이다."] },
         { title: "냉장 상자", text: [
-          "연구가 다시 굴러간다. 아주머니는 알고 보니 임상병리사였다. 열이틀 동안 아무도 묻지 않아서 말하지 않았다고 했다.",
+          "연구가 다시 굴러간다. 아주머니는 알고 보니 임상병리사였다. 그동안 아무도 묻지 않아서 말하지 않았다고 했다.",
           "냉장 상자를 열었다. 엄마가 열지 말라고 했지만, 엄마의 노트가 열라고 하고 있었다. 안에는 피가 든 관이 여섯 개. 라벨은 114-2부터 114-7. 첫 번째 관은 엄마가 들고 간 것이다.",
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
@@ -1725,8 +1725,14 @@
   function projectCost(state) { return Math.ceil(PROJECT_BASE * Math.pow(PROJECT_GROWTH, state.projectsDone) * mods(state).labcost); }
   function rerollCost(state) { return Math.ceil(projectCost(state) * REROLL_SHARE); }
   /** 과제 OFFER_COUNT 개를 겹치지 않게 뽑는다. */
-  function drawOffers(rng) {
-    var pool = PROJECTS.map(function (p) { return p.id; }), out = [];
+  /*
+   * 2.9.2: 두 구역 넘게 지나온 구역만 키우는 과제는 내밀지 않는다(5구역에서는 1 · 2 · 3구역 과제가 빠진다).
+   *   뒤 구역의 수입이 앞 구역의 수만 배라, 앞 구역 생산을 2배로 해도 달라지는 것이 없었다. 고를 것이 셋 중 하나뿐인 때가 많았다.
+   */
+  var PROJECT_ZONE = { z1: 0, z2: 1, z3: 2, z4: 3 };
+  function drawOffers(rng, state) {
+    var at = state && typeof state.zone === 'number' ? state.zone : -1;
+    var pool = PROJECTS.filter(function (p) { return !(at >= 0 && PROJECT_ZONE[p.key] !== undefined && at - PROJECT_ZONE[p.key] >= 2); }).map(function (p) { return p.id; }), out = [];
     rng = typeof rng === 'function' ? rng : Math.random;
     while (out.length < OFFER_COUNT && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length) % pool.length, 1)[0]);
     return out;
@@ -1747,7 +1753,7 @@
     if (def.key === 'drop') { gain = Math.max(1, productionPerSec(state) * SUPPLY_DROP_SECONDS); earn(state, gain); }
     state.research[id]++;
     state.projectsDone++;
-    state.offers = drawOffers(rng);
+    state.offers = drawOffers(rng, state);
     var record = findRecord(state, rng);      // 병원 서류: 과제를 끝낼 때 가끔 한 장을 찾는다
     return { ok: true, id: id, name: def.name, level: state.research[id], cost: cost, gain: gain, record: record };
   }
@@ -1757,12 +1763,12 @@
     var cost = rerollCost(state);
     if (cost > state.points) return fail('points');
     state.points -= cost;
-    state.offers = drawOffers(rng);
+    state.offers = drawOffers(rng, state);
     return { ok: true, cost: cost };
   }
   function stepLab(state, dt, rng) {
     if (!zoneOpen(state, 4)) return;
-    if (!state.offers.length) state.offers = drawOffers(rng);       // 구역에 처음 들어섰을 때
+    if (!state.offers.length) state.offers = drawOffers(rng, state);       // 구역에 처음 들어섰을 때
     // 밤샘 연구 중인 시간만큼은 FOCUS_MULT 배로 모인다(dt 가 길어도 남은 시간까지만)
     var focused = Math.min(dt, Math.max(0, state.focusLeft || 0));
     state.points += researchRate(state) * (dt + (FOCUS_MULT - 1) * focused);
