@@ -2960,11 +2960,11 @@
       setText($('contract-note'), '거래처 ' + C.clientCount(state) + ' / ' + C.CLIENTS.length + ' · 상자 값 +' + Math.round((C.contractMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.CONTRACT_BONUS_MAX * 100) + '%)');
       C.MACHINES.forEach(function (d) {
         var r = rows.machines[d.id], lv = state.machines[d.id] || 0, q = qtyFor(C.maxMachines(state, d.id), d.max - lv), cost = C.machineCost(state, d.id, q);
-        setText(r.count, 'Lv ' + lv + ' / ' + d.max);
+        setText(r.count, (d.id === 'paint' ? '' : 'Lv ') + lv + ' / ' + d.max);      // 도장 라인은 별 딱지가 있어 자리가 좁다(1구역 시설처럼 숫자만)
         // 줄마다 "지금 어떤가 → 사면 어떻게 되나"를 적는다
-        setText(r.info, d.id === 'feed' ? '상자가 ' + line.feed.toFixed(2) + '초마다 들어와요' + (lv < d.max ? ' → ' + (line.feed * C.FEED_STEP).toFixed(2) + '초' : '')
-          : d.id === 'forge' ? '들어오는 상자: ' + C.boxName(line.spawn) + (lv < d.max ? ' → ' + C.boxName(line.spawn + 1) + ' · 판의 상자도 모두 올라요' : '')
-          : '상자 값 ×' + fmt((1 + lv) * line.milestone) + (lv < d.max ? ' · 레벨당 +' + fmt(line.milestone) : ''));
+        setText(r.info, d.id === 'feed' ? (lv < d.max ? line.feed.toFixed(2) + '초 → ' + (line.feed * C.FEED_STEP).toFixed(2) + '초' : line.feed.toFixed(2) + '초마다')
+          : d.id === 'forge' ? C.boxName(line.spawn) + (lv < d.max ? ' → ' + C.boxName(line.spawn + 1) : '')
+          : '×' + fmt((1 + lv) * line.milestone) + (lv < d.max ? ' · 레벨당 +' + fmt(line.milestone) : ''));
         if (d.id === 'paint') setMile(r, lv, q, cost <= state.supplies, C.LINE_MILESTONES);
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);

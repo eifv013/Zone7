@@ -300,7 +300,7 @@ def run_case(browser, name, size, state, mode):
         if '볼트' not in text('row-forge') : problems.append('단조기 줄에 들어오는 상자가 안 적혀 있다: ' + text('row-forge'))
         feed0 = text('row-feed')
         if not tap('#row-feed'): problems.append('투입구를 살 수 없다')
-        if text('row-feed') == feed0 or '초마다' not in text('row-feed'): problems.append('투입구를 샀는데 간격이 그대로다: ' + text('row-feed'))
+        if text('row-feed') == feed0 or '초 →' not in text('row-feed'): problems.append('투입구를 샀는데 간격이 그대로다: ' + text('row-feed'))
         tap('[data-qty="max"]'); tap('#row-paint'); tap('[data-qty="1"]')
         for up in ['#row-bonus', '#row-lucky', '#row-manual']:
             if not page.locator(up).count(): problems.append('새 개조가 없다: ' + up)
@@ -386,6 +386,7 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=radio]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
     elif mode == 'rail':
+        page.evaluate("window.GameCore.TEST.rush = 0")      # 돌진은 운에 달려 있어서, 아래 확인들이 끝날 때까지 꺼 둔다(맨 끝에서 따로 본다)
         # 4구역: 열차가 없을 때의 안내 → 열차와 순환선 → 운행이 시작되고 → 30초 뒤 화물이 들어오는지
         tap('[data-mview-set=manage]'); tap('[data-tab=z3]')
         if not page.locator('#rail').is_visible(): problems.append('4구역 탭에 노선 칸이 없다')
@@ -447,6 +448,20 @@ def run_case(browser, name, size, state, mode):
         for up in ['#row-longplat', '#row-fence', '#row-horn', '#row-coupler', '#row-yard']:
             if not page.locator(up).count(): problems.append('새 개조가 없다: ' + up)
         if not page.is_disabled('#train-go'): problems.append('빈 열차인데 출발 단추가 눌린다')
+        # 3.8.6 돌진: 칸이 붙으면 경고가 뜨고, 경적을 누르면 끊긴다
+        page.evaluate("window.GameCore.TEST.rush = 1000")
+        seen = False
+        for _ in range(80):
+            tap('#platform'); page.wait_for_timeout(150)
+            if text('plat-horde-label') == '무리 돌진!': seen = True; break
+        if not seen: problems.append('돌진 경고가 뜨지 않는다')
+        else:
+            if '달려와요' not in text('plat-horde-left'): problems.append('돌진 중인데 거리 글이 그대로다: ' + text('plat-horde-left'))
+            if 'alert' not in (page.get_attribute('#train-horn', 'class') or ''): problems.append('돌진 중인데 경적 단추가 깜빡이지 않는다')
+            if '경적' not in text('plat-note'): problems.append('돌진 중인데 할 일을 알려 주지 않는다: ' + text('plat-note'))
+            tap('#train-horn'); page.wait_for_timeout(200)
+            if text('plat-horde-label') != '무리와의 거리': problems.append('경적을 울렸는데 돌진이 안 끊긴다: ' + text('plat-horde-label'))
+        page.evaluate("window.GameCore.TEST.rush = 0")
         tap('[data-tab=z4]')
         if '아직 열지 않은' not in text('soon'): problems.append('잠긴 5구역 탭에 안내가 없다: ' + text('soon'))
         if page.locator('[data-tab=z5]').is_visible(): problems.append('아직 먼 6구역 탭이 보인다')
