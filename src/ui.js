@@ -3482,6 +3482,8 @@
         var to = at + dir;
         if (at < 0 || to < 0 || to >= g.length) return false;
         g[to].click();
+        // 2.8.7: 초점도 같이 옮긴다. 손으로 눌렀던 탭에 흰 테두리(초점 표시)가 남아, 밀어서 넘겨도 테두리가 따라오지 않았다
+        try { g[to].focus({ preventScroll: true }); } catch (e) { /* 초점을 못 옮겨도 탭은 넘어갔다 */ }
         try { g[to].scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) { /* 줄이 길 때 고른 탭이 보이게만 한다 */ }
         return true;
       }
