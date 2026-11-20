@@ -2964,6 +2964,12 @@
         if (gN > 0 && zN > 0 && Math.floor(now / 90 + sd) % 3 === 0) { var tu = (((now / 90 | 0) * 29 + sd * 31) % 100) / 100; if (sd === 1) R(170, 12 + tu * 100, 5, 1, '#ffd95a'); else R(10 + tu * 160, sd === 0 ? 9 : 115, 1, 4, '#ffd95a'); }
       }
     }
+    // 울타리 밖의 길 잃은 무리: 손을 흔들고, 남은 시간이 줄어든다. 얼마 안 남으면 뒤에 무리가 붙는다
+    (c.strays || []).forEach(function (s, si) { var q = campStrayPos(s), lf = Math.max(0, s.t / C.STRAY_TIME), wv = Math.floor(now / 160 + si) % 2, bc = lf < 0.35 ? '#ff5a4a' : '#f0b400';
+      man(q[0] - 4, q[1] - 3, s.id, 0, 0); man(q[0], q[1] - 2 - wv, s.id + 1, 0, 0); man(q[0] + 4, q[1] - 3, s.id + 2, 0, 0); R(q[0] + 1, q[1] - 5 - wv, 1, 2, '#e6c9a0');
+      if (lf < 0.5) { var zx = s.side === 1 ? 6 : (s.u > 0.5 ? -9 : 9), zy = s.side === 1 ? (s.u > 0.5 ? -9 : 9) : 0; zed(q[0] + zx * (0.5 + lf), q[1] - 3 + zy * (0.5 + lf), si); }
+      if (Math.floor(now / 250) % 2 || lf < 0.35) { var X = q[0] - 8, Y = q[1] - 7, W = 18, H = 13; R(X, Y, 4, 1, bc); R(X, Y, 1, 4, bc); R(X + W - 4, Y, 4, 1, bc); R(X + W - 1, Y, 1, 4, bc); R(X, Y + H - 1, 4, 1, bc); R(X, Y + H - 4, 1, 4, bc); R(X + W - 4, Y + H - 1, 4, 1, bc); R(X + W - 1, Y + H - 4, 1, 4, bc); }
+      R(q[0] - 6, q[1] + 5, 14, 2, K); R(q[0] - 6, q[1] + 5, Math.round(14 * lf), 2, bc); });
     // 습격 중에는 어둡게 덮고 불빛만 다시 밝힌다
     if (n) { g.fillStyle = 'rgba(8,12,34,.5)'; g.fillRect(0, 0, 184, 128); }
     lights.forEach(function (l) { var glow = String(l[4]).indexOf('rgba') === 0; if (glow) { R(l[0], l[1], l[2], l[3], l[4]); return; } if (n) { R(l[0], l[1], l[2], l[3], l[4]); g.fillStyle = 'rgba(255,233,160,.16)'; g.fillRect(l[0] - 2, l[1] - 1, l[2] + 4, l[3] + 4); } });
@@ -2979,6 +2985,8 @@
     for (var v = 0; v < 6; v++) { g.fillStyle = 'rgba(6,10,6,' + (0.2 - v * 0.03).toFixed(3) + ')'; g.fillRect(v, 0, 1, 128); g.fillRect(183 - v, 0, 1, 128); }
     cv.classList.toggle('ward-shake', !!(campFlash && campFlash.kind === 'breach' && now - campFlash.at < 300));
   }
+  /** 울타리 밖 무리의 자리(도트). 울타리 바로 안쪽에 걸쳐 그린다(밖은 좁아서 안 보인다). */
+  function campStrayPos(s) { return s.side === 1 ? [168, 16 + s.u * 92] : [14 + s.u * 150, s.side === 0 ? 13 : 111]; }
   /** 문에서 그 자리까지의 길(도트 자리들). */
   function campPath(d) { var p = campPlot(d), ry = d.row === 0 ? 43 : 79; return [[8, 79], [48, 79], [50, ry + (d.row === 0 ? 0 : 0)], [p.x + 12, ry], [p.x + 14, p.y + (d.row === 2 ? 4 : CAMP_H - 6)]]; }
   function campSendWalkers(path, n, gun) { var now = Date.now(); for (var k = 0; k < n; k++) campWalk.push({ at: now + k * 130, ms: 1300, path: path, gun: !!gun }); if (campWalk.length > 40) campWalk = campWalk.slice(-40); }
@@ -2995,8 +3003,8 @@
     if (sel) { var lv = C.settleLv(state, sel.id), need = C.settleNeed(state, sel.id), work = C.settleWork(state, sel.id), brk = C.settleBroken(state, sel.id);
       setText($('camp-name'), sel.name + (lv > 0 ? ' ' + lv + '단계' : '') + ' · ' + (brk ? '부서졌어요' : sel.desc)); setText($('camp-need'), need > 0 ? fmt(work) + ' / ' + fmt(need) + '명' : '다 자랐어요'); $('campscene').setAttribute('data-sel-lv', lv); fill($('camp-bar'), need > 0 ? work / need : 1); }
     drawCamp();
-    var sc = $('campscene'); sc.classList.toggle('tappable', has); sc.setAttribute('data-free', free); sc.setAttribute('data-levels', C.settleLevels(state)); sc.setAttribute('data-raid', n ? n.side : ''); sc.setAttribute('data-guards', n ? n.guards : 0); sc.setAttribute('data-need', sc0); sc.setAttribute('data-flag', c.flag || '');
-    setText($('camp-note'), !has ? '안테나를 세우면 사람이 모여요' : n ? (C.nightHold(state) >= 1 ? '울타리가 버티고 있어요' : '무리가 몰리는 쪽에 사람을 세워요. 몰리는 쪽이 바뀌어요') : (state.sendsRun || 0) < 3 ? '지도의 자리를 누르면 문 앞의 사람이 가서 지어요' : C.settleCount(state) < 2 ? '송신탑을 눌러도 주파수를 맞춰요' : (state.nightsHeld || 0) + (state.campBreaches || 0) < 1 ? '손을 쓰고 있으면 습격이 와요. 울타리에 사람을 세워 막아요' : '다음 습격에 ' + fmt(sc0) + '명을 세워야 해요');
+    var sc = $('campscene'); sc.classList.toggle('tappable', has); sc.setAttribute('data-free', free); sc.setAttribute('data-levels', C.settleLevels(state)); sc.setAttribute('data-raid', n ? n.side : ''); sc.setAttribute('data-guards', n ? n.guards : 0); sc.setAttribute('data-need', sc0); sc.setAttribute('data-strays', (c.strays || []).map(function (s) { var q = campStrayPos(s); return Math.round(q[0]) + ':' + Math.round(q[1]); }).join(',')); sc.setAttribute('data-flag', c.flag || '');
+    setText($('camp-note'), !has ? '안테나를 세우면 사람이 모여요' : n ? (C.nightHold(state) >= 1 ? '울타리가 버티고 있어요' : '무리가 몰리는 쪽에 사람을 세워요. 몰리는 쪽이 바뀌어요') : (state.sendsRun || 0) < 3 ? '지도의 자리를 누르면 문 앞의 사람이 가서 지어요' : (state.straysRun || 0) < 3 ? '울타리 밖에서 손 흔드는 사람들을 누르면 들어와요' : C.settleCount(state) < 2 ? '송신탑을 눌러도 주파수를 맞춰요' : (state.nightsHeld || 0) + (state.campBreaches || 0) < 1 ? '손을 쓰고 있으면 습격이 와요. 울타리에 사람을 세워 막아요' : '다음 습격에 ' + fmt(sc0) + '명을 세워야 해요');
   }
   function wireCamp() {
     function campPop(xd, yd, text, cls) {
@@ -3016,12 +3024,17 @@
     $('campscene').addEventListener('click', function (e) {
       var cv = $('campscene'), rc = cv.getBoundingClientRect(), key = !(e.clientX > 0) && !(e.clientY > 0), c = C.campOf(state);
       var x = (e.clientX - rc.left) / rc.width * 184, y = (e.clientY - rc.top) / rc.height * 128;
-      if (key) { if (c.night) guard(-1); else if (c.flag) place(c.flag); return; }
+      if (key) { if (c.strays && c.strays.length) rescue(c.strays[0]); else if (c.night) guard(-1); else if (c.flag) place(c.flag); return; }
+      var near = null, nd = 14; (c.strays || []).forEach(function (s) { var q = campStrayPos(s), d = Math.max(Math.abs(q[0] - x), Math.abs(q[1] - y)); if (d < nd) { nd = d; near = s; } }); if (near) { rescue(near); return; }
       if (c.night) { if (y < 12) { guard(0); return; } if (y > 115) { guard(2); return; } if (x > 171) { guard(1); return; } }
       if (x < 46 && y < 66) { $('t7-tune').click(); return; }      // 송신탑: 주파수를 맞춘다
       var hit = null; C.SETTLE.forEach(function (d) { var p = campPlot(d); if (x >= p.x - 1 && x <= p.x + CAMP_W + 1 && y >= p.y - 4 && y <= p.y + CAMP_H + 4) hit = d; });
       if (hit) place(hit.id);
     });
+    function rescue(s) {
+      var q = campStrayPos(s), r = C.rescueStray(state, s.id); if (!r.ok) return;
+      campSendWalkers([[q[0], q[1]], [q[0] < 60 ? q[0] : 52, q[1] < 60 ? 43 : 79], [50, 79], [12, 79]], 3, false); campPop(q[0], q[1] - 10, '+' + fmt(Math.floor(r.gain)) + '명', 'done'); sfx('buy'); buzz(12); Store.save(); render();
+    }
     function place(id) {
       var d = C.SETTLE.filter(function (q) { return q.id === id; })[0], p = campPlot(d), c = C.campOf(state), r = C.buildSettle(state, id);
       if (!r.ok) { if (r.reason === 'people' || r.reason === 'done') { c.flag = id; if (r.reason === 'people') campPop(p.x + 19, p.y + 6, '문 앞에 사람이 없어요', 'bad'); render(); } return; }
@@ -4016,6 +4029,9 @@
         case 'camp-night':
           campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([40, 40, 40]); if (campPopFn) campPopFn(92, 56, '습격 · ' + ['북쪽', '동쪽', '남쪽'][ev.side] + '으로 몰린다', 'bad'); }
           log('울타리에 무리가 붙었다.', 'bad');
+          break;
+        case 'stray-in':
+          if (tab === 'z6' && pane === 'play') sfx('tab');
           break;
         case 'camp-shift':
           if (tab === 'z6' && pane === 'play') { sfx('tab'); buzz(15); if (campPopFn) campPopFn(92, 56, ['북쪽', '동쪽', '남쪽'][ev.side] + '으로 몰린다', 'bad'); }

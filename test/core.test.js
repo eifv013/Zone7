@@ -2729,6 +2729,17 @@ test('7구역 습격: 화면을 보고 있을 때만 온다. 무리는 세 쪽�
   const a = inCamp(); a.survivors = 5e6; fill7(a, 'farm'); C.campOf(a).clock = C.RAID_EVERY - 1; C.campSeen(a); C.stepCamp(a, 600, calm, []); assert.equal(a.camp.night, null); assert.equal(a.campBreaches || 0, 0);
 });
 
+test('7구역 울타리 밖의 사람들: 보고 있으면 나타나고, 시간 안에 누르면 들어온다. 못 누르면 사라진다', () => {
+  const s = inCamp(), c = C.campOf(s), ev = []; c.hand = 999; for (let i = 0; i < 80; i++) C.stepCamp(s, 0.25, lcg(2), ev); assert.equal((c.strays || []).length, 0, '보고 있지 않으면 나타나지 않는다');
+  const r = lcg(3); for (let i = 0; i < 400; i++) { C.campSeen(s); C.stepCamp(s, 0.25, r, ev); assert.ok(c.strays.length <= C.STRAY_MAX); }
+  assert.ok(ev.some((e) => e.type === 'stray-in')); assert.ok(ev.some((e) => e.type === 'stray-lost'), '못 누르면 사라진다');
+  while (!c.strays.length) { C.campSeen(s); C.stepCamp(s, 0.25, r, ev); } const st = c.strays[0], sv = s.survivors; assert.ok(st.side >= 0 && st.side <= 2 && st.u > 0 && st.u < 1 && st.t > 0);
+  const g = C.rescueStray(s, st.id); assert.ok(g.ok && g.gain > 0); near(s.survivors - sv, C.strayGain(s)); assert.equal(s.straysRun, 1); assert.equal(C.rescueStray(s, st.id).reason, 'gone'); assert.equal(C.rescueStray(inLab(), 1).reason, 'locked');
+  c.nightLv = 10; near(C.strayGain(s), C.survivorRate(s) * 5 * 2); C.stepCamp(s, 600, calm, []); assert.equal(c.strays.length, 0, '자리를 비우면 없어진다');
+  for (const junk of [NaN, 'x', null, -1, {}]) assert.doesNotThrow(() => C.rescueStray(s, junk));
+  const b = C.deserialize(C.serialize(s), 0); assert.doesNotThrow(() => { C.campSeen(b); C.stepCamp(b, 0.5, calm, []); });
+});
+
 test('7구역 이장: 깃발을 꽂아 둔 자리로 알아서 보낸다. 밤에는 울타리를 절반까지만 채운다. 가만히 둠 < 이장 < 손', () => {
   const s = inCamp(); s.survivors = 1e7; s.upgrades.elder = 1; assert.ok(C.elderOn(s)); const c = C.campOf(s); c.hand = 999;
   assert.equal(C.elderTarget(s), 'farm', '깃발이 없으면 가장 덜 드는 자리'); c.flag = 'clinic'; const ev = [];

@@ -598,7 +598,7 @@
       // 구조 신호
       signalIn: SIGNAL_FIRST, signalLeft: 0, signalsAnswered: 0, buff: null,
       // 특전(이번 판)
-      settle: {}, settleLv: {}, camp: { work: {}, broken: {}, flag: null, clock: 0, night: null, nightLv: 0, day: 1, hand: 999, elder: 0 }, nightsHeld: 0, campBreaches: 0, nightLvBest: 0, sendsRun: 0, guardsLost: 0, build: null, tune: { t: 0, band: 0.6, cool: 0 }, tuneHits: 0,      // 7구역 정착지와 주파수(3.1.0)
+      settle: {}, settleLv: {}, camp: { work: {}, broken: {}, flag: null, clock: 0, night: null, nightLv: 0, day: 1, hand: 999, elder: 0 }, nightsHeld: 0, campBreaches: 0, nightLvBest: 0, sendsRun: 0, guardsLost: 0, straysRun: 0, build: null, tune: { t: 0, band: 0.6, cool: 0 }, tuneHits: 0,      // 7구역 정착지와 주파수(3.1.0)
       zev: { rail: null, guard: null, tower: null }, zevIn: { rail: 60, guard: 60, tower: 60 }, railBoost: 0, guardBoost: 0, zevRun: 0, focusLeft: 0, focusCool: 0, push: { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } },      // 4·6·7구역 사건과 5구역 밤샘 연구
       autoOff: {},      // 구역 index → true 면 그 구역의 주문·사건 자동을 꺼 둔 것(철수해도 남는다)
       goalExt: {},      // 목표 id → 채운 연장 단계 수(이번 회차)
@@ -882,7 +882,7 @@
     var rb = raw.build && typeof raw.build === 'object' ? findById(SETTLE, raw.build.id) : null;
     if (rb && s.zone >= 6 && !s.settle[rb.id]) { s.settle[rb.id] = true; s.settleLv[rb.id] = 1; }
     s.camp.flag = findById(SETTLE, rc7.flag) ? rc7.flag : null; s.camp.clock = clamp(safeNum(rc7.clock, 0), 0, RAID_EVERY); s.camp.nightLv = clamp(safeCount(rc7.nightLv), 0, NIGHT_LV_MAX); s.camp.day = clamp(safeCount(rc7.day) || 1, 1, 1e9);
-    s.nightsHeld = clamp(safeCount(raw.nightsHeld), 0, 1e12); s.campBreaches = clamp(safeCount(raw.campBreaches), 0, 1e12); s.nightLvBest = clamp(safeCount(raw.nightLvBest), 0, NIGHT_LV_MAX); s.guardsLost = clamp(safeNum(raw.guardsLost, 0), 0, 1e15); s.sendsRun = clamp(safeCount(raw.sendsRun), 0, 1e12);
+    s.nightsHeld = clamp(safeCount(raw.nightsHeld), 0, 1e12); s.campBreaches = clamp(safeCount(raw.campBreaches), 0, 1e12); s.nightLvBest = clamp(safeCount(raw.nightLvBest), 0, NIGHT_LV_MAX); s.guardsLost = clamp(safeNum(raw.guardsLost, 0), 0, 1e15); s.straysRun = clamp(safeCount(raw.straysRun), 0, 1e12); s.sendsRun = clamp(safeCount(raw.sendsRun), 0, 1e12);
     PUSHES.forEach(function (d) { var q = rp[d.id] && typeof rp[d.id] === 'object' ? rp[d.id] : {}, openZ = s.zone >= d.zone; s.push[d.id] = { left: openZ ? clamp(safeNum(q.left, 0), 0, PUSH_SECONDS) : 0, cool: openZ ? clamp(safeNum(q.cool, 0), 0, PUSH_COOL) : 0 }; });
     s.edge = clamp(safeNum(raw.edge, 0), 0, 1); s.nightEase = raw.nightEase === NIGHT_EASE ? NIGHT_EASE : 1; s.counterAt = clamp(safeCount(raw.counterAt), 0, 99);
     s.defStreak = clamp(safeCount(raw.defStreak), 0, 1e6); s.perkOwed = clamp(safeCount(raw.perkOwed), 0, PERK_OWED_MAX); s.bossPerks = clamp(safeCount(raw.bossPerks), 0, BOSS_PERKS_MAX); s.perkFrom = raw.perkFrom === 'boss' ? 'boss' : 'goal';
@@ -1044,8 +1044,8 @@
   ];
   var SETTLE_SCALE = 100;      // 건물 값 전체에 곱하는 수(밸런스를 맞출 때 이것 하나만 만진다)
   SETTLE.forEach(function (d) { d.cost = Math.round(d.cost * SETTLE_SCALE); });
-  var TUNE_PERIOD = 3.2, TUNE_BAND = 0.14, TUNE_GAIN_SECONDS = 8, TUNE_COOL = 6,      /* 4.2.1: 15초 쉬고 20초 치 → 6초 쉬고 8초 치(초당 받는 것은 같다. 쉬는 동안 손이 놀았다) */
-  TUNE_KEEP = 0, TUNE_MISS_COOL = 5, TUNE_MIN = 5, TUNE_AUTO = 0.5;
+  var TUNE_PERIOD = 3.2, TUNE_BAND = 0.14, TUNE_GAIN_SECONDS = 3, TUNE_COOL = 1.5,      /* 4.2.2: 맞추고 나서 쉬는 시간을 거의 없앴다(1.5초). 왜: 낮에는 맞추고 기다리는 것뿐이라 '보고만 있다'고 하셨다. 한 번에 받는 양은 그만큼 나눴다 */
+  TUNE_KEEP = 0, TUNE_MISS_COOL = 1.5, TUNE_MIN = 5, TUNE_AUTO = 0.5;
   /*
    * 공사(3.1.0): 건물은 맡기는 즉시 서지 않는다. 줄(row)에 따라 SETTLE_BUILD 초가 걸리고, 한 번에 한 채만 짓는다.
    *   사람 수만으로 막으면 강한 사람은 20분, 약한 사람은 16시간이 걸렸다(재 보니 그랬다). 공사 시간은 누구에게나 같다.
@@ -1133,6 +1133,22 @@
    *   night.guards 는 세 쪽의 합, night.fence 는 가장 많이 깎인 쪽(화면과 옛 코드가 쓴다).
    */
   var RAID_SHIFT = 6, RAID_SIDES = 3;
+  /*
+   * 4.2.2 울타리 밖의 사람들(c.strays): 이 화면을 보고 있으면 STRAY_EVERY 초쯤마다 울타리 밖에 길 잃은 무리가 나타난다(많아야 STRAY_MAX).
+   *   STRAY_TIME 초 안에 누르면 문으로 들어온다(모이는 속도의 STRAY_PAY 초 치 × 습격 단계). 못 누르면 사라진다.
+   *   왜: 낮에는 주파수를 맞추고 사람이 차기를 기다리는 것뿐이었다. 지도에서 눈과 손이 할 일을 둔다.
+   */
+  var STRAY_EVERY = 5, STRAY_TIME = 7, STRAY_MAX = 3, STRAY_PAY = 5;
+  function strayGain(state) { var c = state.camp; return Math.max(TUNE_MIN, survivorRate(state) * STRAY_PAY * (1 + 0.1 * (c && c.nightLv > 0 ? c.nightLv : 0))); }
+  /** 울타리 밖의 무리를 들인다. */
+  function rescueStray(state, id) {
+    if (!zoneOpen(state, 6)) return fail('locked');
+    var c = campOf(state), list = c.strays || [], i = -1; for (var k = 0; k < list.length; k++) if (list[k].id === id) { i = k; break; }
+    if (i < 0) return fail('gone');
+    var s = list[i], gain = strayGain(state); list.splice(i, 1);
+    state.survivors = Math.min(1e15, (state.survivors || 0) + gain); state.straysRun = (state.straysRun || 0) + 1; c.hand = 0;
+    return { ok: true, gain: gain, side: s.side, u: s.u };
+  }
   function towerHold(state) { var tw = 0; Object.keys(TOWER_HOLD).forEach(function (id) { if (!settleBroken(state, id)) tw += TOWER_HOLD[id] * levelPow(settleLv(state, id)); }); return Math.min(TOWER_HOLD_MAX, tw); }      // 경비대와 망루만으로는 다 못 막는다
   function sideNeed(n, i) { return Math.max(1, Math.ceil(n.need * n.w[i])); }
   /** i 쪽 울타리가 버티는 정도(0 ~ 1). */
@@ -1173,11 +1189,17 @@
     dt = safeNum(dt, 0); if (!(dt > 0)) return;
     var c = campOf(state), roll = typeof rng === 'function' ? rng : Math.random, elder = elderOn(state);
     if (dt > 5) {      // 굵은 걸음(자리 비움): 밤은 오지 않는다. 이장이 있으면 그동안에도 보낸다
-      c.night = null; c.hand = 999;
+      c.night = null; c.hand = 999; c.strays = [];
       if (elder) { var sends = Math.min(400, Math.floor(dt / ELDER_SECONDS)); for (var q = 0; q < sends; q++) { var tg = elderTarget(state); if (!tg || !buildSettle(state, tg, true, events).ok) break; } }
       return;
     }
     c.hand = Math.min(999, c.hand + dt);
+    if (!Array.isArray(c.strays)) c.strays = [];
+    for (var si0 = c.strays.length - 1; si0 >= 0; si0--) { c.strays[si0].t -= dt; if (c.strays[si0].t <= 0) { var gone = c.strays.splice(si0, 1)[0]; if (events) events.push({ type: 'stray-lost', side: gone.side, u: gone.u }); } }
+    if (c.hand < CAMP_HAND && survivorRate(state) > 0 && TEST.stray !== 0) {
+      c.strayIn = (c.strayIn > 0 ? c.strayIn : STRAY_EVERY * (0.6 + roll() * 0.8)) - dt * TEST.stray;
+      if (c.strayIn <= 0 && c.strays.length < STRAY_MAX) { c.strayN = (c.strayN || 0) + 1; var st = { id: c.strayN, side: Math.floor(roll() * RAID_SIDES) % RAID_SIDES, u: 0.08 + roll() * 0.84, t: STRAY_TIME }; c.strays.push(st); c.strayIn = 0; if (events) events.push({ type: 'stray-in', id: st.id, side: st.side, u: st.u }); }
+    }
     if (elder) {
       c.elder = (c.elder || 0) + dt / ELDER_SECONDS * (c.night ? 4 : 1);      // 습격 중에는 서두른다(몰린 쪽은 몇 초면 깎인다)
       while (c.elder >= 1) { c.elder -= 1;
@@ -1989,7 +2011,7 @@
    */
   var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
   var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
-  var TEST = { rush: 1, er: 1, wave: 1, night: 1 };      // er: 급한 환자가 오는 빠르기에 곱한다(0 이면 오지 않는다)
+  var TEST = { rush: 1, er: 1, wave: 1, night: 1, stray: 1 };      // er: 급한 환자가 오는 빠르기에 곱한다(0 이면 오지 않는다)
   void 0;      // 화면 테스트용 손잡이: 돌진이 오는 확률에 곱한다(0 이면 오지 않는다). 게임에서는 늘 1
   var HORDE_SECONDS = 45, HORDE_SPRINT = 0.08, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_DIST = 0.45, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
@@ -4588,7 +4610,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, sideHold: sideHold, sideNeed: sideNeed, towerHold: towerHold, newRaid: newRaid, RAID_SHIFT: RAID_SHIFT, campSeen: campSeen, raidNeed: raidNeed, levelPow: levelPow, LV_GROW: LV_GROW, TOWER_HOLD_MAX: TOWER_HOLD_MAX, GUARD_LOSS: GUARD_LOSS, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
+    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, rescueStray: rescueStray, strayGain: strayGain, STRAY_TIME: STRAY_TIME, STRAY_MAX: STRAY_MAX, STRAY_EVERY: STRAY_EVERY, sideHold: sideHold, sideNeed: sideNeed, towerHold: towerHold, newRaid: newRaid, RAID_SHIFT: RAID_SHIFT, campSeen: campSeen, raidNeed: raidNeed, levelPow: levelPow, LV_GROW: LV_GROW, TOWER_HOLD_MAX: TOWER_HOLD_MAX, GUARD_LOSS: GUARD_LOSS, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
     SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
     tuneBand: tuneBand, tunePos: tunePos, tuneGain: tuneGain, tuneHit: tuneHit, tuneNow: tuneNow, TUNE_PERIOD: TUNE_PERIOD, TUNE_COOL: TUNE_COOL, TUNE_MISS_COOL: TUNE_MISS_COOL, TUNE_GAIN_SECONDS: TUNE_GAIN_SECONDS, TUNE_AUTO: TUNE_AUTO,
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
