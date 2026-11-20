@@ -1545,9 +1545,17 @@
       ab.addEventListener('click', function () { var res = C.cycleAutoDef(state, d.id); if (res.ok) { sfx('click'); Store.save(); render(); } });
       rows.autoDef = rows.autoDef || {}; rows.autoDef[d.id] = ab; $('auto-defs').appendChild(ab);
     });
+    /* 4.4.0 특성은 세 묶음으로 나눈다(모든 구역 · 구역마다 · 철수와 다음 회차). 최대까지 찍은 것은 줄을 접고 묶음 아래 칩으로 남긴다 */
+    rows.traitGrp = TRAIT_GROUPS.map(function (gp) {
+      var head = el('div', 'trait-grp'), nm = el('span', '', gp.name), num = el('span', 'num', ''), box = el('div'), chips = el('div', 'trait-maxed');
+      head.appendChild(nm); head.appendChild(num); $('traits').appendChild(head); $('traits').appendChild(box); $('traits').appendChild(chips);
+      return { def: gp, num: num, box: box, chips: chips };
+    });
     C.TRAITS.forEach(function (t) {
       var r = buildRow(t, function () { var res = C.buyTrait(state, t.id); if (res.ok) { sfx('trait'); Store.save(); render(); } });
-      rows.traits[t.id] = r; $('traits').appendChild(r.btn);
+      r.bar = el('span', 'trait-bar'); r.barI = el('i'); r.bar.appendChild(r.barI); r.btn.appendChild(r.bar);
+      var gi = 0; TRAIT_GROUPS.forEach(function (gp, k) { if (gp.ids.indexOf(t.id) >= 0) gi = k; });
+      r.grp = gi; rows.traits[t.id] = r; rows.traitGrp[gi].box.appendChild(r.btn);
     });
     // 구역 목표 세 줄
     for (var g = 0; g < 3; g++) {
@@ -4033,9 +4041,27 @@
       box.appendChild(btn);
     });
   }
+  var TRAIT_GROUPS = [
+    { name: '모든 구역', ids: ['immune', 'bulwark', 'quick', 'thrift'] },
+    { name: '구역마다', ids: ['dealer', 'engineer', 'railman', 'scholar'] },
+    { name: '철수와 다음 회차', ids: ['pioneer', 'legacy', 'rest', 'reroll', 'auto'] }
+  ];
+  /** '전체 생산 +200%' 와 '전체 생산 +225%' → '전체 생산 +200% → +225%'(같은 앞말은 한 번만 적는다). */
+  function traitStep(a, b) {
+    if (!b) return a; if (!a) return b;
+    var ta = a.split(' '), tb = b.split(' '), k = 0; while (k < ta.length - 1 && k < tb.length - 1 && ta[k] === tb[k]) k++;
+    return { a: a, b: tb.slice(k).join(' ') };
+  }
+  var exTab = 'trait';      // 4.4.0 특성 탭 안의 칸(특성 · 일행)
+  function renderExTab() {
+    document.querySelectorAll('[data-ex-set]').forEach(function (b) { var on = b.getAttribute('data-ex-set') === exTab; if (b.getAttribute('aria-pressed') !== String(on)) b.setAttribute('aria-pressed', String(on)); });
+    document.querySelectorAll('[data-ex]').forEach(function (sec) { var hide = sec.getAttribute('data-ex') !== exTab; if (sec.hidden !== hide) sec.hidden = hide; });
+  }
   function renderTraits() {
+    renderExTab();
     renderPet();
-    setText($('trait-points'), '남은 항체 샘플 ' + fmt(state.antibodies) + ' · 사용 ' + fmt(C.traitsSpent(state)));
+    setText($('trait-points'), fmt(state.antibodies));
+    var grpLeft = [0, 0, 0], grpMax = [[], [], []];
     C.TRAITS.forEach(function (t) {
       var r = rows.traits[t.id], lv = state.traits[t.id], cost = C.traitCost(state, t.id);
       setText(r.count, 'Lv ' + lv + ' / ' + t.max);
@@ -4048,25 +4074,36 @@
       }
       if (!tInfo && lv > 0) tInfo = C.effectNow(t, lv) ? '현재 ' + C.effectNow(t, lv) : t.id === 'pioneer' ? '현재 시작 물자 ' + fmt(100 * Math.pow(10, lv)) : t.id === 'reroll' ? '현재 한 회차에 ' + lv + '번' : '';
       setText(r.info, tInfo);
-      setText(r.cost, isFinite(cost) ? '샘플 ' + fmt(cost) : '최대');
+      /* 4.4.0 효과 한 줄: 현재 → 한 단계 올린 뒤(찍지 않았으면 올렸을 때의 효과만). 선발대 · 다시 뽑기 · 자동화는 자기 말로 */
+      var nowT = lv > 0 ? C.effectNow(t, lv) : '', nextT = lv < t.max ? C.effectNow(t, lv + 1) : '';
+      if (t.id === 'pioneer') { nowT = lv > 0 ? '시작 물자 ' + fmt(100 * Math.pow(10, lv)) : ''; nextT = lv < t.max ? '시작 물자 ' + fmt(100 * Math.pow(10, lv + 1)) : ''; }
+      if (t.id === 'reroll') { nowT = lv > 0 ? '한 회차에 ' + lv + '번' : ''; nextT = lv < t.max ? '한 회차에 ' + (lv + 1) + '번' : ''; }
+      if (t.id === 'auto') { nowT = tInfo; nextT = ''; }
+      var stp = traitStep(nowT, nextT), dk = typeof stp === 'string' ? stp : stp.a + '→' + stp.b;
+      if (r.desc.getAttribute('data-k') !== dk) { r.desc.setAttribute('data-k', dk); r.desc.textContent = ''; if (typeof stp === 'string') r.desc.textContent = stp || t.desc; else { r.desc.appendChild(document.createTextNode(stp.a + ' ')); r.desc.appendChild(el('i', '', '→ ' + stp.b)); } }
+      setText(r.cost, isFinite(cost) ? fmt(cost) : '최대');
+      r.barI.style.width = Math.round(lv / t.max * 100) + '%';
       r.btn.disabled = !(cost <= state.antibodies);
-      r.btn.classList.toggle('row-owned', lv >= t.max);
+      var full = lv >= t.max; r.btn.classList.toggle('row-owned', full); if (r.btn.hidden !== full) r.btn.hidden = full;
+      if (full) grpMax[r.grp].push(t.name); else grpLeft[r.grp]++;
     });
+    rows.traitGrp.forEach(function (gr, k) { setText(gr.num, grpLeft[k] ? grpLeft[k] + '' : '모두 최대'); var ck = grpMax[k].join('|'); if (gr.chips.getAttribute('data-k') !== ck) { gr.chips.setAttribute('data-k', ck); gr.chips.textContent = ''; grpMax[k].forEach(function (nm) { gr.chips.appendChild(el('span', '', nm + ' 최대')); }); } });
     $('trait-reset').disabled = C.traitsSpent(state) === 0;
     renderChallenges();
-    var owned = C.PERKS.filter(function (p) { return state.perks[p.id] > 0; }), total = 0;
-    owned.forEach(function (p) { total += state.perks[p.id]; });
+    /* 4.4.0 특전 팝업: 고를 수 있는 특전을 모두 적는다(가진 것이 위). 줄마다 레벨, 지금 효과 → 한 장 더 고르면, 최대가 있는 것은 최대 효과 */
+    var total = 0; C.PERKS.forEach(function (p) { total += state.perks[p.id] || 0; });
     setText($('perk-count'), total + '장');
-    var key = owned.map(function (p) { return p.id + state.perks[p.id]; }).join('|') || 'none', list = $('perks');
+    var shown = C.PERKS.filter(function (p) { return !p.retired || state.perks[p.id] > 0; }).sort(function (a, b) { return (state.perks[b.id] || 0) - (state.perks[a.id] || 0); });
+    var key = shown.map(function (p) { return p.id + (state.perks[p.id] || 0); }).join('|'), list = $('perks');
     if (list.getAttribute('data-key') === key) return;
-    list.setAttribute('data-key', key);
-    list.textContent = '';
-    if (!owned.length) list.appendChild(el('li', 'hint', '아직 고른 특전이 없다.'));
-    owned.forEach(function (p) {
-      var li = el('li');
-      li.appendChild(el('span', '', p.name + ' Lv ' + state.perks[p.id] + (p.max > 0 && state.perks[p.id] >= p.max ? ' · 최대' : '')));
-      li.appendChild(el('span', 'num', C.effectNow(p, state.perks[p.id]) || p.desc));      // 지금 쌓인 효과를 적는다(전에는 레벨당 수치만 있었다)
-      list.appendChild(li);
+    list.setAttribute('data-key', key); list.textContent = '';
+    shown.forEach(function (p) {
+      var lv = state.perks[p.id] || 0, full = p.max > 0 && lv >= p.max, row = el('div', 'perk-r' + (lv ? '' : ' zero')), nm = el('div'), ef = el('div', 'ef');
+      nm.appendChild(el('b', '', p.name)); nm.appendChild(el('span', 'lv', 'Lv ' + lv + (p.max > 0 ? ' / ' + p.max : '')));
+      row.appendChild(nm); row.appendChild(el('span', 'mx', full ? '최대' : p.max > 0 ? '최대 ' + C.effectNow(p, p.max).split(' ').pop() : ''));
+      var stp = traitStep(lv ? C.effectNow(p, lv) : '', full ? '' : C.effectNow(p, lv + 1));
+      if (typeof stp === 'string') ef.textContent = lv ? stp : '한 장 고르면 ' + stp; else { ef.appendChild(document.createTextNode(stp.a + ' ')); ef.appendChild(el('i', '', '→ ' + stp.b)); }
+      row.appendChild(ef); list.appendChild(row);
     });
   }
 
@@ -4463,6 +4500,8 @@
     $('zmap-open').addEventListener('click', openMap);
     $('route').addEventListener('click', openMap);
     $('zmap-close').addEventListener('click', function () { $('zmap').hidden = true; });
+    $('perk-open').addEventListener('click', function () { renderTraits(); $('perks-veil').hidden = false; sfx('click'); });      // 4.4.0 특전 팝업
+    $('perks-close').addEventListener('click', function () { $('perks-veil').hidden = true; });
     $('hub-close').addEventListener('click', function () { $('hub').hidden = true; });
     $('danger-down').addEventListener('click', function () { if (C.setDangerNext(state, (state.dangerNext || 0) - 1).ok) { sfx('tab'); Store.save(); render(); } });
     $('danger-up').addEventListener('click', function () { if (C.setDangerNext(state, (state.dangerNext || 0) + 1).ok) { sfx('tab'); Store.save(); render(); } });
@@ -4868,6 +4907,7 @@
     })();
     $('pet-feed').addEventListener('click', function () { var r = C.feedPet(state); if (r.ok) { sfx('feed'); toast('Lv ' + r.level + ' · ' + C.petEffectText(state)); Store.save(); render(); } });
     // 주인공의 성별: 고르면 일지의 호칭이 바뀐다(설정 안 함이면 중립)
+    document.querySelectorAll('[data-ex-set]').forEach(function (b) { b.addEventListener('click', function () { exTab = b.getAttribute('data-ex-set'); sfx('click'); renderExTab(); }); });
     document.querySelectorAll('[data-gender]').forEach(function (b) {
       b.addEventListener('click', function () { if (C.setHeroGender(state, b.getAttribute('data-gender')).ok) { Store.save(); render(); renderJournal(); } });
     });

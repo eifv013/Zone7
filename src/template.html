@@ -691,7 +691,22 @@ html, body, button, .row, .panel { touch-action: pan-x pan-y; }
 #wall-now { margin: 0 0 8px; font-size: 14px; }
 #wall-now.bad { color: var(--blood); }
 #auto-ev-row { margin: 0 0 8px; }
-#auto-ev-row[hidden] { display: none; } #camp-elder-row { margin: 0 0 8px; } #camp-elder-row[hidden] { display: none; }
+#auto-ev-row[hidden] { display: none; }
+/* 4.4.0 특성 창: 묶음 · 한 줄에 효과(현재 → 다음)와 막대 · 값은 오른쪽 · 최대인 것은 작은 칩 */
+.ex-seg { margin: 0 0 10px; flex: none; } .ex-seg button { flex: 1; padding: 9px 0; font-size: 14px; } [data-ex][hidden] { display: none; }
+.trait-pts b { color: var(--hazard); font-size: 20px; }
+.trait-grp { display: flex; justify-content: space-between; margin: 12px 0 6px; font-size: 12px; color: var(--muted, #a8a69c); }
+#traits .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+#traits .row .row-head { grid-column: 1; justify-content: flex-start; gap: 8px; } #traits .row .row-count { font-size: 12px; font-weight: 400; opacity: .7; }
+#traits .row .row-desc { grid-column: 1; } #traits .row .row-desc i { font-style: normal; color: var(--safe); }
+#traits .row .row-foot { grid-column: 2; grid-row: 1 / 4; } #traits .row .row-info { display: none; }
+#traits .row .trait-bar { grid-column: 1; height: 3px; background: color-mix(in srgb, var(--ink) 25%, transparent); border-radius: 2px; overflow: hidden; } #traits .row .trait-bar i { display: block; height: 100%; background: var(--hazard); }
+#traits .row[hidden] { display: none; } .perk-open { margin: 0 0 10px; flex: none; }
+.perks-card { max-height: 86vh; overflow-y: auto; } .perks-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.perk-r { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; border-left: 3px solid var(--hazard); background: color-mix(in srgb, var(--ink) 8%, transparent); border-radius: 6px; }
+.perk-r.zero { border-left-color: color-mix(in srgb, var(--ink) 30%, transparent); opacity: .55; } .perk-r b { font-size: 15px; } .perk-r .lv { font: 12px var(--font-mono); opacity: .75; margin-left: 6px; }
+.perk-r .ef { grid-column: 1 / 3; font-size: 12px; } .perk-r .ef i { font-style: normal; color: var(--safe); } .perk-r .mx { font: 12px var(--font-mono); color: var(--safe); align-self: center; }
+.trait-maxed { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 4px; } .trait-maxed:empty { display: none; } .trait-maxed span { font-size: 12px; border: 1px solid var(--safe); color: var(--safe); border-radius: 20px; padding: 3px 9px; } #camp-elder-row { margin: 0 0 8px; } #camp-elder-row[hidden] { display: none; }
 /* 밤 칸의 방어 여유 게이지와 선제 공격·반격 단추 */
 .edge { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; margin-top: 6px; }
 .night-acts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
@@ -1407,7 +1422,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.3.9</div>
+  <div class="boot-ver">7구역 알파 4.4.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1553,6 +1568,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div id="danger-row" hidden><div class="danger-pick"><span class="label">다음 회차</span><button type="button" id="danger-down" aria-label="위험 단계 내리기">−</button><b class="num" id="danger-val"></b><button type="button" id="danger-up" aria-label="위험 단계 올리기">+</button></div><p class="hint" id="danger-text"></p></div>
       <button type="button" class="relocate" id="retreat" disabled>아직 철수할 수 없다</button>
     </section>
+    <!-- 4.4.0 특전은 철수 칸 아래 단추 하나. 누르면 팝업에서 모두 본다(해 보신 말씀: 특성 창처럼 레벨 · 지금 효과 · 최대 효과를 한눈에) -->
+    <button type="button" class="lab-reroll perk-open" id="perk-open">이번 회차의 특전 · <span id="perk-count">0장</span></button>
     <section class="panel" aria-labelledby="h-hub" id="hub-panel" hidden>
       <div class="panel-head"><h2 id="h-hub">모험</h2><span class="label" id="hub-count"></span></div>
       <p class="hint" id="hub-hint"></p>
@@ -1768,7 +1785,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   </div>
 
   <div class="col" data-view="exped">
-    <section class="panel" aria-labelledby="h-pet">
+    <!-- 4.4.0 특성 탭을 두 칸(특성 · 일행)으로 나눴다. 특전은 철수하면 사라지니 상황 탭의 철수 칸 아래로 옮겼다 -->
+    <div class="qty ex-seg" role="group" aria-label="특성 탭 고르기"><button type="button" data-ex-set="trait" aria-pressed="true">특성</button><button type="button" data-ex-set="pet" aria-pressed="false">일행</button></div>
+    <section class="panel" aria-labelledby="h-pet" data-ex="pet" hidden>
       <div class="panel-head"><h2 id="h-pet">일행</h2><span class="label" id="pet-kind"></span></div>
       <div class="pet-rename hero-row"><input type="text" id="hero-input" maxlength="8" autocomplete="off" spellcheck="false" aria-label="주인공의 새 이름"><button type="button" id="hero-rename">주인공 이름 바꾸기</button></div>
       <div class="set-row gender-row"><span class="label">성별 · 일지의 호칭이 바뀌어요</span>
@@ -1783,16 +1802,11 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="pet-pick"><button type="button" id="adopt-dog"></button><button type="button" id="adopt-cat"></button></div>
       <p class="label pet-odds" id="pet-odds"></p>
     </section>
-    <section class="panel" aria-labelledby="h-traits">
-      <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label" id="trait-points">항체 샘플 0</span></div>
-      <p class="hint">철수해도 남아요. 언제든 되돌려서 샘플을 돌려받을 수 있어요.</p>
+    <section class="panel" aria-labelledby="h-traits" data-ex="trait">
+      <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label trait-pts">항체 샘플 <b class="num" id="trait-points">0</b></span></div>
+      <p class="hint">철수해도 남아요. 되돌리면 샘플을 모두 돌려받아요.</p>
       <div class="rows" id="traits"></div>
       <button type="button" class="recall trait-reset" id="trait-reset">특성 되돌리기</button>
-    </section>
-    <section class="panel" aria-labelledby="h-perks">
-      <div class="panel-head"><h2 id="h-perks">이번 회차의 특전</h2><span class="label" id="perk-count">0장</span></div>
-      <p class="hint">구역 목표를 하나 달성할 때마다 셋 중 하나를 골라요. 이번 회차에만 쓰이고, 철수하면 사라져요.</p>
-      <ul class="stats-list" id="perks"></ul>
     </section>
   </div>
 </main>
@@ -1880,7 +1894,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.3.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.4.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1986,6 +2000,13 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   </div>
 </div>
 
+<div class="story-veil" id="perks-veil" role="dialog" aria-modal="true" aria-labelledby="perks-title" hidden>
+  <div class="story-card feedback-card perks-card">
+    <div class="zmap-head"><div class="label" id="perks-title">이번 회차의 특전</div><button type="button" class="feedback-close" id="perks-close">닫기</button></div>
+    <p class="hint">구역 목표를 달성할 때마다 하나씩 골라요. 철수하면 사라져요.</p>
+    <div class="perks-list" id="perks"></div>
+  </div>
+</div>
 <div class="story-veil" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text" hidden>
   <div class="story-card">
     <div class="label" id="confirm-title"></div>

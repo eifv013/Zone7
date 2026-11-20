@@ -160,7 +160,7 @@ def run_case(browser, name, size, state, mode):
         if not tap('#row-wire'): problems.append('첫 철조망을 살 수 없다')
         tap('[data-tab=z1]'); tap('[data-tab=z2]'); tap('[data-tab=z0]')
         # 동물 친구: 고양이를 맞이하고 이름을 바꾼다
-        tap('[data-mview-set=exped]')
+        tap('[data-mview-set=exped]'); tap('[data-ex-set=pet]')      # 4.4.0: 일행은 특성 탭의 두 번째 칸
         if not tap('#adopt-cat'): problems.append('고양이를 맞이할 수 없다')
         if not page.locator('#pet-card').is_visible() or '친구 1 /' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))
         if '항체 샘플' not in text('adopt-dog'): problems.append('다시 데려오기 값이 보이지 않는다: ' + text('adopt-dog'))
@@ -593,10 +593,14 @@ def run_case(browser, name, size, state, mode):
         if page.locator('[data-tab=z3]').is_visible(): problems.append('아직 먼 4구역 탭이 보인다')
         tap('[data-tab=wall]'); tap('#row-wire')
         # 특성: 하나 찍고, 되돌리고, 다시 찍는다
-        tap('[data-mview-set=exped]')
+        tap('[data-mview-set=exped]'); tap('[data-ex-set=trait]')
         if not tap('#row-immune'): problems.append('특성을 찍을 수 없다')
         if tap('#trait-reset'): tap('#confirm-yes')
-        if '사용 0' not in text('trait-points'): problems.append('특성을 되돌렸는데 쓴 샘플이 남았다: ' + text('trait-points'))
+        if 'Lv 0 /' not in page.inner_text('#row-immune'): problems.append('특성을 되돌렸는데 레벨이 남았다: ' + page.inner_text('#row-immune'))      # 4.4.0: '사용 n' 글은 뺐다
+        if not page.locator('#perks').count(): problems.append('특전 목록이 없다')
+        tap('[data-ex-set=pet]')
+        if not page.locator('#pet-empty, #pet-card').first.is_visible() and not page.locator('#adopt-dog').is_visible(): problems.append('일행 칸이 안 열린다')
+        tap('[data-ex-set=trait]')
         tap('#row-immune'); tap('#row-bulwark')
         tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'save', 'journal']: tap('[data-rtab-set=%s]' % t)
