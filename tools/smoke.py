@@ -640,7 +640,7 @@ def run_case(browser, name, size, state, mode):
     # 끝 검수(1.0.2): 어떤 경우든 마지막에 모든 화면을 돌며 "예전 것이 꼬였는지"를 본다. 새 기능을 넣다가 다른 곳이 망가지는 일을 잡으려는 것이다
     try:
         if os.environ.get('SELFTEST'): page.evaluate("document.querySelector('.mast, header, body').insertAdjacentHTML('beforeend', '<span>[object 시험]</span>')")      # 검수가 정말 잡아내는지 확인할 때만 쓴다
-        views = ['#mnav-base', '#mnav-manage', '#mnav-hub', '#mnav-exped', '[data-view=party] [data-grow-set=exped]', '#mnav-shop', '#mnav-record'] if page.locator('.mnav').first.is_visible() else [None]      # 4.5.4 아래 탭 다섯 + 성장의 두 칸 + 머리줄 기록
+        views = ['#mnav-base', '#mnav-manage', '#mnav-exped', '[data-view=party] [data-grow-set=exped]', '#mnav-shop', '#mnav-record'] if page.locator('.mnav').first.is_visible() else [None]      # 4.5.4 아래 탭 다섯 + 성장의 두 칸 + 머리줄 기록
         for v in views:
             if v: page.evaluate("(document.querySelector(%s) || {click(){}}).click()" % json.dumps(v)); page.wait_for_timeout(250)
             where = v or '넓은 화면'

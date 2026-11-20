@@ -55,6 +55,19 @@
     gopen0:     [{ noise: true, cut: 400, d: 0.07, g: 0.08 }, { f: 784, d: 0.12, at: 0.04, type: 'triangle', g: 0.085 }, { f: 988, d: 0.2, at: 0.1, type: 'sine', g: 0.075 }],
     gopen1:     [{ noise: true, cut: 400, d: 0.09, g: 0.09 }, { f: 659, d: 0.12, at: 0.04, type: 'triangle', g: 0.085 }, { f: 880, d: 0.12, at: 0.12, type: 'triangle', g: 0.085 }, { f: 988, to: 1175, d: 0.3, at: 0.2, type: 'sine', g: 0.085 }],
     gopen2:     [{ noise: true, cut: 400, d: 0.12, g: 0.09 }, { f: 523, d: 0.45, at: 0.04, type: 'triangle', g: 0.07 }, { f: 659, d: 0.45, at: 0.12, type: 'triangle', g: 0.07 }, { f: 784, d: 0.45, at: 0.2, type: 'triangle', g: 0.07 }, { f: 880, d: 0.45, at: 0.28, type: 'triangle', g: 0.07 }, { f: 988, to: 1200, d: 0.6, at: 0.36, type: 'sine', g: 0.09 }, { f: 988, d: 0.08, at: 0.6, type: 'triangle', g: 0.06 }, { f: 880, d: 0.08, at: 0.72, type: 'triangle', g: 0.05 }, { f: 988, d: 0.12, at: 0.84, type: 'triangle', g: 0.06 }],
+    // 4.5.5 친구 만들기: 간식 던지기 · 받아먹기 · 강아지(왈 · 멍멍) · 고양이(냥 · 야옹) · 친구가 됐을 때의 반짝임. 강아지 · 고양이는 목소리(voice)로 낸다
+    bftoss:     [{ noise: true, cut: 380, d: 0.12, g: 0.05 }, { f: 420, to: 760, d: 0.14, type: 'sine', g: 0.04 }],                                  // 휙
+    bfnom:      [{ f: 520, to: 700, d: 0.07, type: 'sine', g: 0.06 }, { f: 600, to: 820, d: 0.08, at: 0.09, type: 'sine', g: 0.06 }],              // 냠냠
+    bfyip:      [{ voice: true, f: [700, 760, 450], d: 0.12, g: 0.06, pk: 0.25, att: 0.006, hold: 0.3, rough: 0.2, roughF: 1400, F: [{ f: [900, 1000, 700], q: 3, g: 1.5 }, { f: [1800, 2000, 1500], q: 5, g: 0.9 }] }],      // 왈
+    bfbark:     [{ voice: true, f: [520, 560, 300], d: 0.16, g: 0.075, pk: 0.25, att: 0.008, hold: 0.3, rough: 0.25, roughF: 1100, F: [{ f: [800, 900, 600], q: 3, g: 1.5 }, { f: [1500, 1700, 1200], q: 5, g: 0.9 }] },
+                 { voice: true, at: 0.24, f: [540, 580, 310], d: 0.17, g: 0.075, pk: 0.25, att: 0.008, hold: 0.3, rough: 0.25, roughF: 1100, F: [{ f: [800, 900, 600], q: 3, g: 1.5 }, { f: [1500, 1700, 1200], q: 5, g: 0.9 }] }],      // 멍멍
+    bfmew:      [{ voice: true, f: [620, 840, 700], d: 0.32, g: 0.06, pk: 0.45, vib: 8, vd: 0.015, att: 0.03, hold: 0.45, F: [{ f: [600, 1100, 800], q: 4, g: 1.4 }, { f: [1500, 2100, 1600], q: 6, g: 1 }] }],      // 냥
+    bfmeow:     [{ voice: true, f: [480, 760, 420], d: 0.75, g: 0.065, pk: 0.4, vib: 7, vd: 0.02, att: 0.06, hold: 0.5, F: [{ f: [500, 1000, 650], q: 4, g: 1.4 }, { f: [1300, 1900, 1100], q: 6, g: 1 }, { f: [2600, 2900, 2400], q: 8, g: 0.4 }] }],      // 야옹
+    bfjoy:      [{ f: 659, d: 0.1, type: 'triangle', g: 0.07 }, { f: 784, d: 0.1, at: 0.08, type: 'triangle', g: 0.07 }, { f: 988, to: 1175, d: 0.32, at: 0.16, type: 'sine', g: 0.08 }],      // 반짝(하트)
+    // 미리 듣기용 다른 소리(고르시면 위의 것과 바꾼다): 아기 고양이(더 높고 짧게), 작은 강아지(깡깡)
+    bfmeowB:    [{ voice: true, f: [700, 980, 620], d: 0.55, g: 0.065, pk: 0.4, vib: 9, vd: 0.02, att: 0.04, hold: 0.5, F: [{ f: [700, 1300, 900], q: 4, g: 1.4 }, { f: [1700, 2400, 1700], q: 6, g: 1 }] }],
+    bfbarkB:    [{ voice: true, f: [820, 900, 560], d: 0.11, g: 0.07, pk: 0.25, att: 0.006, hold: 0.3, rough: 0.2, roughF: 1500, F: [{ f: [1000, 1200, 800], q: 3, g: 1.5 }, { f: [2000, 2300, 1700], q: 5, g: 0.9 }] },
+                 { voice: true, at: 0.17, f: [840, 920, 580], d: 0.11, g: 0.07, pk: 0.25, att: 0.006, hold: 0.3, rough: 0.2, roughF: 1500, F: [{ f: [1000, 1200, 800], q: 3, g: 1.5 }, { f: [2000, 2300, 1700], q: 5, g: 0.9 }] }],
     fortify:    [{ noise: true, cut: 300, d: 0.12, g: 0.07 }, { f: 147, d: 0.16, type: 'triangle', g: 0.06 }],                                           // 망치질
     goal:       [{ f: 523, d: 0.09, type: 'sine', g: 0.05 }, { f: 659, d: 0.09, at: 0.09, type: 'sine', g: 0.05 }, { f: 784, d: 0.09, at: 0.18, type: 'sine', g: 0.05 }, { f: 988, d: 0.3, at: 0.27, type: 'sine', g: 0.05 }],
     feed:       [{ f: 440, to: 660, d: 0.08, type: 'sine', g: 0.045 }, { f: 520, to: 780, d: 0.08, at: 0.09, type: 'sine', g: 0.045 }, { f: 660, to: 990, d: 0.13, at: 0.18, type: 'sine', g: 0.045 }],  // 냠냠
@@ -122,7 +135,36 @@
     return cuts;
   }
 
+  /*
+   * 4.5.5 목소리(voice): 강아지 · 고양이 소리. 톱니파를 목청처럼 쓰고, 입 모양(포먼트)을 띠 거름막 둘~셋으로 만든다.
+   *   f: [처음, 가운데, 끝] 음높이(Hz) — 가운데까지 pk(0~1) 비율로 오르고 끝으로 내린다. 야옹은 오르내리는 활 모양이다.
+   *   F: 입 모양 [{ f: [처음, 가운데, 끝], q, g }] — 'ㅁ'(닫힌 입)에서 'ㅑ'(벌린 입)로, 다시 'ㅗ'로 바뀌며 '야옹'이 된다.
+   *   vib · vd: 떨림(Hz · 깊이), rough · roughF: 숨소리(짖을 때 거칠게), att · hold: 올라오는 시간 · 유지 비율.
+   *   왜: 사인파 몇 음으로는 동물 소리가 아니라는 말이 있었다. 실제 울음처럼 배음과 입 모양이 있어야 그렇게 들린다.
+   */
+  function ramp3(param, a, b, c, st, d, pk) { param.setValueAtTime(a, st); param.linearRampToValueAtTime(b, st + d * (pk || 0.35)); param.linearRampToValueAtTime(c, st + d); }
+  function playVoice(n, t0, bus) {
+    var st = t0 + (n.at || 0), d = n.d, g = ctx.createGain(), peak = Math.max(0.0002, Math.min(MAX_GAIN, (n.g || 0.05) * VOLUME * volume / VOLUME_DEFAULT));
+    var att = n.att || 0.03, hold = n.hold || 0.55;
+    g.gain.setValueAtTime(0.0001, st); g.gain.linearRampToValueAtTime(peak, st + att); g.gain.setValueAtTime(peak, st + d * hold); g.gain.exponentialRampToValueAtTime(0.0001, st + d);
+    var o = ctx.createOscillator(); o.type = 'sawtooth'; ramp3(o.frequency, n.f[0], n.f[1], n.f[2], st, d, n.pk);
+    if (n.vib) { var l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = n.vib; lg.gain.value = n.f[1] * (n.vd || 0.025); l.connect(lg); lg.connect(o.frequency); l.start(st); l.stop(st + d + 0.05); }
+    var mix = ctx.createGain(); mix.gain.value = 1;
+    (n.F || []).forEach(function (F) { var bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = F.q || 5; ramp3(bp.frequency, F.f[0], F.f[1], F.f[2], st, d, n.pk); var fg = ctx.createGain(); fg.gain.value = F.g || 1; o.connect(bp); bp.connect(fg); fg.connect(mix); });
+    if (n.rough) {
+      var len = Math.max(1, Math.floor(ctx.sampleRate * d)), buf = ctx.createBuffer(1, len, ctx.sampleRate), data = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      var ns = ctx.createBufferSource(); ns.buffer = buf; var nb = ctx.createBiquadFilter(); nb.type = 'bandpass'; nb.frequency.value = n.roughF || 1200; nb.Q.value = 1.2;
+      var ng = ctx.createGain(); ng.gain.value = n.rough; ns.connect(nb); nb.connect(ng); ng.connect(mix); ns.start(st); ns.stop(st + d);
+    }
+    var lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+    mix.connect(g); g.connect(lp);
+    var out = ctx.__zone7Comp || ctx.destination;
+    if (bus) { lp.connect(bus); bus.__out = out; } else lp.connect(out);
+    o.start(st); o.stop(st + d + 0.05);
+  }
   function playNote(n, t0, bus) {
+    if (n.voice) return playVoice(n, t0, bus);
     var start = t0 + (n.at || 0), gain = ctx.createGain(), peak = Math.max(0.0002, Math.min(MAX_GAIN, (n.g || 0.05) * VOLUME * volume / VOLUME_DEFAULT)), src;
     // 딸깍거리는 잡음을 막으려고 음량을 짧게 올렸다가 서서히 내린다
     gain.gain.setValueAtTime(0.0001, start);

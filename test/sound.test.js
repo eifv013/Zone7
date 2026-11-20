@@ -17,6 +17,7 @@ test('모든 소리는 유한한 길이와 상한 이하의 음량을 가진다'
       assert.ok((n.at || 0) >= 0, name);
       assert.ok((n.g || 0.05) <= Sound.MAX_GAIN, `${name}: 음량 ${n.g}`);
       if (n.noise) assert.ok(n.cut > 0, `${name}: 소음에는 차단 주파수가 필요하다`);
+      else if (n.voice) assert.ok(n.f.every(v => v >= 40 && v <= 4000), `${name}: 목소리 ${n.f}`);      // 4.5.5 목소리는 [처음, 가운데, 끝]
       else assert.ok(n.f >= 40 && n.f <= 4000, `${name}: 주파수 ${n.f}`);
     }
     assert.ok(Sound.duration(name) > 0 && Sound.duration(name) <= 1.5, `${name}: 전체 ${Sound.duration(name)}초`);
@@ -47,6 +48,7 @@ test('소리는 부드러운 파형만 쓰고, 높은 음은 거름막 아래에
   const S = require('../src/sound.js');
   for (const [name, notes] of Object.entries(S.SOUNDS)) for (const n of notes) {
     if (n.noise) { assert.ok(n.cut <= 400, name); continue; }
+    if (n.voice) { assert.ok(n.f.length === 3 && n.f.every(v => v > 0 && v <= 1000), name + ': 목소리 음높이'); assert.ok(n.F.every(F => F.f.every(v => v > 0 && v <= 3000)), name + ': 입 모양'); assert.ok(n.g <= 0.1, name); continue; }      // 4.5.5 강아지 · 고양이 목소리
     assert.ok(['sine', 'triangle'].includes(n.type), name + ': ' + n.type);
     assert.ok(n.f <= 1000 && n.f < Sound.SOFT_CUT, name + ': ' + n.f);
     if (n.to !== undefined) assert.ok(n.to > 0 && n.to <= 1200, name + ' to: ' + n.to);

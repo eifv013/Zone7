@@ -375,8 +375,6 @@ body { word-break: keep-all; }
 #stage-map { width: min(100%, calc(100dvh - 475px)); min-width: 150px; margin: 0 auto; }
 .hub-card { overscroll-behavior: contain; }
 /* 4.4.8 상점이 일행 탭의 칸이 됐다. 모험 창에서 쓰던 어두운 그림(story-card)을 그대로 쓰고, 옷장은 탭과 함께 스크롤한다 */
-.story-card.hub-card { width: auto; background: #17180f; gap: 10px; }      /* 4.5.4 모험이 탭 화면이 됐다 */
-.hub-card .panel-head { margin-bottom: 0; }
 .shop-card { width: auto; background: #17180f; --ink: #e6e5db; --ink-soft: #b9b8ab; --rule: #6d6d60; gap: 8px; }
 .shop-card #wardrobe { max-height: none; overflow: visible; }
 .story-card.shop-card { gap: 8px; }
@@ -1193,7 +1191,7 @@ canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
   .scavenge { padding: 12px 14px; font-size: 22px; }
   [data-view] { grid-row: 7; display: none; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px 12px; flex-direction: column; gap: 10px; }
   body[data-mview="base"] [data-view="base"], body[data-mview="manage"] [data-view="manage"],
-  body[data-mview="exped"] [data-view="exped"], body[data-mview="record"] [data-view="record"], body[data-mview="party"] [data-view="party"], body[data-mview="shop"] [data-view="shop"], body[data-mview="hub"] [data-view="hub"] { display: flex; }
+  body[data-mview="exped"] [data-view="exped"], body[data-mview="record"] [data-view="record"], body[data-mview="party"] [data-view="party"], body[data-mview="shop"] [data-view="shop"] { display: flex; }
   .foot { max-width: none; margin: 0; }
   .record-tabs { margin-bottom: 0; }
   .foot-block { margin: 0; }
@@ -1468,7 +1466,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.5.4</div>
+  <div class="boot-ver">7구역 알파 4.5.5</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1537,7 +1535,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     </div>
   </div>
   <!-- 4.5.4 기록(일지 · 업적 · 도감 · 설정)은 머리줄 오른쪽 책 단추로 연다 -->
-  <button type="button" class="mast-record" data-mview-set="record" id="mnav-record" aria-pressed="false" aria-label="기록"><svg viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h7v7H1zM2 2v5h2V2zM5 2v5h2V2z"/></svg></button>
+  <button type="button" class="mast-record" data-mview-set="record" id="mnav-record" aria-pressed="false" aria-label="기록"><svg viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path fill-rule="evenodd" d="M2 0h7v9H2zM4 2h4v1H4zM4 4h4v1H4zM4 6h3v1H4zM0 1h2v1H0zM0 4h2v1H0zM0 7h2v1H0z"/></svg></button>
 </header>
 
 <main class="grid">
@@ -1880,34 +1878,6 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div id="wardrobe"></div>
     </section>
   </div>
-  <!-- 4.5.4 모험은 아래 탭의 한 화면(전에는 닫기가 있는 창). 머리줄과 아래 탭이 그대로 남는다 -->
-  <div class="col" data-view="hub" id="hub">
-  <section class="panel story-card hub-card" aria-labelledby="hub-title">
-    <div class="panel-head"><h2 id="hub-title">모험</h2></div>
-    <div class="hub-tabs" role="tablist">
-      <button type="button" data-hub="chal" aria-pressed="true">도전</button>
-      <button type="button" data-hub="exped" aria-pressed="false">원정</button>
-    </div>
-    <div class="hub-pane" id="stage-panel" hidden>
-      <div class="hub-line num" id="stage-count"></div>
-      <div class="hub-line" id="stage-hint"></div>
-      <div class="zmap-map" id="stage-map"></div>
-      <div class="stage" id="stage-detail">
-        <div class="stage-head"><span class="stage-no" id="stage-d-no"></span><b id="stage-d-name"></b></div>
-        <div class="stage-sub" id="stage-d-sub"></div>
-        <!-- 3.0.4: 일반 줄과 하드 줄이 그대로 고르는 단추다(전에는 작은 단추 셋이 한 줄에 끼어 있었다). 두 쪽의 별이 나란히 보이고, 출발 단추는 하나다 -->
-        <button type="button" class="stage-row" id="stage-normal" aria-pressed="true"><span class="stage-row-top"><span><b>일반</b><small id="stage-n-info"></small></span><span class="stage-stars" id="stage-n-stars"></span></span><span class="stage-how" id="stage-n-how"></span></button>
-        <button type="button" class="stage-row hard" id="stage-hard" aria-pressed="false"><span class="stage-row-top"><span><b>하드</b><small id="stage-h-info"></small></span><span class="stage-stars" id="stage-h-stars"></span></span><span class="stage-how" id="stage-h-how"></span></button>
-        <div class="stage-acts"><button type="button" id="stage-go">출발</button></div>
-      </div>
-    </div>
-    <div class="hub-pane" id="chal-panel">
-      <div class="hub-line num" id="chal-count"></div>
-      <div class="hub-line" id="chal-hint"></div>
-      <div id="chal-list"></div>
-    </div>
-  </section>
-  </div>
 </main>
 
 <footer class="foot" id="record" data-view="record" data-rtab="journal">
@@ -1993,7 +1963,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.5.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.5.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2045,6 +2015,34 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </div>
 
 <!-- 구역 지도: 구역마다 지금 무엇을 얼마나 벌고 있는지 한눈에 본다. 구역을 누르면 그 구역 화면으로 간다. -->
+<!-- 4.5.5 모험 창: 아래 탭의 모험 단추를 누르면 뜬다(4.5.4 에는 탭 화면이었다) -->
+<div class="story-veil hub-veil" id="hub" role="dialog" aria-modal="true" aria-labelledby="hub-title" hidden>
+  <div class="story-card feedback-card hub-card">
+    <div class="zmap-head"><div class="label" id="hub-title">모험</div><button type="button" class="feedback-close" id="hub-close">닫기</button></div>
+    <div class="hub-tabs" role="tablist">
+      <button type="button" data-hub="chal" aria-pressed="true">도전</button>
+      <button type="button" data-hub="exped" aria-pressed="false">원정</button>
+    </div>
+    <div class="hub-pane" id="stage-panel" hidden>
+      <div class="hub-line num" id="stage-count"></div>
+      <div class="hub-line" id="stage-hint"></div>
+      <div class="zmap-map" id="stage-map"></div>
+      <div class="stage" id="stage-detail">
+        <div class="stage-head"><span class="stage-no" id="stage-d-no"></span><b id="stage-d-name"></b></div>
+        <div class="stage-sub" id="stage-d-sub"></div>
+        <!-- 3.0.4: 일반 줄과 하드 줄이 그대로 고르는 단추다(전에는 작은 단추 셋이 한 줄에 끼어 있었다). 두 쪽의 별이 나란히 보이고, 출발 단추는 하나다 -->
+        <button type="button" class="stage-row" id="stage-normal" aria-pressed="true"><span class="stage-row-top"><span><b>일반</b><small id="stage-n-info"></small></span><span class="stage-stars" id="stage-n-stars"></span></span><span class="stage-how" id="stage-n-how"></span></button>
+        <button type="button" class="stage-row hard" id="stage-hard" aria-pressed="false"><span class="stage-row-top"><span><b>하드</b><small id="stage-h-info"></small></span><span class="stage-stars" id="stage-h-stars"></span></span><span class="stage-how" id="stage-h-how"></span></button>
+        <div class="stage-acts"><button type="button" id="stage-go">출발</button></div>
+      </div>
+    </div>
+    <div class="hub-pane" id="chal-panel">
+      <div class="hub-line num" id="chal-count"></div>
+      <div class="hub-line" id="chal-hint"></div>
+      <div id="chal-list"></div>
+    </div>
+  </div>
+</div>
 <div class="story-veil" id="zmap" role="dialog" aria-modal="true" aria-labelledby="zmap-title" hidden>
   <div class="story-card feedback-card zmap-card">
     <div class="zmap-head"><div class="label" id="zmap-title">구역 지도</div><button type="button" class="feedback-close" id="zmap-close">닫기</button></div>
@@ -2152,11 +2150,11 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </div>
 
 <nav class="mnav" aria-label="화면 전환">
-  <button type="button" data-mview-set="base" id="mnav-base" aria-pressed="true"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 0h5v1H2zM2 1h1v2H2zM6 1h1v2H6zM1 3h7v1H1zM4 4h1v5H4zM3 8h3v1H3z"/></svg><span>상황</span></button>
-  <button type="button" data-mview-set="manage" id="mnav-manage" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h5v3H1zM6 2h2v1H6zM3 4h1v5H3z"/></svg><span>구역</span></button>
-  <button type="button" data-mview-set="hub" id="mnav-hub" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M4 0h1v2H4zM1 2h7v1H1zM2 3h5v4H2zM3 7h3v1H3zM4 8h1v1H4z"/></svg><span>모험</span></button>
-  <button type="button" data-mview-set="party" id="mnav-exped" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 0h1v9H1zM2 1h5v1H2zM2 2h6v1H2zM2 3h5v1H2zM2 4h4v1H2z"/></svg><span>성장</span></button>
-  <button type="button" data-mview-set="shop" id="mnav-shop" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 3h7v6H1zM3 1h3v1H3zM2 2h1v1H2zM6 2h1v1H6z"/></svg><span>상점</span></button>
+  <button type="button" data-mview-set="base" id="mnav-base" aria-pressed="true"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path fill-rule="evenodd" d="M4 0h1v1H4zM3 1h2v1H3zM7 1h1v1H7zM2 2h3v1H2zM6 2h2v1H6zM2 3h6v1H2zM1 4h7v2H1zM4 4h1v1H4zM0 6h2v1H0zM7 6h2v1H7zM2 7h5v1H2zM0 8h2v1H0zM7 8h2v1H7z"/></svg><span>상황</span></button>
+  <button type="button" data-mview-set="manage" id="mnav-manage" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M4 0h1v9H4zM1 1h6v3H1zM7 2h1v1H7zM2 5h6v3H2zM1 6h1v1H1z"/></svg><span>구역</span></button>
+  <button type="button" id="mnav-hub" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 0h5v1H2zM1 1h1v1H1zM7 1h1v1H7zM0 2h1v5H0zM8 2h1v5H8zM5 2h1v1H5zM4 3h2v1H4zM4 4h1v1H4zM3 5h2v1H3zM3 6h1v1H3zM1 7h1v1H1zM7 7h1v1H7zM2 8h5v1H2z"/></svg><span>모험</span></button>
+  <button type="button" data-mview-set="party" id="mnav-exped" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 0h2v1H1zM6 0h2v1H6zM0 1h4v1H0zM5 1h4v1H5zM1 2h3v1H1zM5 2h3v1H5zM3 3h3v1H3zM4 4h1v2H4zM2 6h5v1H2zM1 7h7v2H1z"/></svg><span>성장</span></button>
+  <button type="button" data-mview-set="shop" id="mnav-shop" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path fill-rule="evenodd" d="M0 0h9v1H0zM0 1h1v2H0zM2 1h1v2H2zM4 1h1v2H4zM6 1h1v2H6zM8 1h1v2H8zM1 3h7v6H1zM2 4h2v2H2zM5 4h2v5H5z"/></svg><span>상점</span></button>
 </nav>
 
 <script>

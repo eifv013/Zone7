@@ -1638,14 +1638,9 @@
     });
   }
   /** 모험 창을 연다. 아래 탭과 상황 화면의 단추가 같이 쓴다. 스테이지 중에는 열지 않는다. */
-  /** 4.5.4 모험은 아래 탭의 한 화면이다. 지금 보고 있는가(넓은 화면에서는 늘 보인다). */
-  function hubShown() { var h = $('hub'); return !!h && h.getClientRects().length > 0; }
-  function openHub() {
-    if (home) { toast('원정 중에는 열 수 없어요'); return; }
-    var nav = document.querySelector('[data-mview-set="hub"]');
-    if (nav && nav.getClientRects().length) nav.click(); else { try { $('hub').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* 못 옮겨도 된다 */ } }
-    renderChallenges(); renderStages();
-  }
+  /** 4.5.5 모험은 다시 창(팝업)이다. 아래 탭의 모험 단추가 연다. */
+  function hubShown() { return !$('hub').hidden; }
+  function openHub() { if (home) { toast('원정 중에는 열 수 없어요'); return; } $('hub').hidden = false; renderChallenges(); renderStages(); }
   var hubTab = 'chal', MARK_NAME = { clear: '클리어', speed: '스피드', hard: '하드', hardSpeed: '하드 스피드', safe: '무결', hardSafe: '하드 무결' };
   function setHubTab(t) {
     hubTab = t;
@@ -2156,7 +2151,7 @@
     if (!st) return;
     Store.save();      // 본 게임을 지금 시각으로 저장해 둔다: 도중에 창이 닫혀도 여기서부터 정산된다
     home = state; stageEnter = Date.now(); state = st;
-    tab = 'z0'; pane = 'play'; perkShown = '';
+    $('hub').hidden = true; tab = 'z0'; pane = 'play'; perkShown = '';
     log('원정 〈' + d.name + '〉에 나섰다. ' + C.stageGoalText(d, hard, C.stageGoalIndex(home, d.id)) + '.', 'good');
     sfx('relocate'); if (fxShow) fxShow('원정', d.name + (hard ? ' · 하드' : ''), 1, 0, -1);
     goTo('manage'); render();
@@ -2215,7 +2210,7 @@
     if (C.challengeBlock(state, d.id)) return;
     confirmBox('도전 〈' + d.name + '〉', d.rule + '. 목표는 ' + C.challengeGoalText(d) + '이에요. 보상은 ' + d.perk.text + '예요. 한 회차에 도전은 한 번만 켤 수 있어요.', '그만둔다', '도전한다', function () {
       var s = C.startChallenge(state, d.id);
-      if (s.ok) { log('도전 〈' + d.name + '〉을 시작했다. ' + d.rule.replace('없어요', '없다').replace('해요', '한다').replace('돼요', '된다').replace('와요', '온다').replace('이에요', '이다').replace('가요', '간다') + '.', 'good'); sfx('relocate'); goTo('base'); if (fxShow) fxShow('도전', d.name + ' · ' + C.challengeGoalText(d), 1, -1, -1); Store.save(); render(); }
+      if (s.ok) { log('도전 〈' + d.name + '〉을 시작했다. ' + d.rule.replace('없어요', '없다').replace('해요', '한다').replace('돼요', '된다').replace('와요', '온다').replace('이에요', '이다').replace('가요', '간다') + '.', 'good'); sfx('relocate'); $('hub').hidden = true; if (fxShow) fxShow('도전', d.name + ' · ' + C.challengeGoalText(d), 1, -1, -1); Store.save(); render(); }
     });
   }
   function buy(result, sound) { if (result && result.ok) { sfx(sound || 'buy'); render(); } }
@@ -4850,6 +4845,7 @@
       confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 여기까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });
     });
     $('hub-open').addEventListener('click', openHub);
+    $('hub-close').addEventListener('click', function () { $('hub').hidden = true; });
     // 4.5.3 친구 만들기 창: 그림이나 단추를 누르면 간식을 던진다. 건너뛰기는 바로 결과로
     $('bf-cv').addEventListener('click', bfTap);
     $('bf-act').addEventListener('click', bfTap);
@@ -5073,10 +5069,10 @@
       var sx = 0, sy = 0, st = 0, ok = false, strip = null, stripAt = 0, onZoneTabs = false;
       function vis(el) { return !!el && !el.hidden && el.getClientRects().length > 0; }
       function group() {
+        if (vis($('hub'))) return Array.prototype.slice.call(document.querySelectorAll('#hub [data-hub]'));
         if (Array.prototype.slice.call(document.querySelectorAll('.story-veil, [role="dialog"], [role="alertdialog"]')).some(vis)) return null;      // 다른 창이 떠 있다
         var now = document.querySelector('[data-mview-set][aria-pressed="true"]'), view = now ? now.getAttribute('data-mview-set') : '';
         if (view === 'record') return Array.prototype.slice.call(document.querySelectorAll('[data-rtab-set]'));
-        if (view === 'hub') return Array.prototype.slice.call(document.querySelectorAll('#hub [data-hub]'));
         if (view === 'manage') return Array.prototype.slice.call(document.querySelectorAll('#zone-tabs button'));
         return null;
       }
@@ -5182,7 +5178,7 @@
         render();
       });
     });
-    $('mnav-hub').addEventListener('click', function () { if (home) { toast('원정 중에는 열 수 없어요'); return; } renderChallenges(); renderStages(); });      // 4.5.4 모험 탭
+    $('mnav-hub').addEventListener('click', function () { sfx('click'); openHub(); });      // 4.5.5 모험 단추는 창을 연다
     var shopNav = document.querySelector('[data-mview-set="shop"]'); if (shopNav) shopNav.addEventListener('click', function () { renderShop(); });      // 4.5.1 상점 탭
     document.querySelectorAll('[data-mview-set]').forEach(function (b) {
       b.addEventListener('click', function () {
