@@ -2691,7 +2691,7 @@ test('7구역 정착지: 자리에 사람을 놓으면 그만큼 차고, 다 차
   /* 단계: 끝없이 자란다(값은 단계마다 3배). 효과는 갈수록 덜 는다 */
   assert.equal(C.settleNeed(s, 'farm'), cost('farm') * 3); const u0 = C.settleUsed(s); assert.ok(fill7(s, 'farm').lv === 2); near(C.settleUsed(s), u0 + cost('farm') * 3);
   near(C.mods(s).prod / prod0, Math.pow(1.5, C.levelPow(2))); assert.ok(fill7(s, 'farm').lv === 3); assert.equal(C.settleNeed(s, 'farm'), cost('farm') * 27); assert.equal(C.settleBlock(s, 'farm'), '', '3단계 뒤에도 놓을 수 있다'); assert.equal(C.settleLevels(s), 7);
-  s.survivors = 1e15; let lvN = 3; for (let k = 0; k < 8; k++) lvN = fill7(s, 'farm').lv; assert.equal(lvN, 11); assert.ok(C.levelPow(11) - C.levelPow(10) < C.levelPow(2) - C.levelPow(1), '갈수록 덜 는다'); assert.ok(C.mods(s).prod / prod0 < 3);
+  s.survivors = 1e15; let lvN = 3; for (let k = 0; k < 8; k++) { const rr = fill7(s, 'farm'); if (rr.ok) lvN = rr.lv; } assert.equal(lvN, C.LV_MAX, '4.3.7: 10단계가 끝'); assert.equal(C.settleNeed(s, 'farm'), 0); assert.equal(C.settleBlock(s, 'farm'), 'done'); assert.ok(C.levelPow(11) - C.levelPow(10) < C.levelPow(2) - C.levelPow(1), '갈수록 덜 는다'); assert.ok(C.mods(s).prod / prod0 < 3);
   s.settleLv.farm = 3; s.survivors = 1e9;
   /* 저장을 거쳐도 남고(놓는 중인 것도), 옛 저장의 '짓는 중'은 다 지은 것으로 옮기고, 철수하면 처음으로 */
   C.buildSettle(s, 'lab7'); const w = C.settleWork(s, 'lab7'); assert.ok(w > 0);
@@ -2721,7 +2721,7 @@ test('7구역 습격: 화면을 보고 있을 때만 온다. 무리는 세 쪽�
   const bv = ev3.find((e) => e.type === 'camp-breach'); assert.ok(bv && bv.id === 'farm'); assert.ok(C.settleBroken(s, 'farm')); assert.equal(c.nightLv, 5 - C.NIGHT_DROP); assert.ok(C.mods(s).prod < p1, '부서진 동안에는 효과가 없다'); assert.equal(s.campBreaches, 1);
   assert.equal(C.settleNeed(s, 'farm'), Math.ceil(cost('farm') * C.REPAIR_FRAC)); const rp = fill7(s, 'farm'); assert.ok(rp.done && rp.repaired && rp.lv === 1); assert.ok(!C.settleBroken(s, 'farm')); near(C.mods(s).prod, p1);
   /* 경비대와 망루는 거들지만 다 막아 주지는 않는다. 지키다 잃는 사람은 울타리가 깎인 만큼 */
-  s.survivors = 1e12; fill7(s, 'guard7'); c.night = C.newRaid(s, calm); near(C.towerHold(s), C.TOWER_HOLD.guard7); c.broken.guard7 = true; near(C.towerHold(s), 0); delete c.broken.guard7; s.settleLv.guard7 = 99; s.settleLv.watch = 99; s.settle.watch = true; assert.equal(C.towerHold(s), C.TOWER_HOLD_MAX); s.settleLv.guard7 = 1; delete s.settle.watch; delete s.settleLv.watch;
+  s.survivors = 1e12; fill7(s, 'guard7'); c.night = C.newRaid(s, calm); near(C.towerHold(s), C.TOWER_HOLD.guard7); c.broken.guard7 = true; near(C.towerHold(s), 0); delete c.broken.guard7; s.settleLv.guard7 = 10; s.settleLv.watch = 10; s.settle.watch = true; assert.ok(C.towerHold(s) <= C.TOWER_HOLD_MAX && C.towerHold(s) > 0.45, '10단계여도 다 막아 주지는 않는다'); s.settleLv.guard7 = 1; delete s.settle.watch; delete s.settleLv.watch;
   c.night = C.newRaid(s, calm); for (let i = 0; i < 3; i++) while (C.sendGuard(s, i).ok) {} c.night.fences = [0.5, 1, 1]; c.night.t = 0.1; const s1 = s.survivors, ev4 = []; C.stepCamp(s, 0.2, calm, ev4); const h4 = ev4.find((e) => e.type === 'camp-held'); assert.ok(h4 && h4.lost === 0 && s.survivors > s1, '지키다 잃는 사람은 없다');
   /* 세워야 하는 수는 모인 사람 전체의 몫이다: 낮에 얼마를 지었든 같고, 단계가 오르면 는다. 자리를 비운 동안에는 오지 않는다 */
   const hz = inCamp(); hz.survivors = 5e6; const need0 = C.raidNeed(hz); assert.equal(need0, Math.ceil(5e6 * C.NIGHT_FRAC)); fill7(hz, 'farm'); assert.equal(C.raidNeed(hz), need0, '지어도 같다'); hz.campRows.arms = 5; assert.ok(C.raidNeed(hz) < need0); hz.campRows.arms = 0;

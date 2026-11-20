@@ -805,7 +805,7 @@
     foot.appendChild(info); foot.appendChild(cost);
     btn.appendChild(head); btn.appendChild(desc); btn.appendChild(foot);
     btn.addEventListener('click', onBuy);
-    return { btn: btn, count: count, info: info, cost: cost, mile: mile };
+    return { btn: btn, count: count, info: info, cost: cost, mile: mile, desc: desc };
   }
   /**
    * 2배 표시를 고친다.
@@ -1516,12 +1516,16 @@
     // 4.3.2 7구역 줄: 안테나 · 수레 · 방벽 · 무기고
     /* 4.3.5 정착지 건물도 운영 줄에 둔다(구매 줄과 같은 꼴). 그림의 자리를 눌러도, 이 줄을 눌러도 같다: 문 앞의 생존자가 한 무리 간다. 줄에서 단계가 보인다.
        열린 건물(앞 건물이 선 줄)만 보인다. 순서는 살림 · 혈청 · 방어 줄, 위에서 아래로 */
-    /* 4.3.6 건물 줄 아홉을 '정착지' 한 줄로 묶었다(줄이 열셋이 되어 길었다). 누르면 그 밑에 아홉 칸이 펼쳐진다: 첫 줄 1 · 2 · 3, 둘째 줄 4 · 5 · 6, 셋째 줄 7 · 8 · 9(그림의 세 단과 같은 자리) */
-    rows.settle7 = buildRow({ id: 'settle7', name: '정착지', desc: '누르면 건물 아홉 채가 펼쳐져요' }, function () { campGridOpen = !campGridOpen; sfx('tab'); render(); });
-    rows.settleGrid = el('div', 'camp-grid'); rows.settleGrid.id = 'camp-grid'; rows.settleGrid.hidden = true; rows.settleTiles = {};
-    C.SETTLE.slice().sort(function (a, b) { return a.row - b.row || a.col - b.col; }).forEach(function (d, k) { var b = el('button', ''), nm = el('b', '', ''), lv = el('span', 'lv', ''), nd = el('small', '', ''); b.type = 'button'; b.id = 'st-' + d.id; b.appendChild(el('i', '', String(k + 1))); b.appendChild(nm); b.appendChild(lv); b.appendChild(nd); b.addEventListener('click', function () { if (campPlaceFn) campPlaceFn(d.id); }); rows.settleGrid.appendChild(b); rows.settleTiles[d.id] = { btn: b, name: nm, lv: lv, need: nd }; });
+    /* 4.3.7 건물 줄을 세 단으로 묶었다: 정착지 1(1 · 2 · 3) · 정착지 2(4 · 5 · 6) · 정착지 3(7 · 8 · 9). 그림의 세 단과 같다.
+       줄을 누르면 그 단의 세 칸이 밑에 펼쳐진다(하나만 펼친다). 세 건물이 다 10단계면 '건설 완료' */
+    rows.tier7 = [0, 1, 2].map(function (r) {
+      var row = buildRow({ id: 'tier7-' + r, name: '정착지 ' + (r + 1), desc: '' }, function () { campGridOpen = campGridOpen === r ? -1 : r; sfx('tab'); render(); });
+      var grid = el('div', 'camp-grid'); grid.hidden = true; var tiles = {};
+      C.SETTLE.filter(function (d) { return d.row === r; }).sort(function (a, b) { return a.col - b.col; }).forEach(function (d) { var b = el('button', ''), nm = el('b', '', ''), lv = el('span', 'lv', ''), nd = el('small', '', ''); b.type = 'button'; b.id = 'st-' + d.id; b.appendChild(el('i', '', String(r * 3 + d.col + 1))); b.appendChild(nm); b.appendChild(lv); b.appendChild(nd); b.addEventListener('click', function () { if (campPlaceFn) campPlaceFn(d.id); }); grid.appendChild(b); tiles[d.id] = { btn: b, name: nm, lv: lv, need: nd }; });
+      return { row: row, grid: grid, tiles: tiles };
+    });
     rows.camp = {}; C.CAMP_ROWS.forEach(function (d) { rows.camp[d.id] = buildRow({ id: d.id, name: d.name, desc: d.desc }, function () { buy(C.buyCampRow(state, d.id), 'route'); }); $('rows-z6').appendChild(rows.camp[d.id].btn); });
-    $('rows-z6').appendChild(rows.settle7.btn); $('rows-z6').appendChild(rows.settleGrid);
+    rows.tier7.forEach(function (t) { $('rows-z6').appendChild(t.row.btn); $('rows-z6').appendChild(t.grid); });
     $('serum').addEventListener('click', function () {
       var r = C.buySerum(state);
       if (!r.ok) return;
@@ -2831,16 +2835,17 @@
    * 화면: 제목 줄(왼쪽 이름 · 오른쪽 단계) → 그림 → 띠(생존자 · 습격까지) → 주파수 칸 → (습격 때만) 세 쪽 단추. 카드와 기록 줄은 없앴다.
    *   띠의 생존자: 낮에는 놓을 수 있는 사람, 습격 때는 아직 세우지 않은 사람(그때 움직일 수 있는 사람을 보여 준다).
    */
-  var CAMP_PX = [50, 94, 138], CAMP_FL = [58, 88, 118], CAMP_W = 38, CAMP_H = 30, CAMP_COL = ['#7fb85a', '#6aaede', '#e98a3c'], CAMP_SIDE = ['서쪽 문', '동쪽 벽', '남쪽 비탈'];
+  /* 4.3.7: 건물이 재료 단계(판잣집 → 벽돌 → 이층 → 요새)로 커져서 그림을 128 → 160 으로 늘리고 단 사이를 30 → 40, 자리 폭을 38 → 44 로 넓혔다(큰 건물이 윗단을 가리지 않게) */
+  var CAMP_HT = 160, CAMP_PX = [46, 91, 136], CAMP_FL = [62, 102, 142], CAMP_W = 44, CAMP_H = 40, CAMP_COL = ['#7fb85a', '#6aaede', '#e98a3c'], CAMP_SIDE = ['서쪽 문', '동쪽 벽', '남쪽 비탈'];
   var CAMP_DIGIT = [['###', '#.#', '#.#', '#.#', '###'], ['.#.', '##.', '.#.', '.#.', '###'], ['###', '..#', '###', '#..', '###'], ['###', '..#', '###', '..#', '###'], ['#.#', '#.#', '###', '..#', '..#'], ['###', '#..', '###', '..#', '###'], ['###', '#..', '###', '#.#', '###'], ['###', '..#', '..#', '..#', '..#'], ['###', '#.#', '###', '#.#', '###'], ['###', '#.#', '###', '..#', '###']];
-  var campGridOpen = false, campPlaceFn = null, campRescueFn = null, sc0 = 0, campBacks = {}, campWalk = [], campFlash = null, campPopFn = null, campNightAt = 0, campWasNight = false, campTmp = null, campNC = {};
+  var campGridOpen = -1, campPlaceFn = null, campRescueFn = null, sc0 = 0, campBacks = {}, campWalk = [], campFlash = null, campPopFn = null, campNightAt = 0, campWasNight = false, campTmp = null, campNC = {};
   function campPlot(d) { return { x: CAMP_PX[d.col], by: CAMP_FL[d.row] }; }
   /** 달빛 아래의 색: 채도를 빼고 푸르게 가라앉힌다. '#rrggbb' 만 바꾼다(반투명 색은 그대로). */
   function campNight(c) { if (c.charAt(0) !== '#' || c.length !== 7) return c; if (campNC[c]) return campNC[c]; var r = parseInt(c.substr(1, 2), 16), gg = parseInt(c.substr(3, 2), 16), b = parseInt(c.substr(5, 2), 16), l = r * 0.3 + gg * 0.5 + b * 0.2; return (campNC[c] = 'rgb(' + Math.round((r * 0.45 + l * 0.55) * 0.34 + 6) + ',' + Math.round((gg * 0.45 + l * 0.55) * 0.4 + 10) + ',' + Math.round((b * 0.45 + l * 0.55) * 0.62 + 26) + ')'); }
   /** 바탕(하늘 · 먼 폐허 · 언덕 · 세 단 · 계단 · 문 · 벽 · 송신탑). 낮과 밤을 따로 한 번씩만 그려 둔다. */
   function campBackdrop(night) {
     var key = night ? 'n' : 'd'; if (campBacks[key]) return campBacks[key];
-    var cv = document.createElement('canvas'); cv.width = 184; cv.height = 128; var g = cv.getContext('2d'), K = '#16110f', raw = false;
+    var cv = document.createElement('canvas'); cv.width = 184; cv.height = CAMP_HT; var g = cv.getContext('2d'), K = '#16110f', raw = false;
     var R = function (x, y, w, h, c) { px(g, Math.round(x), Math.round(y), w, h, night && !raw ? campNight(c) : c); };
     raw = true;
     if (!night) {
@@ -2859,93 +2864,177 @@
     [[54, 30, 9, 18], [64, 26, 7, 22], [72, 33, 12, 15], [86, 24, 8, 24], [96, 31, 10, 17], [108, 27, 6, 21], [116, 34, 12, 14], [130, 29, 9, 19], [142, 33, 13, 15], [158, 27, 8, 21], [168, 32, 16, 16]].forEach(function (b, i) { R(b[0], b[1], b[2], b[3], far); R(b[0], b[1], 1, b[3], farL); if (i % 3 === 0) { R(b[0] + 2, b[1] - 3, 1, 3, far); R(b[0] + b[2] - 3, b[1] - 2, 2, 2, far); } if (night ? i % 4 === 1 : i % 2) R(b[0] + 2, b[1] + 4, 1, 1, win); });
     [[60, 36, 14, 12], [80, 38, 10, 10], [100, 35, 16, 13], [124, 38, 12, 10], [150, 36, 14, 12], [172, 39, 12, 9]].forEach(function (b, i) { R(b[0], b[1], b[2], b[3], near); if (night) { if (i % 2) R(b[0] + 3, b[1] + 4, 1, 1, win); } else for (var k = 2; k < b[2] - 1; k += 4) if ((k + i) % 3) R(b[0] + k, b[1] + 3 + (k % 2) * 3, 1, 1, i % 2 ? win : '#3a2836'); });
     raw = false;
-    R(0, 48, 184, 80, '#2c2622'); for (var y2 = 48; y2 < 128; y2 += 3) for (var x2 = (y2 * 7) % 10; x2 < 184; x2 += 10) R(x2, y2, 3, 1, (x2 + y2) % 4 ? '#342d27' : '#241f1b');
-    for (var hx = 0; hx < 44; hx++) { var top = 44 + Math.round(Math.pow(Math.max(0, hx - 24) / 20, 1.6) * 14); R(hx, top, 1, 84, '#332b25'); R(hx, top, 1, 1, '#5a6a3a'); if (hx % 3 === 0) R(hx, top - 1, 1, 1, '#6a7a42'); if (hx % 7 === 2) R(hx, top + 3 + (hx % 5), 2, 1, '#3e352d'); }
+    R(0, 48, 184, CAMP_HT - 48, '#2c2622'); for (var y2 = 48; y2 < CAMP_HT; y2 += 3) for (var x2 = (y2 * 7) % 10; x2 < 184; x2 += 10) R(x2, y2, 3, 1, (x2 + y2) % 4 ? '#342d27' : '#241f1b');
+    for (var hx = 0; hx < 44; hx++) { var top = 44 + Math.round(Math.pow(Math.max(0, hx - 24) / 20, 1.6) * 14); R(hx, top, 1, CAMP_HT, '#332b25'); R(hx, top, 1, 1, '#5a6a3a'); if (hx % 3 === 0) R(hx, top - 1, 1, 1, '#6a7a42'); if (hx % 7 === 2) R(hx, top + 3 + (hx % 5), 2, 1, '#3e352d'); }
     CAMP_FL.forEach(function (fy, r) {
       R(44, fy, 140, 2, '#8a7a5e'); R(44, fy, 140, 1, '#a8977a'); for (var k = 46; k < 184; k += 9) R(k, fy + 1, 4, 1, '#6e6048');
       if (r < 2) { R(44, fy + 2, 140, 6, '#5c554c'); R(44, fy + 2, 140, 1, '#6e665c'); for (var bx = 44; bx < 184; bx += 8) { R(bx + (r ? 4 : 0), fy + 3, 1, 2, '#454039'); R(bx + (r ? 0 : 4), fy + 5, 1, 3, '#454039'); } R(44, fy + 5, 140, 1, '#454039'); R(44, fy + 8, 140, 1, '#211c19'); }
-      else { R(0, fy + 2, 184, 8, '#3a332c'); for (var qx = 0; qx < 184; qx += 6) R(qx, fy + 3 + (qx % 4), 3, 1, '#2c2622'); }
+      else { R(0, fy + 2, 184, CAMP_HT - fy - 2, '#3a332c'); for (var qx = 0; qx < 184; qx += 6) R(qx, fy + 3 + (qx % 4), 3, 1, '#2c2622'); }
     });
-    R(0, 118, 44, 2, '#8a7a5e'); R(0, 118, 44, 1, '#a8977a');
-    [[58, 88], [88, 118]].forEach(function (s) { for (var k = 0; k < 10; k++) { R(34 + k, s[0] + k * 3, 11 - k, 3, '#6e665c'); R(34 + k, s[0] + k * 3, 11 - k, 1, '#8a8072'); } R(33, s[0] - 6, 1, 36, '#4a4038'); for (var k2 = 0; k2 < 30; k2 += 5) R(33, s[0] - 6 + k2, 2, 1, '#7a6a52'); });
-    R(0, 98, 3, 20, '#4a4038'); R(0, 98, 3, 1, '#7a6a52'); R(8, 96, 3, 22, '#4a4038'); R(8, 96, 3, 1, '#7a6a52'); R(0, 94, 11, 3, K); R(1, 95, 9, 1, '#f0b400'); for (var st = 1; st < 10; st += 4) R(st, 95, 2, 1, K);
-    for (var wy = 34; wy < 118; wy++) R(180, wy, 4, 1, wy % 6 < 3 ? '#5a4a3c' : '#4a3c30'); for (var wk = 36; wk < 118; wk += 9) { R(179, wk, 5, 1, '#7a6a52'); R(181, wk + 3, 2, 3, '#6a6f78'); } R(179, 32, 5, 2, '#8a8f98'); for (var bw = 179; bw < 184; bw += 2) R(bw, 31, 1, 1, '#b4b8c0');
+    R(0, 142, 44, 2, '#8a7a5e'); R(0, 142, 44, 1, '#a8977a');
+    [[CAMP_FL[0], CAMP_FL[1]], [CAMP_FL[1], CAMP_FL[2]]].forEach(function (s) { var sn = Math.round((s[1] - s[0]) / 3); for (var k = 0; k < sn; k++) { var sw = Math.max(1, 11 - Math.round(k * 10 / sn)); R(45 - sw, s[0] + k * 3, sw, 3, '#6e665c'); R(45 - sw, s[0] + k * 3, sw, 1, '#8a8072'); } R(33, s[0] - 6, 1, s[1] - s[0] + 6, '#4a4038'); for (var k2 = 0; k2 < s[1] - s[0]; k2 += 5) R(33, s[0] - 6 + k2, 2, 1, '#7a6a52'); });
+    R(0, 122, 3, 20, '#4a4038'); R(0, 122, 3, 1, '#7a6a52'); R(8, 120, 3, 22, '#4a4038'); R(8, 120, 3, 1, '#7a6a52'); R(0, 118, 11, 3, K); R(1, 119, 9, 1, '#f0b400'); for (var st = 1; st < 10; st += 4) R(st, 119, 2, 1, K);
+    for (var wy = 34; wy < 142; wy++) R(180, wy, 4, 1, wy % 6 < 3 ? '#5a4a3c' : '#4a3c30'); for (var wk = 36; wk < 142; wk += 9) { R(179, wk, 5, 1, '#7a6a52'); R(181, wk + 3, 2, 3, '#6a6f78'); } R(179, 32, 5, 2, '#8a8f98'); for (var bw = 179; bw < 184; bw += 2) R(bw, 31, 1, 1, '#b4b8c0');
     raw = true; var tc = night ? '#141a2e' : '#3a2c34', tc2 = night ? '#0e1424' : '#2a2028';
     for (var ty = 6; ty < 44; ty++) { var hw = 1 + ((ty - 6) / 6 | 0); R(18 - hw, ty, 1, 1, tc); R(18 + hw, ty, 1, 1, tc2); if (ty % 6 === 1) R(18 - hw, ty, hw * 2 + 1, 1, tc); if (ty % 6 === 4 && hw > 1) { R(18 - hw + 1, ty, 1, 1, tc2); R(18 + hw - 1, ty - 1, 1, 1, tc2); R(18, ty, 1, 1, tc2); } }
     R(18, 1, 1, 2, tc2); for (var cb = 0; cb < 22; cb++) { R(18 + cb, 12 + Math.round(cb * 1.5), 1, 1, tc2); if (cb < 16) R(18 - cb, 12 + cb * 2, 1, 1, tc2); }
     raw = false;
     R(4, 36, 16, 9, K); R(5, 37, 14, 8, '#6a5a4a'); R(5, 37, 14, 1, '#8a7a62'); R(3, 34, 18, 3, K); R(4, 35, 16, 1, '#8a4a2e'); R(13, 39, 4, 6, '#2a2420');
-    R(18, 115, 5, 3, K); R(19, 116, 3, 2, '#4a4038');
-    for (var v = 0; v < 7; v++) { g.fillStyle = 'rgba(10,6,8,' + (0.2 - v * 0.028).toFixed(3) + ')'; g.fillRect(v, 0, 1, 128); g.fillRect(183 - v, 0, 1, 128); g.fillRect(0, 127 - v, 184, 1); }
+    R(18, 139, 5, 3, K); R(19, 140, 3, 2, '#4a4038');
+    for (var v = 0; v < 7; v++) { g.fillStyle = 'rgba(10,6,8,' + (0.2 - v * 0.028).toFixed(3) + ')'; g.fillRect(v, 0, 1, CAMP_HT); g.fillRect(183 - v, 0, 1, CAMP_HT); g.fillRect(0, CAMP_HT - 1 - v, 184, 1); }
     return (campBacks[key] = cv);
   }
-  /* 건물 그림(옆모습): CAMP_ART[id](R, L, x, by, lv). by 는 바닥. 38×30 안에 그린다. L(x, y, w, h, 색)는 불빛(밤에도 제 색으로 남는다). 단계가 오르면 덧붙는다(3단계까지) */
+  /*
+   * 4.3.7 건물 그림(옆모습): CAMP_ART[id](R, L, x, by, t). by 는 바닥, 폭 44 · 높이 40 안에 그린다. L(x, y, w, h, 색)은 불빛(밤에도 제 색으로 남는다).
+   *   t 는 재료 단계(campTier): 0 = 1~3단계(천막 · 판잣집) · 1 = 4~6단계(벽돌 · 컨테이너) · 2 = 7~9단계(이층 · 콘크리트) · 3 = 10단계(요새).
+   *   왜: 예전에는 3단계 뒤로 깃발 · 줄등 · 간판을 덧붙였는데 '스티커 같다'고 하셨다. 단계가 오르면 건물의 재료가 바뀌게 했다.
+   */
   var CAMP_ART = (function () {
     var K = '#16110f';
-    function sh(R, x, by, w) { R(x, by, w, 1, 'rgba(0,0,0,.3)'); }
-    function bags(R, x, y, n) { for (var k = 0; k < n; k++) { R(x + k * 5, y, 5, 3, '#a89a6a'); R(x + k * 5, y, 5, 1, '#c9bc8a'); R(x + k * 5, y + 2, 5, 1, '#7a6e48'); } }
-    function tent(R, x, by, c1, c2, w) { w = w || 10; for (var a = 0; a < w; a++) R(x + a, by - 2 - Math.min(a, w - 1 - a), 1, Math.min(a, w - 1 - a) + 2, a < w / 2 ? c1 : c2); R(x + (w >> 1) - 1, by - 3, 2, 3, '#3a342e'); }
-    function box(R, x, by, w, h, wall, top, dark) { R(x, by - h, w, h, K); R(x + 1, by - h + 1, w - 2, h - 1, wall); R(x + 1, by - h + 1, w - 2, 2, top); R(x + 1, by - 3, w - 2, 1, dark); }
-    function crates(R, x, by, n) { for (var k = 0; k < n; k++) { var cx = x + (k % 2) * 5, cy = by - 4 - Math.floor(k / 2) * 4; R(cx, cy, 5, 4, K); R(cx + 1, cy + 1, 3, 2, k % 3 ? '#a8854f' : '#c9a868'); } }
-    return {
-      farm: function (R, L, x, by, lv) {
-        sh(R, x, by, 36); var px0 = lv >= 3 ? 24 : 2, pw = lv >= 3 ? 12 : 26;
-        R(x + px0, by - 3, pw, 3, '#5a4630'); R(x + px0, by - 3, pw, 1, '#7a6040'); for (var q = 1; q < pw - 1; q += 2) { R(x + px0 + q, by - 5, 1, 2, '#7fb85a'); if (q % 4 === 1) R(x + px0 + q, by - 6, 1, 1, q % 8 === 1 ? '#d8644e' : '#a8d86a'); }
-        if (lv < 3) { R(x + 31, by - 11, 1, 11, '#8a6a42'); R(x + 29, by - 9, 5, 1, '#8a6a42'); R(x + 30, by - 13, 3, 3, '#e8c890'); R(x + 30, by - 13, 3, 1, '#c9a868'); }
-        if (lv === 2) { R(x + 3, by - 16, 7, 8, K); R(x + 4, by - 15, 5, 6, '#5a7a90'); R(x + 4, by - 15, 5, 1, '#8ab0c4'); R(x + 4, by - 8, 1, 5, '#4a4038'); R(x + 8, by - 8, 1, 5, '#4a4038'); }
-        if (lv >= 3) { for (var a = 0; a < 22; a++) { var h = Math.round(Math.sin((a + 0.5) / 22 * Math.PI) * 7) + 5; R(x + a, by - h, 1, h, a % 5 === 0 ? '#e8f6f0' : '#8ecfc4'); R(x + a, by - h, 1, 1, '#e8f6f0'); if (a % 5 !== 0 && h > 6) R(x + a, by - h + 2, 1, 2, '#b8e8e0'); } R(x, by - 5, 22, 1, '#e8f6f0'); for (var s = 0; s < 4; s++) { R(x + 2 + s * 5, by - 4, 3, 3, '#4f9a4a'); R(x + 3 + s * 5, by - 5, 1, 1, '#d8644e'); }
-          R(x + 31, by - 13, 5, 6, K); R(x + 32, by - 12, 3, 4, '#5a7a90'); R(x + 32, by - 12, 3, 1, '#8ab0c4'); R(x + 32, by - 7, 1, 4, '#4a4038'); R(x + 35, by - 7, 1, 4, '#4a4038'); }
-      },
-      mess: function (R, L, x, by, lv) {
-        sh(R, x, by, 36); var w = lv >= 3 ? 28 : 24; R(x, by - 13, w, 13, K); R(x + 1, by - 12, w - 2, 12, '#a8845c'); for (var k = 0; k < w - 2; k += 3) R(x + 1 + k, by - 12, 1, 12, '#8e6c48'); for (var a = 0; a < w + 2; a++) R(x - 1 + a, by - 17 + Math.round(a / 7), 1, 3, a % 4 ? '#8a3a2e' : '#a84a3a'); R(x - 1, by - 17, w + 2, 1, '#c05a48');
-        R(x + 17, by - 22, 3, 6, K); R(x + 18, by - 21, 1, 5, '#6a6f78'); if (lv >= 3) { R(x + 6, by - 21, 3, 5, K); R(x + 7, by - 20, 1, 4, '#6a6f78'); }
-        L(x + 3, by - 9, 4, 4); L(x + 10, by - 9, 4, 4); R(x + 17, by - 9, 4, 9, '#4a3428'); R(x + 20, by - 5, 1, 1, '#f0b400'); if (lv >= 3) L(x + 23, by - 9, 3, 4);
-        if (lv >= 2) { R(x + 36, by - 13, 1, 13, '#3a342e'); for (var s = 0; s < 37 - w; s++) { var sy = by - 14 + Math.round(Math.sin(s / Math.max(1, 36 - w) * Math.PI) * 2); R(x + w + s, sy, 1, 1, '#3a342e'); if (s % 3 === 1) L(x + w + s, sy + 1, 1, 1, ['#ffd98a', '#f0705e', '#8ecfc4'][(s / 3 | 0) % 3]); } R(x + w + 2, by - 4, 6, 1, '#8a6a42'); R(x + w + 3, by - 3, 1, 3, '#6a5238'); R(x + w + 6, by - 3, 1, 3, '#6a5238'); }
-      },
-      store: function (R, L, x, by, lv) {
-        sh(R, x, by, 36);
-        if (lv === 1) { crates(R, x + 3, by, 5); for (var a = 0; a < 14; a++) R(x + 15 + a, by - 9 + Math.round(a / 3), 1, 9 - Math.round(a / 3), a % 3 ? '#55643a' : '#6a7a4a'); R(x + 14, by - 10, 1, 10, '#4a4038'); return; }
-        R(x + 1, by - 16, 26, 16, K); R(x + 2, by - 15, 24, 15, '#7a4a30'); for (var k = 0; k < 24; k += 4) R(x + 2 + k, by - 15, 1, 15, '#62391f'); for (var a2 = 0; a2 < 28; a2++) R(x + a2, by - 19 + Math.abs(14 - a2) / 4, 1, 3, a2 % 5 ? '#55585f' : '#6e727a'); R(x + 9, by - 11, 10, 11, K); R(x + 10, by - 10, 8, 10, '#3a2a1c'); R(x + 14, by - 10, 1, 10, K); L(x + 12, by - 14, 4, 2);
-        crates(R, x + 28, by, lv >= 3 ? 6 : 3); if (lv >= 3) { R(x + 28, by - 16, 9, 3, '#55643a'); R(x + 28, by - 16, 9, 1, '#6a7a4a'); }
-      },
-      clinic: function (R, L, x, by, lv) {
-        sh(R, x, by, 34);
-        if (lv === 1) { tent(R, x + 2, by, '#f0f0e8', '#c8c8be', 14); tent(R, x + 20, by, '#f0f0e8', '#c8c8be', 10); R(x + 17, by - 16, 1, 16, '#6a6f78'); R(x + 14, by - 21, 7, 6, K); R(x + 15, by - 20, 5, 4, '#fff'); R(x + 17, by - 20, 1, 4, '#d8453a'); R(x + 16, by - 19, 3, 2, '#d8453a'); return; }
-        box(R, x, by, 24, 14, '#e2dfd2', '#f4f2e8', '#b8b5a8'); for (var k = 4; k < 22; k += 4) R(x + k, by - 11, 1, 8, '#cfccbf'); R(x + 9, by - 22, 7, 7, K); R(x + 10, by - 21, 5, 5, '#fff'); R(x + 12, by - 20, 1, 3, '#d8453a'); R(x + 11, by - 19, 3, 1, '#d8453a'); R(x + 12, by - 15, 1, 2, '#55504a');
-        L(x + 3, by - 10, 4, 4); R(x + 15, by - 10, 5, 10, '#55504a'); R(x + 16, by - 9, 3, 8, '#8aa0aa'); R(x + 13, by - 12, 10, 2, '#d8453a'); R(x + 13, by - 12, 10, 1, '#f0705e'); tent(R, x + 26, by, '#f0f0e8', '#c8c8be', 10);
-        if (lv >= 3) { box(R, x + 2, by - 14, 14, 9, '#d6d3c6', '#ecebe0', '#b0ada0'); L(x + 5, by - 20, 3, 3); L(x + 10, by - 20, 3, 3); R(x + 20, by - 24, 1, 10, '#6a6f78'); L(x + 19, by - 25, 3, 1, '#8ecfc4'); }
-      },
-      lab7: function (R, L, x, by, lv) {
-        sh(R, x, by, 34); box(R, x + 1, by, 26, 14, '#aab8c6', '#c4d0dc', '#8494a2'); R(x + 1, by - 16, 26, 3, K); R(x + 2, by - 15, 24, 1, '#3f5f7a'); for (var k = 0; k < 3; k++) { R(x + 5 + k * 7, by - 19, 4, 4, K); R(x + 6 + k * 7, by - 18, 2, 2, '#6a6f78'); }
-        L(x + 4, by - 10, 5, 4, '#b8f08a'); L(x + 12, by - 10, 5, 4, '#b8f08a'); R(x + 20, by - 10, 5, 10, '#55504a'); R(x + 21, by - 9, 3, 8, '#7a8a96');
-        if (lv >= 2) { R(x + 31, by - 16, 1, 16, '#6a6f78'); R(x + 28, by - 22, 7, 6, K); R(x + 29, by - 21, 5, 4, '#c9d0d8'); R(x + 30, by - 20, 3, 2, '#8a8f98'); }
-        if (lv >= 3) { R(x + 28, by - 9, 8, 9, K); R(x + 29, by - 8, 6, 8, '#4a6a5a'); L(x + 30, by - 7, 4, 5, '#b8f08a'); R(x + 27, by - 5, 2, 1, '#8a8f98'); }
-      },
-      ward: function (R, L, x, by, lv) {
-        sh(R, x, by, 36); for (var k = 0; k < 38; k += 4) R(x + k, by - 8, 1, 8, '#6a6f78'); R(x, by - 6, 38, 1, '#8a8f98'); R(x, by - 3, 38, 1, '#8a8f98');
-        if (lv === 1) { tent(R, x + 3, by, '#e0d8a0', '#b8b078', 12); tent(R, x + 16, by, '#e0d8a0', '#b8b078', 10); tent(R, x + 27, by, '#e0d8a0', '#b8b078', 10); return; }
-        box(R, x + 4, by, 26, 15, '#c8c4b4', '#dcd8ca', '#a09c8c'); for (var a = 0; a < 24; a += 4) R(x + 5 + a, by - 15, 2, 2, a % 8 ? '#f0b400' : '#17180f'); L(x + 7, by - 10, 3, 3); L(x + 13, by - 10, 3, 3); L(x + 19, by - 10, 3, 3); R(x + 24, by - 9, 4, 9, '#3a3a36');
-        if (lv >= 3) { R(x + 33, by - 24, 1, 24, '#6a6f78'); R(x + 31, by - 26, 5, 3, '#55504a'); L(x + 32, by - 23, 3, 1, '#fff2c0'); }
-      },
-      guard7: function (R, L, x, by, lv) {
-        sh(R, x, by, 38);
-        if (lv >= 2) { R(x + 2, by - 12, 18, 12, K); R(x + 3, by - 11, 16, 11, '#55643a'); for (var k = 0; k < 16; k += 3) R(x + 3 + k, by - 11 + (k % 2), 2, 1, '#6a7a4a'); R(x + 1, by - 14, 20, 3, K); R(x + 2, by - 13, 18, 1, '#6a8a52'); L(x + 5, by - 8, 3, 3); R(x + 12, by - 8, 4, 8, '#2a2e26'); } else tent(R, x + 4, by, '#6a8a52', '#4a6a3a', 14);
-        for (var r = 0; r < (lv >= 3 ? 4 : 3); r++) for (var q = 0; q < 3 - (r > 1 ? 1 : 0); q++) { var bx = x + 22 + q * 5 + (r % 2) * 2, byy = by - 3 - r * 3; R(bx, byy, 5, 3, '#a89a6a'); R(bx, byy, 5, 1, '#c9bc8a'); R(bx, byy + 2, 5, 1, '#7a6e48'); }
-        if (lv >= 2) { R(x + 29, by - (lv >= 3 ? 14 : 11), 8, 1, '#17180f'); R(x + 30, by - (lv >= 3 ? 13 : 10), 2, 2, '#3a3a36'); }
-        R(x + 21, by - 26, 1, 15, '#6a6f78'); R(x + 22, by - 26, 6, 4, '#e98a3c'); R(x + 22, by - 26, 6, 1, '#ffb060'); R(x + 24, by - 25, 2, 2, '#17180f'); if (lv >= 3) L(x + 9, by - 17, 3, 2, '#fff2c0');
-      },
-      watch: function (R, L, x, by, lv) {
-        var H = lv === 1 ? 10 : 18; sh(R, x + 8, by, 22); R(x + 10, by - H, 2, H, '#7a5a3a'); R(x + 24, by - H, 2, H, '#5e4630'); for (var k = 0; k < H - 2; k++) { R(x + 11 + Math.round(k * 13 / H), by - H + 1 + k, 1, 1, '#4e3a28'); R(x + 24 - Math.round(k * 13 / H), by - H + 1 + k, 1, 1, '#4e3a28'); } for (var l = 0; l < H - 2; l += 4) R(x + 16, by - H + 2 + l, 4, 1, '#a8854f'); R(x + 17, by - H, 2, H, '#8a6a42');
-        R(x + 7, by - H - 8, 22, 8, K); R(x + 8, by - H - 7, 20, 6, '#8a6a42'); R(x + 8, by - H - 7, 20, 1, '#a8854f'); for (var q = 0; q < 20; q += 4) R(x + 8 + q, by - H - 6, 1, 5, '#5e4630'); R(x + 5, by - H - 13, 26, 4, K); R(x + 6, by - H - 12, 24, 2, '#6a3a26'); R(x + 6, by - H - 12, 24, 1, '#8a4a2e'); R(x + 10, by - H - 10, 1, 3, '#5e4630'); R(x + 26, by - H - 10, 1, 3, '#5e4630');
-        R(x + 16, by - H - 10, 3, 3, '#e6c9a0'); R(x + 16, by - H - 10, 3, 1, '#2a2028'); if (lv >= 2) { R(x + 29, by - H - 9, 4, 3, '#55504a'); L(x + 33, by - H - 9, 2, 3, '#fff2c0'); } if (lv >= 3) { R(x + 3, by - H - 9, 4, 3, '#55504a'); L(x + 1, by - H - 9, 2, 3, '#fff2c0'); }
-      },
-      school: function (R, L, x, by, lv) {
-        sh(R, x, by, 36); var w = lv >= 3 ? 28 : 22; box(R, x + 1, by, w, 13, '#d8c898', '#e8dab0', '#b8a878'); for (var a = 0; a < w + 2; a++) R(x + a, by - 17 + Math.round(Math.abs((w + 2) / 2 - a) / 4), 1, 3, a % 4 ? '#2a5a40' : '#3a7a5a'); R(x + 9, by - 23, 6, 6, K); R(x + 10, by - 22, 4, 5, '#d8c898'); R(x + 11, by - 21, 2, 2, '#f0b400');
-        L(x + 4, by - 9, 4, 4); L(x + 16, by - 9, 4, 4); R(x + 10, by - 9, 4, 9, '#4a3428'); if (lv >= 3) L(x + 23, by - 9, 3, 4);
-        if (lv >= 2) { var sx = x + (lv >= 3 ? 30 : 26); R(sx, by - 9, 1, 9, '#6a6f78'); R(sx + 6, by - 9, 1, 9, '#6a6f78'); R(sx, by - 9, 7, 1, '#6a6f78'); R(sx + 2, by - 8, 1, 5, '#8a8f98'); R(sx + 4, by - 8, 1, 4, '#8a8f98'); R(sx + 1, by - 3, 3, 1, '#d8644e'); R(sx + 3, by - 4, 3, 1, '#6aaede'); }
-      }
+    function H(R,L){
+     var o={};
+     o.win=function(x,y,w,h,lit,c){R(x,y,w,h,K);if(lit)L(x+1,y+1,w-2,h-2,c||'#f0c878');else{R(x+1,y+1,w-2,h-2,'#8ab0c4');R(x+1,y+1,Math.max(1,(w-2)>>1),1,'#c8e0ec')}R(x+(w>>1),y+1,1,h-2,'#5a4028')};
+     o.bricks=function(x,y,w,rows,c1,c2,m){for(var r=0;r<rows;r++){for(var k=0;k<w+4;k+=4){var bx=k+(r%2?2:0);if(bx>=w)continue;R(x+bx,y+r*2,Math.min(3,w-bx),1,(r+k)%3?c1:c2)}R(x,y+r*2+1,w,1,m)}};
+     o.bags=function(x,y,n){for(var k=0;k<n;k++){R(x+k*5,y,5,3,'#a89a6a');R(x+k*5,y,5,1,'#c9bc8a');R(x+k*5,y+2,5,1,'#7a6e48')}};
+     o.crate=function(x,y){R(x,y,5,4,K);R(x+1,y+1,3,2,'#a8854f');R(x+1,y+1,3,1,'#c9a868')};
+     o.solar=function(x,y,n){for(var p=0;p<n;p++){R(x+p*6,y,5,4,K);R(x+p*6+1,y+1,3,2,'#2c4a6a');R(x+p*6+1,y+1,1,1,'#6a8aba');R(x+p*6+2,y+4,1,1,'#6a6f78')}};
+     o.rows=function(x,by,w){R(x,by-3,w,3,'#5a4630');R(x,by-3,w,1,'#7a6040');for(var q=1;q<w-1;q+=2){R(x+q,by-5,1,2,'#7fb85a');if(q%4===1)R(x+q,by-6,1,1,q%8===1?'#d8644e':'#a8d86a')}};
+     o.tent=function(x,by,w,c1,c2){var m=w>>1;for(var a=0;a<w;a++){var h=Math.max(2,m+1-Math.abs(m-a));R(x+a,by-h,1,h,a<m?c1:c2);R(x+a,by-h,1,1,a<m?'#f4f4ec':c2)}};
+     o.sh=function(x,by,w){R(x,by,w,1,'rgba(0,0,0,.3)')};
+     o.cross=function(x,y,s){R(x,y,s,s,'#fff');var t=Math.max(1,(s/3)|0),c=(s-t)>>1;R(x+c,y+1,t,s-2,'#d8453a');R(x+1,y+c,s-2,t,'#d8453a')};
+     o.chain=function(x,by,w,h){for(var k=0;k<w;k+=5)R(x+k,by-h,1,h,'#6a6f78');R(x,by-h,w,1,'#8a8f98');for(var k=0;k<w;k+=3)for(var y=2;y<h;y+=3)R(x+k+(y%6===2?1:0),by-h+y,1,1,'rgba(160,166,176,.35)')};
+     o.wire=function(x,y,w){for(var k=0;k<w;k+=3){R(x+k,y,2,1,'#a0a6b0');R(x+k+1,y-1,1,1,'#a0a6b0');R(x+k+2,y+1,1,1,'#7a8088')}};
+     o.stripe=function(x,y,w,h){for(var k=0;k<w;k++)for(var j=0;j<h;j++)R(x+k,y+j,1,1,((k+j)>>1)%2?'#17180f':'#f0b400')};
+     return o;
+    }
+    var B={
+    farm: function(R,L,x,by,t){var h=H(R,L);h.sh(x,by,42);
+     if(t===0){h.rows(x+1,by,27);h.rows(x+3,by-4,23);for(var k=0;k<30;k+=4)R(x+k,by-6,1,6,'#6a5a44');R(x,by-5,30,1,'#8a7a5e');
+      R(x+35,by-14,1,14,'#8a6a42');R(x+32,by-11,7,1,'#8a6a42');R(x+33,by-17,4,4,'#e8c890');R(x+32,by-18,6,2,'#a8854f');R(x+34,by-10,3,4,'#6b4a3a');R(x+34,by-15,1,1,K);R(x+36,by-15,1,1,K);R(x+39,by-4,4,4,'#6a8aa0');R(x+39,by-4,4,1,'#8ab0c4');return}
+     if(t===1){for(var a=0;a<28;a++){var hh=Math.round(Math.sin((a+.5)/28*Math.PI)*12)+3;R(x+a,by-hh,1,hh,'rgba(232,240,236,.85)');R(x+a,by-hh,1,1,'#f4f8f6');if(a%7===0)R(x+a,by-hh,1,hh,'#b8c4c0')}for(var s=0;s<5;s++){R(x+3+s*5,by-6,3,4,'#4f9a4a');R(x+4+s*5,by-7,1,1,'#d8644e')}R(x+12,by-7,4,7,'rgba(90,110,100,.7)');
+      h.rows(x+30,by,13);R(x+33,by-11,6,8,K);R(x+34,by-10,4,7,'#4a6a8a');R(x+34,by-10,4,1,'#6a8aba');return}
+     if(t===2){R(x+1,by-16,30,16,K);R(x+2,by-15,28,15,'#9ad8cc');for(var k=0;k<28;k+=5)R(x+2+k,by-15,1,15,'#e8f6f0');R(x+2,by-8,28,1,'#e8f6f0');for(var a=0;a<32;a++){var hh=Math.max(0,6-Math.abs(15-a)/2.5|0);if(hh)R(x+a,by-16-hh,1,hh,a%5===0?'#e8f6f0':'#b8ece4')}
+      for(var s=0;s<5;s++){R(x+3+s*5,by-12,4,3,'#4f9a4a');R(x+4+s*5,by-13,1,1,'#d8644e');R(x+3+s*5,by-5,4,3,'#4f9a4a');R(x+5+s*5,by-6,1,1,'#f0b400')}R(x+3,by-9,26,1,'#8a6a42');R(x+13,by-7,5,7,'#6ab0a4');
+      R(x+33,by-19,8,9,K);R(x+34,by-18,6,7,'#5a7a90');R(x+34,by-18,6,1,'#8ab0c4');R(x+35,by-11,1,11,'#4a4038');R(x+39,by-11,1,11,'#4a4038');h.crate(x+36,by-4);return}
+     R(x,by-24,34,24,K);R(x+1,by-23,32,23,'#5a6a74');for(var f=0;f<3;f++){R(x+2,by-21+f*7,30,5,'#2a1e3a');L(x+2,by-21+f*7,30,1,'#c08aff');for(var s=0;s<7;s++){R(x+3+s*4,by-18+f*7,3,2,'#4fba5a');R(x+4+s*4,by-19+f*7,1,1,'#7fe07a')}}
+     R(x+1,by-23,32,1,'#8a9aa4');h.solar(x+2,by-29,5);R(x+34,by-20,2,20,'#8a8f98');R(x+34,by-20,5,2,'#8a8f98');R(x+37,by-18,6,9,K);R(x+38,by-17,4,7,'#4a6a8a');R(x+38,by-17,4,1,'#6a8aba');h.crate(x+37,by-4)},
+    clinic: function(R,L,x,by,t){var h=H(R,L);h.sh(x,by,42);
+     if(t===0){h.tent(x,by,27,'#f0f0e8','#c8c8be');R(x+11,by-6,5,6,'#3a342e');h.cross(x+11,by-12,5);R(x+13,by-16,1,2,'#8a8f98');
+      R(x+29,by-4,13,2,'#e8e6dc');R(x+29,by-2,1,2,'#6a6f78');R(x+41,by-2,1,2,'#6a6f78');R(x+30,by-6,3,2,'#e6c9a0');R(x+33,by-5,8,1,'#6aaede');return}
+     if(t===1){R(x,by-15,31,15,K);R(x+1,by-14,29,14,'#e2dfd2');for(var k=0;k<29;k+=2)R(x+1+k,by-14,1,14,'#cfccbf');R(x+1,by-14,29,1,'#f4f2e8');R(x+1,by-2,29,1,'#a8a598');
+      h.cross(x+3,by-12,7);h.win(x+13,by-11,6,5,1);R(x+22,by-11,6,11,K);R(x+23,by-10,4,10,'#8aa0aa');R(x+23,by-10,4,1,'#b8ccd4');R(x+20,by-14,11,2,'#d8453a');R(x+20,by-14,11,1,'#f0705e');
+      R(x+33,by-7,8,7,K);R(x+34,by-6,6,5,'#55585f');R(x+35,by-5,2,1,'#7fb85a');R(x+38,by-10,1,4,'#3a3a36');return}
+     if(t===2){R(x,by-28,36,28,K);R(x+1,by-27,34,27,'#d6d2c4');R(x+1,by-27,34,1,'#ecebe0');R(x+1,by-14,34,1,'#b0ada0');for(var k=0;k<34;k+=12)R(x+1+k,by-27,1,27,'#c4c0b2');
+      [3,11,26].forEach(function(q){h.win(x+q,by-24,6,6,q===11);h.win(x+q,by-11,6,6,q!==11)});R(x+18,by-11,6,11,K);R(x+19,by-10,4,10,'#8aa0aa');R(x+16,by-13,10,2,'#d8453a');
+      R(x+12,by-35,11,8,K);h.cross(x+13,by-34,9);for(var s=0;s<6;s++)R(x+36+s,by-6+s,1,1,'#8a8a82');R(x+36,by-1,7,1,'#8a8a82');return}
+     R(x+1,by-30,40,30,K);R(x+2,by-29,38,29,'#c4c0b2');R(x+2,by-29,38,1,'#e2dfd2');R(x+2,by-15,38,1,'#8a8a82');
+     [1,39].forEach(function(q){R(x+q,by-30,2,30,'#55585f');for(var r=0;r<7;r++)R(x+q,by-28+r*4,1,1,'#a0a6b0')});
+     [5,13,29].forEach(function(q){h.win(x+q,by-26,6,6,1);R(x+q,by-12,6,4,'#6a6f78');L(x+q+1,by-11,4,1)});R(x+20,by-12,7,12,K);R(x+21,by-11,5,11,'#6a6f78');for(var s=0;s<5;s++)R(x+21,by-10+s*2,5,1,'#55585f');
+     h.cross(x+19,by-26,9);R(x+5,by-33,32,3,'#6e6e66');R(x+13,by-34,16,1,'#f0b400');R(x+20,by-35,2,1,'#f0b400');R(x+37,by-38,1,8,'#8a8f98');R(x+35,by-39,5,2,'#55585f');L(x+36,by-37,3,1,'#fff2c0');
+     h.bags(x,by-3,3);h.bags(x+28,by-3,3)},
+    guard7: function(R,L,x,by,t){var h=H(R,L);h.sh(x,by,42);
+     if(t===0){h.tent(x+1,by,23,'#6a8a52','#4a6a3a');R(x+10,by-6,4,6,'#2a2e26');h.bags(x+25,by-3,3);R(x+30,by-7,1,4,'#6a6f78');R(x+29,by-9,3,2,'#55504a');L(x+30,by-8,1,1,'#ffd98a');h.crate(x+38,by-4);return}
+     if(t===1){R(x,by-14,22,14,K);for(var k=0;k<20;k+=3)R(x+1+k,by-13,3,13,k%2?'#6a7a4a':'#55643a');for(var a=0;a<24;a++)R(x-1+a,by-17+Math.round(a/8),1,3,a%3?'#4a5a3a':'#3a4a2e');h.win(x+3,by-10,5,4,1);R(x+12,by-9,5,9,'#2a2e26');
+      for(var r=0;r<3;r++)h.bags(x+24+(r%2)*2,by-3-r*3,4-(r>1?1:0));R(x+30,by-11,9,1,'#17180f');R(x+31,by-10,2,2,'#3a3a36');return}
+     if(t===2){R(x,by-15,25,15,K);h.bricks(x+1,by-14,23,7,'#8a5a40','#9a6a4a','#b89a7a');h.win(x+3,by-11,5,5,1);h.win(x+17,by-11,5,5,0);R(x+10,by-10,6,10,K);R(x+11,by-9,4,9,'#4a3a2a');for(var a=0;a<27;a++)R(x-1+a,by-18+Math.round(Math.abs(13-a)/5),1,3,'#55585f');
+      R(x+29,by-26,2,26,'#7a5a3a');R(x+39,by-26,2,26,'#5e4630');for(var k=0;k<24;k+=6)R(x+30,by-24+k,10,1,'#6b5238');R(x+27,by-32,16,6,K);R(x+28,by-31,14,4,'#8a6a42');R(x+28,by-31,14,1,'#a8854f');R(x+26,by-35,18,3,'#6a3a26');R(x+26,by-35,18,1,'#8a4a2e');
+      h.bags(x+26,by-3,3);return}
+     R(x+2,by-16,40,16,K);R(x+3,by-15,38,15,'#7a7a72');R(x+3,by-15,38,1,'#9a9a92');for(var k=0;k<38;k+=9)R(x+3+k,by-15,1,15,'#66665e');R(x+6,by-11,10,2,K);R(x+28,by-11,10,2,K);R(x+18,by-11,8,11,K);R(x+19,by-10,6,10,'#55585f');for(var r=0;r<4;r++)R(x+19,by-9+r*2,1,1,'#a0a6b0');
+     for(var a=0;a<44;a++){var hh=Math.max(1,3-Math.abs(22-a)/8|0);R(x+a,by-17-hh,1,hh+1,(a*7)%5<2?'#3a5a2e':(a*7)%5<4?'#4a6a3a':'#5a5030')}for(var a=0;a<44;a+=3)R(x+a,by-15,1,2,'#3a5a2e');
+     R(x+38,by-26,1,8,'#6a6f78');R(x+36,by-28,5,3,'#55585f');L(x+40,by-27,2,1,'#fff2c0');h.bags(x,by-3,3);h.bags(x+29,by-3,3)},
+    mess: function(R,L,x,by,t){var h=H(R,L);h.sh(x,by,42);
+     if(t===0){x+=2;R(x-1,by-14,30,14,K);var pl=['#8e6c48','#a8845c','#7a5a3a','#9a7650'];for(var k=0;k<28;k+=3)R(x+k,by-13,3,13,pl[(k/3)%4]);R(x+18,by-11,6,5,'#6a6f78');R(x+18,by-11,6,1,'#8a8f98');
+      R(x+2,by-10,7,6,K);L(x+3,by-9,5,4,'#f0b878');R(x+5,by-9,1,4,'#8a6a42');R(x+11,by-9,5,9,K);R(x+12,by-8,3,8,'#b8402e');R(x+12,by-8,1,8,'#d8644e');
+      for(var a=0;a<32;a++){var y=by-19+Math.round(a/9);R(x-2+a,y,1,5,K);R(x-2+a,y+1,1,3,a%3===0?'#a84a3a':a%3===1?'#8a3a2e':'#7a3226')}R(x+21,by-17,6,2,'#6a6f78');R(x+4,by-25,2,7,K);R(x+4,by-25,1,7,'#8a8f98');
+      R(x+31,by-5,4,5,'#6a4a30');R(x+31,by-5,4,1,'#8a6a42');R(x+36,by-3,3,3,'#a8854f');R(x+36,by-3,3,1,'#c9a868');return}
+     if(t===1){x+=2;R(x-1,by-15,32,15,K);h.bricks(x,by-14,30,7,'#9a5a40','#a8664a','#c8a888');h.win(x+2,by-11,7,7,1);h.win(x+21,by-11,7,7,0);R(x+12,by-9,6,9,K);R(x+13,by-8,4,8,'#6a4428');
+      for(var a=0;a<10;a++)R(x+10+a,by-12,1,3,a%2?'#e8e6dc':'#c0392b');for(var a=0;a<34;a++){var hh=Math.max(1,7-Math.abs(16-a)/3|0);R(x-2+a,by-15-hh,1,hh+1,K);if(hh>1)R(x-2+a,by-14-hh,1,hh,(a+hh)%2?'#8a3a2e':'#a84a3a')}
+      R(x+22,by-25,5,8,K);for(var r=0;r<4;r++)R(x+23,by-24+r*2,3,1,r%2?'#9a5a40':'#a8664a');R(x+32,by-3,7,1,'#8a6a42');R(x+33,by-2,1,2,'#6a5238');R(x+37,by-2,1,2,'#6a5238');return}
+     if(t===2){x+=2;R(x-1,by-11,34,11,K);h.bricks(x,by-10,32,5,'#9a5a40','#a8664a','#c8a888');h.win(x+2,by-9,6,6,1);h.win(x+24,by-9,6,6,1);R(x+12,by-9,6,9,K);R(x+13,by-8,4,8,'#6a4428');for(var a=0;a<10;a++)R(x+10+a,by-11,1,2,a%2?'#e8e6dc':'#c0392b');
+      R(x+1,by-22,30,10,K);for(var k=0;k<28;k+=3)R(x+2+k,by-21,3,9,k%2?'#7a5a3a':'#8e6c48');[4,13,22].forEach(function(q){h.win(x+q,by-19,5,5,1)});
+      R(x-1,by-14,34,1,'#5c554c');for(var k=-1;k<33;k+=3)R(x+k,by-16,1,2,'#7a6a52');R(x-1,by-17,34,1,'#a8977a');
+      for(var a=0;a<34;a++){var hh=Math.max(1,5-Math.abs(15-a)/4|0);R(x-2+a,by-22-hh,1,hh+1,K);if(hh>1)R(x-2+a,by-21-hh,1,hh,'#55585f')}
+      R(x+20,by-33,8,7,K);R(x+21,by-32,6,5,'#6a7a8a');R(x+21,by-32,6,1,'#8aa0b4');R(x+22,by-27,1,2,'#4a4038');R(x+26,by-27,1,2,'#4a4038');R(x+6,by-30,2,6,K);R(x+6,by-30,1,6,'#9a5a40');
+      for(var s=0;s<6;s++)R(x+33,by-11+s*2,4,1,'#a8854f');R(x+33,by-12,1,12,'#6a5238');return}
+     x+=3;R(x-1,by-12,36,12,K);R(x,by-11,34,11,'#8a8a82');for(var k=0;k<34;k+=8)R(x+k,by-11,1,11,'#6e6e66');R(x,by-6,34,1,'#6e6e66');R(x,by-11,34,1,'#a8a8a0');
+     [2,26].forEach(function(q){R(x+q,by-9,6,5,K);L(x+q+1,by-8,4,3);for(var s=0;s<2;s++)R(x+q+1,by-8+s*2,4,1,'#6a6f78')});R(x+12,by-10,10,10,K);R(x+13,by-9,8,9,'#6a6f78');for(var s=0;s<4;s++)R(x+13,by-8+s*2,8,1,'#55585f');L(x+13,by-3,8,3);
+     [0,33].forEach(function(q){R(x+q-1,by-24,3,24,'#55585f');for(var r=0;r<6;r++)R(x+q,by-22+r*4,1,1,'#a0a6b0')});
+     R(x-1,by-24,36,12,K);h.bricks(x,by-23,34,5,'#9a5a40','#a8664a','#c8a888');[4,14,24].forEach(function(q){h.win(x+q,by-21,6,6,1)});R(x-2,by-26,38,2,'#6e6e66');R(x-2,by-26,38,1,'#a8a8a0');
+     for(var a=0;a<14;a++){var hh=Math.round(Math.sin((a+.5)/14*Math.PI)*5)+2;R(x+a,by-26-hh,1,hh,a%4===0?'#e8f6f0':'#8ecfc4')}for(var s=0;s<3;s++)R(x+2+s*4,by-28,2,2,'#4f9a4a');h.solar(x+18,by-31,3);
+     for(var k=0;k<6;k++){R(x-3+k*7,by-3,6,3,'#a89a6a');R(x-3+k*7,by-3,6,1,'#c9bc8a')}},
+    lab7: function(R,L,x,by,t){var h=H(R,L);h.sh(x,by,42);var G='#b8f08a';
+     if(t===0){R(x+1,by-14,29,14,K);R(x+2,by-13,27,13,'#8a949e');for(var k=0;k<27;k+=2)R(x+2+k,by-13,1,13,'#7a848e');R(x+2,by-13,27,1,'#a8b2bc');R(x+2,by-2,27,1,'#646e78');
+      [4,11].forEach(function(q){R(x+q,by-10,6,5,K);L(x+q+1,by-9,4,3,G)});R(x+19,by-10,6,10,K);R(x+20,by-9,4,9,'#55606a');R(x+20,by-9,4,1,'#7a848e');
+      [5,21].forEach(function(q){R(x+q,by-17,5,3,K);R(x+q+1,by-16,3,2,'#6a6f78');R(x+q+2,by-16,1,2,'#3a3e44')});
+      R(x+32,by-10,3,10,K);R(x+32,by-9,3,9,'#5a8a6a');R(x+32,by-9,1,9,'#7aaa8a');R(x+36,by-8,3,8,K);R(x+36,by-7,3,7,'#c9c7ba');R(x+36,by-7,1,7,'#e8e6dc');R(x+33,by-11,1,1,'#8a8f98');R(x+37,by-9,1,1,'#8a8f98');return}
+     if(t===1){R(x,by-17,32,17,K);R(x+1,by-16,30,16,'#aab8c6');for(var r=0;r<3;r++)R(x+1,by-11+r*5,30,1,'#8494a2');for(var k=10;k<30;k+=10)R(x+1+k,by-16,1,16,'#8494a2');R(x+1,by-16,30,1,'#c4d0dc');R(x+1,by-14,30,2,'#3f5f7a');
+      [3,10,17].forEach(function(q){R(x+q,by-10,5,4,K);L(x+q+1,by-9,3,2,G)});R(x+24,by-10,5,10,K);R(x+25,by-9,3,9,'#6a7a88');
+      R(x+22,by-20,1,3,'#8a8f98');R(x+18,by-24,8,1,'#c9d0d8');R(x+19,by-23,6,1,'#c9d0d8');R(x+20,by-22,4,1,'#a8b0b8');R(x+22,by-26,1,2,'#8a8f98');R(x+5,by-20,5,3,K);R(x+6,by-19,3,2,'#6a6f78');
+      R(x+32,by-12,4,2,'#8a8f98');R(x+34,by-12,2,12,'#8a8f98');R(x+36,by-11,7,11,K);R(x+37,by-10,5,10,'#6a7a8a');R(x+37,by-10,5,1,'#8aa0b4');R(x+37,by-6,5,1,'#55606a');return}
+     if(t===2){R(x,by-26,36,26,K);R(x+1,by-25,34,25,'#b4b8b4');R(x+1,by-25,34,1,'#d0d4d0');R(x+1,by-13,34,1,'#8a8e8a');for(var k=0;k<34;k+=11)R(x+1+k,by-25,1,25,'#9ca09c');
+      for(var q=0;q<4;q++){R(x+3+q*8,by-22,6,5,K);L(x+4+q*8,by-21,4,3,G)}[3,11,27].forEach(function(q){R(x+q,by-10,6,5,K);L(x+q+1,by-9,4,3,G)});R(x+19,by-11,6,11,K);R(x+20,by-10,4,10,'#55606a');R(x+18,by-12,8,1,'#3f5f7a');
+      R(x+3,by-33,8,7,K);R(x+4,by-32,6,5,'#8a8f98');for(var s=0;s<3;s++)R(x+4,by-31+s*2,6,1,'#55585f');R(x+28,by-36,3,10,K);R(x+29,by-36,1,10,'#9ca09c');R(x+28,by-36,3,1,'#6a6f78');
+      R(x+37,by-9,6,9,K);R(x+38,by-8,4,8,'#4a6a5a');L(x+39,by-7,2,5,G);return}
+     R(x,by-28,40,28,K);R(x+1,by-27,38,27,'#6a7480');for(var k=0;k<38;k+=8)R(x+1+k,by-27,1,27,'#55606a');for(var r=0;r<4;r++)R(x+1,by-20+r*6,38,1,'#55606a');for(var k=0;k<38;k+=8)for(var r=0;r<5;r++)R(x+3+k,by-25+r*6,1,1,'#9aa4b0');R(x+1,by-27,38,1,'#8a949e');
+     h.stripe(x+1,by-4,38,2);[3,10,27,34].forEach(function(q){R(x+q,by-21,4,7,K);L(x+q+1,by-20,2,5,G)});
+     R(x+15,by-15,11,15,K);R(x+16,by-14,9,14,'#f0b400');R(x+17,by-13,7,13,'#4a525c');R(x+19,by-11,3,3,K);L(x+20,by-10,1,1,G);R(x+20,by-6,1,6,'#2a3038');
+     R(x+30,by-40,1,12,'#8a8f98');for(var k=0;k<12;k+=3){R(x+28,by-39+k,5,1,'#8a8f98')}R(x+29,by-41,3,1,'#8a8f98');L(x+7,by-30,3,2,'#ff5a4a');R(x+6,by-29,5,1,'#55585f');R(x+14,by-31,10,3,'#55585f');R(x+14,by-31,10,1,'#7a848e')},
+    watch: function(R,L,x,by,t){var h=H(R,L);
+     var tower=function(Hh,leg,legD,cab,roof){h.sh(x+10,by,24);R(x+12,by-Hh,2,Hh,leg);R(x+30,by-Hh,2,Hh,legD);for(var k=0;k<Hh-2;k++){R(x+13+Math.round(k*16/Hh),by-Hh+1+k,1,1,legD);R(x+30-Math.round(k*16/Hh),by-Hh+1+k,1,1,legD)}for(var l=0;l<Hh-2;l+=3)R(x+20,by-Hh+2+l,4,1,'#a8854f');R(x+20,by-Hh,1,Hh,'#8a6a42');R(x+23,by-Hh,1,Hh,'#8a6a42')};
+     if(t===0){h.sh(x+6,by,32);R(x+12,by-12,2,12,'#7a5a3a');R(x+28,by-12,2,12,'#5e4630');R(x+11,by-13,20,2,K);R(x+12,by-13,18,1,'#a8854f');for(var k=12;k<30;k+=4)R(x+k,by-17,1,4,'#8a6a42');R(x+11,by-17,20,1,'#8a6a42');
+      for(var l=0;l<11;l+=3)R(x+18,by-11+l,5,1,'#a8854f');R(x+18,by-12,1,12,'#8a6a42');R(x+22,by-12,1,12,'#8a6a42');
+      R(x+2,by-7,6,7,K);R(x+3,by-6,4,6,'#6a4a30');R(x+3,by-4,4,1,'#4a3020');h.crate(x+33,by-4);h.crate(x+35,by-8);return}
+     if(t===1){tower(18,'#7a5a3a','#5e4630');R(x+9,by-26,26,8,K);R(x+10,by-25,24,6,'#8a6a42');R(x+10,by-25,24,1,'#a8854f');for(var q=0;q<24;q+=4)R(x+10+q,by-24,1,5,'#5e4630');R(x+7,by-31,30,4,K);R(x+8,by-30,28,2,'#6a3a26');R(x+8,by-30,28,1,'#8a4a2e');R(x+12,by-28,1,3,'#5e4630');R(x+31,by-28,1,3,'#5e4630');
+      R(x+21,by-28,2,2,'#c9a040');R(x+21,by-29,2,1,'#5e4630');h.crate(x+2,by-4);h.crate(x+37,by-4);return}
+     if(t===2){h.sh(x+10,by,24);R(x+12,by-22,2,22,'#6a6f78');R(x+30,by-22,2,22,'#55585f');for(var k=0;k<20;k+=5){for(var j=0;j<5;j++){R(x+14+Math.round(j*16/5),by-22+k+j,1,1,'#55585f');R(x+29-Math.round(j*16/5),by-22+k+j,1,1,'#55585f')}R(x+12,by-22+k,20,1,'#6a6f78')}
+      for(var l=0;l<22;l+=3)R(x+20,by-22+l,4,1,'#8a8f98');R(x+20,by-22,1,22,'#6a6f78');R(x+23,by-22,1,22,'#6a6f78');
+      R(x+9,by-31,26,9,K);R(x+10,by-30,24,7,'#7a7e86');R(x+10,by-30,24,1,'#9aa0a8');R(x+12,by-28,20,3,K);L(x+13,by-27,18,1,'#f0c878');R(x+8,by-34,28,3,K);R(x+9,by-33,26,1,'#55585f');
+      R(x+3,by-30,6,3,'#55504a');L(x+1,by-30,2,3,'#fff2c0');R(x+35,by-30,6,3,'#55504a');L(x+41,by-30,2,3,'#fff2c0');h.bags(x+1,by-3,2);h.bags(x+33,by-3,2);return}
+     h.sh(x+4,by,36);R(x+15,by-26,14,26,K);R(x+16,by-25,12,25,'#8a8a82');for(var r=0;r<6;r++)R(x+16,by-22+r*4,12,1,'#6e6e66');R(x+16,by-25,1,25,'#a8a8a0');R(x+19,by-9,6,9,K);R(x+20,by-8,4,8,'#55585f');
+     R(x+9,by-36,26,10,K);R(x+10,by-35,24,8,'#9a9a92');R(x+10,by-35,24,1,'#b4b4ac');for(var q=0;q<4;q++){R(x+12+q*6,by-32,4,2,K);L(x+12+q*6,by-32,4,1,'#f0c878')}R(x+8,by-38,28,2,'#6e6e66');R(x+8,by-38,28,1,'#a8a8a0');
+     R(x+21,by-40,1,2,'#8a8f98');L(x+20,by-41,3,1,'#ff5a4a');R(x+4,by-35,5,3,'#55504a');L(x+2,by-35,2,3,'#fff2c0');R(x+35,by-35,5,3,'#55504a');L(x+40,by-35,2,3,'#fff2c0');
+     R(x+30,by-26,4,3,'#55585f');R(x+33,by-27,2,5,'#6a6f78');h.bags(x+1,by-3,3);h.bags(x+29,by-3,3);h.wire(x+1,by-5,14);h.wire(x+29,by-5,14)},
+    store: function(R,L,x,by,t){var h=H(R,L);h.sh(x,by,42);
+     if(t===0){[[2,0],[7,0],[12,0],[4,1],[9,1],[6,2]].forEach(function(c){h.crate(x+c[0],by-4-c[1]*4)});for(var a=0;a<16;a++)R(x+19+a,by-10+Math.round(a/3),1,10-Math.round(a/3),a%3?'#55643a':'#6a7a4a');R(x+18,by-11,1,11,'#4a4038');R(x+19,by-11,16,1,'#7a8a5a');
+      R(x+37,by-7,4,7,K);R(x+38,by-6,2,6,'#4a6a8a');R(x+38,by-6,2,1,'#6a8aba');return}
+     if(t===1){R(x+1,by-16,27,16,K);for(var k=0;k<25;k+=3)R(x+2+k,by-15,3,15,k%2?'#7a5a3a':'#8e6c48');for(var a=0;a<30;a++)R(x+a,by-19+Math.abs(14-a)/4,1,3,a%4?'#55585f':'#6e727a');
+      R(x+8,by-12,12,12,K);R(x+9,by-11,5,11,'#6a4a30');R(x+15,by-11,4,11,'#6a4a30');R(x+9,by-11,10,1,'#8a6a42');for(var k=0;k<10;k++)R(x+9+k,by-11+Math.round(k*1.1),1,1,'#8a6a42');R(x+14,by-11,1,11,K);
+      h.crate(x+30,by-4);h.crate(x+35,by-4);h.crate(x+32,by-8);return}
+     if(t===2){R(x,by-17,33,17,K);h.bricks(x+1,by-16,31,8,'#7a4a30','#8a5a3a','#a8866a');for(var a=0;a<35;a++)R(x-1+a,by-20+Math.abs(16-a)/5,1,3,a%4?'#55585f':'#6e727a');
+      R(x+7,by-12,18,12,K);R(x+8,by-11,16,6,'#7a7e86');for(var s=0;s<3;s++)R(x+8,by-10+s*2,16,1,'#5a5e66');R(x+8,by-5,16,5,'#2a2420');h.crate(x+10,by-4);h.crate(x+16,by-4);L(x+14,by-15,4,1,'#f0c878');
+      R(x+34,by-1,9,1,'#8a6a42');R(x+34,by-2,9,1,'#a8854f');R(x+35,by-6,3,4,'#d8c898');R(x+38,by-6,4,4,'#c9b888');R(x+36,by-9,4,3,'#d8c898');return}
+     for(var a=0;a<38;a++){var hh=Math.round(Math.sin((a+.5)/38*Math.PI)*16)+6;R(x+a,by-hh,1,hh,K);if(a>0&&a<37){R(x+a,by-hh+1,1,hh-1,a%4?'#7a8088':'#8a9098');R(x+a,by-hh+1,1,1,'#a8b0b8')}}
+     R(x+10,by-14,18,14,K);R(x+11,by-13,16,13,'#3a3a36');h.stripe(x+11,by-13,16,2);for(var k=0;k<3;k++){h.crate(x+12+k*5,by-4)}h.crate(x+14,by-8);L(x+18,by-20,3,1,'#f0c878');
+     R(x+40,by-32,2,32,'#f0b400');for(var k=0;k<30;k+=4)R(x+40,by-30+k,2,1,'#17180f');R(x+22,by-33,20,2,'#f0b400');R(x+22,by-33,20,1,'#ffd040');R(x+25,by-31,1,6,'#3a3a36');R(x+23,by-25,5,4,K);R(x+24,by-24,3,2,'#a8854f')},
+    ward: function(R,L,x,by,t){var h=H(R,L);h.sh(x,by,42);
+     if(t===0){h.chain(x,by,43,8);h.tent(x+3,by,13,'#e0d8a0','#b8b078');h.tent(x+16,by,11,'#e0d8a0','#b8b078');h.tent(x+28,by,13,'#e0d8a0','#b8b078');h.chain(x,by,43,8);return}
+     if(t===1){[[2,0],[22,0]].forEach(function(c){R(x+c[0],by-12,18,12,K);R(x+c[0]+1,by-11,16,11,'#c8b860');for(var k=0;k<16;k+=2)R(x+c[0]+1+k,by-11,1,11,'#b0a050');R(x+c[0]+1,by-11,16,1,'#e0d080');R(x+c[0]+6,by-8,5,4,K);L(x+c[0]+7,by-7,3,2)});
+      R(x+20,by-22,1,10,'#6a6f78');R(x+18,by-24,5,2,'#55585f');L(x+19,by-23,3,1,'#fff2c0');h.chain(x,by,43,10);h.wire(x,by-11,43);return}
+     if(t===2){R(x+3,by-20,34,20,K);R(x+4,by-19,32,19,'#c8c4b4');R(x+4,by-19,32,1,'#dcd8ca');h.stripe(x+4,by-18,32,2);for(var q=0;q<4;q++){R(x+6+q*8,by-13,5,5,K);L(x+7+q*8,by-12,3,3);R(x+8+q*8,by-12,1,3,K)}R(x+17,by-7,6,7,K);R(x+18,by-6,4,6,'#55585f');
+      h.chain(x,by,43,7);h.wire(x,by-8,43);return}
+     R(x+1,by-26,38,26,K);R(x+2,by-25,36,25,'#9a9a92');R(x+2,by-25,36,2,'#b4b4ac');for(var r=0;r<4;r++)R(x+2,by-20+r*5,36,1,'#80807a');for(var k=0;k<36;k+=9)R(x+2+k,by-25,1,25,'#80807a');h.stripe(x+2,by-27,36,2);
+     [5,29].forEach(function(q){R(x+q,by-20,6,3,K);L(x+q+1,by-19,4,1,'#fff2c0')});R(x+14,by-17,12,17,K);R(x+15,by-16,10,16,'#f0b400');R(x+16,by-15,8,15,'#55585f');R(x+16,by-9,8,1,'#3a3e44');R(x+19,by-13,2,2,'#8ab0c4');
+     R(x+20,by-33,1,6,'#6a6f78');L(x+19,by-35,3,2,'#f0b400');R(x+5,by-31,1,4,'#6a6f78');R(x+3,by-33,5,2,'#55585f');L(x+4,by-32,3,1,'#fff2c0');
+     R(x+40,by-16,2,16,'#8a8f98');R(x+38,by-16,5,1,'#8a8f98');R(x+38,by-15,1,2,'#8a8f98');for(var k=0;k<3;k++)R(x+38+((k*2)%3),by-12+k*3,1,1,'rgba(200,230,240,.6)');h.wire(x,by-1,43)},
+    school: function(R,L,x,by,t){var h=H(R,L);h.sh(x,by,42);
+     if(t===0){R(x+2,by-14,1,14,'#6a5a44');R(x+26,by-14,1,14,'#6a5a44');R(x+1,by-16,27,3,K);R(x+2,by-15,25,1,'#c9a868');R(x+2,by-14,25,1,'#a8854f');for(var k=0;k<25;k+=4)R(x+2+k,by-13,2,1,'#c9a868');
+      for(var b=0;b<3;b++){R(x+5+b*7,by-4,5,1,'#8a6a42');R(x+5+b*7,by-3,1,3,'#6a5238');R(x+9+b*7,by-3,1,3,'#6a5238')}
+      R(x+30,by-14,12,10,K);R(x+31,by-13,10,8,'#2e5a40');R(x+32,by-11,4,1,'#e8e6dc');R(x+33,by-9,6,1,'#e8e6dc');R(x+32,by-7,3,1,'#e8e6dc');R(x+31,by-4,1,4,'#6a5238');R(x+40,by-4,1,4,'#6a5238');return}
+     if(t===1){R(x+1,by-14,28,14,K);for(var k=0;k<26;k+=3)R(x+2+k,by-13,3,13,k%2?'#9a7650':'#a8845c');for(var a=0;a<30;a++)R(x+a,by-17+Math.round(Math.abs(15-a)/5),1,3,a%4?'#2a5a40':'#3a7a5a');
+      h.win(x+4,by-10,6,5,1);h.win(x+20,by-10,6,5,1);R(x+12,by-9,6,9,K);R(x+13,by-8,4,8,'#5a3a24');R(x+13,by-24,1,6,'#6a5238');R(x+17,by-24,1,6,'#6a5238');R(x+12,by-25,7,1,'#6a5238');R(x+14,by-23,3,3,'#c9a040');R(x+15,by-20,1,1,'#8a6a20');
+      R(x+32,by-11,1,11,'#6a6f78');R(x+40,by-11,1,11,'#6a6f78');R(x+32,by-11,9,1,'#6a6f78');R(x+35,by-10,1,6,'#8a8f98');R(x+34,by-4,3,1,'#d8644e');return}
+     if(t===2){R(x,by-16,32,16,K);h.bricks(x+1,by-15,30,8,'#9a6448','#a87050','#d0b898');for(var a=0;a<34;a++)R(x-1+a,by-19+Math.round(Math.abs(16-a)/6),1,3,a%4?'#2a5a40':'#3a7a5a');
+      R(x+11,by-27,10,10,K);R(x+12,by-26,8,9,'#d0b898');R(x+13,by-25,6,6,'#e8e6dc');R(x+15,by-24,1,3,K);R(x+16,by-22,2,1,K);for(var a=0;a<12;a++)R(x+10+a,by-29+Math.abs(6-a)/3,1,2,'#2a5a40');
+      [3,22].forEach(function(q){h.win(x+q,by-12,7,6,1)});R(x+13,by-10,6,10,K);R(x+14,by-9,4,9,'#5a3a24');
+      R(x+34,by-12,1,12,'#6a6f78');R(x+42,by-12,1,12,'#6a6f78');R(x+34,by-12,9,1,'#6a6f78');R(x+36,by-11,1,7,'#8a8f98');R(x+40,by-11,1,6,'#8a8f98');R(x+35,by-4,3,1,'#d8644e');R(x+39,by-5,3,1,'#6aaede');return}
+     R(x,by-26,36,26,K);h.bricks(x+1,by-25,34,13,'#9a6448','#a87050','#d0b898');R(x+1,by-13,34,1,'#7a5040');[2,9,23,30].forEach(function(q){h.win(x+q,by-23,5,6,1);h.win(x+q,by-11,5,6,1)});R(x+15,by-11,6,11,K);R(x+16,by-10,4,10,'#5a3a24');
+     R(x+13,by-37,10,11,K);R(x+14,by-36,8,10,'#d0b898');R(x+15,by-35,6,6,'#e8e6dc');R(x+17,by-34,1,3,K);R(x+18,by-32,2,1,K);for(var a=0;a<12;a++)R(x+12+a,by-39+Math.abs(6-a)/3,1,2,'#2a5a40');
+     for(var a=0;a<38;a++)R(x-1+a,by-28,1,2,a%4?'#2a5a40':'#3a7a5a');h.solar(x+1,by-32,2);h.solar(x+24,by-32,2);
+     R(x+38,by-10,1,10,'#6a6f78');R(x+42,by-10,1,10,'#6a6f78');R(x+38,by-10,5,1,'#8a8f98');R(x+38,by-5,5,1,'#8a8f98')}
     };
+    return B;
   })();
+  function campTier(lv) { return lv >= 10 ? 3 : lv >= 7 ? 2 : lv >= 4 ? 1 : 0; }
   /** 한 장면을 그린다(낮 또는 밤). */
   function drawCampScene(g, night, now) {
     var c = C.campOf(state), n = c.night, K = '#16110f', lights = [], raw = false, over = [];
@@ -2957,32 +3046,32 @@
     var tuneHot = state.tune && state.tune.cool > C.TUNE_COOL - 0.6; if (state.antennas > 0) [[24, 8, 7], [27, 5, 11], [30, 2, 15]].forEach(function (q, i) { if (!tuneHot && (Math.floor(now / 350) + i) % 4 === 3) return; for (var a = 0; a < q[2]; a++) R(q[0] + Math.round(Math.sin(a / (q[2] - 1) * Math.PI) * 2), q[1] + a, 1, 1, tuneHot ? '#ffd95a' : night ? 'rgba(200,214,240,.5)' : 'rgba(255,226,160,.55)'); });
     raw = false; L(7, 39, 3, 3); L(4, 99, 2, 2);
     function lamp(x, by) { R(x, by - 14, 1, 14, '#3a342e'); R(x - 1, by - 15, 3, 2, '#55504a'); L(x - 1, by - 13, 3, 1); }
-    lamp(92, CAMP_FL[0]); lamp(136, CAMP_FL[1]); lamp(92, CAMP_FL[2]); lamp(26, 118);
-    raw = true; var ff = Math.floor(now / 140) % 2; R(20, 113 - ff, 1, 3 + ff, '#ffd95a'); R(19, 114, 3, 1, '#f08a3a'); raw = false;
+    lamp(26, 142);      // 4.3.7: 단 위의 가로등은 뺐다(넓어진 건물과 겹쳤다. 밤에는 건물 창이 대신 밝다)
+    raw = true; var ff = Math.floor(now / 140) % 2; R(20, 137 - ff, 1, 3 + ff, '#ffd95a'); R(19, 138, 3, 1, '#f08a3a'); raw = false;
     // 아홉 자리
     C.SETTLE.forEach(function (d) {
       var p = campPlot(d), x = p.x, by = p.by, lv = C.settleLv(state, d.id), why = C.settleBlock(state, d.id), work = C.settleWork(state, d.id), need = C.settleNeed(state, d.id), broken = C.settleBroken(state, d.id), col = CAMP_COL[d.col];
-      if (lv > 0) { CAMP_ART[d.id](R, L, x, by, Math.min(3, lv));
-        raw = true; over.push(function () { raw = true; if (c.flag !== d.id) { raw = false; return; }      /* 4.3.4: 단계는 고른 건물에만 보인다(모든 건물에 숫자를 달면 빽빽했다) */ if (lv <= 3) { for (var k = 0; k < 3; k++) { R(x + 12 + k * 5, by + 3, 4, 2, K); R(x + 13 + k * 5, by + 3, 2, 1, k < lv ? col : '#4a443c'); } } else { var ds = String(lv), dw = ds.length * 4 + 1; R(x + 19 - (dw >> 1) - 1, by + 2, dw + 2, 7, K); for (var di = 0; di < ds.length; di++) spr(g, x + 19 - (dw >> 1) + di * 4, by + 3, CAMP_DIGIT[+ds.charAt(di)], { '#': col }); } raw = false; });
-        if (broken) { R(x, by - 22, CAMP_W, 22, 'rgba(20,10,6,.5)'); for (var f = 0; f < 3; f++) { var fx = x + 6 + f * 11, fl = Math.floor(now / 120 + f) % 2; R(fx, by - 8 - fl, 3, 5 + fl, '#f08a3a'); R(fx + 1, by - 10 - fl, 1, 3, '#ffd95a'); var sa = ((now + f * 700) % 2400) / 2400; R(fx + 1 + sa * 3, by - 11 - sa * 12, 2, 1, 'rgba(60,56,64,' + (0.8 - sa * 0.7).toFixed(2) + ')'); } } raw = false;
+      if (lv > 0) { CAMP_ART[d.id](R, L, x, by, campTier(lv));
+        raw = true; over.push(function () { raw = true; if (c.flag !== d.id) { raw = false; return; }      /* 4.3.4: 단계는 고른 건물에만 보인다(모든 건물에 숫자를 달면 빽빽했다) */ if (lv <= 3) { for (var k = 0; k < 3; k++) { R(x + 15 + k * 5, by + 3, 4, 2, K); R(x + 16 + k * 5, by + 3, 2, 1, k < lv ? col : '#4a443c'); } } else { var ds = String(lv), dw = ds.length * 4 + 1; R(x + 22 - (dw >> 1) - 1, by + 2, dw + 2, 7, K); for (var di = 0; di < ds.length; di++) spr(g, x + 22 - (dw >> 1) + di * 4, by + 3, CAMP_DIGIT[+ds.charAt(di)], { '#': col }); } raw = false; });
+        if (broken) { R(x, by - 30, CAMP_W, 30, 'rgba(20,10,6,.5)'); for (var f = 0; f < 3; f++) { var fx = x + 7 + f * 13, fl = Math.floor(now / 120 + f) % 2; R(fx, by - 8 - fl, 3, 5 + fl, '#f08a3a'); R(fx + 1, by - 10 - fl, 1, 3, '#ffd95a'); var sa = ((now + f * 700) % 2400) / 2400; R(fx + 1 + sa * 3, by - 11 - sa * 12, 2, 1, 'rgba(60,56,64,' + (0.8 - sa * 0.7).toFixed(2) + ')'); } } raw = false;
       } else {
-        var lock = why === 'prev' || why === 'locked'; R(x + 2, by - 6, 1, 6, '#6a5a44'); R(x + 34, by - 6, 1, 6, '#6a5a44'); for (var e = 3; e < 34; e += 3) R(x + e, by - 5 + (e % 2), 2, 1, lock ? '#4a443c' : '#c9bc8a');
-        if (!(work > 0)) { R(x + 16, by - 12, 1, 12, '#6a5a44'); R(x + 12, by - 17, 9, 6, K); raw = !lock; R(x + 13, by - 16, 7, 4, lock ? '#3a342e' : col); if (!lock) { R(x + 16, by - 16, 1, 4, '#fff'); R(x + 14, by - 14, 5, 1, '#fff'); } raw = false; }
+        var lock = why === 'prev' || why === 'locked'; R(x + 2, by - 6, 1, 6, '#6a5a44'); R(x + 40, by - 6, 1, 6, '#6a5a44'); for (var e = 3; e < 40; e += 3) R(x + e, by - 5 + (e % 2), 2, 1, lock ? '#4a443c' : '#c9bc8a');
+        if (!(work > 0)) { R(x + 21, by - 12, 1, 12, '#6a5a44'); R(x + 17, by - 17, 9, 6, K); raw = !lock; R(x + 18, by - 16, 7, 4, lock ? '#3a342e' : col); if (!lock) { R(x + 21, by - 16, 1, 4, '#fff'); R(x + 19, by - 14, 5, 1, '#fff'); } raw = false; }
       }
       if (work > 0 && need > 0) {      // 놓는 중: 비계와 차오르는 줄
-        for (var s = 0; s < 4; s++) R(x + 2 + s * 10, by - 22, 1, 22, '#c9a868'); R(x + 2, by - 22, 31, 1, '#c9a868'); R(x + 2, by - 15, 31, 1, '#a88a50'); R(x + 2, by - 8, 31, 1, '#a88a50'); for (var dd = 0; dd < 30; dd += 3) R(x + 3 + dd, by - 21 + ((dd / 3) % 2) * 3, 1, 1, '#8a7040');
+        for (var s = 0; s < 5; s++) R(x + 2 + s * 10, by - 22, 1, 22, '#c9a868'); R(x + 2, by - 22, 41, 1, '#c9a868'); R(x + 2, by - 15, 41, 1, '#a88a50'); R(x + 2, by - 8, 41, 1, '#a88a50'); for (var dd = 0; dd < 40; dd += 3) R(x + 3 + dd, by - 21 + ((dd / 3) % 2) * 3, 1, 1, '#8a7040');
         over.push(function () { raw = true; R(x - 1, by + 3, CAMP_W, 4, K); R(x, by + 4, Math.max(1, Math.round((CAMP_W - 2) * work / need)), 2, '#f0b400'); raw = false; });
       }
-      if (c.flag === d.id) { raw = true; var bc = '#e8e6dc', X = x - 3, Y = by - 31, W = CAMP_W + 5, H = 39; R(X, Y, 5, 1, bc); R(X, Y, 1, 5, bc); R(X + W - 5, Y, 5, 1, bc); R(X + W - 1, Y, 1, 5, bc); R(X, Y + H - 1, 5, 1, bc); R(X, Y + H - 5, 1, 5, bc); R(X + W - 5, Y + H - 1, 5, 1, bc); R(X + W - 1, Y + H - 5, 1, 5, bc); raw = false; }
+      if (c.flag === d.id) { raw = true; var bc = '#e8e6dc', X = x - 2, Y = by - 42, W = CAMP_W + 4, H = 50; R(X, Y, 5, 1, bc); R(X, Y, 1, 5, bc); R(X + W - 5, Y, 5, 1, bc); R(X + W - 1, Y, 1, 5, bc); R(X, Y + H - 1, 5, 1, bc); R(X, Y + H - 5, 1, 5, bc); R(X + W - 5, Y + H - 1, 5, 1, bc); R(X + W - 1, Y + H - 5, 1, 5, bc); raw = false; }
     });
     over.forEach(function (f) { f(); });
     // 사람(3×6)과 무리
     var SH = ['#3f5f7a', '#8a8a52', '#b8402e', '#6b4a3a', '#c9c7ba', '#5a7a3a', '#9a5ac8', '#d8a03a'];
     function man(x, y, i, carry, gun) { R(x, y, 3, 2, '#e6c9a0'); R(x, y, 3, 1, i % 3 ? '#3a3028' : i % 2 ? '#6b4a3a' : '#17180f'); R(x, y + 2, 3, 2, gun ? '#4a6a3a' : SH[i % SH.length]); R(x, y + 4, 1, 2, '#2a2e36'); R(x + 2, y + 4, 1, 2, '#2a2e36'); if (carry) { R(x + 3, y + 1, 2, 2, K); R(x + 3, y + 1, 2, 1, '#c9a868'); } if (gun) R(x + 3, y + 2, 3, 1, '#17180f'); }
     function zed(x, y, i) { R(x, y, 3, 2, i % 2 ? '#7fb85a' : '#6aa85a'); R(x + (i % 2 ? 0 : 2), y, 1, 1, '#17180f'); R(x, y + 2, 3, 2, ['#6b4a3a', '#3f5f7a', '#55585f'][i % 3]); R(x + 3, y + 2, 1, 1, '#7fb85a'); R(x, y + 4, 1, 2, '#3a3a36'); R(x + 2, y + 4, 1, 2, '#3a3a36'); }
-    if (!n) C.SETTLE.forEach(function (d, di) { var lv = C.settleLv(state, d.id); if (!lv || C.settleBroken(state, d.id)) return; var p = campPlot(d); for (var k = 0; k < Math.min(2, lv); k++) man(p.x + 6 + k * 22 + Math.round(Math.sin(now / 1100 + di * 2 + k * 3) * 4), p.by - 6, di + k); });
+    if (!n) C.SETTLE.forEach(function (d, di) { var lv = C.settleLv(state, d.id); if (!lv || C.settleBroken(state, d.id)) return; var p = campPlot(d); for (var k = 0; k < Math.min(2, lv); k++) man(p.x + 6 + k * 28 + Math.round(Math.sin(now / 1100 + di * 2 + k * 3) * 4), p.by - 6, di + k); });
     var free = C.settleFree(state), crowd = n ? 0 : free <= 0 ? 0 : Math.min(9, 1 + Math.floor(Math.log(free + 1) / Math.LN10 * 1.6));
-    [12, 16, 8, 22, 4, 27, 19, 30, 14].slice(0, crowd).forEach(function (qx, i) { man(qx, 112 - ((Math.floor(now / 600) + i) % 5 === 0 ? 1 : 0), i); });
+    [12, 16, 8, 22, 4, 27, 19, 30, 14].slice(0, crowd).forEach(function (qx, i) { man(qx, 136 - ((Math.floor(now / 600) + i) % 5 === 0 ? 1 : 0), i); });
     campWalk = campWalk.filter(function (w) { return now - w.at < w.ms; });
     campWalk.forEach(function (w, wi) { var tt = (now - w.at) / w.ms; if (tt < 0) return; var pts = w.path, seg = Math.min(pts.length - 2, Math.floor(tt * (pts.length - 1))), lt = tt * (pts.length - 1) - seg, a = pts[seg], b = pts[seg + 1]; man(a[0] + (b[0] - a[0]) * lt, a[1] + (b[1] - a[1]) * lt - (Math.floor(now / 110 + wi) % 2), wi + 3, !w.gun, w.gun); });
     (c.strays || []).forEach(function (s, si) { var q = campStrayPos(s), wv = Math.floor(now / 160 + si) % 2; man(q[0] - 4, q[1] - 3, s.id); man(q[0], q[1] - 3 - wv, s.id + 1); R(q[0] + 1, q[1] - 5 - wv, 1, 2, '#e6c9a0'); if (s.t / C.STRAY_TIME < 0.5) zed(q[0] + (s.side === 0 ? -5 : 5), q[1] - 3, si); });
@@ -2991,23 +3080,23 @@
       var zAll = Math.min(40, 14 + (c.nightLv || 0) * 2);
       for (var sd = 0; sd < 3; sd++) {
         var zN = Math.round(zAll * n.w[sd]), gN = Math.round(Math.min(1, n.g[sd] / C.sideNeed(n, sd)) * 8), dmg = 1 - Math.max(0, n.fences[sd]);
-        for (var zi = 0; zi < zN; zi++) { var uu = ((zi * 37 + sd * 11) % 100) / 100, jig = Math.floor(now / 200 + zi) % 2; if (sd === 0) zed(1 + (zi % 3) * 2 + jig, 92 + (zi % 4) * 5 + (zi % 2), zi); else if (sd === 1) zed(180 + (zi % 2) - jig, 40 + uu * 72, zi); else zed(14 + uu * 160, 121 + (zi % 2) - jig, zi); }
-        for (var gi = 0; gi < gN; gi++) { if (sd === 0) man(12 + gi * 3, 112 - (gi % 2), gi, 0, 1); else if (sd === 1) man(174 - (gi % 3) * 4, CAMP_FL[gi % 3] - 6, gi, 0, 1); else man(48 + gi * 16, 112, gi, 0, 1); }
-        raw = true; if (gN > 0 && zN > 0 && Math.floor(now / 90 + sd) % 3 === 0) { if (sd === 0) R(4, 113, 5, 1, '#ffd95a'); else if (sd === 1) R(177, CAMP_FL[(now / 90 | 0) % 3] - 4, 5, 1, '#ffd95a'); else R(50 + ((now / 90 | 0) * 29 % 110), 118, 1, 4, '#ffd95a'); }
-        for (var di2 = 0; di2 < Math.round(dmg * 6); di2++) { if (sd === 0) R(1 + (di2 % 2) * 7, 100 + di2 * 3, 2, 2, '#f08a3a'); else if (sd === 1) R(180 + (di2 % 2), 40 + di2 * 12, 3, 3, '#f08a3a'); else R(20 + di2 * 26, 120, 3, 1, '#f08a3a'); } raw = false;
+        for (var zi = 0; zi < zN; zi++) { var uu = ((zi * 37 + sd * 11) % 100) / 100, jig = Math.floor(now / 200 + zi) % 2; if (sd === 0) zed(1 + (zi % 3) * 2 + jig, 116 + (zi % 4) * 5 + (zi % 2), zi); else if (sd === 1) zed(180 + (zi % 2) - jig, 40 + uu * 96, zi); else zed(14 + uu * 160, 147 + (zi % 2) - jig, zi); }
+        for (var gi = 0; gi < gN; gi++) { if (sd === 0) man(12 + gi * 3, 136 - (gi % 2), gi, 0, 1); else if (sd === 1) man(174 - (gi % 3) * 4, CAMP_FL[gi % 3] - 6, gi, 0, 1); else man(48 + gi * 16, 136, gi, 0, 1); }
+        raw = true; if (gN > 0 && zN > 0 && Math.floor(now / 90 + sd) % 3 === 0) { if (sd === 0) R(4, 137, 5, 1, '#ffd95a'); else if (sd === 1) R(177, CAMP_FL[(now / 90 | 0) % 3] - 4, 5, 1, '#ffd95a'); else R(50 + ((now / 90 | 0) * 29 % 110), 142, 1, 4, '#ffd95a'); }
+        for (var di2 = 0; di2 < Math.round(dmg * 6); di2++) { if (sd === 0) R(1 + (di2 % 2) * 7, 124 + di2 * 3, 2, 2, '#f08a3a'); else if (sd === 1) R(180 + (di2 % 2), 40 + di2 * 16, 3, 3, '#f08a3a'); else R(20 + di2 * 26, 144, 3, 1, '#f08a3a'); } raw = false;
       }
     }
     // 불빛: 밤에는 제 색으로 다시 밝히고, 등 아래에는 점을 성기게 찍어 번지게 한다(네모로 깔지 않는다)
     raw = true;
     if (night) {
       lights.forEach(function (l) { R(l[0], l[1], l[2], l[3], l[4]); if (l[2] >= 3 && l[3] >= 3) { R(l[0] - 1, l[1] - 1, l[2] + 2, 1, 'rgba(255,217,138,.22)'); R(l[0] - 1, l[1] + l[3], l[2] + 2, 1, 'rgba(255,217,138,.22)'); R(l[0] - 1, l[1], 1, l[3], 'rgba(255,217,138,.22)'); R(l[0] + l[2], l[1], 1, l[3], 'rgba(255,217,138,.22)'); } });
-      [[92, 45], [136, 75], [92, 105], [26, 105]].forEach(function (q) { for (var yy = 0; yy < 13; yy++) { var w2 = Math.round(1 + yy / 13 * 5); for (var xx = -w2; xx <= w2; xx++) if ((xx + yy) % 2 === 0) R(q[0] + xx, q[1] + yy, 1, 1, 'rgba(255,217,138,.20)'); } });
-      for (var a2 = 0; a2 < 6; a2++) for (var bb = -a2; bb <= a2; bb++) if ((a2 + bb) % 2 === 0) R(20 + bb, 117 - a2, 1, 1, 'rgba(240,138,58,.22)');
+      [[26, 129]].forEach(function (q) { for (var yy = 0; yy < 13; yy++) { var w2 = Math.round(1 + yy / 13 * 5); for (var xx = -w2; xx <= w2; xx++) if ((xx + yy) % 2 === 0) R(q[0] + xx, q[1] + yy, 1, 1, 'rgba(255,217,138,.20)'); } });
+      for (var a2 = 0; a2 < 6; a2++) for (var bb = -a2; bb <= a2; bb++) if ((a2 + bb) % 2 === 0) R(20 + bb, 141 - a2, 1, 1, 'rgba(240,138,58,.22)');
     }
     if (n) for (var sb = 0; sb < 3; sb++) {      // 쪽마다: 모자라면 붉게(몰린 쪽은 깜빡인다), 남은 벽이 줄로 보인다
-      var band = sb === 0 ? [0, 60, 34, 60] : sb === 1 ? [164, 30, 20, 90] : [34, 118, 150, 10], hot = sb === n.side, weak = C.sideHold(state, sb) < 1 && n.w[sb] > 0.02;
+      var band = sb === 0 ? [0, 80, 34, 62] : sb === 1 ? [164, 30, 20, 112] : [34, 142, 150, 18], hot = sb === n.side, weak = C.sideHold(state, sb) < 1 && n.w[sb] > 0.02;
       if (weak) R(band[0], band[1], band[2], band[3], 'rgba(216,69,58,' + (hot ? (Math.floor(now / 250) % 2 ? '.3' : '.16') : '.08') + ')');
-      var bx2 = sb === 0 ? 3 : sb === 1 ? 152 : 78, by2 = sb === 0 ? 88 : sb === 1 ? 38 : 122, fe = Math.max(0, n.fences[sb]); R(bx2 - 1, by2 - 1, 28, 5, K); R(bx2, by2, Math.round(26 * fe), 3, fe > 0.5 ? '#7fb85a' : fe > 0.25 ? '#e98a3c' : '#ff5a4a');
+      var bx2 = sb === 0 ? 3 : sb === 1 ? 152 : 78, by2 = sb === 0 ? 112 : sb === 1 ? 38 : 152, fe = Math.max(0, n.fences[sb]); R(bx2 - 1, by2 - 1, 28, 5, K); R(bx2, by2, Math.round(26 * fe), 3, fe > 0.5 ? '#7fb85a' : fe > 0.25 ? '#e98a3c' : '#ff5a4a');
     }
     raw = false;
   }
@@ -3017,14 +3106,14 @@
     if (isNight !== campWasNight) { campWasNight = isNight; campNightAt = now; }
     var bl = Math.min(1, (now - campNightAt) / 1200), amt = isNight ? bl : 1 - bl;      // 0 = 낮, 1 = 밤. 1.2초에 걸쳐 겹쳐 넘어간다
     if (amt <= 0 || amt >= 1) drawCampScene(g, amt >= 1, now);
-    else { if (!campTmp) { campTmp = document.createElement('canvas'); campTmp.width = 184; campTmp.height = 128; } drawCampScene(g, false, now); drawCampScene(campTmp.getContext('2d'), true, now); g.globalAlpha = amt; g.drawImage(campTmp, 0, 0); g.globalAlpha = 1; }
-    if (campFlash && now - campFlash.at < 400) { var fa = 1 - (now - campFlash.at) / 400; g.fillStyle = (campFlash.kind === 'done' ? 'rgba(240,180,0,' : campFlash.kind === 'held' ? 'rgba(127,184,90,' : 'rgba(216,69,58,') + (0.4 * fa).toFixed(2) + ')'; if (campFlash.rect) g.fillRect(campFlash.rect[0], campFlash.rect[1], campFlash.rect[2], campFlash.rect[3]); else g.fillRect(0, 0, 184, 128); }
+    else { if (!campTmp) { campTmp = document.createElement('canvas'); campTmp.width = 184; campTmp.height = CAMP_HT; } drawCampScene(g, false, now); drawCampScene(campTmp.getContext('2d'), true, now); g.globalAlpha = amt; g.drawImage(campTmp, 0, 0); g.globalAlpha = 1; }
+    if (campFlash && now - campFlash.at < 400) { var fa = 1 - (now - campFlash.at) / 400; g.fillStyle = (campFlash.kind === 'done' ? 'rgba(240,180,0,' : campFlash.kind === 'held' ? 'rgba(127,184,90,' : 'rgba(216,69,58,') + (0.4 * fa).toFixed(2) + ')'; if (campFlash.rect) g.fillRect(campFlash.rect[0], campFlash.rect[1], campFlash.rect[2], campFlash.rect[3]); else g.fillRect(0, 0, 184, CAMP_HT); }
     cv.classList.toggle('ward-shake', !!(campFlash && campFlash.kind === 'breach' && now - campFlash.at < 300));
   }
   /** 울타리 밖 무리의 자리(도트): 0 서쪽 언덕 비탈 · 1 동쪽 벽 앞 · 2 남쪽 비탈 아래. */
-  function campStrayPos(s) { return s.side === 0 ? [8, 62 + s.u * 26] : s.side === 1 ? [174, CAMP_FL[Math.min(2, Math.floor(s.u * 3))] - 3] : [46 + s.u * 124, 124]; }
+  function campStrayPos(s) { return s.side === 0 ? [8, 82 + s.u * 34] : s.side === 1 ? [174, CAMP_FL[Math.min(2, Math.floor(s.u * 3))] - 3] : [46 + s.u * 124, 150]; }
   /** 문에서 그 자리까지의 길(계단을 오른다). */
-  function campPath(d) { var p = campPlot(d), pts = [[8, 112], [34, 112]]; if (d.row <= 1) pts.push([44, 82]); if (d.row === 0) { pts.push([36, 82]); pts.push([44, 52]); } pts.push([p.x + 14, p.by - 6]); return pts; }
+  function campPath(d) { var p = campPlot(d), pts = [[8, 136], [34, 136]]; if (d.row <= 1) pts.push([44, 96]); if (d.row === 0) { pts.push([36, 96]); pts.push([44, 56]); } pts.push([p.x + 14, p.by - 6]); return pts; }
   function campSendWalkers(path, n, gun) { var now = Date.now(); for (var k = 0; k < n; k++) campWalk.push({ at: now + k * 130, ms: 1300, path: path, gun: !!gun }); if (campWalk.length > 40) campWalk = campWalk.slice(-40); }
   function renderCamp() {
     C.campSeen(state);      // 이 화면을 보고 있는 동안은 습격까지의 시간이 간다
@@ -3037,16 +3126,16 @@
     if (n) CAMP_SIDE.forEach(function (nm, k) { var b = $('camp-g' + k), h = C.sideHold(state, k), key = nm + Math.round(h * 100) + (k === n.side); if (b.getAttribute('data-k') !== key) { b.setAttribute('data-k', key); b.innerHTML = ''; b.appendChild(document.createTextNode(nm)); b.appendChild(el('small', '', Math.round(h * 100) + '%')); } b.className = (k === n.side && h < 1 ? 'hot' : '') + (h >= 1 ? ' ok' : ''); });
     if (!n && started) sc0 = C.raidNeed(state);
     /* 문 앞의 생존자(지금 놓을 수 있는 수): 문 앞 무리 위에 작게. 습격 때는 숨긴다(모두가 싸우러 나가므로) */
-    var gl = document.getElementById('camp-gate') || (function () { var e = el('span', 'plot-need can', ''); e.id = 'camp-gate'; e.style.left = (16 / 184 * 100) + '%'; e.style.top = (108 / 128 * 100) + '%'; $('camp-wrap').appendChild(e); return e; })();
+    var gl = document.getElementById('camp-gate') || (function () { var e = el('span', 'plot-need can', ''); e.id = 'camp-gate'; e.style.left = (16 / 184 * 100) + '%'; e.style.top = (132 / CAMP_HT * 100) + '%'; $('camp-wrap').appendChild(e); return e; })();
     var gShow = !n && has; if (gl.hidden !== !gShow) gl.hidden = !gShow; if (gShow) setText(gl, fmt(free) + '명');
     /* 자리 위의 숫자(더 놓아야 하는 사람): 고른 자리와, 문 앞의 사람으로 지금 끝낼 수 있는 자리에만 */
     var wrapN = $('camp-wrap');
     C.SETTLE.forEach(function (d) { var id = 'need-' + d.id, lb = document.getElementById(id), p = campPlot(d), why = C.settleBlock(state, d.id), needN = C.settleNeed(state, d.id), leftN = needN - C.settleWork(state, d.id), show = !n && needN > 0 && why !== 'prev' && why !== 'locked' && (c.flag === d.id || (free >= leftN && free > 0));
-      if (!lb) { lb = el('span', 'plot-need', ''); lb.id = id; lb.style.left = ((p.x + CAMP_W / 2) / 184 * 100) + '%'; lb.style.top = ((p.by - 12) / 128 * 100) + '%'; wrapN.appendChild(lb); }
+      if (!lb) { lb = el('span', 'plot-need', ''); lb.id = id; lb.style.left = ((p.x + CAMP_W / 2) / 184 * 100) + '%'; lb.style.top = ((p.by - 12) / CAMP_HT * 100) + '%'; wrapN.appendChild(lb); }
       if (lb.hidden !== !show) lb.hidden = !show; if (show) { setText(lb, fmt(leftN) + '명'); var cls = 'plot-need' + (C.settleBroken(state, d.id) ? ' broken' : free >= 1 ? ' can' : ''); if (lb.className !== cls) lb.className = cls; } });
     var seenS = {};
     (c.strays || []).forEach(function (s) { var id = 'stray-' + s.id, b = document.getElementById(id), q = campStrayPos(s); seenS[id] = 1;
-      if (!b) { b = el('button', 'stray-dot', '!'); b.type = 'button'; b.id = id; b.setAttribute('aria-label', '울타리 밖의 생존자를 들인다'); b.style.left = (Math.max(9, Math.min(175, q[0])) / 184 * 100) + '%'; b.style.top = (Math.min(118, q[1] - 2) / 128 * 100) + '%'; b.addEventListener('click', function (e) { e.stopPropagation(); if (campRescueFn) campRescueFn(s.id); }); wrapN.appendChild(b); }
+      if (!b) { b = el('button', 'stray-dot', '!'); b.type = 'button'; b.id = id; b.setAttribute('aria-label', '울타리 밖의 생존자를 들인다'); b.style.left = (Math.max(9, Math.min(175, q[0])) / 184 * 100) + '%'; b.style.top = (Math.min(150, q[1] - 2) / CAMP_HT * 100) + '%'; b.addEventListener('click', function (e) { e.stopPropagation(); if (campRescueFn) campRescueFn(s.id); }); wrapN.appendChild(b); }
       var lf = Math.max(0, s.t / (s.t0 || C.STRAY_TIME)); b.style.setProperty('--p', lf.toFixed(3)); b.classList.toggle('late', lf < 0.35); });
     Array.prototype.slice.call(wrapN.querySelectorAll('.stray-dot')).forEach(function (b) { if (!seenS[b.id]) b.remove(); });
     drawCamp();
@@ -3059,36 +3148,36 @@
     function campPop(xd, yd, text, cls) {
       if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       var wrap = $('camp-wrap'); if (!wrap || wrap.querySelectorAll('.ward-pop').length > 10) return;
-      var s = el('span', 'ward-pop' + (cls ? ' ' + cls : ''), text); s.style.left = (Math.max(22, Math.min(162, xd)) / 184 * 100) + '%'; s.style.top = (yd / 128 * 100) + '%';
+      var s = el('span', 'ward-pop' + (cls ? ' ' + cls : ''), text); s.style.left = (Math.max(22, Math.min(162, xd)) / 184 * 100) + '%'; s.style.top = (yd / CAMP_HT * 100) + '%';
       s.addEventListener('animationend', function () { s.remove(); }); wrap.appendChild(s);
     }
     campPopFn = campPop;
     function guard(side) {
       var r = C.sendGuard(state, side); if (!r.ok) { if (r.reason === 'people') campPop(92, 60, '세울 생존자가 없어요', 'bad'); return; }
-      var sd = r.side, to = sd === 0 ? [14, 112] : sd === 1 ? [172, 82] : [100, 112];
-      campSendWalkers(sd === 1 ? [[60, 112], [34, 112], [44, 82], to] : [[60, 112], to], 3, true); campPop(to[0], to[1] - 14, (r.moved >= 0 ? '옮김 ' : '+') + fmt(r.sent), ''); sfx('fortify'); buzz(10); render();
+      var sd = r.side, to = sd === 0 ? [14, 136] : sd === 1 ? [172, 96] : [100, 136];
+      campSendWalkers(sd === 1 ? [[60, 136], [34, 136], [44, 96], to] : [[60, 136], to], 3, true); campPop(to[0], to[1] - 14, (r.moved >= 0 ? '옮김 ' : '+') + fmt(r.sent), ''); sfx('fortify'); buzz(10); render();
     }
     [0, 1, 2].forEach(function (k) { $('camp-g' + k).addEventListener('click', function () { guard(k); }); });
     $('t7-dial').addEventListener('click', function () { $('t7-tune').click(); });      // 주파수 칸을 눌러 맞춘다(송신 기사가 있으면 알아서 맞춘다)
     $('campscene').addEventListener('click', function (e) {
       var cv = $('campscene'), rc = cv.getBoundingClientRect(), key = !(e.clientX > 0) && !(e.clientY > 0), c = C.campOf(state);
-      var x = (e.clientX - rc.left) / rc.width * 184, y = (e.clientY - rc.top) / rc.height * 128;
+      var x = (e.clientX - rc.left) / rc.width * 184, y = (e.clientY - rc.top) / rc.height * CAMP_HT;
       if (key) { if (c.strays && c.strays.length) rescue(c.strays[0]); else if (c.night) guard(-1); else if (c.flag) place(c.flag); return; }
       var near = null, nd = 14; (c.strays || []).forEach(function (s) { var q = campStrayPos(s), d = Math.max(Math.abs(q[0] - x), Math.abs(q[1] - y)); if (d < nd) { nd = d; near = s; } }); if (near) { rescue(near); return; }
       if (x < 30 && y < 48) { $('t7-tune').click(); return; }      // 송신탑: 주파수를 맞춘다
-      var hit = null; C.SETTLE.forEach(function (d) { var p = campPlot(d); if (x >= p.x - 2 && x <= p.x + CAMP_W + 2 && y >= p.by - CAMP_H && y <= p.by + 6) hit = d; });
+      var hit = null; C.SETTLE.forEach(function (d) { var p = campPlot(d); if (x >= p.x - 2 && x <= p.x + CAMP_W + 2 && y >= p.by - CAMP_H + 4 && y <= p.by + 3) hit = d;      /* 4.3.7: 단마다 40 줄씩 겹치지 않게 나눈다 */ });
       if (hit) { place(hit.id); return; }
-      if (c.night) { if (x < 34) guard(0); else if (x > 174) guard(1); else if (y > 118) guard(2); }
+      if (c.night) { if (x < 34) guard(0); else if (x > 174) guard(1); else if (y > 142) guard(2); }
     });
     campRescueFn = function (id) { var c2 = C.campOf(state), s2 = (c2.strays || []).filter(function (q) { return q.id === id; })[0]; if (s2) rescue(s2); };
     function rescue(s) {
       var q = campStrayPos(s), r = C.rescueStray(state, s.id); if (!r.ok) return;
-      campSendWalkers(s.side === 1 ? [[q[0], q[1] - 3], [60, q[1] - 3]] : s.side === 0 ? [[q[0], q[1]], [8, 112], [20, 112]] : [[q[0], 118], [20, 112]], 3, false); campPop(q[0], Math.min(108, q[1] - 14), '+' + fmt(Math.floor(r.gain)) + '명', 'done'); sfx('buy'); buzz(12); Store.save(); render();
+      campSendWalkers(s.side === 1 ? [[q[0], q[1] - 3], [60, q[1] - 3]] : s.side === 0 ? [[q[0], q[1]], [8, 136], [20, 136]] : [[q[0], 142], [20, 136]], 3, false); campPop(q[0], Math.min(132, q[1] - 14), '+' + fmt(Math.floor(r.gain)) + '명', 'done'); sfx('buy'); buzz(12); Store.save(); render();
     }
     campPlaceFn = function (id) { place(id); };
     function place(id) {
       var d = C.SETTLE.filter(function (q) { return q.id === id; })[0], p = campPlot(d), c = C.campOf(state), fresh = c.flag !== id, r = C.buildSettle(state, id);
-      if (fresh && C.settleBlock(state, id) !== 'prev') campPop(p.x + 19, p.by - 40, d.name + ' · ' + d.desc, '');      // 처음 고른 자리: 무엇을 하는 건물인지 한 번 뜬다(카드를 없앤 대신)
+      if (fresh && C.settleBlock(state, id) !== 'prev') campPop(p.x + 22, p.by - 46, d.name + ' · ' + d.desc, '');      // 처음 고른 자리: 무엇을 하는 건물인지 한 번 뜬다(카드를 없앤 대신)
       if (!r.ok) { if (r.reason === 'people' || r.reason === 'done') { c.flag = id; if (r.reason === 'people') campPop(p.x + 19, p.by - 24, '놓을 생존자가 없어요', 'bad'); render(); } return; }
       campSendWalkers(campPath(d), Math.min(5, 2 + Math.floor(r.sent / Math.max(1, r.need) * 20)), false); campPop(p.x + 19, p.by - 26, '+' + fmt(r.sent) + '명', '');
       if (r.done) campDone(d, r.lv, r.repaired, false); else { sfx('click'); buzz(8); }
@@ -3097,8 +3186,8 @@
   }
   /** 다 놓았다: 팝업 없이, 그 자리의 반짝임과 뜨는 글 · 일지 한 줄로만 알린다. */
   function campDone(d, lv, repaired, auto) {
-    var p = campPlot(d); campFlash = { at: Date.now(), kind: 'done', rect: [p.x - 2, p.by - 30, CAMP_W + 4, 36] };
-    if (campPopFn) campPopFn(p.x + 19, p.by - 34, repaired ? d.name + ' 고침' : d.name + ' ' + lv + '단계', 'done');
+    var p = campPlot(d); campFlash = { at: Date.now(), kind: 'done', rect: [p.x - 2, p.by - 40, CAMP_W + 4, 46] };
+    if (campPopFn) campPopFn(p.x + 22, p.by - 44, repaired ? d.name + ' 고침' : d.name + ' ' + lv + '단계', 'done');
     log(repaired ? d.name + (C.hasBatchim(d.name) ? '을' : '를') + ' 고쳤다.' : lv === 1 ? d.name + (C.hasBatchim(d.name) ? '이' : '가') + ' 섰다. ' + d.desc + '.' : d.name + (C.hasBatchim(d.name) ? '이' : '가') + ' ' + lv + '단계가 됐다.', 'good');
     if (!auto || (tab === 'z6' && pane === 'play')) { sfx('goal'); buzz(25); }
   }
@@ -3719,12 +3808,18 @@
       var sRate = C.survivorRate(state);
       renderCamp();
       var free7 = C.settleFree(state), flag7 = C.campOf(state).flag;
-      /* 정착지 한 줄: 건물 수와 단계의 합. 펼치면 아홉 칸(아직 열리지 않은 칸은 ???) */
-      var lvSum = C.settleLevels(state); setText(rows.settle7.count, C.settleCount(state) + ' / ' + C.SETTLE.length); setText(rows.settle7.info, '단계 합 ' + lvSum + ' · 일할 생존자 ' + fmt(free7) + '명'); setText(rows.settle7.cost, campGridOpen ? '접기' : '펼치기'); rows.settle7.btn.disabled = false; rows.settle7.btn.classList.toggle('open', campGridOpen);
-      if (rows.settleGrid.hidden !== !campGridOpen) rows.settleGrid.hidden = !campGridOpen;
-      if (campGridOpen) C.SETTLE.forEach(function (d) { var t8 = rows.settleTiles[d.id], why8 = C.settleBlock(state, d.id), hid = why8 === 'prev' || why8 === 'locked', lv8 = C.settleLv(state, d.id), need8 = C.settleNeed(state, d.id), left8 = need8 - C.settleWork(state, d.id), brk8 = C.settleBroken(state, d.id);
-        setText(t8.name, hid ? HID : d.name); setText(t8.lv, hid ? '' : brk8 ? '부서짐' : 'Lv ' + lv8); setText(t8.need, hid ? HID : fmt(left8) + '명');
-        t8.btn.disabled = hid || !(free7 >= 1) || !(need8 > 0); var cls8 = (flag7 === d.id ? 'flagged ' : '') + (brk8 ? 'broken ' : '') + (hid ? 'hid' : ''); if (t8.btn.className !== cls8) t8.btn.className = cls8; });
+      /* 정착지 1 · 2 · 3: 단의 단계(세 건물의 합, 30이 끝). 앞 단이 하나도 안 선 단은 ???. 펼치면 그 단의 세 칸 */
+      rows.tier7.forEach(function (tr, r) {
+        var ds = C.SETTLE.filter(function (d) { return d.row === r; }), open7 = ds.some(function (d) { var w = C.settleBlock(state, d.id); return w !== 'prev' && w !== 'locked'; }), sum = 0, max = ds.length * C.LV_MAX, done7;
+        ds.forEach(function (d) { sum += C.settleLv(state, d.id); }); done7 = sum >= max;
+        setText(tr.row.count, open7 ? 'Lv ' + sum + ' / ' + max : HID); setText(tr.row.desc, open7 ? ds.map(function (d) { var w = C.settleBlock(state, d.id); return w === 'prev' || w === 'locked' ? HID : d.name; }).join(' · ') : HID);
+        setText(tr.row.info, open7 ? (done7 ? '세 건물이 모두 ' + C.LV_MAX + '단계' : '일할 생존자 ' + fmt(free7) + '명') : ''); setText(tr.row.cost, !open7 ? '' : done7 ? '건설 완료' : campGridOpen === r ? '접기' : '펼치기');
+        tr.row.btn.disabled = !open7; tr.row.btn.classList.toggle('open', campGridOpen === r); tr.row.btn.classList.toggle('row-max', done7);
+        var showG = open7 && campGridOpen === r; if (tr.grid.hidden !== !showG) tr.grid.hidden = !showG; if (!showG) return;
+        ds.forEach(function (d) { var t8 = tr.tiles[d.id], why8 = C.settleBlock(state, d.id), hid = why8 === 'prev' || why8 === 'locked', lv8 = C.settleLv(state, d.id), need8 = C.settleNeed(state, d.id), left8 = need8 - C.settleWork(state, d.id), brk8 = C.settleBroken(state, d.id);
+          setText(t8.name, hid ? HID : d.name); setText(t8.lv, hid ? '' : brk8 ? '부서짐' : 'Lv ' + lv8 + (lv8 >= C.LV_MAX ? ' · 완료' : '')); setText(t8.need, hid ? HID : need8 > 0 ? fmt(left8) + '명' : '건설 완료');
+          t8.btn.disabled = hid || !(free7 >= 1) || !(need8 > 0); var cls8 = (flag7 === d.id ? 'flagged ' : '') + (brk8 ? 'broken ' : '') + (hid ? 'hid' : ''); if (t8.btn.className !== cls8) t8.btn.className = cls8; });
+      });
       C.CAMP_ROWS.forEach(function (d) { var r7 = rows.camp[d.id], lv7 = C.campRow(state, d.id), c7 = C.campRowCost(state, d.id), pct = function (v) { return Math.round(v * 100) + '%'; };
         var now7 = d.id === 'cart' ? '무리 +' + pct(C.CART_STEP * lv7) : d.id === 'wall7' ? '더디게 +' + pct(C.WALL7_STEP * lv7) : '세울 수 −' + pct(1 - Math.pow(1 - C.ARMS_STEP, lv7)), nx7 = d.id === 'cart' ? '+' + pct(C.CART_STEP * (lv7 + 1)) : d.id === 'wall7' ? '+' + pct(C.WALL7_STEP * (lv7 + 1)) : '−' + pct(1 - Math.pow(1 - C.ARMS_STEP, lv7 + 1));
         setText(r7.count, 'Lv ' + lv7 + ' / ' + d.max); setText(r7.info, now7 + (isFinite(c7) ? ' → ' + nx7 : '')); setText(r7.cost, isFinite(c7) ? '×1 ' + fmt(c7) : '최대'); r7.btn.disabled = !(c7 <= state.supplies); afford(r7.cost, c7); r7.btn.classList.toggle('row-max', !isFinite(c7)); });
