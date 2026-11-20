@@ -2939,7 +2939,7 @@
   })();
   /** 한 장면을 그린다(낮 또는 밤). */
   function drawCampScene(g, night, now) {
-    var c = C.campOf(state), n = c.night, K = '#16110f', lights = [], raw = false;
+    var c = C.campOf(state), n = c.night, K = '#16110f', lights = [], raw = false, over = [];
     var R = function (x, y, w, h, col) { px(g, Math.round(x), Math.round(y), w, h, night && !raw ? campNight(col) : col); };
     var L = function (x, y, w, h, col) { lights.push([x, y, w, h, col || '#ffd98a']); if (!night) R(x, y, w, h, '#f0b878'); };
     g.imageSmoothingEnabled = false; g.drawImage(campBackdrop(night), 0, 0);
@@ -2954,7 +2954,7 @@
     C.SETTLE.forEach(function (d) {
       var p = campPlot(d), x = p.x, by = p.by, lv = C.settleLv(state, d.id), why = C.settleBlock(state, d.id), work = C.settleWork(state, d.id), need = C.settleNeed(state, d.id), broken = C.settleBroken(state, d.id), col = CAMP_COL[d.col];
       if (lv > 0) { CAMP_ART[d.id](R, L, x, by, Math.min(3, lv));
-        raw = true; if (lv <= 3) { for (var k = 0; k < 3; k++) { R(x + 12 + k * 5, by + 3, 4, 2, K); R(x + 13 + k * 5, by + 3, 2, 1, k < lv ? col : '#4a443c'); } } else { var ds = String(lv), dw = ds.length * 4 + 1; R(x + 19 - (dw >> 1) - 1, by + 2, dw + 2, 7, K); for (var di = 0; di < ds.length; di++) spr(g, x + 19 - (dw >> 1) + di * 4, by + 3, CAMP_DIGIT[+ds.charAt(di)], { '#': col }); }
+        raw = true; over.push(function () { raw = true; var lvMode = window.__campLv || 'pips'; if (lvMode === 'none' || (lvMode === 'sel' && c.flag !== d.id)) { raw = false; return; } if (lv <= 3) { for (var k = 0; k < 3; k++) { R(x + 12 + k * 5, by + 3, 4, 2, K); R(x + 13 + k * 5, by + 3, 2, 1, k < lv ? col : '#4a443c'); } } else { var ds = String(lv), dw = ds.length * 4 + 1; R(x + 19 - (dw >> 1) - 1, by + 2, dw + 2, 7, K); for (var di = 0; di < ds.length; di++) spr(g, x + 19 - (dw >> 1) + di * 4, by + 3, CAMP_DIGIT[+ds.charAt(di)], { '#': col }); } raw = false; });
         if (broken) { R(x, by - 22, CAMP_W, 22, 'rgba(20,10,6,.5)'); for (var f = 0; f < 3; f++) { var fx = x + 6 + f * 11, fl = Math.floor(now / 120 + f) % 2; R(fx, by - 8 - fl, 3, 5 + fl, '#f08a3a'); R(fx + 1, by - 10 - fl, 1, 3, '#ffd95a'); var sa = ((now + f * 700) % 2400) / 2400; R(fx + 1 + sa * 3, by - 11 - sa * 12, 2, 1, 'rgba(60,56,64,' + (0.8 - sa * 0.7).toFixed(2) + ')'); } } raw = false;
       } else {
         var lock = why === 'prev' || why === 'locked'; R(x + 2, by - 6, 1, 6, '#6a5a44'); R(x + 34, by - 6, 1, 6, '#6a5a44'); for (var e = 3; e < 34; e += 3) R(x + e, by - 5 + (e % 2), 2, 1, lock ? '#4a443c' : '#c9bc8a');
@@ -2962,10 +2962,11 @@
       }
       if (work > 0 && need > 0) {      // 놓는 중: 비계와 차오르는 줄
         for (var s = 0; s < 4; s++) R(x + 2 + s * 10, by - 22, 1, 22, '#c9a868'); R(x + 2, by - 22, 31, 1, '#c9a868'); R(x + 2, by - 15, 31, 1, '#a88a50'); R(x + 2, by - 8, 31, 1, '#a88a50'); for (var dd = 0; dd < 30; dd += 3) R(x + 3 + dd, by - 21 + ((dd / 3) % 2) * 3, 1, 1, '#8a7040');
-        raw = true; R(x - 1, by + 3, CAMP_W, 4, K); R(x, by + 4, Math.max(1, Math.round((CAMP_W - 2) * work / need)), 2, '#f0b400'); raw = false;
+        over.push(function () { raw = true; R(x - 1, by + 3, CAMP_W, 4, K); R(x, by + 4, Math.max(1, Math.round((CAMP_W - 2) * work / need)), 2, '#f0b400'); raw = false; });
       }
       if (c.flag === d.id) { raw = true; var bc = '#e8e6dc', X = x - 3, Y = by - 31, W = CAMP_W + 5, H = 39; R(X, Y, 5, 1, bc); R(X, Y, 1, 5, bc); R(X + W - 5, Y, 5, 1, bc); R(X + W - 1, Y, 1, 5, bc); R(X, Y + H - 1, 5, 1, bc); R(X, Y + H - 5, 1, 5, bc); R(X + W - 5, Y + H - 1, 5, 1, bc); R(X + W - 1, Y + H - 5, 1, 5, bc); raw = false; }
     });
+    over.forEach(function (f) { f(); });
     // 사람(3×6)과 무리
     var SH = ['#3f5f7a', '#8a8a52', '#b8402e', '#6b4a3a', '#c9c7ba', '#5a7a3a', '#9a5ac8', '#d8a03a'];
     function man(x, y, i, carry, gun) { R(x, y, 3, 2, '#e6c9a0'); R(x, y, 3, 1, i % 3 ? '#3a3028' : i % 2 ? '#6b4a3a' : '#17180f'); R(x, y + 2, 3, 2, gun ? '#4a6a3a' : SH[i % SH.length]); R(x, y + 4, 1, 2, '#2a2e36'); R(x + 2, y + 4, 1, 2, '#2a2e36'); if (carry) { R(x + 3, y + 1, 2, 2, K); R(x + 3, y + 1, 2, 1, '#c9a868'); } if (gun) R(x + 3, y + 2, 3, 1, '#17180f'); }
@@ -3020,8 +3021,8 @@
     C.campSeen(state);      // 이 화면을 보고 있는 동안은 습격까지의 시간이 간다
     var c = C.campOf(state), n = c.night, free = C.settleFree(state), has = C.survivorRate(state) > 0 || state.survivors > 0, started = C.settleCount(state) >= 1, lvN = c.nightLv || 0;
     var ttl = $('camp-title'), head = $('camp-head'); setText(ttl, n ? '습격' : '정착지'); ttl.classList.toggle('raid', !!n); setText(head, lvN > 0 ? lvN + '단계' : ''); head.classList.remove('bad');
-    /* 띠: 생존자(낮에는 놓을 수 있는 사람, 습격 때는 아직 세우지 않은 사람) · 습격까지 남은 시간 */
-    var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, '생존자 ' + fmt(n ? C.guardPool(state) : free) + '명'); setText(s1, n ? '습격 ' + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
+    /* 띠: 생존자(낮에는 놓을 수 있는 사람 = '일할 생존자', 습격 때는 아직 세우지 않은 사람 = '싸울 생존자') · 습격까지 남은 시간. 4.3.1: 낮과 밤에 세는 사람이 다르니 어느 쪽인지 적는다 */
+    var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, (n ? '싸울 생존자 ' : '일할 생존자 ') + fmt(n ? C.guardPool(state) : free) + '명'); setText(s1, n ? '습격 ' + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
     var gb = $('camp-guard'); if (gb.hidden !== !n) gb.hidden = !n;
     if (n) CAMP_SIDE.forEach(function (nm, k) { var b = $('camp-g' + k), h = C.sideHold(state, k), key = nm + Math.round(h * 100) + (k === n.side); if (b.getAttribute('data-k') !== key) { b.setAttribute('data-k', key); b.innerHTML = ''; b.appendChild(document.createTextNode(nm)); b.appendChild(el('small', '', Math.round(h * 100) + '%')); } b.className = (k === n.side && h < 1 ? 'hot' : '') + (h >= 1 ? ' ok' : ''); });
     if (!n && started) sc0 = C.raidNeed(state);
