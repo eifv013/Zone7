@@ -3458,7 +3458,7 @@
       /* 4.1.0 6구역 다리. 제목 줄 오른쪽: 지금 한 마리를 잡으면 받는 것(연속 배수까지). 그림 아래: 연속 줄 → 초소장 바 → 행렬 카드 → 기록 한 줄 */
       var gRate = C.guardRate(state), br = C.bridgeOf(state), cap = C.comboCap(state), gAuto = (state.upgrades.autoguard || 0) > 0, gSw = C.autoEvents(state, 5);
       var gr = $('guard-rate'), urgent = br.down > 0 || br.warn > 0 || br.wave > 0;
-      setText(gr, !(state.posts > 0) ? '' : br.down > 0 ? '뚫렸다 · 방벽을 다시 세우는 중' : br.warn > 0 ? '떼가 몰려온다' : br.wave > 0 ? '떼 · ' + Math.ceil(br.wave) + '초' : '한 마리 +' + fmt(gRate * C.BRIDGE_SPAWN * br.combo));
+      setText(gr, !(state.posts > 0) ? '' : br.down > 0 ? '뚫렸다 · 방벽을 다시 세우는 중' : br.warn > 0 ? '무리 습격이 온다' : br.wave > 0 ? '무리 습격 · ' + Math.ceil(br.wave) + '초' : '한 마리 +' + fmt(gRate * C.BRIDGE_SPAWN * br.combo));
       gr.classList.toggle('bad', urgent);
       /* 4.1.4: 단계는 제목이 아니라 그림 오른쪽 위 딱지에 적는다(제목에서는 눈에 안 들어왔다). 오르내릴 때 딱지가 움직인다 */
       var lvEl = $('br-level'), lv6 = state.posts > 0 ? (br.streak || 0) : 0; if (lvEl.hidden !== !(lv6 > 0)) lvEl.hidden = !(lv6 > 0); setText(lvEl, lv6 + '단계');
@@ -3475,7 +3475,7 @@
       var gb = $('guard-bar'), gbOn = state.posts > 0 && gAuto && gSw; if (gb.hidden !== !gbOn) gb.hidden = !gbOn; if (gbOn) fill(gb, br.zs.length ? br.shot : 0);
       drawBridge();
       var bsc = $('bridgescene'); bsc.setAttribute('data-zs', br.zs.length); bsc.setAttribute('data-kills', state.handKills || 0); bsc.classList.toggle('tappable', state.posts > 0);
-      setText($('guard-note'), !(state.posts > 0) ? '' : (state.handKills || 0) < 3 ? '건너오는 것을 눌러 쏘아요. 연달아 잡으면 더 받아요' : (state.breaches || 0) < 1 && (state.handKills || 0) < 40 ? '닿으면 방벽이 깎여요. 다 깎이면 뚫려요' : (br.streak || 0) > 0 && (state.wavesHeld || 0) < 4 ? '떼를 막으면 단계가 올라요. 더 많이 오고 더 받아요' : '다리 안전도 ×' + C.bridgeSafety(state).toFixed(2) + ' · 통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length);
+      setText($('guard-note'), !(state.posts > 0) ? '' : (state.handKills || 0) < 3 ? '건너오는 것을 눌러 쏘아요. 연달아 잡으면 더 받아요' : (state.breaches || 0) < 1 && (state.handKills || 0) < 40 ? '닿으면 방벽이 깎여요. 다 깎이면 뚫려요' : (br.streak || 0) > 0 && (state.wavesHeld || 0) < 4 ? '무리 습격을 막으면 단계가 올라요. 더 많이 오고 더 받아요' : '다리 안전도 ×' + C.bridgeSafety(state).toFixed(2) + ' · 통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length);
       var fl6 = state.firepower || 0, fc6 = C.fireCost(state), ml6 = state.morale || 0, mc6 = C.moraleCost(state);
       setText(rows.fire.count, 'Lv ' + fl6 + ' / ' + C.FIRE_MAX); setText(rows.fire.info, '한 발 ' + (1 + fl6) + (isFinite(fc6) ? ' → ' + (2 + fl6) : ''));
       setText(rows.fire.cost, isFinite(fc6) ? '×1 ' + fmt(fc6) : '최대'); rows.fire.btn.disabled = !(fc6 <= state.supplies); afford(rows.fire.cost, fc6); rows.fire.btn.classList.toggle('row-max', !isFinite(fc6));
@@ -3856,11 +3856,11 @@
           bridgeLeak = Date.now(); if (tab === 'z5' && pane === 'play' && ev.big) { sfx('rush'); buzz(40); if (bridgePopFn) bridgePopFn(46, 30, '연속이 끊겼다', 'bad'); }
           break;
         case 'bridge-warn':      // 4.1.2: 떼가 온다
-          if (tab === 'z5' && pane === 'play') { bridgeFlash = { at: Date.now(), kind: 'warn' }; sfx('rush'); buzz([40, 40, 40]); if (bridgePopFn) bridgePopFn(130, 24, '떼가 몰려온다', 'wave'); }
+          if (tab === 'z5' && pane === 'play') { bridgeFlash = { at: Date.now(), kind: 'warn' }; sfx('rush'); buzz([40, 40, 40]); if (bridgePopFn) bridgePopFn(130, 24, '무리 습격', 'wave'); }
           break;
         case 'bridge-held':
-          if (tab === 'z5' && pane === 'play') { sfx('goal'); buzz(30); if (bridgePopFn) bridgePopFn(100, 24, '떼를 막았다 +' + fmt(ev.gain), 'held'); }
-          log('떼를 막았다. 다리 ' + ev.streak + '단계.', 'good');
+          if (tab === 'z5' && pane === 'play') { sfx('goal'); buzz(30); if (bridgePopFn) bridgePopFn(100, 24, '습격을 막았다 +' + fmt(ev.gain), 'held'); }
+          log('무리 습격을 막았다. 다리 ' + ev.streak + '단계.', 'good');
           break;
         case 'bridge-breach':
           bridgeFlash = { at: Date.now(), kind: 'breach' }; bridgeFx = [];

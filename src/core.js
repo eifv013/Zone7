@@ -452,7 +452,7 @@
     { id: 'sandbag', zone: 5, name: '모래주머니', desc: '방벽이 4 더 버틴다',        key: 'wall',    per: 4,    baseCost: 2e27, growth: 5,   max: 5 },
     { id: 'sapper',  zone: 5, name: '공병',      desc: '방벽을 25% 더 빨리 고친다', key: 'wallfix', per: 0.25, baseCost: 3e27, growth: 5,   max: 4 },
     { id: 'nadebox', zone: 5, name: '수류탄 상자', desc: '수류탄이 4마리 빨리 찬다', key: 'nade',    per: 1,    baseCost: 4e27, growth: 8,   max: 3 },
-    { id: 'flare',   zone: 5, name: '조명탄',    desc: '떼를 막으면 받는 것 +50%',  key: 'held',    per: 0.5,  baseCost: 3e27, growth: 4,   max: 6 },
+    { id: 'flare',   zone: 5, name: '조명탄',    desc: '무리 습격을 막으면 받는 것 +50%',  key: 'held',    per: 0.5,  baseCost: 3e27, growth: 4,   max: 6 },
     { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 5e27, growth: 6,   max: 4 },
     { id: 'amp',     zone: 6, name: '증폭기',    desc: '생존자가 모이는 속도 +25%', key: 'z7',    per: 0.25, baseCost: 1.5e30, growth: 2.4, max: 40 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '5구역 시설 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e23, growth: 3, max: 12 },
