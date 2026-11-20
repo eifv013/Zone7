@@ -353,6 +353,9 @@ body { word-break: keep-all; }
 /* 1.8.4: 모험 창이 화면보다 길어져 위아래로 밀리던 것을 막는다. 지도는 화면 높이에 맞춰 줄어들고(정사각형), 창은 스크롤 없이 한 화면에 든다 */
 #stage-map { width: min(100%, calc(100dvh - 475px)); min-width: 150px; margin: 0 auto; }
 .hub-card { overscroll-behavior: contain; }
+/* 4.4.8 상점이 일행 탭의 칸이 됐다. 모험 창에서 쓰던 어두운 그림(story-card)을 그대로 쓰고, 옷장은 탭과 함께 스크롤한다 */
+.shop-card { width: auto; background: #17180f; --ink: #e6e5db; --ink-soft: #b9b8ab; --rule: #6d6d60; gap: 8px; }
+.shop-card #wardrobe { max-height: none; overflow: visible; }
 /* 도전 목록은 길다: 창은 그대로 두고 목록만 그 안에서 넘긴다(제목과 탭이 밀려 올라가지 않게) */
 #chal-list { max-height: calc(100dvh - 250px); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 #stage-detail { padding: 8px 10px; gap: 4px; }
@@ -701,7 +704,7 @@ html, body, button, .row, .panel { touch-action: pan-x pan-y; }
 #traits .row .row-desc { grid-column: 1; } #traits .row .row-desc i { font-style: normal; color: var(--safe); }
 #traits .row .row-foot { grid-column: 2; grid-row: 1 / 4; } #traits .row .row-info { display: none; }
 #traits .row .trait-bar { grid-column: 1; height: 3px; background: color-mix(in srgb, var(--ink) 25%, transparent); border-radius: 2px; overflow: hidden; } #traits .row .trait-bar i { display: block; height: 100%; background: var(--hazard); }
-#traits .row[hidden] { display: none; } .perk-open { margin: 0 0 10px; flex: none; }
+#traits .row[hidden] { display: none; } .perk-open { flex: none; width: 100%; margin-top: 8px; padding: 10px 12px; background: var(--hazard); color: #17171a; border: 0; border-radius: 8px; font: 700 15px/1.3 var(--font-body); cursor: pointer; }
 .perks-card { max-height: 86vh; overflow-y: auto; } .perks-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .perk-r { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; border-left: 3px solid var(--hazard); background: color-mix(in srgb, var(--ink) 8%, transparent); border-radius: 6px; }
 .perk-r.zero { border-left-color: color-mix(in srgb, var(--ink) 30%, transparent); opacity: .55; } .perk-r b { font-size: 15px; } .perk-r .lv { font: 12px var(--font-mono); opacity: .75; margin-left: 6px; }
@@ -1433,7 +1436,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.4.7</div>
+  <div class="boot-ver">7구역 알파 4.4.8</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1579,8 +1582,6 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div id="danger-row" hidden><div class="danger-pick"><span class="label">다음 회차</span><button type="button" id="danger-down" aria-label="위험 단계 내리기">−</button><b class="num" id="danger-val"></b><button type="button" id="danger-up" aria-label="위험 단계 올리기">+</button></div><p class="hint" id="danger-text"></p></div>
       <button type="button" class="relocate" id="retreat" disabled>아직 철수할 수 없다</button>
     </section>
-    <!-- 4.4.0 특전은 철수 칸 아래 단추 하나. 누르면 팝업에서 모두 본다(해 보신 말씀: 특성 창처럼 레벨 · 지금 효과 · 최대 효과를 한눈에) -->
-    <button type="button" class="lab-reroll perk-open" id="perk-open">이번 회차의 특전 · <span id="perk-count">0장</span></button>
     <section class="panel" aria-labelledby="h-hub" id="hub-panel" hidden>
       <div class="panel-head"><h2 id="h-hub">모험</h2><span class="label" id="hub-count"></span></div>
       <p class="hint" id="hub-hint"></p>
@@ -1797,6 +1798,12 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 
   <div class="col" data-view="exped">
     <!-- 4.4.6 일행은 아래 탭(일행)으로 따로 뺐다. 특성 탭에는 특성만 둔다. 특전은 상황 탭의 철수 칸 아래에 있다 -->
+    <!-- 4.4.8 특전은 특성 탭 맨 위로 옮겼다(상황 탭 맨 아래에서는 안 보였다). 누르면 팝업에서 레벨 · 현재 효과 · 최대 효과를 본다 -->
+    <section class="panel perk-panel" aria-labelledby="h-perkp">
+      <div class="panel-head"><h2 id="h-perkp">이번 회차 특전</h2><span class="label"><b class="num" id="perk-count">0장</b></span></div>
+      <p class="hint">철수하면 사라져요. 구역 목표를 채우거나 변이체를 막으면 하나씩 골라요.</p>
+      <button type="button" class="perk-open" id="perk-open">특전 모두 보기</button>
+    </section>
     <section class="panel" aria-labelledby="h-traits" data-ex="trait">
       <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label trait-pts">항체 샘플 <b class="num" id="trait-points">0</b></span></div>
       <p class="hint">철수해도 남아요. 되돌리면 샘플을 모두 돌려받아요.</p>
@@ -1822,6 +1829,18 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       </div>
       <div class="pet-pick"><button type="button" id="adopt-dog"></button><button type="button" id="adopt-cat"></button></div>
       <p class="label pet-odds" id="pet-odds"></p>
+    </section>
+    <!-- 4.4.8 상점(외형 뽑기 · 옷장)을 모험 창에서 일행 탭으로 옮겼다. 라라와 친구의 외형이 한곳에 모인다 -->
+    <section class="panel hub-pane story-card shop-card" aria-labelledby="h-shop" id="shop-panel">
+      <div class="panel-head"><h2 id="h-shop">상점</h2></div>
+      <div class="hub-line num" id="shop-count"></div>
+      <div class="shop-acts"><button type="button" id="gacha-pull">뽑기</button><button type="button" class="stage-hard" id="ticket-buy">뽑기권 사기</button></div>
+      <div class="gacha-result" id="gacha-result" aria-live="polite"></div>
+      <div class="hub-line" id="shop-pity"></div>
+      <button type="button" class="odds-toggle" id="odds-toggle">확률 보기</button>
+      <div id="odds" hidden></div>
+      <div class="look"><canvas id="look-pic" width="166" height="76"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div></div>
+      <div id="wardrobe"></div>
     </section>
   </div>
 </main>
@@ -1909,7 +1928,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.4.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.4.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -1968,7 +1987,6 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="hub-tabs" role="tablist">
       <button type="button" data-hub="chal" aria-pressed="true">도전</button>
       <button type="button" data-hub="exped" aria-pressed="false">원정</button>
-      <button type="button" data-hub="shop" aria-pressed="false">상점</button>
     </div>
     <div class="hub-pane" id="stage-panel" hidden>
       <div class="hub-line num" id="stage-count"></div>
@@ -1982,16 +2000,6 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <button type="button" class="stage-row hard" id="stage-hard" aria-pressed="false"><span class="stage-row-top"><span><b>하드</b><small id="stage-h-info"></small></span><span class="stage-stars" id="stage-h-stars"></span></span><span class="stage-how" id="stage-h-how"></span></button>
         <div class="stage-acts"><button type="button" id="stage-go">출발</button></div>
       </div>
-    </div>
-    <div class="hub-pane" id="shop-panel" hidden>
-      <div class="hub-line num" id="shop-count"></div>
-      <div class="shop-acts"><button type="button" id="gacha-pull">뽑기</button><button type="button" class="stage-hard" id="ticket-buy">뽑기권 사기</button></div>
-      <div class="gacha-result" id="gacha-result" aria-live="polite"></div>
-      <div class="hub-line" id="shop-pity"></div>
-      <button type="button" class="odds-toggle" id="odds-toggle">확률 보기</button>
-      <div id="odds" hidden></div>
-      <div class="look"><canvas id="look-pic" width="166" height="76"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div></div>
-      <div id="wardrobe"></div>
     </div>
     <div class="hub-pane" id="chal-panel">
       <div class="hub-line num" id="chal-count"></div>

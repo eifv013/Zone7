@@ -2542,10 +2542,10 @@ test('2.0.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기의
   assert.ok(!C.gachaTable().some(t => t.slot === 'flag'), '깃발은 뽑기에 없다');
 });
 
-test('2.0.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 15×12칸', () => {
+test('2.0.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 15×11칸', () => {
   const S = require('../src/scene.js');
   assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 15);      // 4.4.6: 여덟 가지를 더했다
-  // 4.4.6: 그림은 15×12칸(앉은 옆모습) 하나. 품종마다 그림이 있고, 모르는 품종은 그 종류의 첫 그림으로 그린다
+  // 4.4.6: 그림은 15×11칸(앉은 옆모습) 하나. 품종마다 그림이 있고, 모르는 품종은 그 종류의 첫 그림으로 그린다
   ['dog', 'cat', 'zzz'].forEach(k => [0, 1].forEach(w => { const r = S.petRows(k, w); assert.equal(r.length, S.PET_H); r.forEach(row => assert.equal(row.length, S.PET_W)); assert.ok(r.some(row => row.includes('e')), '눈'); }));
   C.PET_BREEDS.forEach(b => { assert.ok(S.PET_SPEC[b.id], '그림이 없다: ' + b.id); assert.equal(S.PET_SPEC[b.id].kind, b.kind, b.id); });
   assert.notDeepEqual(S.petRows('dog', 0, 'shiba'), S.petRows('dog', 0, 'beagle'), '품종마다 다르다');

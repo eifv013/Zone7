@@ -613,13 +613,13 @@
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
   }
   /*
-   * 동물 친구(4.4.6): 강아지 24 · 고양이 24. 작은 도트 하나(15×12칸)로 걷는 장면과 창(일행 · 도감)을 함께 그린다.
+   * 동물 친구(4.4.6): 강아지 24 · 고양이 24. 작은 도트 하나(15×11칸)로 걷는 장면과 창(일행 · 도감)을 함께 그린다.
    *   왜: 큰 그림(24×19칸)은 필요 없다고 하셨다. 레퍼런스(앉은 옆모습 도트 고양이 · 강아지)처럼
    *   머리는 왼쪽 앞, 몸은 오른쪽으로 앉고, 꼬리는 오른쪽에서 말려 올라간다. 눈은 1칸 점, 테두리는 없다(라라와 같이).
    *   품종마다 귀 · 꼬리 · 털 · 무늬 · 몸집이 다르다(PET_SPEC). 창에서는 같은 그림을 칸 크기(k)만 키워 쓴다.
    *   글자 뜻(칸): o 몸, q 무늬, d 어두운 귀, z 주둥이(밝게), e 눈, n 코, t2 혀, i 속귀, C 볼, x 다리 사이 선
    */
-  var PET_H = 12, PET_W = 15;
+  var PET_H = 11, PET_W = 15;      // 4.4.8 맨 아래 빈 줄(테두리 자리)을 없애 발이 땅에 닿는다
   var PET_SPEC = {
     jindo: {'size': 'm', 'ear': 'pt', 'tail': 'curl', 'snout': 'mid', 'body': '#ece6d6', 'patch': '#ece6d6', 'kind': 'dog'},
     nureong: {'size': 'm', 'ear': 'pt', 'tail': 'curl', 'snout': 'mid', 'body': '#c08a44', 'patch': '#ead6a6', 'pat': 'belly', 'kind': 'dog'},
@@ -704,8 +704,7 @@
    '..OOOOOOOO...T.',
    '..OOOOOOOOO..T.',
    '..OxOOOOOOOO.T.',
-   '..PPxPPOOOOOTT.',
-   '...............'];
+   '..PPxPPOOOOOTT.'];
   var PET_DOG=[
    '...............',
    '...............',
@@ -717,8 +716,7 @@
    '..OOOOOOOOOT...',
    '..OOOOOOOOOO...',
    '..OxOOOOOOOO...',
-   '..PPxPPOOOOO...',
-   '...............'];
+   '..PPxPPOOOOO...'];
   /** 품종(sp)에 맞춘 칸 그림. sp.wag 면 꼬리 끝이 한 칸 오른다. */
   function petGrid(sp){
    var cat=sp.kind==='cat', G=(cat?PET_CAT:PET_DOG).map(function(r){return r.split('');}), H=G.length, W=PET_W;

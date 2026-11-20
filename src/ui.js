@@ -1643,8 +1643,7 @@
   function setHubTab(t) {
     hubTab = t;
     Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.hub === t)); });
-    $('chal-panel').hidden = t !== 'chal'; $('stage-panel').hidden = t !== 'exped'; $('shop-panel').hidden = t !== 'shop';
-    if (t === 'shop') renderShop();
+    $('chal-panel').hidden = t !== 'chal'; $('stage-panel').hidden = t !== 'exped';      // 4.4.8 상점은 일행 탭으로 옮겼다
   }
   /*
    * 원정 목록: 스테이지마다 한 칸. 규칙·목표·제한 시간과 얻은 표시(클리어·스피드·하드)를 적고, "출발"과 "하드" 단추를 둔다.
@@ -1795,7 +1794,6 @@
   var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', pet: '친구 옷', flag: '깃발 · 도전과 원정의 보상' };
   function renderShop() {
     if (home) return;
-    var shopBtn = document.querySelector('[data-hub="shop"]'); shopBtn.disabled = false; setText(shopBtn, '상점');
     setText($('shop-count'), '뽑기권 ' + state.tickets + '장 · 조각 ' + state.shards + '개 · 간식 ' + fmt(state.treats) + '개');
     setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번\n이미 가진 것이 나오면 조각으로 바뀌어요');
     $('gacha-pull').disabled = false;      // 4.4.1: 뽑기권이 없어도 기계는 열어 볼 수 있다(단추가 꺼진다)
@@ -1852,7 +1850,7 @@
     lookNow = lookWith(worn, pc);
     drawLookScene($('look-pic'), lookNow, lookFrame);
     if (!lookTimer) lookTimer = setInterval(function () {      // 미리 보기의 라라는 제자리걸음을 하고 깃발은 펄럭인다(상점을 보고 있을 때만 그린다)
-      if ($('hub').hidden || hubTab !== 'shop' || !lookNow) return;
+      if (document.body.getAttribute('data-mview') !== 'party' || !lookNow) return;      // 일행 탭을 보고 있을 때만 그린다
       lookFrame = (lookFrame + 1) % 240; drawLookScene($('look-pic'), lookNow, lookFrame);
     }, 130);
     setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '현재 입은 모습');
@@ -4975,7 +4973,7 @@
      * 옆으로 밀어 탭 넘기기(2.8.0): 화면을 왼쪽으로 밀면 다음 탭, 오른쪽으로 밀면 앞 탭으로 간다.
      *   기록 화면: 일지 · 업적 · 도감 · 무전 · 통계 · 패치 · 도움말 · 설정
      *   구역 화면: 1구역 · 2 · 3 … · 방벽
-     *   모험 창  : 도전 · 원정 · 상점
+     *   모험 창  : 도전 · 원정(4.4.8: 상점은 일행 탭)
      * 밀기로 치는 것: 가로로 60px 넘게, 세로보다 두 배 넘게, 0.6초 안에. 위아래로 읽는 중에 잘못 넘어가지 않게 한다.
      * 넘기지 않는 곳: 옆으로 미는 줄(탭 줄, 도감의 묶음 줄), 음량 막대, 글을 적는 칸, 그리고 다른 창(일지 알림, 확인창)이 떠 있을 때.
      * 끝에서는 더 넘어가지 않는다(처음으로 돌아가지 않는다).
@@ -5083,6 +5081,8 @@
     });
 
     // 폰 하단 메뉴: 네 가지 보기 중 하나를 고른다(데스크톱에서는 메뉴가 숨겨져 있고 전부 보인다).
+    // 4.4.8 일행 탭을 열면 상점(옷장 · 뽑기)을 새로 그린다
+    var partyNav = document.querySelector('[data-mview-set="party"]'); if (partyNav) partyNav.addEventListener('click', function () { renderShop(); });
     document.querySelectorAll('[data-mview-set]').forEach(function (b) {
       b.addEventListener('click', function () {
         document.body.setAttribute('data-mview', b.dataset.mviewSet);
@@ -5244,6 +5244,7 @@
     catch (e) { console.warn('scene', e); scene = null; }
     boot.mark('ready');
     setInterval(safeFrame, 100);
+    try { renderShop(); } catch (e) { /* 상점은 일행 탭을 열 때 다시 그린다 */ }      // 4.4.8 상점이 일행 탭에 늘 있으니(넓은 화면) 처음에 한 번 그린다
     window.ZONE7_STARTED = true;      // 안전장치(template.html)에게 무사히 시작했다고 알린다. 게임은 여기서 이미 돌고 있다
     // 아래 셋은 부가 기능이다(1.2.2): 여기서 오류가 나도 게임 시작을 막지 않게 하나씩 감싼다
     try { Cloud.init(); } catch (e) { console.warn('cloud', e); }
