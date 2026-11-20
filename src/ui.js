@@ -2031,6 +2031,18 @@
     gMsg('뽑기권 ' + fmt(t) + '장 · 전설 보장까지 ' + C.gachaPityLeft(state) + '번');
   }
   function gOpenMachine() { gst = { mode: 'idle', at: gNow(), items: [], taps: 0, tapAt: 0, raf: 0 }; $('gacha-veil').hidden = false; gIdleActs(); gLoop(); }
+  /** 4.4.2 기계 창의 확률표: 등급별 합계, 품목마다 확률(코어의 gachaTable 그대로), 가진 것은 흐리게, 보장까지 남은 횟수. */
+  function gOdds() {
+    var box = $('gacha-odds'), table = C.gachaTable(), key = table.map(function (t) { return C.ownsCosmetic(state, t.id) ? 1 : 0; }).join('') + C.gachaPityLeft(state);
+    if (box.getAttribute('data-k') === key) return; box.setAttribute('data-k', key); box.textContent = '';
+    box.appendChild(el('div', 'odds-head', '전설 보장까지 ' + C.gachaPityLeft(state) + '번 · ' + C.GACHA_PITY + '번 안에 전설이 한 번은 나와요'));
+    C.RARITIES.forEach(function (rn, ri) {
+      var items = table.filter(function (t) { return t.rarity === ri; }); if (!items.length) return;
+      box.appendChild(el('div', 'odds-head', rn + ' · 합계 ' + (C.GACHA_ODDS[ri] * 100).toFixed(0) + '% · ' + items.length + '종'));
+      items.forEach(function (t) { var own = C.ownsCosmetic(state, t.id), row = el('div', 'gi' + (own ? ' own' : '')); row.appendChild(el('b', '', t.name + (own ? ' · 있음' : ''))); row.appendChild(el('span', 'num', t.pct.toFixed(2) + '%')); box.appendChild(row); });
+    });
+    box.appendChild(el('div', 'odds-items', '이미 있는 것이 나오면 조각으로 바뀌어요(일반 ' + C.SHARDS_DUP[0] + ' · 희귀 ' + C.SHARDS_DUP[1] + ' · 전설 ' + C.SHARDS_DUP[2] + '개).'));
+  }
   function gClose() { $('gacha-veil').hidden = true; if (gst.raf) cancelAnimationFrame(gst.raf); gst.raf = 0; Store.save(); renderShop(); }
   function gStart(n) {
     var r = n === 1 ? C.pullGacha(state) : C.pullGachaMany(state, n); if (!r.ok) return;
@@ -4700,6 +4712,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (b) { b.addEventListener('click', function () { if (b.disabled) return; setHubTab(b.dataset.hub); if (b.dataset.hub === 'exped') renderStages(); }); });
     $('gacha-pull').addEventListener('click', gOpenMachine);      // 4.4.1: 뽑기는 기계 창에서(1회 · 10회)
     $('gacha-close').addEventListener('click', gClose);
+    $('gacha-odds-toggle').addEventListener('click', function () { var o = $('gacha-odds'); o.hidden = !o.hidden; if (!o.hidden) gOdds(); setText($('gacha-odds-toggle'), o.hidden ? '확률 보기' : '확률 접기'); sfx('click'); });
     $('gacha-cv').addEventListener('click', function (e) { var rc = $('gacha-cv').getBoundingClientRect(); gTap((e.clientX - rc.left) / rc.width * GW, (e.clientY - rc.top) / rc.height * GH); });
     $('ticket-buy').addEventListener('click', function () { if (C.buyTicket(state).ok) { sfx('buy'); Store.save(); renderShop(); } });
     $('odds-toggle').addEventListener('click', function () { oddsOpen = !oddsOpen; renderShop(); });
