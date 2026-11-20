@@ -857,6 +857,22 @@ canvas.labcv { background: #1c2a2e; margin-bottom: 0; border-bottom-left-radius:
 .ward-strip .bad { color: #fff; background: #b8402e; } .ward-strip .stop { color: #9ad0e8; } .ward-strip .none { color: #55707a; } .ward-strip .has { color: #f0b400; }
 .ward-tally { display: flex; gap: 6px; margin: 4px 0 6px; } .ward-tally span { flex: 1; text-align: center; font: 600 12px/1 var(--font-body); padding: 7px 2px; border-radius: 8px; border: 1px solid var(--edge); white-space: nowrap; }
 .ward-tally .stop { color: #6aaede; } .ward-tally .cure { color: var(--hazard); } .ward-tally .turn { color: #d8644e; }
+.ward-wrap { position: relative; } .ward-wrap .ward-pop { position: absolute; transform: translate(-50%, 0); font: 700 13px/1 var(--font-mono); color: #9ad0e8; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 0 #0a1214, 0 0 4px #0a1214; animation: ward-pop .9s ease-out both; z-index: 2; }
+.ward-wrap .ward-pop.cure { color: #ffd95a; font-size: 16px; } .ward-wrap .ward-pop.boost { color: #c9a8ff; } .ward-wrap .ward-pop.bad { color: #ff7a6a; }
+@keyframes ward-pop { 0% { transform: translate(-50%, 4px); opacity: 0; } 15% { transform: translate(-50%, 0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-50%, -26px); opacity: 0; } }
+.boost-btn { width: 100%; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 2px solid #b48aff; border-radius: 10px; background: color-mix(in srgb, #b48aff 14%, transparent); color: var(--ink); font: 700 14px/1.2 var(--font-body); cursor: pointer; }
+.boost-btn[hidden], .pick-two[hidden] { display: none; }
+#serum-btn { padding-top: 10px; padding-bottom: 10px; } #lab .ward-strip { margin-bottom: 6px; } #lab-bar { margin: 2px 0 6px; }
+.boost-btn.armed { background: #b48aff; color: #17180f; animation: plat-full .6s steps(2) infinite; }
+.pick-two { display: flex; gap: 8px; margin-top: 8px; } .pick-two button { flex: 1; border: 2px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); padding: 9px 6px; font: 700 13px/1.35 var(--font-body); cursor: pointer; }
+.pick-two button small { display: block; font-weight: 600; color: var(--safe); font-size: 12px; } .pick-two button.hard { border-color: var(--hazard); } .pick-two button.hard small { color: var(--hazard); }
+/* 회진 차트: 전에 집계 줄이 있던 자리에 같은 꼴(세 칸)로 둔다. 폰 한 화면에 들어가야 해서 테두리 상자는 쓰지 않는다 */
+.ward-chart { margin: 4px 0 6px; padding: 0; border: 0; } .ward-chart .order-head { margin-bottom: 4px; } .ward-chart .order-head .num { color: var(--safe); font-weight: 700; font-size: 13px; }
+#chart-lines { display: flex; gap: 6px; } #chart-lines[hidden] { display: none; }
+.chart-line { flex: 1; display: flex; gap: 4px; justify-content: center; align-items: baseline; padding: 7px 2px; border: 1px solid var(--edge); border-radius: 8px; font: 600 12px/1 var(--font-body); white-space: nowrap; }
+.chart-line b { display: none; } .chart-line em { font-style: normal; font-weight: 700; color: var(--safe); font-family: var(--font-mono); }
+.chart-line.ok { background: var(--safe); border-color: var(--safe); color: #fff; } .chart-line.ok em { color: #fff; }
+.ward-chart .pick-two { margin-top: 0; }
 canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
 #serum-btn { margin-bottom: 4px; } #serum-btn.nope { animation: jam-shake .3s steps(2) 1; background: var(--blood); color: #fff; } #lab-bar { margin: 0 0 8px; }
 #fork[hidden] { display: none; } #fork { margin-top: 6px; } #fork.ready { border-color: var(--hazard); } #fork .lab-offers { margin: 8px 0 0; grid-template-columns: 1fr 1fr; }
@@ -1361,7 +1377,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.0.7</div>
+  <div class="boot-ver">7구역 알파 4.0.8</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1623,13 +1639,25 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="trade lab" id="lab" hidden>
         <!-- 3.9.2 5구역 혈청 달이기: 머리줄 → 시험관(누르면 거둔다) → 갈림길 카드 → 기록 -->
         <div class="order-head plat-head"><span class="label">병실</span><span class="num" id="lab-points"></span></div>
-        <canvas class="belt plat labcv" id="labscene" width="184" height="96" role="button" tabindex="0" data-tap aria-label="병실. 사람을 누르면 혈청 한 대를 놓는다"></canvas>
+        <div class="ward-wrap" id="ward-wrap"><canvas class="belt plat labcv" id="labscene" width="184" height="112" role="button" tabindex="0" data-tap aria-label="병실. 사람을 누르면 혈청 한 대를 놓는다"></canvas></div>
         <div class="ward-strip" id="ward-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
         <!-- 4.0.4: 혈청 만들기는 큰 단추로(그림 속 상자는 누르기에 작았다). 단추 아래 막대가 다음 한 대까지 찬다 -->
+        <!-- 4.0.8 강화 혈청: 연구원이 가져왔을 때만 보인다. 누르고 사람을 고른다 -->
+        <button type="button" class="boost-btn" id="boost-btn" hidden></button>
         <button type="button" class="fortify sell plat-go" id="serum-btn"><span id="serum-name">혈청 만들기</span><span class="num" id="serum-count"></span></button>
         <div class="label" id="lab-rate"></div>
         <div class="autobar" id="lab-bar" aria-hidden="true"></div>
-        <div class="ward-tally"><span class="stop" id="tally-stop"></span><span class="cure" id="tally-cure"></span><span class="turn" id="tally-turn"></span></div>
+        <!-- 4.0.8 급한 환자를 살리면 둘 가운데 하나를 고른다(고를 때만 보인다) -->
+        <div class="order" id="er-pick" hidden>
+          <div class="order-head"><span class="label">급한 환자를 살렸어요</span><span class="num">하나 고르기</span></div>
+          <div class="pick-two"><button type="button" id="er-pick-a"></button><button type="button" id="er-pick-b"></button></div>
+        </div>
+        <!-- 4.0.8 회진 차트(집계 줄을 대신한다): 세 줄을 채우면 혈청 값이 오르고 다음 차트를 고른다 -->
+        <div class="order ward-chart" id="ward-chart">
+          <div class="order-head"><span class="label" id="chart-name"></span><span class="num" id="chart-count"></span></div>
+          <div id="chart-lines"><div class="chart-line"><b></b><span></span><em></em></div><div class="chart-line"><b></b><span></span><em></em></div><div class="chart-line"><b></b><span></span><em></em></div></div>
+          <div class="pick-two" id="chart-next" hidden><button type="button" id="chart-easy"></button><button type="button" class="hard" id="chart-hard"></button></div>
+        </div>
         <div class="label" id="lab-note"></div>
         <div class="label" id="lab-record"></div>
       </div>
@@ -1813,7 +1841,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.0.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.0.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

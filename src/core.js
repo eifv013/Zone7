@@ -578,7 +578,7 @@
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
-      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8 }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, dosesAll: 0, serumTaps: 0, labV: 3, labV4: 1,
+      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, boons: { rich: 0, slow: 0, box: 0, quick: 0 }, chartBonus: 0, chartNo: 0, savedRun: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8, mix: 0, boost: 0, hand: 999, erNext: 35, er: null, pick: null }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, dosesAll: 0, serumTaps: 0, labV: 3, labV4: 1,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
@@ -725,6 +725,14 @@
     s.curesRun = clamp(safeCount(raw.curesRun), 0, 1e12); s.stopsRun = clamp(safeCount(raw.stopsRun), 0, 1e12); s.turnedRun = clamp(safeCount(raw.turnedRun), 0, 1e12); s.dosesRun = clamp(safeCount(raw.dosesRun), 0, 1e12); s.serumTaps = clamp(safeCount(raw.serumTaps), 0, 1e12);
     var rw = raw.ward && typeof raw.ward === 'object' ? raw.ward : {};
     s.ward = { seats: [], stock: clamp(safeCount(rw.stock), 0, 40), make: clamp(safeNum(rw.make, 0), 0, 1), nurse: clamp(safeNum(rw.nurse, 0), 0, 1), stun: 0, arrive: clamp(safeNum(rw.arrive, 0), 0, 1) };
+    /* 4.0.8 급한 환자 · 회진 차트 · 강화 혈청. 저장이 깨져 있어도 놀이가 멈추지 않게 하나하나 걸러 읽는다 */
+    s.boons = {}; BOONS.forEach(function (d) { s.boons[d.id] = clamp(safeCount(raw.boons && typeof raw.boons === 'object' ? raw.boons[d.id] : 0), 0, 999); });
+    s.chartBonus = clamp(safeNum(raw.chartBonus, 0), 0, 1e6); s.chartNo = clamp(safeCount(raw.chartNo), 0, 1e9); s.savedRun = clamp(safeCount(raw.savedRun), 0, 1e12);
+    s.ward.mix = clamp(safeCount(rw.mix), 0, 999); s.ward.boost = rw.boost ? 1 : 0; s.ward.hand = 999; s.ward.erNext = clamp(safeNum(rw.erNext, ER_FIRST), 1, ER_EVERY);
+    s.ward.er = rw.er && typeof rw.er === 'object' ? { t: clamp(safeNum(rw.er.t, ER_TIME), 1, ER_TIME), dose: clamp(safeCount(rw.er.dose), 0, WARD_DOSES - 1), look: clamp(safeCount(rw.er.look), 0, 999) } : null;
+    s.ward.pick = Array.isArray(rw.pick) && rw.pick.length === 2 && rw.pick.every(function (id) { return !!BOON_BY[id]; }) && rw.pick[0] !== rw.pick[1] ? rw.pick.slice() : null;
+    var rc5 = rw.chart && typeof rw.chart === 'object' && Array.isArray(rw.chart.lines) ? rw.chart : null;
+    if (rc5 && rc5.lines.length === 3 && rc5.lines.every(function (l) { return l && typeof l === 'object' && CHART_TEXT[l.k]; })) s.ward.chart = { hard: !!rc5.hard, done: !!rc5.done, lines: rc5.lines.map(function (l) { var need = clamp(safeCount(l.need), 1, 999); return { k: l.k, need: need, have: clamp(safeCount(l.have), 0, need) }; }) };
     (Array.isArray(rw.seats) ? rw.seats : []).slice(0, SEAT_MAX).forEach(function (p) {
       p = p && typeof p === 'object' ? p : {};
       if (typeof p.dose === 'number' && p.dose >= 0) s.ward.seats.push({ m: clamp(safeNum(p.m, 0), 0, 0.999), dose: clamp(safeCount(p.dose), 0, WARD_DOSES - 1), r: clamp(safeNum(p.r, 1), 0.5, 1.5), look: clamp(safeCount(p.look), 0, 999), since: clamp(safeNum(p.since, 0), 0, 1e6) });
@@ -1825,7 +1833,8 @@
    */
   var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
   var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
-  var TEST = { rush: 1 };      // 화면 테스트용 손잡이: 돌진이 오는 확률에 곱한다(0 이면 오지 않는다). 게임에서는 늘 1
+  var TEST = { rush: 1, er: 1 };      // er: 급한 환자가 오는 빠르기에 곱한다(0 이면 오지 않는다)
+  void 0;      // 화면 테스트용 손잡이: 돌진이 오는 확률에 곱한다(0 이면 오지 않는다). 게임에서는 늘 1
   var HORDE_SECONDS = 45, HORDE_SPRINT = 0.08, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_DIST = 0.45, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
   var CAR_MULTS = [0, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.95, 2.25, 2.6, 3];
@@ -2018,14 +2027,29 @@
    */
   var SEAT_BASE = 4, SEAT_MAX = 6, SERUM_SECONDS = 4, SERUM_CAP = 6, SERUM_CAP_STEP = 2, SERUM_TAP = 0.12, TURN_SECONDS = 16, TURN_BREAK = 2, TURN_STUN = 1.2, WARD_DOSES = 6, WARD_CURE = 12, WARD_STAY = 12, WARD_STAY_ONE = 5, WARD_ARRIVE = 4.5, WARD_FILL = 1.2, NURSE_SECONDS = 2, NURSE_FROM = 0.7, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
   var RACK_COST = 2e23, RACK_GROWTH = 30, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
+  var ER_FIRST = 35, ER_EVERY = 70, ER_TIME = 22, ER_HAND = 30;      // 급한 환자: 첫 침대까지 · 그 뒤 간격 · 여섯 대를 놓을 시간 · '손을 쓰고 있다'로 치는 시간(초)
+  var BOOST_DOSES = 3, MIX_BASE = 14, MIX_MIN = 6;                    // 강화 혈청: 몇 대 몫인지 · 손으로 몇 대마다 오는지(연구원 5명마다 1대씩 줄어 MIX_MIN 까지)
+  var CHART_EASY = 0.1, CHART_HARD = 0.3;                             // 회진 차트를 끝낼 때마다 혈청 값에 더해지는 몫
+  var BOON_RICH = 0.2, BOON_SLOW = 0.1, BOON_QUICK = 0.25;
+  var BOONS = [
+    { id: 'rich', name: '진한 혈청', text: '혈청 값 +20%' },
+    { id: 'slow', name: '느린 맥', text: '변하는 시간 +10%' },
+    { id: 'box', name: '큰 상자', text: '혈청 칸 +1' },
+    { id: 'quick', name: '빠른 손', text: '단추 한 번에 +25%' }
+  ];
+  var BOON_BY = {}; BOONS.forEach(function (d) { BOON_BY[d.id] = d; });
+  var CHART_TEXT = { stop: '멈추기', dose: '손으로 놓기', cure: '되돌리기', er: '급한 환자', boost: '강화 혈청' };      // 세 칸에 나란히 들어가야 해서 짧게 적는다
   function seatCount(state) { return clamp(SEAT_BASE + Math.floor(safeNum(state.racks, 0)), SEAT_BASE, SEAT_MAX); }
-  function serumCap(state) { return SERUM_CAP + SERUM_CAP_STEP * mods(state).peak; }
-  function turnSeconds(state) { return TURN_SECONDS * (1 + mods(state).sterile); }
+  function boonOf(state, id) { var b = state.boons; return b && b[id] > 0 ? b[id] : 0; }
+  function serumCap(state) { return SERUM_CAP + SERUM_CAP_STEP * mods(state).peak + boonOf(state, 'box'); }
+  function turnSeconds(state) { return TURN_SECONDS * (1 + mods(state).sterile) * (1 + BOON_SLOW * boonOf(state, 'slow')); }
   function serumSeconds(state) { return SERUM_SECONDS * assistFactor(state); }
   function nurseOn(state) { return (state.upgrades.nurse || 0) > 0 && autoEvents(state, 4); }
-  function newWard() { return { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8 }; }
+  function newWard() { return { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8, mix: 0, boost: 0, hand: 999, erNext: ER_FIRST, er: null, pick: null }; }
   function wardOf(state) {
     var w = state.ward; if (!w || typeof w !== 'object' || !Array.isArray(w.seats)) w = state.ward = newWard();
+    if (!(w.erNext > 0)) w.erNext = ER_FIRST; if (!(w.mix >= 0)) w.mix = 0; if (!(w.hand >= 0)) w.hand = 999;
+    if (!w.chart) w.chart = newChart(state, false);
     var n = seatCount(state); while (w.seats.length < n) w.seats.push({ wait: 0 }); if (w.seats.length > n) w.seats.length = n;      // { wait } 는 빈 의자
     return w;
   }
@@ -2042,7 +2066,7 @@
     var w = wardOf(state);
     if (w.stun > 0) return fail('stun');
     if (w.stock >= serumCap(state)) return fail('full');
-    w.make += SERUM_TAP; state.serumTaps = (state.serumTaps || 0) + 1;
+    w.make += SERUM_TAP * (1 + BOON_QUICK * boonOf(state, 'quick')); w.hand = 0; state.serumTaps = (state.serumTaps || 0) + 1;
     var made = 0; while (w.make >= 1 && w.stock < serumCap(state)) { w.make -= 1; w.stock++; made++; }
     return { ok: true, made: made, stock: w.stock };
   }
@@ -2061,15 +2085,94 @@
     if (w.stun > 0 && !auto) return fail('stun');
     if (!p || !(p.dose >= 0)) return fail('empty');
     if (!(w.stock >= 1)) return fail('nostock');
-    w.stock--; p.dose++; p.since = 0;
-    var mult = p.dose === 1 ? 1 : p.dose >= WARD_DOSES ? WARD_CURE - 1 : 0, gain = doseValue(state) * mult, points = 0;
+    w.stock--;
+    var out = landDose(state, i, 1, auto, rng);
+    if (!auto) mixTick(state, w, out);
+    return out;
+  }
+  /*
+   * 4.0.8 병실에 세 가지를 더했다(연구 성과를 없앤 자리).
+   *   ① 급한 환자: 손을 쓰고 있을 때 가끔 이동 침대가 들어온다. ER_TIME 초 안에 여섯 대를 다 놓아야 한다(한 대로는 멈추지 않는다. 간호사는 손대지 않는다).
+   *      살리면 둘 가운데 하나를 고른다(BOONS, 이번 회차 동안). 놓치면 의자의 사람과 똑같이 변해 달려든다.
+   *   ② 회진 차트: 세 줄을 다 채우면 혈청 값이 오르고, 다음 차트를 둘 가운데 고른다(가벼운 것 / 빡빡한 것: 누가 변하면 처음부터).
+   *   ③ 강화 혈청: 손으로 mixNeed 대를 놓을 때마다 연구원이 한 대 가져온다(연구원이 많을수록 자주). 한 대가 BOOST_DOSES 대 몫이고, 누구에게 쓸지 고른다.
+   *   셋 다 '손으로' 한 일로만 나아간다. 자리를 비운 동안(굵은 걸음)에는 급한 환자가 오지 않는다.
+   */
+  function mixNeed(state) { return Math.max(MIX_MIN, MIX_BASE - Math.floor(safeNum(state.staff, 0) / 5)); }
+  function newChart(state, hard) {
+    var no = Math.floor(safeNum(state.chartNo, 0)), k = hard ? 1.5 : 1;
+    var a = no % 2 === 0 ? { k: 'stop', need: Math.min(14, 4 + no) } : { k: 'dose', need: Math.min(40, 12 + 3 * no) };
+    var b = no % 2 === 0 ? { k: 'boost', need: hard ? 2 : 1 } : { k: 'er', need: 1 };
+    var c = { k: 'cure', need: Math.min(4, 1 + Math.floor(no / 3)) + (hard ? 1 : 0) };
+    a.need = Math.ceil(a.need * k);
+    return { hard: !!hard, done: false, lines: [a, b, c].map(function (l) { return { k: l.k, need: l.need, have: 0 }; }) };
+  }
+  /** 차트의 k 줄을 n 만큼 채운다. 세 줄이 다 차면 그 자리에서 혈청 값이 오른다(다음 차트는 nextChart 로 고른다). */
+  function chartTick(state, k, n) {
+    var w = state.ward, ch = w && w.chart; if (!ch || ch.done) return false;
+    ch.lines.forEach(function (l) { if (l.k === k) l.have = Math.min(l.need, l.have + (n || 1)); });
+    if (!ch.lines.every(function (l) { return l.have >= l.need; })) return false;
+    ch.done = true; state.chartBonus = safeNum(state.chartBonus, 0) + (ch.hard ? CHART_HARD : CHART_EASY); state.chartNo = Math.floor(safeNum(state.chartNo, 0)) + 1;
+    return true;
+  }
+  function chartMiss(state) { var ch = state.ward && state.ward.chart; if (ch && ch.hard && !ch.done) { ch.lines.forEach(function (l) { l.have = 0; }); return true; } return false; }
+  function nextChart(state, hard) {
+    if (!zoneOpen(state, 4)) return fail('locked');
+    var w = wardOf(state); if (!w.chart.done) return fail('notdone');
+    w.chart = newChart(state, !!hard); return { ok: true, hard: !!hard };
+  }
+  function pickBoon(state, id) {
+    if (!zoneOpen(state, 4)) return fail('locked');
+    var w = wardOf(state); if (!w.pick || w.pick.indexOf(id) < 0) return fail('nopick');
+    if (!state.boons || typeof state.boons !== 'object') state.boons = {};
+    state.boons[id] = boonOf(state, id) + 1; w.pick = null; return { ok: true, id: id, name: BOON_BY[id].name };
+  }
+  /** where(의자 번호 또는 'er')의 사람에게 n 대가 들어간다. 값 · 집계 · 차트 · 되돌림을 한곳에서 치른다. */
+  function landDose(state, where, n, auto, rng) {
+    var w = wardOf(state), er = where === 'er', p = er ? w.er : w.seats[where], before = p.dose, after = Math.min(WARD_DOSES, before + n), roll = typeof rng === 'function' ? rng : Math.random;
+    p.dose = after; p.since = 0;
+    var mult = (before === 0 ? 1 : 0) + (after >= WARD_DOSES ? WARD_CURE - 1 : 0), gain = doseValue(state) * mult;
     if (gain > 0) { earn(state, gain); state.labEarned = (state.labEarned || 0) + gain; }
-    state.points += points;
-    var out = { ok: true, at: i, dose: p.dose, stop: p.dose === 1, cure: p.dose >= WARD_DOSES, gain: gain, points: points, auto: !!auto };
-    state.dosesAll = (state.dosesAll || 0) + 1;
-    if (!auto) state.dosesRun = (state.dosesRun || 0) + 1;
-    if (out.stop) state.stopsRun = (state.stopsRun || 0) + 1;
-    if (out.cure) { state.curesRun = (state.curesRun || 0) + 1; w.seats[i] = { wait: 0 }; }      // 4.0.6: 서류 찾기는 넣지 않는다(4.0.5 에 잠깐 있었다)
+    var out = { ok: true, at: where, dose: after, stop: before === 0 && !er, cure: after >= WARD_DOSES, gain: gain, points: 0, auto: !!auto, er: er };
+    state.dosesAll = (state.dosesAll || 0) + (after - before);
+    if (!auto) { state.dosesRun = (state.dosesRun || 0) + (after - before); w.hand = 0; if (chartTick(state, 'dose', after - before)) out.chart = true; }
+    if (out.stop) { state.stopsRun = (state.stopsRun || 0) + 1; if (chartTick(state, 'stop')) out.chart = true; }
+    if (out.cure) {
+      state.curesRun = (state.curesRun || 0) + 1; if (chartTick(state, 'cure')) out.chart = true;
+      if (er) {
+        var a = Math.floor(roll() * BOONS.length) % BOONS.length, b = (a + 1 + Math.floor(roll() * (BOONS.length - 1))) % BOONS.length;
+        w.er = null; w.erNext = ER_EVERY; w.pick = [BOONS[a].id, BOONS[b].id]; state.savedRun = (state.savedRun || 0) + 1; out.pick = w.pick; if (chartTick(state, 'er')) out.chart = true;
+      } else w.seats[where] = { wait: 0 };      // 서류 찾기는 넣지 않는다(4.0.5 에 잠깐 있었다)
+    }
+    return out;
+  }
+  /** 이동 침대의 급한 환자에게 한 대 놓는다(손으로만). */
+  function injectEr(state, rng) {
+    if (!zoneOpen(state, 4)) return fail('locked');
+    if (!(state.staff > 0)) return fail('stopped');
+    var w = wardOf(state);
+    if (w.stun > 0) return fail('stun');
+    if (!w.er) return fail('empty');
+    if (!(w.stock >= 1)) return fail('nostock');
+    w.stock--;
+    var out = landDose(state, 'er', 1, false, rng);
+    mixTick(state, w, out);
+    return out;
+  }
+  function mixTick(state, w, out) { if (w.boost) return; w.mix = (w.mix || 0) + 1; if (w.mix >= mixNeed(state)) { w.mix = 0; w.boost = 1; if (out) out.boost = true; } }
+  /** 강화 혈청을 where(의자 번호 또는 'er')의 사람에게 놓는다: 한 번에 BOOST_DOSES 대 몫. 냉장 상자의 혈청은 쓰지 않는다. */
+  function boostSeat(state, where, rng) {
+    if (!zoneOpen(state, 4)) return fail('locked');
+    if (!(state.staff > 0)) return fail('stopped');
+    var w = wardOf(state);
+    if (w.stun > 0) return fail('stun');
+    if (!w.boost) return fail('noboost');
+    if (where !== 'er') where = Math.floor(safeNum(where, -1));
+    var p = where === 'er' ? w.er : w.seats[where];
+    if (!p || !(p.dose >= 0)) return fail('empty');
+    w.boost = 0;
+    var out = landDose(state, where, BOOST_DOSES, false, rng); out.boosted = true;
+    if (chartTick(state, 'boost')) out.chart = true;
     return out;
   }
   function stepWard(state, dt, rng, events) {
@@ -2078,10 +2181,17 @@
     var w = wardOf(state), auto = autoEvents(state, 4), aide = auto && (state.upgrades.autolab || 0) > 0, nurse = nurseOn(state), roll = typeof rng === 'function' ? rng : Math.random;
     if (dt > 5) {      // 굵은 걸음(자리 비움 등): 하나하나 세지 않는다. 조교와 간호사가 다 있어야 돌아간다
       if (aide && nurse) { var flat = labRate(state) * dt; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; }
-      w.seats = []; w.make = 0; w.nurse = 0; w.arrive = 0; wardOf(state); return;
+      w.seats = []; w.make = 0; w.nurse = 0; w.arrive = 0; w.er = null; w.hand = 999; wardOf(state); return;      // 자리를 비운 동안에는 급한 환자도 오지 않는다
     }
     var steps = Math.max(1, Math.ceil(dt / 0.25)), h = dt / steps, turn = turnSeconds(state), cap = serumCap(state);
     if (w.stun > 0) w.stun = Math.max(0, w.stun - dt);
+    w.hand = Math.min(999, (w.hand || 0) + dt);
+    /* 급한 환자: 손을 쓰고 있을 때(ER_HAND 초 안에 누른 적이 있을 때)만 다음 침대까지의 시간이 간다. 보고 있지 않은 사람에게 벌칙을 주지 않으려는 것 */
+    if (w.er) { w.er.t -= dt; if (w.er.t <= 0) {
+      var brokeE = Math.min(w.stock, TURN_BREAK); w.stock -= brokeE; w.stun = TURN_STUN; state.turnedRun = (state.turnedRun || 0) + 1;
+      if (events) events.push({ type: 'ward-turned', at: 'er', broke: brokeE, look: w.er.look, reset: chartMiss(state) });
+      w.er = null; w.erNext = ER_EVERY;
+    } } else if (!w.pick && w.hand < ER_HAND) { w.erNext -= dt * TEST.er; if (w.erNext <= 0) { w.er = { t: ER_TIME, dose: 0, look: Math.floor(roll() * 1000) }; w.erNext = ER_EVERY; if (events) events.push({ type: 'ward-er' }); } }
     for (var k = 0; k < steps; k++) {
       if (aide && w.stock < cap) { w.make += h / serumSeconds(state); while (w.make >= 1 && w.stock < cap) { w.make -= 1; w.stock++; } }
       if (w.stock >= cap) w.make = Math.min(w.make, 0.999);
@@ -2105,7 +2215,7 @@
           /* 변했다(벌칙): 변한 사람이 달려들어 냉장 상자의 혈청을 TURN_BREAK 대 깨뜨리고, TURN_STUN 초 동안 아무것도 누를 수 없다(화면 가득 달려든다).
              굵은 걸음이 아닐 때만 일어나니, 자리를 비운 동안에는 벌칙이 없다 */
           var broke = Math.min(w.stock, TURN_BREAK); w.stock -= broke; w.stun = TURN_STUN; w.seats[i] = { wait: 0 }; state.turnedRun = (state.turnedRun || 0) + 1;
-          if (events) events.push({ type: 'ward-turned', at: i, broke: broke, look: p.look });
+          if (events) events.push({ type: 'ward-turned', at: i, broke: broke, look: p.look, reset: chartMiss(state) });
         } }
       }
       if (nurse) {
@@ -2402,7 +2512,7 @@
    */
   function labRate(state) {
     if (!zoneOpen(state, 4) || !(state.staff > 0)) return 0;
-    return state.staff * milestoneMult(state.staff) * LAB_VALUE * LAB_SCALE * mods(state).lab * globalMult(state) * seatCount(state) / SEAT_BASE * Math.pow(REAGENT_STEP, state.reagent || 0) * recordMult(state);      // 4.0.5: 병원 서류는 혈청 값을 올린다
+    return state.staff * milestoneMult(state.staff) * LAB_VALUE * LAB_SCALE * mods(state).lab * globalMult(state) * seatCount(state) / SEAT_BASE * Math.pow(REAGENT_STEP, state.reagent || 0) * recordMult(state) * (1 + BOON_RICH * boonOf(state, 'rich')) * (1 + safeNum(state.chartBonus, 0));      // 4.0.5: 병원 서류는 혈청 값을 올린다
   }
   function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + labRate(state) + guardRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
@@ -4120,7 +4230,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    seatCount: seatCount, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    seatCount: seatCount, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,

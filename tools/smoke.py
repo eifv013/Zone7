@@ -368,7 +368,7 @@ def run_case(browser, name, size, state, mode):
         if not page.locator('#lab').is_visible(): problems.append('5구역 탭에 병실이 없다')
         if page.locator('#fork').is_visible() or page.locator('.lab-offer:visible').count(): problems.append('없앤 연구 성과 카드가 보인다')
         if '빈 자리' not in text('ward-strip'): problems.append('자리마다의 상태 글이 없다: ' + text('ward-strip'))
-        if '멈춘 사람' not in text('tally-stop') or '변한 사람' not in text('tally-turn'): problems.append('집계 줄이 없다')
+        if page.locator('.ward-tally').count(): problems.append('없앤 집계 줄이 남아 있다')
         if '연구원을 뽑으면' not in text('lab-rate'): problems.append('연구원이 없을 때의 안내가 없다: ' + text('lab-rate'))
         for old in ['#lab-reroll', '#lab-focus', '#row-scope', '#lab-done', '#tubes']:
             if page.locator(old).count(): problems.append('옛 단추나 개조가 남아 있다: ' + old)
@@ -403,8 +403,27 @@ def run_case(browser, name, size, state, mode):
             page.mouse.click(*ward_xy(who)); page.wait_for_timeout(250)
             if page.get_attribute('#lab', 'data-doses') != '1': problems.append('사람을 눌렀는데 혈청이 놓이지 않는다: %s' % page.get_attribute('#lab', 'data-doses'))
             if seats()[who] != '1': problems.append('한 대를 놓았는데 대수가 그대로다: %s' % seats())
+            if page.locator('#ward-wrap .ward-pop').count() < 1: problems.append('혈청을 놓았는데 얻은 것이 그림에 뜨지 않는다')
+            if not page.get_attribute('#lab', 'data-chart').startswith('1/'): problems.append('사람을 멈췄는데 회진 차트가 그대로다: %s' % page.get_attribute('#lab', 'data-chart'))
+        if '+' not in text('lab-points') or '되돌림' not in text('lab-points'): problems.append('제목 줄에 혈청으로 얻는 것이 없다: ' + text('lab-points'))
+        if page.locator('#chart-lines .chart-line:visible').count() != 3: problems.append('회진 차트 세 칸이 안 보인다')
+        if page.locator('#boost-btn').is_visible() or page.locator('#er-pick').is_visible(): problems.append('없을 때는 숨어야 할 강화 혈청 단추나 고르기 상자가 보인다')
+        # 4.0.8 급한 환자: 손을 쓰고 있으면 이동 침대가 온다(시험에서는 빨리 오게 한다). 복도를 누르면 그 사람에게 놓인다
+        page.evaluate("GameCore.TEST.er = 80"); er_in = False
+        for _ in range(30):
+            tap('#serum-btn'); page.wait_for_timeout(100)
+            if (page.get_attribute('#labscene', 'data-er') or '') != '': er_in = True; break
+        page.evaluate("GameCore.TEST.er = 0")
+        if not er_in: problems.append('손을 쓰고 있는데 급한 환자가 오지 않는다')
+        else:
+            for _ in range(40):
+                if int(page.get_attribute('#labscene', 'data-stock') or 0) >= 1: break
+                tap('#serum-btn'); page.wait_for_timeout(60)
+            page.wait_for_timeout(700); bxe = page.locator('#labscene').bounding_box(); e0 = page.get_attribute('#labscene', 'data-er')
+            page.mouse.click(bxe['x'] + bxe['width'] * 0.5, bxe['y'] + bxe['height'] * 100 / 112); page.wait_for_timeout(250)
+            if page.get_attribute('#labscene', 'data-er') == e0: problems.append('이동 침대를 눌렀는데 혈청이 놓이지 않는다: %s' % e0)
         turned = False
-        for _ in range(170):
+        for _ in range(260):
             if int(page.get_attribute('#lab', 'data-turned') or 0) >= 1: turned = True; break
             page.wait_for_timeout(200)
         if not turned: problems.append('한 대도 못 맞은 사람이 변하지 않는다')
