@@ -3070,7 +3070,7 @@
     function man(x, y, i, carry, gun) { R(x, y, 3, 2, '#e6c9a0'); R(x, y, 3, 1, i % 3 ? '#3a3028' : i % 2 ? '#6b4a3a' : '#17180f'); R(x, y + 2, 3, 2, gun ? '#4a6a3a' : SH[i % SH.length]); R(x, y + 4, 1, 2, '#2a2e36'); R(x + 2, y + 4, 1, 2, '#2a2e36'); if (carry) { R(x + 3, y + 1, 2, 2, K); R(x + 3, y + 1, 2, 1, '#c9a868'); } if (gun) R(x + 3, y + 2, 3, 1, '#17180f'); }
     function zed(x, y, i) { R(x, y, 3, 2, i % 2 ? '#7fb85a' : '#6aa85a'); R(x + (i % 2 ? 0 : 2), y, 1, 1, '#17180f'); R(x, y + 2, 3, 2, ['#6b4a3a', '#3f5f7a', '#55585f'][i % 3]); R(x + 3, y + 2, 1, 1, '#7fb85a'); R(x, y + 4, 1, 2, '#3a3a36'); R(x + 2, y + 4, 1, 2, '#3a3a36'); }
     if (!n) C.SETTLE.forEach(function (d, di) { var lv = C.settleLv(state, d.id); if (!lv || C.settleBroken(state, d.id)) return; var p = campPlot(d); for (var k = 0; k < Math.min(2, lv); k++) man(p.x + 6 + k * 28 + Math.round(Math.sin(now / 1100 + di * 2 + k * 3) * 4), p.by - 6, di + k); });
-    var free = C.settleFree(state), crowd = n ? 0 : free <= 0 ? 0 : Math.min(9, 1 + Math.floor(Math.log(free + 1) / Math.LN10 * 1.6));
+    var free = n ? C.guardPool(state) : C.settleFree(state), crowd = free <= 0 ? 0 :      /* 4.3.9: 습격 때도 문 앞에 아직 세우지 않은 사람이 보인다 */ Math.min(9, 1 + Math.floor(Math.log(free + 1) / Math.LN10 * 1.6));
     [12, 16, 8, 22, 4, 27, 19, 30, 14].slice(0, crowd).forEach(function (qx, i) { man(qx, 136 - ((Math.floor(now / 600) + i) % 5 === 0 ? 1 : 0), i); });
     campWalk = campWalk.filter(function (w) { return now - w.at < w.ms; });
     campWalk.forEach(function (w, wi) { var tt = (now - w.at) / w.ms; if (tt < 0) return; var pts = w.path, seg = Math.min(pts.length - 2, Math.floor(tt * (pts.length - 1))), lt = tt * (pts.length - 1) - seg, a = pts[seg], b = pts[seg + 1]; man(a[0] + (b[0] - a[0]) * lt, a[1] + (b[1] - a[1]) * lt - (Math.floor(now / 110 + wi) % 2), wi + 3, !w.gun, w.gun); });
@@ -3128,7 +3128,9 @@
     if (!n && started) sc0 = C.raidNeed(state);
     /* 문 앞의 생존자(지금 놓을 수 있는 수): 문 앞 무리 위에 작게. 습격 때는 숨긴다(모두가 싸우러 나가므로) */
     var gl = document.getElementById('camp-gate') || (function () { var e = el('span', 'plot-need can', ''); e.id = 'camp-gate'; e.style.left = (16 / 184 * 100) + '%'; e.style.top = (132 / CAMP_HT * 100) + '%'; $('camp-wrap').appendChild(e); return e; })();
-    var gShow = !n && has; if (gl.hidden !== !gShow) gl.hidden = !gShow; if (gShow) setText(gl, fmt(free) + '명');
+    /* 4.3.9: 습격 때도 문 앞의 수를 띄운다. 습격에는 아직 어느 쪽에도 세우지 않은 생존자(guardPool). 왜(해 보신 말씀): 밤이 되면 세울 사람이 몇 남았는지 안 보여서 답답했다 */
+    var gShow = has, gN = n ? C.guardPool(state) : free; if (gl.hidden !== !gShow) gl.hidden = !gShow;
+    if (gShow) { setText(gl, fmt(gN) + '명'); var gc = 'plot-need' + (n && gN < 1 ? ' broken' : ' can'); if (gl.className !== gc) gl.className = gc; }
     /* 자리 위의 숫자(더 놓아야 하는 사람): 고른 자리와, 문 앞의 사람으로 지금 끝낼 수 있는 자리에만 */
     var wrapN = $('camp-wrap');
     C.SETTLE.forEach(function (d) { var id = 'need-' + d.id, lb = document.getElementById(id), p = campPlot(d), why = C.settleBlock(state, d.id), needN = C.settleNeed(state, d.id), leftN = needN - C.settleWork(state, d.id), show = !n && needN > 0 && why !== 'prev' && why !== 'locked' && (c.flag === d.id || (free >= leftN && free > 0));
