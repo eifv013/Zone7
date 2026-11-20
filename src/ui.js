@@ -2822,7 +2822,7 @@
    *   바탕(campBackdrop)은 한 번만 그리고, 건물 · 사람 · 불빛은 매번 그린다.
    */
   var CAMP_PX = [57, 96, 135], CAMP_PY = [13, 49, 85], CAMP_W = 38, CAMP_H = 28, CAMP_COL = ['#7fb85a', '#6aaede', '#e98a3c'];
-  var sc0 = 0, campBack = null, campWalk = [], campFlash = null, campPopFn = null, campSel = '';
+  var campRescueFn = null, sc0 = 0, campBack = null, campWalk = [], campFlash = null, campPopFn = null, campSel = '';
   function campPlot(d) { return { x: CAMP_PX[d.col], y: CAMP_PY[d.row] }; }
   function campBackdrop() {
     if (campBack) return campBack;
@@ -3002,6 +3002,12 @@
     var sel = c.flag ? C.SETTLE.filter(function (d) { return d.id === c.flag; })[0] : null, card = $('camp-card'); if (card.hidden !== !sel) card.hidden = !sel;
     if (sel) { var lv = C.settleLv(state, sel.id), need = C.settleNeed(state, sel.id), work = C.settleWork(state, sel.id), brk = C.settleBroken(state, sel.id);
       setText($('camp-name'), sel.name + (lv > 0 ? ' ' + lv + '단계' : '') + ' · ' + (brk ? '부서졌어요' : sel.desc)); setText($('camp-need'), need > 0 ? fmt(work) + ' / ' + fmt(need) + '명' : '다 자랐어요'); $('campscene').setAttribute('data-sel-lv', lv); fill($('camp-bar'), need > 0 ? work / need : 1); }
+    /* 4.2.3 울타리 밖 무리의 표시: 그림 위에 누르기 쉬운 둥근 딱지를 얹는다(도트 그림만으로는 작아서 눈에 안 띄었다). 테두리가 남은 시간만큼 줄어든다 */
+    var wrapS = $('camp-wrap'), seenS = {};
+    (c.strays || []).forEach(function (s) { var id = 'stray-' + s.id, b = document.getElementById(id), q = campStrayPos(s); seenS[id] = 1;
+      if (!b) { b = el('button', 'stray-dot', '!'); b.type = 'button'; b.id = id; b.setAttribute('aria-label', '울타리 밖의 사람들을 들인다'); b.style.left = (q[0] / 184 * 100) + '%'; b.style.top = ((q[1] - 1) / 128 * 100) + '%'; b.addEventListener('click', function (e) { e.stopPropagation(); if (campRescueFn) campRescueFn(s.id); }); wrapS.appendChild(b); }
+      var lf = Math.max(0, s.t / C.STRAY_TIME); b.style.setProperty('--p', lf.toFixed(3)); b.classList.toggle('late', lf < 0.35); });
+    Array.prototype.slice.call(wrapS.querySelectorAll('.stray-dot')).forEach(function (b) { if (!seenS[b.id]) b.remove(); });
     drawCamp();
     var sc = $('campscene'); sc.classList.toggle('tappable', has); sc.setAttribute('data-free', free); sc.setAttribute('data-levels', C.settleLevels(state)); sc.setAttribute('data-raid', n ? n.side : ''); sc.setAttribute('data-guards', n ? n.guards : 0); sc.setAttribute('data-need', sc0); sc.setAttribute('data-strays', (c.strays || []).map(function (s) { var q = campStrayPos(s); return Math.round(q[0]) + ':' + Math.round(q[1]); }).join(',')); sc.setAttribute('data-flag', c.flag || '');
     setText($('camp-note'), !has ? '안테나를 세우면 사람이 모여요' : n ? (C.nightHold(state) >= 1 ? '울타리가 버티고 있어요' : '무리가 몰리는 쪽에 사람을 세워요. 몰리는 쪽이 바뀌어요') : (state.sendsRun || 0) < 3 ? '지도의 자리를 누르면 문 앞의 사람이 가서 지어요' : (state.straysRun || 0) < 3 ? '울타리 밖에서 손 흔드는 사람들을 누르면 들어와요' : C.settleCount(state) < 2 ? '송신탑을 눌러도 주파수를 맞춰요' : (state.nightsHeld || 0) + (state.campBreaches || 0) < 1 ? '손을 쓰고 있으면 습격이 와요. 울타리에 사람을 세워 막아요' : '다음 습격에 ' + fmt(sc0) + '명을 세워야 해요');
@@ -3031,6 +3037,7 @@
       var hit = null; C.SETTLE.forEach(function (d) { var p = campPlot(d); if (x >= p.x - 1 && x <= p.x + CAMP_W + 1 && y >= p.y - 4 && y <= p.y + CAMP_H + 4) hit = d; });
       if (hit) place(hit.id);
     });
+    campRescueFn = function (id) { var c2 = C.campOf(state), s2 = (c2.strays || []).filter(function (q) { return q.id === id; })[0]; if (s2) rescue(s2); };
     function rescue(s) {
       var q = campStrayPos(s), r = C.rescueStray(state, s.id); if (!r.ok) return;
       campSendWalkers([[q[0], q[1]], [q[0] < 60 ? q[0] : 52, q[1] < 60 ? 43 : 79], [50, 79], [12, 79]], 3, false); campPop(q[0], q[1] - 10, '+' + fmt(Math.floor(r.gain)) + '명', 'done'); sfx('buy'); buzz(12); Store.save(); render();

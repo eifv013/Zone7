@@ -339,6 +339,17 @@ def run_case(browser, name, size, state, mode):
         for _ in range(4): tap('#row-antenna'); page.wait_for_timeout(120)
         page.locator('#campscene').scroll_into_view_if_needed(); page.wait_for_timeout(150); clear(); cbx = page.locator('#campscene').bounding_box(); page.mouse.click(cbx['x'] + cbx['width'] * 23 / 184, cbx['y'] + cbx['height'] * 30 / 128); page.wait_for_timeout(250)
         if '다시 잡는 중' not in text('t7-tune'): problems.append('송신탑을 눌렀는데 주파수를 맞추지 않는다: ' + text('t7-tune'))
+        # 4.2.2 울타리 밖의 사람들: 보고 있으면 나타나고, 표시를 누르면 들어온다
+        page.evaluate("GameCore.TEST.stray = 40; GameCore.TEST.night = 0"); got = False
+        for _ in range(20):
+            if page.locator('.stray-dot').count(): got = True; break
+            page.wait_for_timeout(150)
+        page.evaluate("GameCore.TEST.stray = 0")
+        if not got: problems.append('보고 있는데 울타리 밖에 사람들이 나타나지 않는다')
+        else:
+            n0 = page.locator('.stray-dot').count(); page.evaluate("document.querySelector('.stray-dot').click()"); page.wait_for_timeout(250)      # 화면 아래 띠에 가릴 수 있어 단추를 바로 누른다
+            if page.locator('.stray-dot').count() >= n0: problems.append('울타리 밖의 사람들을 눌렀는데 그대로 있다')
+        page.evaluate("GameCore.TEST.night = 1")
         if text('row-antenna').find('40 / 500') < 0: problems.append('안테나를 40기 사지 못했다: ' + text('row-antenna')[:40].replace(chr(10), ' '))
         if not fits(): problems.append('한 화면에 들어오지 않는다(7구역)')
         # 생존자 목표(10만 명)를 채워서 끝을 본다
