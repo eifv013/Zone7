@@ -876,6 +876,12 @@ canvas.labcv { background: #1c2a2e; margin-bottom: 0; border-bottom-left-radius:
 .bridgecv { border-radius: 8px !important; margin-bottom: 8px !important; background: #0b1424 !important; } #bridge-wrap .ward-pop { color: #ffd95a; } #bridge-wrap .ward-pop.hit { color: #e8e6dc; font-size: 11px; } #bridge-wrap .ward-pop.big { color: #d8b0ff; font-size: 16px; }
 #nade-btn { padding-top: 10px; padding-bottom: 10px; margin-bottom: 8px; } #guard-rate.bad { color: var(--blood); animation: plat-full .4s steps(2) infinite; }
 #bridge-wrap .ward-pop.wave { color: #ff7a6a; font-size: 17px; } #bridge-wrap .ward-pop.held { color: #ffd95a; font-size: 17px; }
+/* 4.1.4 다리 단계: 그림 오른쪽 위 모서리의 딱지. 오르면 금빛으로 커졌다 돌아오고, 뚫려서 내려가면 붉게 흔들린다 */
+.br-level { position: absolute; top: 7px; right: 8px; padding: 3px 7px; border: 2px solid #e8e6dc; border-radius: 7px; background: rgba(12,14,20,.82); color: #e8e6dc; font: 700 12px/1 var(--font-mono); pointer-events: none; z-index: 2; transform-origin: 100% 0; }
+.br-level[hidden] { display: none; } .br-level.up { animation: br-up .9s ease-out 1; } .br-level.down { animation: br-down .6s steps(6) 1; }
+@keyframes br-up { 0% { transform: scale(2.4); background: #f0b400; color: #17180f; border-color: #fff2c0; box-shadow: 0 0 0 6px rgba(240,180,0,.45); } 55% { transform: scale(1.5); background: #f0b400; color: #17180f; } 100% { transform: scale(1); } }
+@keyframes br-down { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); background: #b8402e; border-color: #ff7a6a; } 40%, 80% { transform: translateX(4px); background: #b8402e; } }
+@media (prefers-reduced-motion: reduce) { .br-level.up, .br-level.down { animation: none; } }
 .two-bars { display: flex; gap: 12px; } .two-bars .plat-horde { flex: 1; min-width: 0; } .two-bars .plat-horde b { min-width: 34px; }
 .heat-row .track i { background: #e98a3c !important; } .heat-row.hot .track i { background: var(--blood) !important; } .heat-row.jam .label { color: var(--blood); font-weight: 700; } .heat-row.jam .track { animation: plat-full .3s steps(2) infinite; } .heat-row.nope { animation: jam-shake .3s steps(2) 1; }
 .combo-row .track i { background: var(--hazard) !important; } .combo-row b { color: var(--hazard) !important; font-size: 14px !important; } .combo-row.cold b { color: var(--ink-soft) !important; }
@@ -1384,7 +1390,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.1.3</div>
+  <div class="boot-ver">7구역 알파 4.1.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1679,7 +1685,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="trade guard" id="guard" hidden>
         <!-- 4.1.0 6구역 다리 막기: 제목 줄 → 그림(건너오는 것을 눌러 쏜다) → 연속 줄 → 초소장 바 → 행렬 카드 → 기록 한 줄 -->
         <div class="order-head plat-head"><span class="label" id="guard-title">다리</span><span class="num" id="guard-rate"></span></div>
-        <div class="ward-wrap" id="bridge-wrap"><canvas class="belt plat labcv bridgecv" id="bridgescene" width="184" height="108" role="button" tabindex="0" data-tap aria-label="다리. 건너오는 것을 누르면 쏜다"></canvas></div>
+        <div class="ward-wrap" id="bridge-wrap"><canvas class="belt plat labcv bridgecv" id="bridgescene" width="184" height="108" role="button" tabindex="0" data-tap aria-label="다리. 건너오는 것을 누르면 쏜다"></canvas><span class="br-level" id="br-level" hidden></span></div>
         <!-- 4.1.3 연속과 총열을 한 줄에 나란히(자리를 아낀다). 총열이 다 차면 과열되어 잠깐 쏠 수 없다 -->
         <div class="two-bars"><div class="plat-horde combo-row"><span class="label">연속</span><div class="track"><i id="combo-bar"></i></div><b class="num" id="combo-x"></b></div><div class="plat-horde heat-row" id="heat-row"><span class="label" id="heat-label">총열</span><div class="track"><i id="heat-bar"></i></div></div></div>
         <!-- 4.1.2 수류탄: 손으로 잡은 만큼 찬다. 다 차면 던질 수 있다 -->
@@ -1854,7 +1860,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.1.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.1.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

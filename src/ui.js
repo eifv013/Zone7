@@ -2499,10 +2499,11 @@
     if (b.wave > 0) { var wp = Math.floor(now / 250) % 2 ? '.55' : '.3'; g.fillStyle = 'rgba(216,69,58,' + wp + ')'; g.fillRect(0, 0, 184, 2); g.fillRect(0, 106, 184, 2); R(0, 0, Math.round(184 * b.wave / C.WAVE_SECONDS), 2, '#ff5a4a'); }
     // 뚫렸다: 어둡고 붉게. 다시 세우는 동안 가운데에 차오르는 줄
     if (b.down > 0) { g.fillStyle = 'rgba(60,8,8,.55)'; g.fillRect(0, 0, 184, 108); R(60, 50, 64, 6, K); R(61, 51, Math.round(62 * (1 - b.down / C.BREACH_SECONDS)), 4, '#e98a3c'); }
-    if (bridgeFlash && now - bridgeFlash.at < 350) { var fa = 1 - (now - bridgeFlash.at) / 350; g.fillStyle = (bridgeFlash.kind === 'nade' ? 'rgba(255,240,200,' : 'rgba(216,69,58,') + (0.5 * fa).toFixed(2) + ')'; g.fillRect(0, 0, 184, 108); }
-    cv.classList.toggle('ward-shake', !!(bridgeFlash && bridgeFlash.kind !== 'warn' && now - bridgeFlash.at < 260));
+    if (bridgeFlash && now - bridgeFlash.at < 350) { var fa = 1 - (now - bridgeFlash.at) / 350; g.fillStyle = (bridgeFlash.kind === 'nade' ? 'rgba(255,240,200,' : bridgeFlash.kind === 'up' ? 'rgba(240,180,0,' : 'rgba(216,69,58,') + (0.5 * fa).toFixed(2) + ')'; g.fillRect(0, 0, 184, 108); }
+    if (bridgeFlash && bridgeFlash.kind === 'up' && now - bridgeFlash.at < 700) { var ua = (now - bridgeFlash.at) / 700, ux = Math.round(184 * ua); R(ux - 3, 0, 3, 108, 'rgba(255,242,192,' + (0.6 * (1 - ua)).toFixed(2) + ')'); R(0, 0, 184, 2, '#f0b400'); R(0, 106, 184, 2, '#f0b400'); }      // 단계가 올랐다: 금빛 띠가 다리를 훑고 지나간다
+    cv.classList.toggle('ward-shake', !!(bridgeFlash && bridgeFlash.kind !== 'warn' && bridgeFlash.kind !== 'up' && now - bridgeFlash.at < 260));
   }
-  var bridgeBeam = 150, bsc0 = null;
+  var bridgeBeam = 150, bsc0 = null, bridgeLvSeen = null;
   var W_H = 112;        // 4.0.8: 병실 그림의 높이(도트). 아래 16도트는 이동 침대가 다니는 복도
   var wardEr = null, wardErFx = null, wardBoostFx = 0, wardArmed = false;      // 급한 환자가 들어온 때 · 살리거나 놓친 때 · 연구원이 강화 혈청을 가져온 때 · 강화 혈청을 들었는지
   var W_GURNEY = ['.....hhhh', '....hhhhhh.......bbbbbbbbbbbbbbbbbbbb', '...hhsssss..bbbbbBBBBBBBbbbbbbbbbbbbbbbbff', '..pPesssmsdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbfff', '.pppPssssddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbff', '.ppppppppbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb..r', 'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww.r', 'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWrr', 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk', '..KkKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKkK', '...k.k................................k.k', '....k..................................k', '...k.k................................k.k', '..k...k..............................k...k', '.ooo.ooo............................ooo.ooo', '.oOo.oOo............................oOo.oOo', '.ooo.ooo............................ooo.ooo'];
@@ -3459,7 +3460,10 @@
       var gr = $('guard-rate'), urgent = br.down > 0 || br.warn > 0 || br.wave > 0;
       setText(gr, !(state.posts > 0) ? '' : br.down > 0 ? '뚫렸다 · 방벽을 다시 세우는 중' : br.warn > 0 ? '떼가 몰려온다' : br.wave > 0 ? '떼 · ' + Math.ceil(br.wave) + '초' : '한 마리 +' + fmt(gRate * C.BRIDGE_SPAWN * br.combo));
       gr.classList.toggle('bad', urgent);
-      setText($('guard-title'), (br.streak || 0) > 0 ? '다리 · ' + br.streak + '단계' : '다리');
+      /* 4.1.4: 단계는 제목이 아니라 그림 오른쪽 위 딱지에 적는다(제목에서는 눈에 안 들어왔다). 오르내릴 때 딱지가 움직인다 */
+      var lvEl = $('br-level'), lv6 = state.posts > 0 ? (br.streak || 0) : 0; if (lvEl.hidden !== !(lv6 > 0)) lvEl.hidden = !(lv6 > 0); setText(lvEl, lv6 + '단계');
+      if (bridgeLvSeen !== null && lv6 !== bridgeLvSeen && (lv6 > bridgeLvSeen || br.down > 0)) { var lc = lv6 > bridgeLvSeen ? 'up' : 'down'; lvEl.classList.remove('up', 'down'); void lvEl.offsetWidth; lvEl.classList.add(lc); if (lc === 'up') bridgeFlash = { at: Date.now(), kind: 'up' }; }
+      bridgeLvSeen = lv6; $('bridgescene').setAttribute('data-level', lv6);
       var hr6 = $('heat-row'), jam6 = br.jam > 0; $('heat-bar').style.width = (Math.min(1, br.heat || 0) * 100).toFixed(1) + '%'; setText($('heat-label'), jam6 ? '과열' : '총열'); hr6.classList.toggle('jam', jam6); hr6.classList.toggle('hot', !jam6 && br.heat > 0.75); bsc0 = $('bridgescene'); bsc0.setAttribute('data-heat', (br.heat || 0).toFixed(2)); bsc0.setAttribute('data-jam', jam6 ? 1 : 0);
       var nb = $('nade-btn'), nNeed = C.nadeNeed(state), nReady = (br.nade || 0) >= nNeed, nShow = state.posts > 0; if (nb.hidden !== !nShow) nb.hidden = !nShow;
       setText($('nade-name'), nReady ? '수류탄 던지기' : '수류탄'); setText($('nade-count'), nReady ? '' : (br.nade || 0) + ' / ' + nNeed); nb.disabled = !nReady || br.down > 0 || !br.zs.length;
