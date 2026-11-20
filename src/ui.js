@@ -1513,6 +1513,8 @@
     // 7구역: 안테나와 혈청
     rows.antenna = buildRow({ id: 'antenna', name: '안테나', desc: '방송을 멀리 보내 생존자를 부른다. 10·25·50기마다 2배' }, function () { buy(C.buyAntenna(state, qtyFor(C.maxAntennas(state), C.COUNT_MAX - state.antennas)), 'route'); });
     $('rows-z6').appendChild(rows.antenna.btn);
+    // 4.3.2 7구역 줄: 안테나 · 수레 · 방벽 · 무기고
+    rows.camp = {}; C.CAMP_ROWS.forEach(function (d) { rows.camp[d.id] = buildRow({ id: d.id, name: d.name, desc: d.desc }, function () { buy(C.buyCampRow(state, d.id), 'route'); }); $('rows-z6').appendChild(rows.camp[d.id].btn); });
     $('serum').addEventListener('click', function () {
       var r = C.buySerum(state);
       if (!r.ok) return;
@@ -3022,10 +3024,14 @@
     var c = C.campOf(state), n = c.night, free = C.settleFree(state), has = C.survivorRate(state) > 0 || state.survivors > 0, started = C.settleCount(state) >= 1, lvN = c.nightLv || 0;
     var ttl = $('camp-title'), head = $('camp-head'); setText(ttl, n ? '습격' : '정착지'); ttl.classList.toggle('raid', !!n); setText(head, lvN > 0 ? lvN + '단계' : ''); head.classList.remove('bad');
     /* 띠: 생존자(낮에는 놓을 수 있는 사람 = '일할 생존자', 습격 때는 아직 세우지 않은 사람 = '싸울 생존자') · 습격까지 남은 시간. 4.3.1: 낮과 밤에 세는 사람이 다르니 어느 쪽인지 적는다 */
-    var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, (n ? '싸울 생존자 ' : '일할 생존자 ') + fmt(n ? C.guardPool(state) : free) + '명'); setText(s1, n ? '습격 ' + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
+    // 4.3.3: 띠에는 늘 모인 생존자 전체를 적는다(낮과 밤에 다른 수를 같은 이름으로 적어 말이 안 됐다)
+    var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, '생존자 ' + fmt(Math.floor(state.survivors || 0)) + '명'); setText(s1, n ? '습격 ' + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
     var gb = $('camp-guard'); if (gb.hidden !== !n) gb.hidden = !n;
     if (n) CAMP_SIDE.forEach(function (nm, k) { var b = $('camp-g' + k), h = C.sideHold(state, k), key = nm + Math.round(h * 100) + (k === n.side); if (b.getAttribute('data-k') !== key) { b.setAttribute('data-k', key); b.innerHTML = ''; b.appendChild(document.createTextNode(nm)); b.appendChild(el('small', '', Math.round(h * 100) + '%')); } b.className = (k === n.side && h < 1 ? 'hot' : '') + (h >= 1 ? ' ok' : ''); });
     if (!n && started) sc0 = C.raidNeed(state);
+    /* 문 앞의 생존자(지금 놓을 수 있는 수): 문 앞 무리 위에 작게. 습격 때는 숨긴다(모두가 싸우러 나가므로) */
+    var gl = document.getElementById('camp-gate') || (function () { var e = el('span', 'plot-need can', ''); e.id = 'camp-gate'; e.style.left = (16 / 184 * 100) + '%'; e.style.top = (108 / 128 * 100) + '%'; $('camp-wrap').appendChild(e); return e; })();
+    var gShow = !n && has; if (gl.hidden !== !gShow) gl.hidden = !gShow; if (gShow) setText(gl, fmt(free) + '명');
     /* 자리 위의 숫자(더 놓아야 하는 사람): 고른 자리와, 문 앞의 사람으로 지금 끝낼 수 있는 자리에만 */
     var wrapN = $('camp-wrap');
     C.SETTLE.forEach(function (d) { var id = 'need-' + d.id, lb = document.getElementById(id), p = campPlot(d), why = C.settleBlock(state, d.id), needN = C.settleNeed(state, d.id), leftN = needN - C.settleWork(state, d.id), show = !n && needN > 0 && why !== 'prev' && why !== 'locked' && (c.flag === d.id || (free >= leftN && free > 0));
@@ -3034,7 +3040,7 @@
     var seenS = {};
     (c.strays || []).forEach(function (s) { var id = 'stray-' + s.id, b = document.getElementById(id), q = campStrayPos(s); seenS[id] = 1;
       if (!b) { b = el('button', 'stray-dot', '!'); b.type = 'button'; b.id = id; b.setAttribute('aria-label', '울타리 밖의 생존자를 들인다'); b.style.left = (Math.max(9, Math.min(175, q[0])) / 184 * 100) + '%'; b.style.top = (Math.min(118, q[1] - 2) / 128 * 100) + '%'; b.addEventListener('click', function (e) { e.stopPropagation(); if (campRescueFn) campRescueFn(s.id); }); wrapN.appendChild(b); }
-      var lf = Math.max(0, s.t / C.STRAY_TIME); b.style.setProperty('--p', lf.toFixed(3)); b.classList.toggle('late', lf < 0.35); });
+      var lf = Math.max(0, s.t / (s.t0 || C.STRAY_TIME)); b.style.setProperty('--p', lf.toFixed(3)); b.classList.toggle('late', lf < 0.35); });
     Array.prototype.slice.call(wrapN.querySelectorAll('.stray-dot')).forEach(function (b) { if (!seenS[b.id]) b.remove(); });
     drawCamp();
     var sc = $('campscene'); sc.classList.toggle('tappable', has); sc.setAttribute('data-free', free); sc.setAttribute('data-levels', C.settleLevels(state)); sc.setAttribute('data-raid', n ? n.side : ''); sc.setAttribute('data-guards', n ? n.guards : 0); sc.setAttribute('data-flag', c.flag || ''); sc.setAttribute('data-need', sc0);
@@ -3704,6 +3710,9 @@
       renderZoneEvent('tower');
       var sRate = C.survivorRate(state);
       renderCamp();
+      C.CAMP_ROWS.forEach(function (d) { var r7 = rows.camp[d.id], lv7 = C.campRow(state, d.id), c7 = C.campRowCost(state, d.id), pct = function (v) { return Math.round(v * 100) + '%'; };
+        var now7 = d.id === 'cart' ? '무리 +' + pct(C.CART_STEP * lv7) : d.id === 'wall7' ? '더디게 +' + pct(C.WALL7_STEP * lv7) : '세울 수 −' + pct(1 - Math.pow(1 - C.ARMS_STEP, lv7)), nx7 = d.id === 'cart' ? '+' + pct(C.CART_STEP * (lv7 + 1)) : d.id === 'wall7' ? '+' + pct(C.WALL7_STEP * (lv7 + 1)) : '−' + pct(1 - Math.pow(1 - C.ARMS_STEP, lv7 + 1));
+        setText(r7.count, 'Lv ' + lv7 + ' / ' + d.max); setText(r7.info, now7 + (isFinite(c7) ? ' → ' + nx7 : '')); setText(r7.cost, isFinite(c7) ? '×1 ' + fmt(c7) : '최대'); r7.btn.disabled = !(c7 <= state.supplies); afford(r7.cost, c7); r7.btn.classList.toggle('row-max', !isFinite(c7)); });
       renderTune();
       var aq = qtyFor(C.maxAntennas(state), C.COUNT_MAX - state.antennas), acost = C.antennaCost(state, aq);
       setText(rows.antenna.count, state.antennas + ' / ' + C.COUNT_MAX);

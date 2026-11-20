@@ -2724,9 +2724,17 @@ test('7구역 습격: 화면을 보고 있을 때만 온다. 무리는 세 쪽�
   s.survivors = 1e12; fill7(s, 'guard7'); c.night = C.newRaid(s, calm); near(C.towerHold(s), C.TOWER_HOLD.guard7); c.broken.guard7 = true; near(C.towerHold(s), 0); delete c.broken.guard7; s.settleLv.guard7 = 99; s.settleLv.watch = 99; s.settle.watch = true; assert.equal(C.towerHold(s), C.TOWER_HOLD_MAX); s.settleLv.guard7 = 1; delete s.settle.watch; delete s.settleLv.watch;
   c.night = C.newRaid(s, calm); for (let i = 0; i < 3; i++) while (C.sendGuard(s, i).ok) {} c.night.fences = [0.5, 1, 1]; c.night.t = 0.1; const s1 = s.survivors, ev4 = []; C.stepCamp(s, 0.2, calm, ev4); const h4 = ev4.find((e) => e.type === 'camp-held'); assert.ok(h4 && h4.lost === 0 && s.survivors > s1, '지키다 잃는 사람은 없다');
   /* 세워야 하는 수는 모인 사람 전체의 몫이다: 낮에 얼마를 지었든 같고, 단계가 오르면 는다. 자리를 비운 동안에는 오지 않는다 */
-  const hz = inCamp(); hz.survivors = 5e6; const need0 = C.raidNeed(hz); assert.equal(need0, Math.ceil(5e6 * C.NIGHT_FRAC)); fill7(hz, 'farm'); assert.equal(C.raidNeed(hz), need0, '지어도 같다'); hz.upgrades.muster = 5; assert.ok(C.raidNeed(hz) < need0); hz.upgrades.muster = 0;
+  const hz = inCamp(); hz.survivors = 5e6; const need0 = C.raidNeed(hz); assert.equal(need0, Math.ceil(5e6 * C.NIGHT_FRAC)); fill7(hz, 'farm'); assert.equal(C.raidNeed(hz), need0, '지어도 같다'); hz.campRows.arms = 5; assert.ok(C.raidNeed(hz) < need0); hz.campRows.arms = 0;
   hz.camp.nightLv = 8; assert.ok(C.raidNeed(hz) > need0 * 2.2); hz.camp.nightLv = 200; assert.ok(C.raidNeed(hz) <= 5e6 * 1.61, '상한');
-  assert.ok(!C.UPGRADES.some((d) => ['medkit', 'beacon', 'wagon'].includes(d.id)), '4.3.0: 숫자만 다른 개조 셋은 뺐다'); hz.upgrades.medkit = 4; assert.doesNotThrow(() => C.mods(hz), '옛 저장에 남아 있어도 탈이 없다');
+  /* 4.3.2 운영 줄 셋(수레 · 방벽 · 무기고)과 다시 채운 개조 */
+  hz.camp.broken.farm = true; const rp0 = C.settleNeed(hz, 'farm'); hz.upgrades.medkit = 4; assert.ok(C.settleNeed(hz, 'farm') < rp0, '구급낭'); delete hz.camp.broken.farm; hz.upgrades.medkit = 0;
+  const l2 = C.settleNeed(hz, 'farm'); hz.upgrades.blueprint = 4; near(C.settleNeed(hz, 'farm'), Math.ceil(l2 * Math.pow(0.95, 4)), '설계도'); const z1 = inCamp(); z1.upgrades.blueprint = 8; assert.equal(C.settleNeed(z1, 'farm'), C.SETTLE.find((d) => d.id === 'farm').cost, '1단계 값은 그대로(혈청의 문턱)');
+  const rw = inCamp(); rw.supplies = 1e80; assert.equal(C.CAMP_ROWS.length, 3); assert.equal(C.buyCampRow(rw, 'nope').reason, 'unknown'); assert.equal(C.buyCampRow(inLab(), 'cart').reason, 'locked');
+  const c0 = C.campRowCost(rw, 'cart'); assert.ok(C.buyCampRow(rw, 'cart').ok); assert.equal(C.campRow(rw, 'cart'), 1); assert.ok(C.campRowCost(rw, 'cart') > c0); near(C.mods(rw).wagon, 1 + C.CART_STEP);
+  let nb = 0; while (C.buyCampRow(rw, 'wall7').ok) nb++; assert.equal(nb, 8); assert.equal(C.campRowCost(rw, 'wall7'), Infinity); near(C.mods(rw).fence, 1 + C.WALL7_STEP * 8);
+  const mg = JSON.parse(C.serialize(rw)); delete mg.campRows; mg.upgrades.palisade = 3; mg.upgrades.muster = 99; const mb = C.deserialize(JSON.stringify(mg), 0); assert.equal(C.campRow(mb, 'wall7'), 3, '옛 개조는 줄로 옮긴다'); assert.equal(C.campRow(mb, 'arms'), 8);
+  for (const junk of [null, 5, 'x', { cart: -3, wall7: 1e9, arms: 'x' }]) { const raw = JSON.parse(C.serialize(rw)); raw.campRows = junk; const z = C.deserialize(JSON.stringify(raw), 0); assert.ok(C.campRow(z, 'cart') >= 0 && C.campRow(z, 'wall7') <= 8 && isFinite(C.mods(z).muster)); }
+  const sp = inCamp(), sc7 = C.campOf(sp); sp.upgrades.litter = 4; sp.upgrades.speaker = 5; const rs = lcg(8); while (!(sc7.strays || []).length) { C.campSeen(sp); C.stepCamp(sp, 0.25, rs, []); } assert.ok(sc7.strays[0].t0 > C.STRAY_TIME * 1.9, '들것: 더 오래 기다린다');
   const a = inCamp(); a.survivors = 5e6; fill7(a, 'farm'); C.campOf(a).clock = C.RAID_EVERY - 1; C.campSeen(a); C.stepCamp(a, 600, calm, []); assert.equal(a.camp.night, null); assert.equal(a.campBreaches || 0, 0);
 });
 
@@ -2736,7 +2744,7 @@ test('7구역 울타리 밖의 사람들: 보고 있으면 나타나고, 시간 
   assert.ok(ev.some((e) => e.type === 'stray-in')); assert.ok(ev.some((e) => e.type === 'stray-lost'), '못 누르면 사라진다');
   while (!c.strays.length) { C.campSeen(s); C.stepCamp(s, 0.25, r, ev); } const st = c.strays[0], sv = s.survivors; assert.ok(st.side >= 0 && st.side <= 2 && st.u > 0 && st.u < 1 && st.t > 0);
   const g = C.rescueStray(s, st.id); assert.ok(g.ok && g.gain > 0); near(s.survivors - sv, C.strayGain(s)); assert.equal(s.straysRun, 1); assert.equal(C.rescueStray(s, st.id).reason, 'gone'); assert.equal(C.rescueStray(inLab(), 1).reason, 'locked');
-  c.nightLv = 10; near(C.strayGain(s), C.survivorRate(s) * 5 * 2); C.stepCamp(s, 600, calm, []); assert.equal(c.strays.length, 0, '자리를 비우면 없어진다');
+  c.nightLv = 10; near(C.strayGain(s), C.survivorRate(s) * C.STRAY_PAY * 2); C.stepCamp(s, 600, calm, []); assert.equal(c.strays.length, 0, '자리를 비우면 없어진다');
   for (const junk of [NaN, 'x', null, -1, {}]) assert.doesNotThrow(() => C.rescueStray(s, junk));
   const b = C.deserialize(C.serialize(s), 0); assert.doesNotThrow(() => { C.campSeen(b); C.stepCamp(b, 0.5, calm, []); });
 });
