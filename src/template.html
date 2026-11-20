@@ -862,7 +862,7 @@ canvas.labcv { background: #1c2a2e; margin-bottom: 0; border-bottom-left-radius:
 @keyframes ward-pop { 0% { transform: translate(-50%, 4px); opacity: 0; } 15% { transform: translate(-50%, 0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-50%, -26px); opacity: 0; } }
 .boost-btn { width: 100%; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 2px solid #b48aff; border-radius: 10px; background: color-mix(in srgb, #b48aff 14%, transparent); color: var(--ink); font: 700 14px/1.2 var(--font-body); cursor: pointer; }
 .boost-btn[hidden], .pick-two[hidden] { display: none; }
-#serum-btn { padding-top: 10px; padding-bottom: 10px; } #lab .ward-strip { margin-bottom: 6px; } #lab-bar { margin: 2px 0 6px; }
+#serum-btn { padding-top: 10px; padding-bottom: 10px; } #lab .ward-strip { margin-bottom: 6px; }
 .boost-btn.armed { background: #b48aff; color: #17180f; animation: plat-full .6s steps(2) infinite; }
 .pick-two { display: flex; gap: 8px; margin-top: 8px; } .pick-two button { flex: 1; border: 2px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); padding: 9px 6px; font: 700 13px/1.35 var(--font-body); cursor: pointer; }
 .pick-two button small { display: block; font-weight: 600; color: var(--safe); font-size: 12px; } .pick-two button.hard { border-color: var(--hazard); } .pick-two button.hard small { color: var(--hazard); }
@@ -874,7 +874,7 @@ canvas.labcv { background: #1c2a2e; margin-bottom: 0; border-bottom-left-radius:
 .chart-line.ok { background: var(--safe); border-color: var(--safe); color: #fff; } .chart-line.ok em { color: #fff; }
 .ward-chart .pick-two { margin-top: 0; }
 canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
-#serum-btn { margin-bottom: 4px; } #serum-btn.nope { animation: jam-shake .3s steps(2) 1; background: var(--blood); color: #fff; } #lab-bar { margin: 0 0 8px; }
+#serum-btn { margin-bottom: 4px; } #serum-btn.nope { animation: jam-shake .3s steps(2) 1; background: var(--blood); color: #fff; } #lab-bar { margin: 8px 0 8px; }      /* 4.0.9: 자동 바는 단추에서 한 칸 띄운다(4.0.8 에 안내 글을 숨기면서 단추에 붙어 버렸다) */
 #fork[hidden] { display: none; } #fork { margin-top: 6px; } #fork.ready { border-color: var(--hazard); } #fork .lab-offers { margin: 8px 0 0; grid-template-columns: 1fr 1fr; }
 .lab-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .lab-top #lab-rate { text-align: right; }
@@ -1377,7 +1377,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.0.8</div>
+  <div class="boot-ver">7구역 알파 4.0.9</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1841,7 +1841,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.0.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.0.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
