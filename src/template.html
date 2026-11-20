@@ -873,6 +873,9 @@ canvas.labcv { background: #1c2a2e; margin-bottom: 0; border-bottom-left-radius:
 .chart-line b { display: none; } .chart-line em { font-style: normal; font-weight: 700; color: var(--safe); font-family: var(--font-mono); }
 .chart-line.ok { background: var(--safe); border-color: var(--safe); color: #fff; } .chart-line.ok em { color: #fff; }
 .ward-chart .pick-two { margin-top: 0; }
+.bridgecv { border-radius: 8px !important; margin-bottom: 8px !important; background: #0b1424 !important; } #bridge-wrap .ward-pop { color: #ffd95a; } #bridge-wrap .ward-pop.hit { color: #e8e6dc; font-size: 11px; } #bridge-wrap .ward-pop.big { color: #d8b0ff; font-size: 16px; }
+.combo-row .track i { background: var(--hazard) !important; } .combo-row b { color: var(--hazard) !important; font-size: 14px !important; } .combo-row.cold b { color: var(--ink-soft) !important; }
+#guard-auto { margin: 0 0 4px; } #guard-auto[hidden] { display: none; } #guard-bar { margin: 0 0 8px; }
 canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
 #serum-btn { margin-bottom: 4px; } #serum-btn.nope { animation: jam-shake .3s steps(2) 1; background: var(--blood); color: #fff; } #lab-bar { margin: 8px 0 8px; }      /* 4.0.9: 자동 바는 단추에서 한 칸 띄운다(4.0.8 에 안내 글을 숨기면서 단추에 붙어 버렸다) */
 #fork[hidden] { display: none; } #fork { margin-top: 6px; } #fork.ready { border-color: var(--hazard); } #fork .lab-offers { margin: 8px 0 0; grid-template-columns: 1fr 1fr; }
@@ -1377,7 +1380,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.0.9</div>
+  <div class="boot-ver">7구역 알파 4.1.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1670,15 +1673,18 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="rows" id="rows-z2" hidden></div>
       <div class="rows" id="rows-z3" hidden></div>
       <div class="trade guard" id="guard" hidden>
-        <div class="lab-top"><div><div class="label">다리 안전도</div><div class="trade-price num" id="guard-safety">×1.00</div></div><div class="label" id="guard-rate"></div></div>
-        <div class="track"><i id="guard-bar"></i></div>
-        <div class="label" id="guard-note"></div>
-        <button type="button" class="surge" id="push-guard">순찰</button>
+        <!-- 4.1.0 6구역 다리 막기: 제목 줄 → 그림(건너오는 것을 눌러 쏜다) → 연속 줄 → 초소장 바 → 행렬 카드 → 기록 한 줄 -->
+        <div class="order-head plat-head"><span class="label">다리</span><span class="num" id="guard-rate"></span></div>
+        <div class="ward-wrap" id="bridge-wrap"><canvas class="belt plat labcv bridgecv" id="bridgescene" width="184" height="108" role="button" tabindex="0" data-tap aria-label="다리. 건너오는 것을 누르면 쏜다"></canvas></div>
+        <div class="plat-horde combo-row"><span class="label">연속</span><div class="track"><i id="combo-bar"></i></div><b class="num" id="combo-x"></b></div>
+        <div class="label" id="guard-auto"></div>
+        <div class="autobar" id="guard-bar" aria-hidden="true"></div>
         <div class="order zev" id="zev-guard" hidden>
           <div class="order-head"><span class="label">행렬</span><span class="num" id="zev-guard-left"></span></div>
           <p id="zev-guard-text"></p>
           <div class="zev-acts"><button type="button" class="order-fill" id="zev-guard-now"></button><button type="button" class="order-fill alt" id="zev-guard-boost"></button></div>
         </div>
+        <div class="label" id="guard-note"></div>
       </div>
       <div class="rows" id="rows-z4" hidden></div>
       <!-- 7구역 운영(3.1.0): 생존자(맡긴 사람 · 맡길 수 있는 사람), 주파수 맞추기, 무전. 정착지와 혈청은 '개조' 화면(#settle)에 있다 -->
@@ -1841,7 +1847,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.0.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.1.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

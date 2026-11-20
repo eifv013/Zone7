@@ -1690,7 +1690,7 @@ test('6구역 강변 검문소: 초소가 통행 물자를 벌고, 방어력이 
   s.upgrades.lamp = 2; near(C.bridgeSafety(s), C.SAFETY_MAX + 1);
   const before = s.guardEarned;
   assert.ok(C.productionPerSec(s) >= C.guardRate(s), '초당 물자에 들어간다');
-  C.tick(s, 1, () => 0.5);
+  for (let i = 0; i < 20; i++) C.tick(s, 1, () => 0.5);      // 4.1.0: 통행 물자는 다리에서 들어온다(아무도 안 쏘면 초소에 닿은 것의 몫만)
   assert.ok(s.guardEarned > before);
   const nights = s.safeNights; s.dayClock = C.DAY_SECONDS - 0.5;
   C.tick(s, 1, () => 0.5);
@@ -1920,9 +1920,7 @@ test('주문·의뢰·화물 자동 넘기기: 그 구역의 자동 개조가 �
 test('6구역 목표는 무리와의 경주에 묶이지 않는다: 초소, 개조, 통행 물자', () => {
   const g = C.GOALS[5].find((x) => x.id === 'z6b'), s = inLab(); s.zone = 5; s.supplies = 1e60;
   assert.equal(g.value(s), 0);
-  for (let i = 0; i < 6; i++) assert.ok(C.buyUpgrade(s, 'booth').ok);
-  for (let i = 0; i < 4; i++) assert.ok(C.buyUpgrade(s, 'signpost').ok);
-  assert.equal(g.value(s), 10); assert.ok(g.value(s) >= g.need);
+  s.handKills = g.need; assert.ok(g.value(s) >= g.need, '4.1.0: 손으로 잡은 수');
   C.GOALS[5].forEach((x) => assert.ok(!/방어력/.test(x.text), x.text));
 });
 
@@ -2030,17 +2028,12 @@ test('4·6·7구역 사건: 그 구역이 벌고 있을 때만 뜨고, 바로 �
 test('6구역 순찰과 7구역 직접 방송: 누르면 잠깐 그 구역이 배로 돌고, 쉬는 시간이 있다', () => {
   const s = inLab(); s.zone = 6; s.posts = 12; s.antennas = 12; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 }; s.jamIn = 1e6; s.truckIn = 1e6;
   const g = C.guardRate(s), v = C.survivorRate(s);
-  let e0 = s.guardEarned, p0 = s.survivors; C.tick(s, 1, () => 0.99);
-  near(s.survivors - p0, v); const base = (s.guardEarned - e0) / C.guardRate(s);      // 통행 물자는 다리 안전도에 따라 달라지므로 비율로 본다
-  assert.ok(C.pushZone(s, 'guard').ok); assert.equal(C.pushZone(s, 'tower').reason, 'gone', '직접 방송은 주파수 맞추기로 바뀌었다(3.1.0)'); assert.equal(C.pushZone(s, 'guard').reason, 'cooldown');
-  e0 = s.guardEarned; p0 = s.survivors; C.tick(s, 1, () => 0.99);
-  const ratio = (s.guardEarned - e0) / C.guardRate(s) / base; assert.ok(ratio > C.PUSH_MULT * 0.9 && ratio < C.PUSH_MULT * 1.1, '순찰 중에는 배로(' + ratio.toFixed(2) + ')'); near(s.survivors - p0, v);
-  // 긴 시간을 한 번에 흘려도 남은 시간까지만 배로 친다
-  p0 = s.survivors; C.tick(s, 30, () => 0.99); near(s.survivors - p0, v * 30);
-  assert.equal(s.push.tower.left, 0);
-  for (let i = 0; i < C.PUSH_COOL; i++) C.tick(s, 1, () => 0.99);
-  assert.equal(s.push.guard.cool, 0); assert.ok(C.pushZone(s, 'guard').ok);
-  const closed = inLab(); assert.equal(C.pushZone(closed, 'guard').reason, 'locked'); assert.equal(C.pushZone(closed, 'nope').reason, 'unknown');
+  /* 4.1.0: 6구역의 순찰은 없앴다(다리에서 손으로 쏜다). 7구역 직접 방송은 3.1.0 에 주파수 맞추기로 바뀌었다 */
+  assert.equal(C.pushZone(s, 'guard').reason, 'gone'); assert.equal(C.pushZone(s, 'tower').reason, 'gone');
+  let p0 = s.survivors; C.tick(s, 1, () => 0.99); near(s.survivors - p0, v);
+  p0 = s.survivors; C.tick(s, 30, () => 0.99); near(s.survivors - p0, v * 30); assert.ok(g > 0);
+  assert.equal(s.push.tower.left, 0); assert.equal(s.push.guard.left, 0);
+  const closed = inLab(); assert.equal(C.pushZone(closed, 'nope').reason, 'unknown');
   const empty = inLab(); empty.zone = 6; assert.equal(C.pushZone(empty, 'tower').reason, 'gone');
   const bad = C.sanitizeState({ version: 2, zone: 2, push: { guard: { left: 9, cool: 999 }, tower: 'x' } }, 0);
   assert.deepEqual(bad.push, { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } });
@@ -2053,7 +2046,7 @@ test('5·6·7구역의 자동 개조: 단추는 알아서 누르고, 사건은 �
   ['autolab', 'autoguard', 'autotower'].forEach((id) => assert.ok(C.buyUpgrade(s, id).ok, id));
   assert.ok(C.autoOn(s, 4) && C.autoOn(s, 5) && C.autoOn(s, 6));
   const ev = C.tick(s, 1, () => 0.99).filter((e) => e.type === 'auto-push').map((e) => e.id).sort();
-  assert.deepEqual(ev, ['guard']); assert.ok(s.push.guard.left > 0); assert.ok(s.tune.cool > 0, '송신 기사는 주파수를 알아서 맞춘다(3.1.0)');
+  assert.deepEqual(ev, [], '4.1.0: 순찰은 없다'); assert.ok(s.tune.cool > 0, '송신 기사는 주파수를 알아서 맞춘다(3.1.0)');
   // 사건: 3초 뒤에 알아서 받고, 절반만 받는다
   s.zev.guard = { left: C.ZEV_WAIT }; s.zev.tower = { left: C.ZEV_WAIT };
   const full = C.zevReward(s, 'guard', false), auto5 = C.zevReward(s, 'guard', true), auto6 = C.zevReward(s, 'tower', true);
@@ -2183,10 +2176,10 @@ test('구역마다 주문·사건 자동을 끌 수 있다: 꺼 두면 자동 �
   const mk = () => { const s = inLab(); s.zone = 6; s.staff = 10; s.posts = 12; s.antennas = 12; ['autoline', 'autosig', 'autolab', 'autoguard', 'autotower', 'broker'].forEach((id) => { s.upgrades[id] = 1; }); s.jamIn = 1e6; s.truckIn = 1e6; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 }; s.contractIn = 1e6; s.orderIn = 1e6; return s; };
   const on = mk(); assert.ok(C.autoEvents(on, 5));
   on.zev.guard = { left: C.ZEV_WAIT }; let got = []; for (let i = 0; i < 5; i++) got = got.concat(C.tick(on, 1, () => 0.99));
-  assert.ok(got.some((e) => e.type === 'zev-auto' && e.id === 'guard')); assert.ok(got.some((e) => e.type === 'auto-push' && e.id === 'guard'));
+  assert.ok(got.some((e) => e.type === 'zev-auto' && e.id === 'guard')); assert.ok(got.some((e) => e.type === 'bridge-shot'), '초소장이 쏜다');
   const off = mk(); assert.ok(C.setAutoEvents(off, 5, false).ok); assert.equal(C.autoEvents(off, 5), false); assert.ok(C.autoOn(off, 5), '개조는 그대로 있다');
   off.zev.guard = { left: C.ZEV_WAIT }; got = []; for (let i = 0; i < 5; i++) got = got.concat(C.tick(off, 1, () => 0.99));
-  assert.ok(!got.some((e) => e.type === 'zev-auto' && e.id === 'guard')); assert.ok(!got.some((e) => e.type === 'auto-push' && e.id === 'guard')); assert.ok(off.zev.guard, '사건은 손을 기다린다');
+  assert.ok(!got.some((e) => e.type === 'zev-auto' && e.id === 'guard')); assert.ok(!got.some((e) => e.type === 'bridge-shot'), '꺼 두면 초소장도 쏘지 않는다'); assert.ok(off.zev.guard, '사건은 손을 기다린다');
   assert.ok(got.some((e) => e.type === 'tune' && e.auto), '다른 구역의 자동은 그대로 돈다');
   // 다시 켜고, 저장과 철수를 거쳐도 설정이 남는다
   assert.ok(C.setAutoEvents(off, 5, true).ok); assert.ok(C.autoEvents(off, 5));
@@ -3155,4 +3148,40 @@ test('5구역 저장: 급한 환자 · 차트 · 강화 혈청 · 고른 것을 
     assert.ok(z.ward.pick === null || z.ward.pick.length === 2); assert.ok(!z.ward.er || (z.ward.er.t <= C.ER_TIME && z.ward.er.dose < C.WARD_DOSES)); assert.ok(z.ward.chart.lines.length === 3 && isFinite(C.labRate(z)));
   }
   const r = C.deserialize(C.serialize(s), 0); if (C.canRetreat ? C.canRetreat(r) : false) { C.retreat(r, 0, calm); assert.equal(r.chartBonus, 0); assert.equal(r.boons.slow, 0); assert.equal(r.ward.er, null); }
+});
+
+/* 4.1.0 6구역: 다리 막기 */
+function onBridge() { const s = inLab(); s.zone = 5; s.posts = 12; s.defenses.rail = 1e9; s.zevIn = { rail: 1e9, guard: 1e9, tower: 1e9 }; s.jamIn = 1e9; s.truckIn = 1e9; C.bridgeOf(s); return s; }
+test('6구역 다리: 무리가 건너오고, 손으로 쏘면 깎이고, 잡으면 몫을 받는다. 연달아 잡으면 배수가 오른다', () => {
+  const s = onBridge(), b = C.bridgeOf(s); assert.equal(C.shootBridge(s).reason, 'empty'); assert.equal(C.shootBridge(inLab()).reason, 'locked');
+  const e = onBridge(); e.posts = 0; assert.equal(C.shootBridge(e).reason, 'stopped');
+  C.stepBridge(s, C.BRIDGE_SPAWN + 0.1, calm, []); assert.equal(b.zs.length, 1); assert.ok(b.zs[0].x < 1 && b.zs[0].x > 0.8);
+  const before = s.supplies; let r; for (let i = 0; i < C.BRIDGE_HP - 1; i++) { r = C.shootBridge(s); assert.ok(r.ok && !r.kill); }
+  r = C.shootBridge(s); assert.ok(r.kill && r.gain > 0); near(s.supplies - before, C.guardRate(s) * C.BRIDGE_SPAWN, '첫 마리는 1배'); assert.equal(s.handKills, 1); assert.ok(b.combo > 1);
+  s.firepower = 2; b.zs.push({ x: 0.5, hp: C.BRIDGE_HP, max: C.BRIDGE_HP, big: 0 }); assert.ok(C.shootBridge(s).kill, '화력: 한 발에 3'); 
+  b.zs.push({ x: 0.2, hp: 3, max: 3, big: 0 }, { x: 0.9, hp: 3, max: 3, big: 0 }); r = C.shootBridge(s, 0.88); assert.ok(Math.abs(r.x - 0.9) < 1e-9, '누른 자리에서 가장 가까운 것'); r = C.shootBridge(s); assert.ok(Math.abs(r.x - 0.2) < 1e-9, '자리를 안 주면 맨 앞');
+  for (let i = 0; i < 80; i++) { b.zs.push({ x: 0.5, hp: 1, max: 3, big: 0 }); C.shootBridge(s); } near(b.combo, C.comboCap(s), '상한에서 멈춘다'); s.morale = 4; assert.ok(C.comboCap(s) > C.comboCap(onBridge()));
+  b.zs = []; b.spawn = 0; C.stepBridge(s, 0.5, calm, []); const c0 = b.combo; for (let i = 0; i < 24; i++) { b.zs = []; b.spawn = 0; C.stepBridge(s, 0.5, calm, []); } assert.ok(b.combo < c0 && b.combo >= 1, '한동안 못 잡으면 줄어든다');
+  for (const junk of [NaN, -1, 9, 'x', null, undefined]) assert.doesNotThrow(() => C.shootBridge(s, junk));
+});
+
+test('6구역 다리: 큰 놈이 초소에 닿으면 연속이 처음으로. 가만히 둠 < 초소장 < 초소장 + 손', () => {
+  const s = onBridge(), b = C.bridgeOf(s); b.combo = 2; b.hold = 99; b.zs.push({ x: 0.001, hp: 12, max: 12, big: 1 }); const ev = [];
+  C.stepBridge(s, 0.25, calm, ev); assert.ok(ev.some((e) => e.type === 'bridge-leak' && e.big)); assert.equal(b.combo, 1);
+  const run = (auto, tps) => { const z = onBridge(); if (auto) z.upgrades.autoguard = 1; let acc = 0; const s0 = z.guardEarned;
+    for (let t = 0; t < 6000; t++) { C.stepBridge(z, 0.1, calm, []); acc += tps * 0.1; while (acc >= 1) { acc -= 1; const bb = C.bridgeOf(z); if (!bb.zs.length) break; const big = bb.zs.find((q) => q.big && q.x < 0.5); C.shootBridge(z, big ? big.x : undefined); } }
+    return (z.guardEarned - s0) / (C.guardRate(z) * 600); };
+  const idle = run(false, 0), auto = run(true, 0), hand = run(true, 4), solo = run(false, 4);
+  assert.ok(idle > 0.1 && idle < 0.35, '가만히: ' + idle.toFixed(2)); assert.ok(auto > idle * 1.5 && auto < 1.3, '초소장: ' + auto.toFixed(2)); assert.ok(hand > auto * 1.5, '손: ' + hand.toFixed(2)); assert.ok(solo > auto, '손만: ' + solo.toFixed(2));
+  const off = onBridge(); off.upgrades.autoguard = 1; C.setAutoEvents(off, 5, false); const evo = []; for (let i = 0; i < 100; i++) C.stepBridge(off, 0.1, calm, evo); assert.ok(!evo.some((e) => e.type === 'bridge-shot'));
+});
+
+test('6구역 다리: 자리를 비운 동안에는 하나하나 세지 않는다. 화력과 사기를 사고, 저장을 안전하게 읽는다', () => {
+  const a = onBridge(), b = onBridge(); b.upgrades.autoguard = 1; C.stepBridge(a, 600, calm, []); C.stepBridge(b, 600, calm, []);
+  near(a.guardEarned, C.guardRate(a) * 600 * C.BRIDGE_LEAK); near(b.guardEarned, C.guardRate(b) * 600); assert.equal(C.bridgeOf(a).zs.length, 0);
+  for (const junk of [NaN, -5, 'x', undefined, 1e99]) assert.doesNotThrow(() => C.stepBridge(onBridge(), junk, calm, []));
+  const s = onBridge(); s.supplies = 1e80; let n = 0; while (C.buyFire(s).ok) n++; assert.equal(n, 3); assert.equal(C.fireCost(s), Infinity); n = 0; while (C.buyMorale(s).ok) n++; assert.equal(n, 4); assert.equal(C.buyFire(inLab()).reason, 'locked');
+  C.stepBridge(s, 4, calm, []); s.bridge.combo = 1.7; const back = C.deserialize(C.serialize(s), 0); assert.equal(back.firepower, 3); assert.equal(back.morale, 4); assert.equal(back.bridge.zs.length, s.bridge.zs.length); near(back.bridge.combo, 1.7);
+  for (const junk of [null, 5, 'x', { zs: 'x' }, { zs: [null, 1, { x: 9, hp: 1 }, { x: 0.5, hp: -1 }, { x: 0.5, hp: 1e9, big: 1 }], combo: 1e9, spawn: -3 }]) { const raw = JSON.parse(JSON.stringify(s)); raw.bridge = junk; raw.firepower = junk; raw.morale = junk;
+    const z = C.deserialize(JSON.stringify(raw), 0); assert.doesNotThrow(() => { C.stepBridge(z, 0.5, calm, []); C.shootBridge(z); }); assert.ok(z.bridge.combo <= 10 && z.bridge.zs.every((q) => q.x > 0 && q.x <= 1 && q.hp > 0 && q.hp <= C.BRIDGE_BIG_HP)); }
 });

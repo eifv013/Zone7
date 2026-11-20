@@ -353,12 +353,27 @@ def run_case(browser, name, size, state, mode):
     elif mode == 'guard':
         # 6구역: 안전도 칸이 보이고 → 초소를 사면 통행 물자가 들어오고 → 한 화면에 들어온다(긴 구역 이름이 머리띠를 밀어내지 않는다)
         tap('[data-mview-set=manage]'); tap('[data-tab=z5]')
-        if not page.locator('#guard').is_visible(): problems.append('6구역 탭에 다리 안전도 칸이 없다')
-        if '×' not in text('guard-safety'): problems.append('다리 안전도가 없다: ' + text('guard-safety'))
+        if not page.locator('#bridgescene').is_visible(): problems.append('6구역 탭에 다리 그림이 없다')
+        if page.locator('#push-guard').count(): problems.append('없앤 순찰 단추가 남아 있다')
         if not tap('#row-post'): problems.append('초소를 살 수 없다')
         page.wait_for_timeout(300)
         if not text('row-post').strip().startswith('초소') or '1 / 500' not in text('row-post'): problems.append('초소를 샀는데 수가 그대로다: ' + text('row-post')[:40])
-        if '초당 +0' in text('guard-rate'): problems.append('초소가 있는데 통행 물자가 0이다: ' + text('guard-rate'))
+        if '한 마리 +' not in text('guard-rate'): problems.append('제목 줄에 한 마리를 잡으면 받는 것이 없다: ' + text('guard-rate'))
+        for up in ['#row-fire', '#row-morale']:
+            if not page.locator(up).count(): problems.append('6구역 줄이 없다: ' + up)
+        # 4.1.0 다리: 무리가 건너오고 → 누르면 쏘고 → 잡으면 얻은 것이 뜨고 연속이 오른다(손가락으로도)
+        for _ in range(30):
+            if int(page.get_attribute('#bridgescene', 'data-zs') or 0) >= 1: break
+            page.wait_for_timeout(200)
+        if int(page.get_attribute('#bridgescene', 'data-zs') or 0) < 1: problems.append('초소를 세웠는데 무리가 건너오지 않는다')
+        else:
+            page.evaluate("""() => new Promise((done) => { const el = document.getElementById('bridgescene'), r = el.getBoundingClientRect(), x = r.left + r.width * 0.9, y = r.top + r.height * 0.5; let k = 0;
+              const one = () => { const mk = (type) => { const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y }); el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [t], targetTouches: type === 'touchend' ? [] : [t], changedTouches: [t] })); };
+                mk('touchstart'); mk('touchend'); if (++k < 8) setTimeout(one, 70); else setTimeout(done, 200); }; one(); })""")
+            if int(page.get_attribute('#bridgescene', 'data-kills') or 0) < 1: problems.append('다리의 것을 여덟 번 눌렀는데 하나도 못 잡았다')
+            if text('combo-x') == '×1.0': problems.append('잡았는데 연속이 그대로다')
+            if page.locator('#bridge-wrap .ward-pop').count() < 1: problems.append('잡았는데 얻은 것이 그림에 뜨지 않는다')
+        if page.evaluate("(() => { const c = document.getElementById('bridgescene'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size; })()") < 20: problems.append('다리 그림이 비어 있다')
         if not fits(): problems.append('한 화면에 들어오지 않는다(6구역)')
         tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다(6구역 상황)')
