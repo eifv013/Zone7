@@ -1452,9 +1452,8 @@
       var r = C.harvestTube(state, slot);
       if (!r.ok) return;
       tubeFx[slot] = { at: Date.now(), kind: r.boil ? 'burnt' : r.fan ? 'fan' : r.peak ? 'peak' : r.burnt ? 'burnt' : 'pop' };
-      if (r.boil) { toast('끓어 넘쳤다'); sfx('rush'); buzz([30, 40, 30]); Store.save(); render(); return; }      // 과열: 한 관을 너무 연달아 올렸다
+      if (r.boil) { sfx('rush');      /* 4.0.1: 알림 띠는 띄우지 않는다(그림에서 관이 타는 것으로 충분하다) */ buzz([30, 40, 30]); Store.save(); render(); return; }      // 과열: 한 관을 너무 연달아 올렸다
       if (r.fan) { sfx('click'); buzz(8); render(); return; }      // 불 올리기: 가볍게
-      if (r.chain > 0) toast('연속 절정 ' + (r.chain + 1) + '개 · +' + Math.round(r.chain * C.CHAIN_STEP * 100) + '%');
       if (r.gain > 0) popNumber('+' + fmt(r.gain));
       sfx(r.peak ? 'signal' : r.burnt ? 'click' : 'buy'); buzz(r.peak ? 25 : 10); Store.save(); render();
     });
@@ -3763,7 +3762,7 @@
     $('train-horn').addEventListener('click', function () {
       var res = C.blowHorn(state);
       if (!res.ok) return;
-      platHorn = Date.now(); log(res.broke ? '경적으로 무리의 돌진을 막았다.' : '경적을 울렸다. 무리가 물러선다.', ''); if (res.broke) toast('돌진을 막았다'); sfx('signal'); buzz(35); Store.save(); render();
+      platHorn = Date.now(); log(res.broke ? '경적으로 무리의 돌진을 막았다.' : '경적을 울렸다. 무리가 물러선다.', ''); sfx('signal'); buzz(35); Store.save(); render();
     });
     $('train-go').addEventListener('click', function () {
       var res = C.sendTrain(state);
