@@ -319,16 +319,17 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=manage]'); tap('[data-tab=z6]')
         if not page.locator('#tower').is_visible(): problems.append('7구역 탭에 송신탑 칸이 없다')
         # 3.1.0: 주파수 맞추기와 정착지
-        if not page.locator('#t7-dial').is_visible() or not page.locator('#t7-tune').is_visible(): problems.append('주파수 맞추기가 보이지 않는다')
+        if not page.locator('#t7-dial').is_visible(): problems.append('주파수 칸이 보이지 않는다')
+        if page.locator('#t7-tune').is_visible() or page.locator('#camp-card').count(): problems.append('없앤 맞추기 단추나 카드가 보인다')
         # 4.2.0 정착지 지도: 그림이 있고, 아홉 채가 서 있고(옛 저장의 '짓는 중'도 선 것으로 옮긴다), 송신탑을 누르면 주파수를 맞춘다
         if not page.locator('#campscene').is_visible(): problems.append('정착지 지도가 없다')
         if int(page.get_attribute('#campscene', 'data-levels') or 0) < 9: problems.append('정착지 아홉 채가 다 서지 않았다: %s' % page.get_attribute('#campscene', 'data-levels'))
-        if '문 앞에' not in text('camp-head'): problems.append('제목 줄에 문 앞의 사람 수가 없다: ' + text('camp-head'))
+        if '생존자' not in text('camp-s0') or '습격까지' not in text('camp-s1'): problems.append('띠에 생존자와 습격까지가 없다: %s | %s' % (text('camp-s0'), text('camp-s1')))
         if page.evaluate("(() => { const c = document.getElementById('campscene'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size; })()") < 30: problems.append('정착지 지도가 비어 있다')
         if page.locator('#settle-grid').count() or page.locator('#tower-people').count(): problems.append('없앤 정착지 표나 옛 머리줄이 남아 있다')
         page.locator('#campscene').scroll_into_view_if_needed(); page.wait_for_timeout(150); clear()
-        cbx = page.locator('#campscene').bounding_box(); page.mouse.click(cbx['x'] + cbx['width'] * 76 / 184, cbx['y'] + cbx['height'] * 27 / 128); page.wait_for_timeout(250)
-        if page.get_attribute('#campscene', 'data-flag') != 'farm' or not page.locator('#camp-card').is_visible(): problems.append('자리를 눌렀는데 고른 자리가 안 보인다: %s' % page.get_attribute('#campscene', 'data-flag'))
+        cbx = page.locator('#campscene').bounding_box(); page.mouse.click(cbx['x'] + cbx['width'] * 68 / 184, cbx['y'] + cbx['height'] * 48 / 128); page.wait_for_timeout(250)
+        if page.get_attribute('#campscene', 'data-flag') != 'farm': problems.append('자리를 눌렀는데 고른 자리가 안 잡힌다: %s' % page.get_attribute('#campscene', 'data-flag'))
         tap('#zone-panes [data-pane=up]'); page.wait_for_timeout(300)
         for _ in range(3):      # 혈청부터(안테나를 한꺼번에 사면 물자가 바닥난다)
             if not tap('#serum'): break
@@ -337,7 +338,7 @@ def run_case(browser, name, size, state, mode):
         tap('#zone-panes [data-pane=play]')
         tap('[data-qty="10"]')
         for _ in range(4): tap('#row-antenna'); page.wait_for_timeout(120)
-        page.locator('#campscene').scroll_into_view_if_needed(); page.wait_for_timeout(150); clear(); cbx = page.locator('#campscene').bounding_box(); page.mouse.click(cbx['x'] + cbx['width'] * 23 / 184, cbx['y'] + cbx['height'] * 30 / 128); page.wait_for_timeout(250)
+        page.locator('#campscene').scroll_into_view_if_needed(); page.wait_for_timeout(150); clear(); cbx = page.locator('#campscene').bounding_box(); page.mouse.click(cbx['x'] + cbx['width'] * 18 / 184, cbx['y'] + cbx['height'] * 25 / 128); page.wait_for_timeout(250)
         if '다시 잡는 중' not in text('t7-tune'): problems.append('송신탑을 눌렀는데 주파수를 맞추지 않는다: ' + text('t7-tune'))
         # 4.2.2 울타리 밖의 사람들: 보고 있으면 나타나고, 표시를 누르면 들어온다
         page.evaluate("GameCore.TEST.stray = 40; GameCore.TEST.night = 0"); got = False

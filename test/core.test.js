@@ -2726,7 +2726,7 @@ test('7구역 습격: 화면을 보고 있을 때만 온다. 무리는 세 쪽�
   /* 세워야 하는 수는 모인 사람 전체의 몫이다: 낮에 얼마를 지었든 같고, 단계가 오르면 는다. 자리를 비운 동안에는 오지 않는다 */
   const hz = inCamp(); hz.survivors = 5e6; const need0 = C.raidNeed(hz); assert.equal(need0, Math.ceil(5e6 * C.NIGHT_FRAC)); fill7(hz, 'farm'); assert.equal(C.raidNeed(hz), need0, '지어도 같다'); hz.upgrades.muster = 5; assert.ok(C.raidNeed(hz) < need0); hz.upgrades.muster = 0;
   hz.camp.nightLv = 8; assert.ok(C.raidNeed(hz) > need0 * 2.2); hz.camp.nightLv = 200; assert.ok(C.raidNeed(hz) <= 5e6 * 1.61, '상한');
-  hz.camp.broken.farm = true; const rp0 = C.settleNeed(hz, 'farm'); hz.upgrades.medkit = 4; assert.ok(C.settleNeed(hz, 'farm') < rp0, '구급낭: 고치는 데 덜 든다');
+  assert.ok(!C.UPGRADES.some((d) => ['medkit', 'beacon', 'wagon'].includes(d.id)), '4.3.0: 숫자만 다른 개조 셋은 뺐다'); hz.upgrades.medkit = 4; assert.doesNotThrow(() => C.mods(hz), '옛 저장에 남아 있어도 탈이 없다');
   const a = inCamp(); a.survivors = 5e6; fill7(a, 'farm'); C.campOf(a).clock = C.RAID_EVERY - 1; C.campSeen(a); C.stepCamp(a, 600, calm, []); assert.equal(a.camp.night, null); assert.equal(a.campBreaches || 0, 0);
 });
 

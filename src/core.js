@@ -479,9 +479,7 @@
     { id: 'autoguard', zone: 5, name: '초소장',     desc: '맨 앞의 것을 알아서 쏘고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
     { id: 'palisade', zone: 6, name: '통나무 울타리', desc: '울타리가 25% 더디게 깎인다',     key: 'fence',    per: 0.25, baseCost: 3e31, growth: 6, max: 6 },
     { id: 'muster',  zone: 6, name: '훈련',      desc: '습격에 세워야 하는 사람 −8%',    key: 'muster',    per: -0.08, baseCost: 4e31, growth: 5, max: 8 },
-    { id: 'medkit',  zone: 6, name: '구급낭',    desc: '부서진 건물을 고치는 데 드는 사람 −15%',          key: 'loss',     per: -0.15, baseCost: 3e31, growth: 5, max: 6 },
-    { id: 'beacon',  zone: 6, name: '봉화',      desc: '습격을 막으면 오는 사람 +50%',   key: 'nightpay', per: 0.5,  baseCost: 5e31, growth: 4, max: 10 },
-    { id: 'wagon',   zone: 6, name: '수레',      desc: '한 번에 보내는 무리 +25%',       key: 'wagon',     per: 0.25, baseCost: 2e31, growth: 5, max: 8 },
+    /* 4.3.0: 구급낭 · 봉화 · 수레는 뺐다(숫자만 다른 개조가 늘어 무거워졌다). 저장에 남아 있어도 효과는 없다 */
     { id: 'elder',   zone: 6, name: '이장',      desc: '깃발을 꽂아 둔 자리로 알아서 사람을 보낸다. 밤에는 울타리를 절반까지 채운다', key: 'elder', per: 1, baseCost: 8e31, growth: 1, max: 1 },
     { id: 'autotower', zone: 6, name: '송신 기사',  desc: '주파수를 알아서 맞추고, 무전에 알아서 응답한다(절반)', key: 'autotower', per: 1, baseCost: 5e31, growth: 1, max: 1 }
   ];
