@@ -282,7 +282,8 @@ body { word-break: keep-all; }
 @media (max-width: 640px) {
   .mast { position: relative; }
   .mast-record { display: flex; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background: transparent; color: var(--ink); border: 2px solid var(--ink); border-radius: 6px; cursor: pointer; }
-  .mast-record svg { width: 16px; height: 16px; fill: currentColor; }
+  .mast-record svg { width: 16px; height: 16px; fill: var(--hazard); }      /* 4.5.6 수첩을 노랗게 */
+  .mast-record[aria-pressed="true"] svg { fill: #17171a; }
   .mast-record[aria-pressed="true"] { background: var(--hazard); color: #17171a; border-color: var(--hazard); }
   .mast-record.dot::after { content: ''; position: absolute; top: -4px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--blood); }
   .dplus { margin-right: 36px; }
@@ -1466,7 +1467,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.5.5</div>
+  <div class="boot-ver">7구역 알파 4.5.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1963,7 +1964,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.5.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.5.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

@@ -14,6 +14,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 4.5.6', date: '2026-11-22', at: '2026-11-22 07:00:00', title: '기록 단추 색',
+      items: [ '머리줄 오른쪽의 기록(수첩) 단추를 노랗게 칠했어요.' ] },
     { ver: '알파 4.5.5', date: '2026-11-22', at: '2026-11-22 06:50:00', title: '모험 창과 새 아이콘',
       items: [
         '모험 탭을 누르면 모험 창이 떠요.',
