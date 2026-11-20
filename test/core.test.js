@@ -2724,8 +2724,14 @@ test('7구역 습격: 화면을 보고 있을 때만 온다. 무리는 세 쪽�
   s.survivors = 1e12; fill7(s, 'guard7'); c.night = C.newRaid(s, calm); near(C.towerHold(s), C.TOWER_HOLD.guard7); c.broken.guard7 = true; near(C.towerHold(s), 0); delete c.broken.guard7; s.settleLv.guard7 = 10; s.settleLv.watch = 10; s.settle.watch = true; assert.ok(C.towerHold(s) <= C.TOWER_HOLD_MAX && C.towerHold(s) > 0.45, '10단계여도 다 막아 주지는 않는다'); s.settleLv.guard7 = 1; delete s.settle.watch; delete s.settleLv.watch;
   c.night = C.newRaid(s, calm); for (let i = 0; i < 3; i++) while (C.sendGuard(s, i).ok) {} c.night.fences = [0.5, 1, 1]; c.night.t = 0.1; const s1 = s.survivors, ev4 = []; C.stepCamp(s, 0.2, calm, ev4); const h4 = ev4.find((e) => e.type === 'camp-held'); assert.ok(h4 && h4.lost === 0 && s.survivors > s1, '지키다 잃는 사람은 없다');
   /* 세워야 하는 수는 모인 사람 전체의 몫이다: 낮에 얼마를 지었든 같고, 단계가 오르면 는다. 자리를 비운 동안에는 오지 않는다 */
-  const hz = inCamp(); hz.survivors = 5e6; const need0 = C.raidNeed(hz); assert.equal(need0, Math.ceil(5e6 * C.NIGHT_FRAC)); fill7(hz, 'farm'); assert.equal(C.raidNeed(hz), need0, '지어도 같다'); hz.campRows.arms = 5; assert.ok(C.raidNeed(hz) < need0); hz.campRows.arms = 0;
-  hz.camp.nightLv = 8; assert.ok(C.raidNeed(hz) > need0 * 2.2); hz.camp.nightLv = 200; assert.ok(C.raidNeed(hz) <= 5e6 * 1.61, '상한');
+  const hz = inCamp(); hz.survivors = 5e6; const need0 = C.raidNeed(hz); assert.equal(need0, Math.ceil(5e6 * C.NIGHT_FRAC)); fill7(hz, 'farm'); assert.equal(C.raidNeed(hz), need0, '지어도 같다'); hz.campRows.arms = 3; assert.ok(C.raidNeed(hz) < need0); hz.campRows.arms = 0;
+  hz.camp.nightLv = 8; assert.ok(C.raidNeed(hz) > need0 * 1.1); hz.camp.nightLv = 200; assert.ok(C.raidNeed(hz) <= 5e6 * C.NIGHT_CAP + 1, '상한');
+  // 4.3.8: 어떤 단계 · 무장 · 경비대 · 망루여도 세 쪽을 한꺼번에 다 채울 수는 없고(옮겨야 한다), 몰린 모양 하나는 늘 막을 수 있다
+  for (const lv of [0, 5, 30, 200]) for (const arms of [0, 3, 10]) for (const tl of [0, 4, 10]) {
+    const q = inCamp(); q.survivors = 1e8; q.camp.nightLv = lv; q.campRows.arms = arms; if (tl) { fill7(q, 'guard7'); q.settleLv.guard7 = tl; q.settle.watch = true; q.settleLv.watch = tl; }
+    const T = C.raidTight(q), eff = C.raidNeed(q) * (1 - C.towerHold(q)) / q.survivors;
+    assert.ok(T >= C.NIGHT_FLOOR - 1e-9 && T <= C.NIGHT_CAP + 1e-9, 'T ' + T); assert.ok(Math.abs(eff - T) < 0.01, '세울 수가 T 에 맞는다'); assert.ok(1.8 * T > 1, '다 채울 수 없다'); assert.ok(T <= 1, '막을 수는 있다');
+  }
   /* 4.3.2 운영 줄 셋(수레 · 방벽 · 무기고)과 다시 채운 개조 */
   hz.camp.broken.farm = true; const rp0 = C.settleNeed(hz, 'farm'); hz.upgrades.medkit = 4; assert.ok(C.settleNeed(hz, 'farm') < rp0, '구급낭'); delete hz.camp.broken.farm; hz.upgrades.medkit = 0;
   const l2 = C.settleNeed(hz, 'farm'); hz.upgrades.blueprint = 4; near(C.settleNeed(hz, 'farm'), Math.ceil(l2 * Math.pow(0.95, 4)), '설계도'); const z1 = inCamp(); z1.upgrades.blueprint = 8; assert.equal(C.settleNeed(z1, 'farm'), C.SETTLE.find((d) => d.id === 'farm').cost, '1단계 값은 그대로(혈청의 문턱)');
@@ -2753,7 +2759,11 @@ test('7구역 이장: 깃발을 꽂아 둔 자리로 알아서 보낸다. 밤에
   const s = inCamp(); s.survivors = 1e7; s.upgrades.elder = 1; assert.ok(C.elderOn(s)); const c = C.campOf(s); c.hand = 999;
   assert.equal(C.elderTarget(s), 'farm', '깃발이 없으면 가장 덜 드는 자리'); c.flag = 'clinic'; const ev = [];
   for (let i = 0; i < 40; i++) C.stepCamp(s, 1, calm, ev); assert.ok(C.settleHas(s, 'clinic')); assert.ok(ev.some((e) => e.type === 'settle-done' && e.id === 'clinic' && e.auto)); assert.equal(c.hand >= 40, true, '이장이 보낸 것은 손으로 치지 않는다');
-  C.setAutoEvents(s, 6, false); const w0 = C.settleUsed(s); for (let i = 0; i < 10; i++) C.stepCamp(s, 1, calm, []); assert.equal(C.settleUsed(s), w0, '구역 자동을 끄면 쉰다'); C.setAutoEvents(s, 6, true);
+  assert.ok(ev.some((e) => e.type === 'camp-send' && e.id && e.auto), '이장이 보낸 것을 화면에 알린다');
+  C.setAutoEvents(s, 6, false); assert.ok(C.elderOn(s), '송신 기사 스위치와 이장은 따로다'); C.setAutoEvents(s, 6, true);
+  assert.ok(C.setElder(s, false).ok); const w0 = C.settleUsed(s); for (let i = 0; i < 10; i++) C.stepCamp(s, 1, calm, []); assert.equal(C.settleUsed(s), w0, '이장을 끄면 쉰다');
+  const eo = C.deserialize(C.serialize(s), 0); assert.equal(C.elderOn(eo), false, '꺼 둔 것은 저장된다'); C.setElder(s, true); assert.ok(C.elderOn(s)); assert.equal(C.setElder(inCamp(), true).ok, false, '이장이 없으면 못 켠다');
+  const old = JSON.parse(C.serialize(s)); delete old.elderOff; old.autoOff = { 6: true }; assert.equal(C.elderOn(C.deserialize(JSON.stringify(old), 0)), false, '옛 저장: 7구역 자동을 꺼 두었으면 이장도 꺼 둔다');
   c.night = C.newRaid(s, calm); c.night.shift = 99; c.night.t = 99; for (let i = 0; i < 14; i++) C.stepCamp(s, 1, calm, []); assert.ok(c.night && c.night.guards > 0 && C.nightHold(s) >= 0.5 && C.nightHold(s) < 0.95, '다는 못 채운다: ' + C.nightHold(s)); c.night = null;
   const away = inCamp(); away.survivors = 1e7; away.upgrades.elder = 1; C.campOf(away).flag = 'farm'; C.stepCamp(away, 3600, calm, []); assert.ok(C.settleLevels(away) >= 2, '자리를 비운 동안에도 보낸다');
   const idle = inCamp(); idle.survivors = 1e7; C.stepCamp(idle, 3600, calm, []); assert.equal(C.settleLevels(idle), 0);

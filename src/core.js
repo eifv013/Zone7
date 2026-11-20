@@ -603,6 +603,7 @@
       settle: {}, settleLv: {}, camp: { work: {}, broken: {}, flag: null, clock: 0, night: null, nightLv: 0, day: 1, hand: 999, elder: 0 }, nightsHeld: 0, campBreaches: 0, nightLvBest: 0, sendsRun: 0, guardsLost: 0, straysRun: 0, campRows: { cart: 0, wall7: 0, arms: 0 }, build: null, tune: { t: 0, band: 0.6, cool: 0 }, tuneHits: 0,      // 7구역 정착지와 주파수(3.1.0)
       zev: { rail: null, guard: null, tower: null }, zevIn: { rail: 60, guard: 60, tower: 60 }, railBoost: 0, guardBoost: 0, zevRun: 0, focusLeft: 0, focusCool: 0, push: { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } },      // 4·6·7구역 사건과 5구역 밤샘 연구
       autoOff: {},      // 구역 index → true 면 그 구역의 주문·사건 자동을 꺼 둔 것(철수해도 남는다)
+      elderOff: false,      // 4.3.8: 7구역 이장을 꺼 둔 것(철수해도 남는다). 송신 기사(autoOff[6])와 따로 켜고 끈다
       goalExt: {},      // 목표 id → 채운 연장 단계 수(이번 회차)
       goalPick: {},      // 이번 회차의 목표 고르기(구역 index → 자리별 0|1). 비어 있으면 원래 목표 셋
       perks: {}, pendingPerks: [], goalsDone: {}, rerollsUsed: 0,      // rerollsUsed: 이번 판에 특전을 다시 뽑은 횟수(철수하면 0)
@@ -892,6 +893,7 @@
     s.defStreak = clamp(safeCount(raw.defStreak), 0, 1e6); s.perkOwed = clamp(safeCount(raw.perkOwed), 0, PERK_OWED_MAX); s.bossPerks = clamp(safeCount(raw.bossPerks), 0, BOSS_PERKS_MAX); s.perkFrom = raw.perkFrom === 'boss' ? 'boss' : 'goal';
     var ao = raw.autoOff && typeof raw.autoOff === 'object' ? raw.autoOff : {};
     for (var az = 1; az < AUTO_KEYS.length; az++) if (ao[az] === true) s.autoOff[az] = true;
+    s.elderOff = typeof raw.elderOff === 'boolean' ? raw.elderOff : ao[6] === true;      // 4.3.8 전 저장: 7구역 자동을 꺼 두었으면 이장도 꺼 둔 것으로
     var ge = raw.goalExt && typeof raw.goalExt === 'object' ? raw.goalExt : {};
     GOALS.concat(GOALS_ALT).forEach(function (list) { list.forEach(function (g) { if (g && s.goalsDone[g.id]) { var tv = clamp(safeCount(ge[g.id]), 0, EXT_MAX); if (tv > 0) s.goalExt[g.id] = tv; } }); });
     var gp = raw.goalPick && typeof raw.goalPick === 'object' ? raw.goalPick : {};
@@ -1196,16 +1198,27 @@
    *   세워야 하는 수 = 전체의 NIGHT_FRAC × 단계(NIGHT_GROW 배씩, 많아야 전체의 NIGHT_CAP). 낮에 얼마를 지었든 같다.
    *   지키다 잃는 사람도 없앴다(수가 들쭉날쭉해지는 까닭이었다). 벌칙은 뚫렸을 때 건물이 부서지는 것 하나다.
    */
-  var NIGHT_FRAC = 0.06, NIGHT_CAP = 1.6;
-  /** 다음 습격에 세워야 하는 사람 수. */
+  /*
+   * 4.3.8 습격의 빠듯함(T): 몰린 쪽들에 실제로 세워야 하는 사람 ÷ 모인 사람 전체.
+   *   왜(해 보신 말씀: '막는 게 너무 쉽다'): 전에는 전체의 6% × 1.12^단계라, 세 쪽 모두 가장 몰릴 때(0.6씩 = 1.8배)만큼 미리 세워 두고 나면
+   *   쪽이 바뀌어도 할 일이 없었다. 이제 T 를 NIGHT_FLOOR(0.58) 위로 둔다: 1.8 × T > 1 이라 세 쪽을 한꺼번에 다 채울 수는 없고,
+   *   T ≤ 1 이라 현재 몰린 모양(0.6 + 0.3 + 0.1)은 늘 막을 수 있다. 그래서 습격 내내 몰리는 쪽을 따라 옮겨야 한다.
+   *   단계가 오르면 T 가 NIGHT_CAP(0.95)까지 오른다(남는 사람이 줄어 옮길 틈이 좁아진다). 무장(campRows.arms)과 경비대 · 망루는 T 를 낮추지만 바닥 아래로는 못 낮춘다.
+   *   경비대 · 망루의 몫(towerHold)은 쪽마다 버팀에 더해지므로, 세울 수를 그만큼 부풀려 T 가 위의 값이 되게 맞춘다.
+   */
+  var NIGHT_FRAC = 0.62, NIGHT_STEP = 0.012, NIGHT_CAP = 0.95, NIGHT_FLOOR = 0.58, TOWER_EASE = 0.5;
+  function raidTight(state) { var c = state.camp, lv = c && c.nightLv > 0 ? c.nightLv : 0; return Math.max(NIGHT_FLOOR, Math.min(NIGHT_CAP, NIGHT_FRAC + NIGHT_STEP * lv) * mods(state).muster * (1 - TOWER_EASE * towerHold(state))); }
+  /** 다음 습격에 세워야 하는 사람 수(쪽마다의 몫으로 나뉜다). */
   function raidNeed(state) {
-    var c = state.camp, lv = c && c.nightLv > 0 ? c.nightLv : 0, all = Math.floor(state.survivors || 0);
-    return Math.max(5, Math.ceil(all * Math.min(NIGHT_CAP, NIGHT_FRAC * Math.pow(NIGHT_GROW, lv)) * mods(state).muster));
+    var all = Math.floor(state.survivors || 0);
+    return Math.max(5, Math.ceil(all * raidTight(state) / Math.max(0.05, 1 - towerHold(state))));
   }
   /** 습격에 아직 세우지 않은 사람 수(모인 사람 전체에서 센다). */
   function guardPool(state) { var n = state.camp && state.camp.night; return Math.max(0, Math.floor(state.survivors || 0) - (n ? n.guards || 0 : 0)); }
   function campSeen(state) { if (zoneOpen(state, 6)) campOf(state).hand = 0; }      // 화면이 7구역 운영을 보고 있다: 그동안은 해가 간다(보고 있지 않으면 습격은 오지 않는다)
-  function elderOn(state) { return mods(state).elder > 0 && !(state.autoOff && state.autoOff[6]); }
+  function elderOn(state) { return mods(state).elder > 0 && !state.elderOff; }
+  /** 4.3.8 이장을 켜고 끈다(그전에는 송신 기사와 한 스위치였고, 그 스위치가 구역 탭 아래에 있어 찾기 어려웠다). */
+  function setElder(state, on) { if (!(mods(state).elder > 0)) return fail('none'); state.elderOff = !on; return { ok: true, on: !!on }; }
   /** 이장이 보낼 자리: 깃발을 꽂아 둔 자리, 놓을 수 없으면 놓을 수 있는 자리 가운데 가장 덜 드는 곳. */
   function elderTarget(state) {
     var c = campOf(state); if (c.flag && !settleBlock(state, c.flag)) return c.flag;
@@ -1231,8 +1244,8 @@
     if (elder) {
       c.elder = (c.elder || 0) + dt / ELDER_SECONDS * (c.night ? 4 : 1);      // 습격 중에는 서두른다(몰린 쪽은 몇 초면 깎인다)
       while (c.elder >= 1) { c.elder -= 1;
-        if (c.night && nightHold(state) < ELDER_HOLD) { if (!sendGuard(state, -1, true).ok) break; }
-        else { var t2 = elderTarget(state); if (!t2 || !buildSettle(state, t2, true, events).ok) { c.elder = Math.min(c.elder, 1); break; } } }      // 이장은 다음 습격에 세울 만큼은 남겨 둔다
+        if (c.night && nightHold(state) < ELDER_HOLD) { var eg = sendGuard(state, -1, true); if (!eg.ok) break; if (events) events.push({ type: 'camp-send', side: eg.side, auto: true }); }
+        else { var t2 = elderTarget(state), eb = t2 ? buildSettle(state, t2, true, events) : null; if (!eb || !eb.ok) { c.elder = Math.min(c.elder, 1); break; } if (events) events.push({ type: 'camp-send', id: t2, auto: true }); } }      // 4.3.8: 보낸 것을 알린다(화면이 길을 걷는 사람을 그린다)      // 이장은 다음 습격에 세울 만큼은 남겨 둔다
     }
     var n = c.night;
     if (n) {
@@ -1876,7 +1889,7 @@
    */
   function autoShare(state, zone) { return state.zone > zone ? 1 : Math.min(1, AUTO_SHARE + mods(state).autoshare); }
   var AUTO_SHARE = 0.5;
-  function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && (mods(state)[AUTO_KEYS[zone]] > 0 || (zone === 4 && (state.upgrades.nurse || 0) > 0) || (zone === 6 && (state.upgrades.elder || 0) > 0)); }      // 4.0.3: 5구역은 자동이 둘(연구 조교 · 간호사). 하나만 있어도 켜진 것으로 본다
+  function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && (mods(state)[AUTO_KEYS[zone]] > 0 || (zone === 4 && (state.upgrades.nurse || 0) > 0) ); }      // 4.3.8: 7구역의 이 스위치는 송신 기사만 다룬다(이장은 setElder)      // 4.0.3: 5구역은 자동이 둘(연구 조교 · 간호사). 하나만 있어도 켜진 것으로 본다
   /**
    * 그 구역의 주문·의뢰·사건을 자동에 맡겼는가(1.5.3). 자동 개조가 있어도 구역마다 끌 수 있다(state.autoOff[구역 index]).
    * 손으로 하면 더 받는 것들이라, 지금 붙어서 하는 구역은 끄고 싶을 수 있다. 전력 투입·청신호·순찰조처럼 늘 도는 자동은 이 스위치와 상관없다.
@@ -4013,7 +4026,7 @@
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
-    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos; next.sellPeak = !!state.sellPeak; next.autoOff = state.autoOff;      // 흥정꾼의 고점 판매 설정은 취향이라 철수해도 남는다
+    next.ach = state.ach; next.zdex = state.zdex; next.regulars = state.regulars; next.clients = state.clients; next.cargos = state.cargos; next.sellPeak = !!state.sellPeak; next.autoOff = state.autoOff; next.elderOff = !!state.elderOff;      // 흥정꾼의 고점 판매 설정은 취향이라 철수해도 남는다
     next.records = state.records; next.passers = state.passers; next.ended = state.ended; next.endedAt = state.endedAt;
     next.lifetimeEarned = state.lifetimeEarned;
     next.clicks = state.clicks;
@@ -4636,7 +4649,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, LV_MAX: LV_MAX7, CAMP_ROWS: CAMP_ROWS, campRow: campRow, campRowCost: campRowCost, buyCampRow: buyCampRow, levelNeed: levelNeed, CART_STEP: CART_STEP, WALL7_STEP: WALL7_STEP, ARMS_STEP: ARMS_STEP, guardPool: guardPool, NIGHT_FRAC: NIGHT_FRAC, rescueStray: rescueStray, strayGain: strayGain, STRAY_PAY: STRAY_PAY, STRAY_TIME: STRAY_TIME, STRAY_MAX: STRAY_MAX, STRAY_EVERY: STRAY_EVERY, sideHold: sideHold, sideNeed: sideNeed, towerHold: towerHold, newRaid: newRaid, RAID_SHIFT: RAID_SHIFT, campSeen: campSeen, raidNeed: raidNeed, levelPow: levelPow, LV_GROW: LV_GROW, TOWER_HOLD_MAX: TOWER_HOLD_MAX, GUARD_LOSS: GUARD_LOSS, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
+    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, setElder: setElder, raidTight: raidTight, NIGHT_FLOOR: NIGHT_FLOOR, NIGHT_STEP: NIGHT_STEP, NIGHT_CAP: NIGHT_CAP, LV_MAX: LV_MAX7, CAMP_ROWS: CAMP_ROWS, campRow: campRow, campRowCost: campRowCost, buyCampRow: buyCampRow, levelNeed: levelNeed, CART_STEP: CART_STEP, WALL7_STEP: WALL7_STEP, ARMS_STEP: ARMS_STEP, guardPool: guardPool, NIGHT_FRAC: NIGHT_FRAC, rescueStray: rescueStray, strayGain: strayGain, STRAY_PAY: STRAY_PAY, STRAY_TIME: STRAY_TIME, STRAY_MAX: STRAY_MAX, STRAY_EVERY: STRAY_EVERY, sideHold: sideHold, sideNeed: sideNeed, towerHold: towerHold, newRaid: newRaid, RAID_SHIFT: RAID_SHIFT, campSeen: campSeen, raidNeed: raidNeed, levelPow: levelPow, LV_GROW: LV_GROW, TOWER_HOLD_MAX: TOWER_HOLD_MAX, GUARD_LOSS: GUARD_LOSS, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
     SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
     tuneBand: tuneBand, tunePos: tunePos, tuneGain: tuneGain, tuneHit: tuneHit, tuneNow: tuneNow, TUNE_PERIOD: TUNE_PERIOD, TUNE_COOL: TUNE_COOL, TUNE_MISS_COOL: TUNE_MISS_COOL, TUNE_GAIN_SECONDS: TUNE_GAIN_SECONDS, TUNE_AUTO: TUNE_AUTO,
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,

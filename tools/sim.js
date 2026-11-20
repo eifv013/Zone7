@@ -61,6 +61,10 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     // 4·6·7구역 사건: 배수를 먼저 다 쌓고, 그 뒤로는 바로 받는다. 5구역 밤샘 연구는 되는 대로 누른다
     if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
     if (!IDLE) { if (s.zone >= 4 && s.staff > 0) { let left5 = Math.max(1, Math.round((taps || 1) * dt)); while (left5-- > 0) { const w5 = C.wardOf(s); let did5 = false; if (w5.stock >= 1) { let ur = -1, fo = -1; w5.seats.forEach((p, i) => { if (p.dose === 0 && p.m > 0.6 && (ur < 0 || p.m > w5.seats[ur].m)) ur = i; if (p.dose >= 1 && (fo < 0 || p.dose > w5.seats[fo].dose)) fo = i; }); const pk = ur >= 0 ? ur : fo >= 0 ? fo : w5.seats.findIndex((p) => p.dose === 0); if (pk >= 0) did5 = C.injectSeat(s, pk).ok; } if (!did5) C.tapSerum(s); } } if (s.zone >= 5) C.pushZone(s, 'guard'); if (s.zone >= 6) C.pushZone(s, 'tower'); }
+    // 4.3.7: 6구역 다리는 손으로 쏜다(총열이 달아오르면 쉬고, 수류탄이 차면 던진다). 전에는 쏘지 않아 '손으로 150마리' 목표에서 영영 멈췄다
+    if (!IDLE && s.zone === 5) { const b6 = C.bridgeOf(s); for (let k = 0; k < Math.max(1, Math.round((taps || 1) * dt)); k++) { if ((b6.heat || 0) > 0.8 || !b6.zs.length) break; C.shootBridge(s); } if (C.throwNade) C.throwNade(s); }
+    // 4.3.7: 7구역 습격에는 생존자를 몰리는 쪽에 세우고, 울타리 밖 생존자는 들인다
+    if (!IDLE && s.zone >= 6) { const c7 = C.campOf(s); if (c7.night) for (let k = 0; k < 4; k++) if (!C.sendGuard(s, -1).ok) break; (c7.strays || []).slice().forEach(q => C.rescueStray(s, q.id)); }
     if (!IDLE) { if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s); }
     // 7구역 정착지와 주파수(3.1.0): 지을 수 있는 건물은 짓되 혈청 줄(가운데)을 먼저. 주파수는 바늘이 띠 안에 있을 때만 누른다
     if (s.zone >= 6) {

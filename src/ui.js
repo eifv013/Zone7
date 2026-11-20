@@ -2936,9 +2936,9 @@
      if(t===0){h.tent(x+1,by,23,'#6a8a52','#4a6a3a');R(x+10,by-6,4,6,'#2a2e26');h.bags(x+25,by-3,3);R(x+30,by-7,1,4,'#6a6f78');R(x+29,by-9,3,2,'#55504a');L(x+30,by-8,1,1,'#ffd98a');h.crate(x+38,by-4);return}
      if(t===1){R(x,by-14,22,14,K);for(var k=0;k<20;k+=3)R(x+1+k,by-13,3,13,k%2?'#6a7a4a':'#55643a');for(var a=0;a<24;a++)R(x-1+a,by-17+Math.round(a/8),1,3,a%3?'#4a5a3a':'#3a4a2e');h.win(x+3,by-10,5,4,1);R(x+12,by-9,5,9,'#2a2e26');
       for(var r=0;r<3;r++)h.bags(x+24+(r%2)*2,by-3-r*3,4-(r>1?1:0));R(x+30,by-11,9,1,'#17180f');R(x+31,by-10,2,2,'#3a3a36');return}
-     if(t===2){R(x,by-15,25,15,K);h.bricks(x+1,by-14,23,7,'#8a5a40','#9a6a4a','#b89a7a');h.win(x+3,by-11,5,5,1);h.win(x+17,by-11,5,5,0);R(x+10,by-10,6,10,K);R(x+11,by-9,4,9,'#4a3a2a');for(var a=0;a<27;a++)R(x-1+a,by-18+Math.round(Math.abs(13-a)/5),1,3,'#55585f');
-      R(x+29,by-26,2,26,'#7a5a3a');R(x+39,by-26,2,26,'#5e4630');for(var k=0;k<24;k+=6)R(x+30,by-24+k,10,1,'#6b5238');R(x+27,by-32,16,6,K);R(x+28,by-31,14,4,'#8a6a42');R(x+28,by-31,14,1,'#a8854f');R(x+26,by-35,18,3,'#6a3a26');R(x+26,by-35,18,1,'#8a4a2e');
-      h.bags(x+26,by-3,3);return}
+     if(t===2){R(x,by-15,27,15,K);h.bricks(x+1,by-14,25,7,'#8a5a40','#9a6a4a','#b89a7a');h.win(x+3,by-11,5,5,1);h.win(x+19,by-11,5,5,0);R(x+11,by-10,6,10,K);R(x+12,by-9,4,9,'#4a3a2a');for(var a=0;a<29;a++)R(x-1+a,by-18+Math.round(Math.abs(14-a)/5),1,3,a%4?'#55585f':'#6e727a');
+       R(x+28,by-28,12,28,K);h.bricks(x+29,by-27,10,13,'#8a5a40','#9a6a4a','#b89a7a');R(x+30,by-20,8,2,K);L(x+31,by-20,6,1,'#f0c878');R(x+27,by-30,14,3,K);R(x+28,by-29,12,1,'#6e727a');for(var c2=0;c2<14;c2+=3)R(x+27+c2,by-32,2,2,'#55585f');
+       h.bags(x+28,by-3,3);return}
      R(x+2,by-16,40,16,K);R(x+3,by-15,38,15,'#7a7a72');R(x+3,by-15,38,1,'#9a9a92');for(var k=0;k<38;k+=9)R(x+3+k,by-15,1,15,'#66665e');R(x+6,by-11,10,2,K);R(x+28,by-11,10,2,K);R(x+18,by-11,8,11,K);R(x+19,by-10,6,10,'#55585f');for(var r=0;r<4;r++)R(x+19,by-9+r*2,1,1,'#a0a6b0');
      for(var a=0;a<44;a++){var hh=Math.max(1,3-Math.abs(22-a)/8|0);R(x+a,by-17-hh,1,hh+1,(a*7)%5<2?'#3a5a2e':(a*7)%5<4?'#4a6a3a':'#5a5030')}for(var a=0;a<44;a+=3)R(x+a,by-15,1,2,'#3a5a2e');
      R(x+38,by-26,1,8,'#6a6f78');R(x+36,by-28,5,3,'#55585f');L(x+40,by-27,2,1,'#fff2c0');h.bags(x,by-3,3);h.bags(x+29,by-3,3)},
@@ -3048,21 +3048,21 @@
     function lamp(x, by) { R(x, by - 14, 1, 14, '#3a342e'); R(x - 1, by - 15, 3, 2, '#55504a'); L(x - 1, by - 13, 3, 1); }
     lamp(26, 142);      // 4.3.7: 단 위의 가로등은 뺐다(넓어진 건물과 겹쳤다. 밤에는 건물 창이 대신 밝다)
     raw = true; var ff = Math.floor(now / 140) % 2; R(20, 137 - ff, 1, 3 + ff, '#ffd95a'); R(19, 138, 3, 1, '#f08a3a'); raw = false;
-    // 아홉 자리
+    // 아홉 자리. aim: 사람이 가는 자리(4.3.8: 이장이 켜져 있으면 이장이 보낼 자리. 전에는 깃발만 표시해서, 깃발 자리가 막히면 이장이 어디로 보내는지 안 보였다)
+    var aim = !n && C.elderOn(state) ? C.elderTarget(state) || c.flag : c.flag;
     C.SETTLE.forEach(function (d) {
       var p = campPlot(d), x = p.x, by = p.by, lv = C.settleLv(state, d.id), why = C.settleBlock(state, d.id), work = C.settleWork(state, d.id), need = C.settleNeed(state, d.id), broken = C.settleBroken(state, d.id), col = CAMP_COL[d.col];
       if (lv > 0) { CAMP_ART[d.id](R, L, x, by, campTier(lv));
-        raw = true; over.push(function () { raw = true; if (c.flag !== d.id) { raw = false; return; }      /* 4.3.4: 단계는 고른 건물에만 보인다(모든 건물에 숫자를 달면 빽빽했다) */ if (lv <= 3) { for (var k = 0; k < 3; k++) { R(x + 15 + k * 5, by + 3, 4, 2, K); R(x + 16 + k * 5, by + 3, 2, 1, k < lv ? col : '#4a443c'); } } else { var ds = String(lv), dw = ds.length * 4 + 1; R(x + 22 - (dw >> 1) - 1, by + 2, dw + 2, 7, K); for (var di = 0; di < ds.length; di++) spr(g, x + 22 - (dw >> 1) + di * 4, by + 3, CAMP_DIGIT[+ds.charAt(di)], { '#': col }); } raw = false; });
+        raw = true; over.push(function () { raw = true; if (aim !== d.id) { raw = false; return; }      /* 4.3.4: 단계는 고른 건물에만 보인다(모든 건물에 숫자를 달면 빽빽했다) */ if (lv <= 3) { for (var k = 0; k < 3; k++) { R(x + 15 + k * 5, by + 3, 4, 2, K); R(x + 16 + k * 5, by + 3, 2, 1, k < lv ? col : '#4a443c'); } } else { var ds = String(lv), dw = ds.length * 4 + 1; R(x + 22 - (dw >> 1) - 1, by + 2, dw + 2, 7, K); for (var di = 0; di < ds.length; di++) spr(g, x + 22 - (dw >> 1) + di * 4, by + 3, CAMP_DIGIT[+ds.charAt(di)], { '#': col }); } raw = false; });
         if (broken) { R(x, by - 30, CAMP_W, 30, 'rgba(20,10,6,.5)'); for (var f = 0; f < 3; f++) { var fx = x + 7 + f * 13, fl = Math.floor(now / 120 + f) % 2; R(fx, by - 8 - fl, 3, 5 + fl, '#f08a3a'); R(fx + 1, by - 10 - fl, 1, 3, '#ffd95a'); var sa = ((now + f * 700) % 2400) / 2400; R(fx + 1 + sa * 3, by - 11 - sa * 12, 2, 1, 'rgba(60,56,64,' + (0.8 - sa * 0.7).toFixed(2) + ')'); } } raw = false;
       } else {
         var lock = why === 'prev' || why === 'locked'; R(x + 2, by - 6, 1, 6, '#6a5a44'); R(x + 40, by - 6, 1, 6, '#6a5a44'); for (var e = 3; e < 40; e += 3) R(x + e, by - 5 + (e % 2), 2, 1, lock ? '#4a443c' : '#c9bc8a');
         if (!(work > 0)) { R(x + 21, by - 12, 1, 12, '#6a5a44'); R(x + 17, by - 17, 9, 6, K); raw = !lock; R(x + 18, by - 16, 7, 4, lock ? '#3a342e' : col); if (!lock) { R(x + 21, by - 16, 1, 4, '#fff'); R(x + 19, by - 14, 5, 1, '#fff'); } raw = false; }
       }
-      if (work > 0 && need > 0) {      // 놓는 중: 비계와 차오르는 줄
-        for (var s = 0; s < 5; s++) R(x + 2 + s * 10, by - 22, 1, 22, '#c9a868'); R(x + 2, by - 22, 41, 1, '#c9a868'); R(x + 2, by - 15, 41, 1, '#a88a50'); R(x + 2, by - 8, 41, 1, '#a88a50'); for (var dd = 0; dd < 40; dd += 3) R(x + 3 + dd, by - 21 + ((dd / 3) % 2) * 3, 1, 1, '#8a7040');
+      if (work > 0 && need > 0) {      // 놓는 중: 차오르는 노란 줄(4.3.8: 비계 칸은 뺐다. 줄만으로 짓는 중인 걸 안다고 하셨다)
         over.push(function () { raw = true; R(x - 1, by + 3, CAMP_W, 4, K); R(x, by + 4, Math.max(1, Math.round((CAMP_W - 2) * work / need)), 2, '#f0b400'); raw = false; });
       }
-      if (c.flag === d.id) { raw = true; var bc = '#e8e6dc', X = x - 2, Y = by - 42, W = CAMP_W + 4, H = 50; R(X, Y, 5, 1, bc); R(X, Y, 1, 5, bc); R(X + W - 5, Y, 5, 1, bc); R(X + W - 1, Y, 1, 5, bc); R(X, Y + H - 1, 5, 1, bc); R(X, Y + H - 5, 1, 5, bc); R(X + W - 5, Y + H - 1, 5, 1, bc); R(X + W - 1, Y + H - 5, 1, 5, bc); raw = false; }
+      if (aim === d.id) { raw = true; var bc = '#e8e6dc', X = x - 2, Y = by - 42, W = CAMP_W + 4, H = 50; R(X, Y, 5, 1, bc); R(X, Y, 1, 5, bc); R(X + W - 5, Y, 5, 1, bc); R(X + W - 1, Y, 1, 5, bc); R(X, Y + H - 1, 5, 1, bc); R(X, Y + H - 5, 1, 5, bc); R(X + W - 5, Y + H - 1, 5, 1, bc); R(X + W - 1, Y + H - 5, 1, 5, bc); raw = false; }
     });
     over.forEach(function (f) { f(); });
     // 사람(3×6)과 무리
@@ -3123,6 +3123,7 @@
     // 4.3.3: 띠에는 늘 모인 생존자 전체를 적는다(낮과 밤에 다른 수를 같은 이름으로 적어 말이 안 됐다)
     var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, '생존자 ' + fmt(Math.floor(state.survivors || 0)) + '명'); setText(s1, n ? '습격 ' + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
     var gb = $('camp-guard'); if (gb.hidden !== !n) gb.hidden = !n;
+    var er = $('camp-elder-row'), hasE = (state.upgrades.elder || 0) > 0; if (er.hidden !== !hasE) er.hidden = !hasE; if (hasE && $('camp-elder').checked !== C.elderOn(state)) $('camp-elder').checked = C.elderOn(state);
     if (n) CAMP_SIDE.forEach(function (nm, k) { var b = $('camp-g' + k), h = C.sideHold(state, k), key = nm + Math.round(h * 100) + (k === n.side); if (b.getAttribute('data-k') !== key) { b.setAttribute('data-k', key); b.innerHTML = ''; b.appendChild(document.createTextNode(nm)); b.appendChild(el('small', '', Math.round(h * 100) + '%')); } b.className = (k === n.side && h < 1 ? 'hot' : '') + (h >= 1 ? ' ok' : ''); });
     if (!n && started) sc0 = C.raidNeed(state);
     /* 문 앞의 생존자(지금 놓을 수 있는 수): 문 앞 무리 위에 작게. 습격 때는 숨긴다(모두가 싸우러 나가므로) */
@@ -3158,6 +3159,7 @@
       campSendWalkers(sd === 1 ? [[60, 136], [34, 136], [44, 96], to] : [[60, 136], to], 3, true); campPop(to[0], to[1] - 14, (r.moved >= 0 ? '옮김 ' : '+') + fmt(r.sent), ''); sfx('fortify'); buzz(10); render();
     }
     [0, 1, 2].forEach(function (k) { $('camp-g' + k).addEventListener('click', function () { guard(k); }); });
+    $('camp-elder').addEventListener('change', function () { if (!C.setElder(state, $('camp-elder').checked).ok) return; sfx('click'); Store.save(); render(); });      // 4.3.8: 이장을 켜고 끈다
     $('t7-dial').addEventListener('click', function () { $('t7-tune').click(); });      // 주파수 칸을 눌러 맞춘다(송신 기사가 있으면 알아서 맞춘다)
     $('campscene').addEventListener('click', function (e) {
       var cv = $('campscene'), rc = cv.getBoundingClientRect(), key = !(e.clientX > 0) && !(e.clientY > 0), c = C.campOf(state);
@@ -3519,7 +3521,7 @@
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
       $('auto-ev').checked = C.autoEvents(state, aeZone);
-      setText($('auto-ev-text'), ['', '단골 주문 자동', '조립공 · 의뢰 넘기기', '역무원 · 표류·특별 화물 자동', '연구 조교 · 간호사', '초소장 · 행렬 자동', '방송·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
+      setText($('auto-ev-text'), ['', '단골 주문 자동', '조립공 · 의뢰 넘기기', '역무원 · 표류·특별 화물 자동', '연구 조교 · 간호사', '초소장 · 행렬 자동', '송신 기사 · 주파수·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
     }
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-now').hidden = tab !== 'wall';
@@ -4189,6 +4191,9 @@
           break;
         case 'stray-in':
           if (tab === 'z6' && pane === 'play') sfx('tab');
+          break;
+        case 'camp-send':      // 4.3.8: 이장이 보냈다. 문에서 그 자리(또는 그쪽 울타리)로 걸어가는 사람으로 보인다
+          if (tab === 'z6' && pane === 'play') { if (ev.id) { var sd8 = C.SETTLE.filter(function (q) { return q.id === ev.id; })[0]; if (sd8) campSendWalkers(campPath(sd8), 2, false); } else if (ev.side >= 0) { var to8 = ev.side === 0 ? [14, 136] : ev.side === 1 ? [172, 96] : [100, 136]; campSendWalkers(ev.side === 1 ? [[60, 136], [34, 136], [44, 96], to8] : [[60, 136], to8], 2, true); } }
           break;
         case 'camp-shift':
           if (tab === 'z6' && pane === 'play') { sfx('tab'); buzz(15); if (campPopFn) campPopFn(92, 56, CAMP_SIDE[ev.side] + '으로 몰린다', 'bad'); }
