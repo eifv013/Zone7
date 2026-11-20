@@ -2993,7 +2993,8 @@
   function renderCamp() {
     C.campSeen(state);      // 4.2.1: 이 화면을 보고 있는 동안은 해가 간다(전에는 자리를 눌러야만 갔는데, 다 지으면 누를 자리가 없어 습격이 영영 안 왔다)
     var c = C.campOf(state), n = c.night, free = C.settleFree(state), has = C.survivorRate(state) > 0 || state.survivors > 0;
-    var head = $('camp-head'); setText(head, n ? '울타리 ' + Math.round(Math.max(0, n.fence) * 100) + '%' : '문 앞에 ' + fmt(free) + '명'); head.classList.toggle('bad', !!n && C.nightHold(state) < 1);
+    /* 4.2.4 제목 줄: 낮에는 문 앞의 사람(지을 사람), 습격 중에는 아직 세우지 않은 사람(전체에서 센다). 전체 수는 기록 줄에 늘 보인다 */
+    var head = $('camp-head'), all7 = Math.floor(state.survivors || 0); setText(head, n ? '세울 사람 ' + fmt(C.guardPool(state)) + '명' : '문 앞에 ' + fmt(free) + '명'); head.classList.toggle('bad', !!n && C.nightHold(state) < 1);
     var ck = $('camp-clock'), left = C.RAID_EVERY - (c.clock || 0), showCk = !!n || C.settleCount(state) >= 1;
     if (ck.hidden !== !showCk) ck.hidden = !showCk; if (showCk) setText(ck, n ? '습격 ' + clock(Math.max(0, n.t)) : ((c.nightLv || 0) > 0 ? c.nightLv + '단계 · ' : '') + '습격까지 ' + clock(Math.max(0, left))); ck.classList.toggle('raid', !!n);
     var gb = $('camp-guard'), tb = $('t7-tune'); if (gb.hidden !== !n) gb.hidden = !n; if (tb.hidden !== !!n) tb.hidden = !!n;
@@ -3010,7 +3011,7 @@
     Array.prototype.slice.call(wrapS.querySelectorAll('.stray-dot')).forEach(function (b) { if (!seenS[b.id]) b.remove(); });
     drawCamp();
     var sc = $('campscene'); sc.classList.toggle('tappable', has); sc.setAttribute('data-free', free); sc.setAttribute('data-levels', C.settleLevels(state)); sc.setAttribute('data-raid', n ? n.side : ''); sc.setAttribute('data-guards', n ? n.guards : 0); sc.setAttribute('data-need', sc0); sc.setAttribute('data-strays', (c.strays || []).map(function (s) { var q = campStrayPos(s); return Math.round(q[0]) + ':' + Math.round(q[1]); }).join(',')); sc.setAttribute('data-flag', c.flag || '');
-    setText($('camp-note'), !has ? '안테나를 세우면 사람이 모여요' : n ? (C.nightHold(state) >= 1 ? '울타리가 버티고 있어요' : '무리가 몰리는 쪽에 사람을 세워요. 몰리는 쪽이 바뀌어요') : (state.sendsRun || 0) < 3 ? '지도의 자리를 누르면 문 앞의 사람이 가서 지어요' : (state.straysRun || 0) < 3 ? '울타리 밖에서 손 흔드는 사람들을 누르면 들어와요' : C.settleCount(state) < 2 ? '송신탑을 눌러도 주파수를 맞춰요' : (state.nightsHeld || 0) + (state.campBreaches || 0) < 1 ? '손을 쓰고 있으면 습격이 와요. 울타리에 사람을 세워 막아요' : '다음 습격에 ' + fmt(sc0) + '명을 세워야 해요');
+    setText($('camp-note'), !has ? '안테나를 세우면 사람이 모여요' : n ? '전체 ' + fmt(all7) + '명 · ' + fmt(n.guards) + ' / ' + fmt(n.need) + '명을 세웠어요' : (state.sendsRun || 0) < 3 ? '지도의 자리를 누르면 문 앞의 사람이 가서 지어요' : (state.straysRun || 0) < 3 ? '울타리 밖에서 손 흔드는 사람들을 누르면 들어와요' : C.settleCount(state) < 2 ? '송신탑을 눌러도 주파수를 맞춰요' : (state.nightsHeld || 0) + (state.campBreaches || 0) < 1 ? '습격에는 정착지의 모든 사람이 나서요. 몰리는 쪽에 세워요' : '전체 ' + fmt(all7) + '명 · 다음 습격에 ' + fmt(sc0) + '명');
   }
   function wireCamp() {
     function campPop(xd, yd, text, cls) {

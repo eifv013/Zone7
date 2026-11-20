@@ -2707,12 +2707,12 @@ test('7구역 습격: 화면을 보고 있을 때만 온다. 무리는 세 쪽�
   c.hand = 999; c.clock = C.RAID_EVERY - 0.2; C.stepCamp(s, 1, calm, ev); assert.equal(c.night, null, '보고 있지 않으면 오지 않는다');
   C.campSeen(s); assert.equal(c.hand, 0); C.stepCamp(s, 1, calm, ev); const nv = ev.find((e) => e.type === 'camp-night'); assert.ok(nv && c.night && c.night.need === nv.need && nv.need >= 5);
   const n = c.night; near(n.w[0] + n.w[1] + n.w[2], 1); assert.ok(n.w[n.side] >= 0.59); near(C.nightHold(s), 0);
-  const free0 = C.settleFree(s), g = C.sendGuard(s, n.side); assert.ok(g.ok && g.side === n.side && g.sent > 0 && g.moved === -1); assert.equal(C.settleFree(s), free0 - g.sent, '세운 사람은 문 앞에서 빠진다');
+  const free0 = C.settleFree(s), pool0 = C.guardPool(s), g = C.sendGuard(s, n.side); assert.ok(g.ok && g.side === n.side && g.sent > 0 && g.moved === -1); assert.equal(C.settleFree(s), free0, '4.2.4: 지키는 사람은 짓는 사람과 따로 센다'); assert.equal(C.guardPool(s), pool0 - g.sent); assert.equal(pool0, Math.floor(s.survivors), '모든 사람이 나선다');
   for (let i = 0; i < 3; i++) while (C.sendGuard(s, i).ok) {} assert.equal(C.sendGuard(s, 0).reason, 'full'); near(C.nightHold(s), 1); assert.equal(n.guards, n.g[0] + n.g[1] + n.g[2]);
   /* 몰리는 쪽이 바뀐다: 옮기지 않으면 그쪽이 깎인다. 문 앞에 사람이 없으면 남는 쪽에서 옮겨 온다 */
   const ev2 = []; let r2 = lcg(5); for (let i = 0; i < 30 && !ev2.some((e) => e.type === 'camp-shift'); i++) { C.campSeen(s); C.stepCamp(s, 0.25, r2, ev2); }
   const sh = ev2.find((e) => e.type === 'camp-shift'); assert.ok(sh && sh.side === n.side); assert.ok(C.sideHold(s, n.side) < 1, '새로 몰린 쪽은 모자란다');
-  const sv0 = s.survivors; s.survivors = C.settleUsed(s); assert.equal(C.settleFree(s), 0); const mv = C.sendGuard(s, n.side); assert.ok(mv.ok && mv.moved >= 0 && mv.moved !== n.side, '남는 쪽에서 옮긴다'); s.survivors = sv0;
+  const sv0 = s.survivors; s.survivors = n.guards; assert.equal(C.guardPool(s), 0); const mv = C.sendGuard(s, n.side); assert.ok(mv.ok && mv.moved >= 0 && mv.moved !== n.side, '남는 쪽에서 옮긴다'); s.survivors = sv0;
   for (let k = 0; k < 20; k++) for (let i = 0; i < 3; i++) C.sendGuard(s, i);
   const sv = s.survivors; for (let i = 0; i < 200 && c.night; i++) { C.campSeen(s); for (let q = 0; q < 3; q++) C.sendGuard(s, q); C.stepCamp(s, 0.25, r2, ev); }
   const hv = ev.find((e) => e.type === 'camp-held'); assert.ok(hv && hv.gain > 0 && hv.lv === 1); assert.ok(s.survivors > sv - 1); assert.equal(c.nightLv, 1); assert.equal(s.nightsHeld, 1); assert.equal(c.night, null);
@@ -2722,10 +2722,11 @@ test('7구역 습격: 화면을 보고 있을 때만 온다. 무리는 세 쪽�
   assert.equal(C.settleNeed(s, 'farm'), Math.ceil(cost('farm') * C.REPAIR_FRAC)); const rp = fill7(s, 'farm'); assert.ok(rp.done && rp.repaired && rp.lv === 1); assert.ok(!C.settleBroken(s, 'farm')); near(C.mods(s).prod, p1);
   /* 경비대와 망루는 거들지만 다 막아 주지는 않는다. 지키다 잃는 사람은 울타리가 깎인 만큼 */
   s.survivors = 1e12; fill7(s, 'guard7'); c.night = C.newRaid(s, calm); near(C.towerHold(s), C.TOWER_HOLD.guard7); c.broken.guard7 = true; near(C.towerHold(s), 0); delete c.broken.guard7; s.settleLv.guard7 = 99; s.settleLv.watch = 99; s.settle.watch = true; assert.equal(C.towerHold(s), C.TOWER_HOLD_MAX); s.settleLv.guard7 = 1; delete s.settle.watch; delete s.settleLv.watch;
-  c.night = C.newRaid(s, calm); for (let i = 0; i < 3; i++) while (C.sendGuard(s, i).ok) {} c.night.fences = [0.5, 1, 1]; c.night.t = 0.1; const gl = c.night.guards, s1 = s.survivors, ev4 = []; C.stepCamp(s, 0.2, calm, ev4); const h4 = ev4.find((e) => e.type === 'camp-held'); assert.ok(h4 && h4.lost === Math.floor(gl * C.GUARD_LOSS * 0.5), '깎인 만큼 잃는다');
-  /* 쌓아만 둔 사람이 많으면 그만큼 큰 무리가 온다. 단계가 오를수록 더 많이 세워야 한다. 자리를 비운 동안에는 오지 않는다 */
-  const hz = inCamp(); hz.survivors = 5e6; fill7(hz, 'farm'); const small = C.raidNeed(hz); hz.survivors = 5e11; assert.ok(C.raidNeed(hz) > small * 100); hz.upgrades.muster = 5; assert.ok(C.raidNeed(hz) < 5e11 * 0.3);
-  const lz = inCamp(); lz.survivors = 2e4; lz.settle.farm = true; lz.settleLv.farm = 1; const n0 = C.raidNeed(lz); lz.camp.nightLv = 8; assert.ok(C.raidNeed(lz) > n0 * 2.5);
+  c.night = C.newRaid(s, calm); for (let i = 0; i < 3; i++) while (C.sendGuard(s, i).ok) {} c.night.fences = [0.5, 1, 1]; c.night.t = 0.1; const s1 = s.survivors, ev4 = []; C.stepCamp(s, 0.2, calm, ev4); const h4 = ev4.find((e) => e.type === 'camp-held'); assert.ok(h4 && h4.lost === 0 && s.survivors > s1, '지키다 잃는 사람은 없다');
+  /* 세워야 하는 수는 모인 사람 전체의 몫이다: 낮에 얼마를 지었든 같고, 단계가 오르면 는다. 자리를 비운 동안에는 오지 않는다 */
+  const hz = inCamp(); hz.survivors = 5e6; const need0 = C.raidNeed(hz); assert.equal(need0, Math.ceil(5e6 * C.NIGHT_FRAC)); fill7(hz, 'farm'); assert.equal(C.raidNeed(hz), need0, '지어도 같다'); hz.upgrades.muster = 5; assert.ok(C.raidNeed(hz) < need0); hz.upgrades.muster = 0;
+  hz.camp.nightLv = 8; assert.ok(C.raidNeed(hz) > need0 * 2.2); hz.camp.nightLv = 200; assert.ok(C.raidNeed(hz) <= 5e6 * 1.61, '상한');
+  hz.camp.broken.farm = true; const rp0 = C.settleNeed(hz, 'farm'); hz.upgrades.medkit = 4; assert.ok(C.settleNeed(hz, 'farm') < rp0, '구급낭: 고치는 데 덜 든다');
   const a = inCamp(); a.survivors = 5e6; fill7(a, 'farm'); C.campOf(a).clock = C.RAID_EVERY - 1; C.campSeen(a); C.stepCamp(a, 600, calm, []); assert.equal(a.camp.night, null); assert.equal(a.campBreaches || 0, 0);
 });
 
