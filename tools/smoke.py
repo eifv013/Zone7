@@ -330,6 +330,8 @@ def run_case(browser, name, size, state, mode):
         page.locator('#campscene').scroll_into_view_if_needed(); page.wait_for_timeout(150); clear()
         cbx = page.locator('#campscene').bounding_box(); page.mouse.click(cbx['x'] + cbx['width'] * 68 / 184, cbx['y'] + cbx['height'] * 48 / 128); page.wait_for_timeout(250)
         if page.get_attribute('#campscene', 'data-flag') != 'farm': problems.append('자리를 눌렀는데 고른 자리가 안 잡힌다: %s' % page.get_attribute('#campscene', 'data-flag'))
+        if page.locator('#row-st-farm').count() != 1 or 'Lv' not in text('row-st-farm'): problems.append('정착지 건물 줄이 없다')
+        elif 'flagged' not in (page.get_attribute('#row-st-farm', 'class') or ''): problems.append('고른 건물이 줄에 표시되지 않는다')
         tap('#zone-panes [data-pane=up]'); page.wait_for_timeout(300)
         for _ in range(3):      # 혈청부터(안테나를 한꺼번에 사면 물자가 바닥난다)
             if not tap('#serum'): break
