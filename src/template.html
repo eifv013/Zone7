@@ -834,6 +834,10 @@ canvas.plat.tappable { cursor: pointer; } canvas.plat.tappable:active { filter: 
 @keyframes t7-hit { 0% { box-shadow: 0 0 0 0 var(--safe); background: color-mix(in srgb, var(--safe) 45%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
 @keyframes t7-miss { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 @media (prefers-reduced-motion: reduce) { .t7-dial.hit, .t7-dial.miss { animation: none; } .t7-work i, .t7-band { transition: none; } }
+.t7-dial.slim { height: 22px; margin: 0 0 6px; } .t7-dial.slim .t7-freq { top: 4px; font-size: 11px; } .t7-gain { position: absolute; right: 8px; top: 4px; font-size: 11px; color: var(--ink-soft); }
+#tower #t7-tune { margin: 0 0 8px; } #tower #t7-tune[hidden] { display: none; } .camp-guard:not(:disabled) { background: var(--blood) !important; color: #fff !important; } .camp-guard[hidden], .camp-card[hidden] { display: none; }
+.camp-card { margin: 0 0 6px; padding: 8px 12px; } .camp-card .autobar { margin-top: 6px; } #camp-head.bad { color: var(--blood); animation: plat-full .4s steps(2) infinite; }
+#camp-wrap .ward-pop { color: #e8e6dc; font-size: 12px; } #camp-wrap .ward-pop.done { color: #ffd95a; font-size: 16px; } #camp-wrap .ward-pop.bad { color: #ff7a6a; font-size: 16px; } #camp-clock.raid { border-color: #ff7a6a; color: #ffb0a4; }
 .settle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 6px; }
 .settle-grid button { min-height: 66px; padding: 7px 3px; text-align: center; font-size: 12px; line-height: 1.35; background: transparent; color: var(--ink); border: 2px solid var(--edge, var(--ink-soft)); border-radius: var(--r-s, 6px); cursor: pointer; }
 .settle-grid b { display: block; font-size: 13px; } .settle-grid small { display: block; color: var(--ink-soft); font-size: 11px; }
@@ -1390,7 +1394,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.1.7</div>
+  <div class="boot-ver">7구역 알파 4.2.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1702,17 +1706,19 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="rows" id="rows-z4" hidden></div>
       <!-- 7구역 운영(3.1.0): 생존자(맡긴 사람 · 맡길 수 있는 사람), 주파수 맞추기, 무전. 정착지와 혈청은 '개조' 화면(#settle)에 있다 -->
       <div class="trade tower" id="tower" hidden>
-        <div class="lab-top"><div><div class="label">생존자</div><div class="trade-price num" id="tower-people">0</div></div><div class="label t7-side"><span id="tower-rate"></span><br><span id="tower-mult"></span></div></div>
-        <div class="t7-work" aria-hidden="true"><i id="t7-busy"></i><i id="t7-free"></i></div>
-        <div class="t7-cap"><span id="t7-busy-text"></span><span id="t7-free-text"></span></div>
-        <div class="t7-h"><span>주파수 맞추기</span><span id="t7-gain"></span></div>
-        <div class="t7-dial" id="t7-dial" aria-hidden="true"><div class="t7-band" id="t7-band"></div><div class="t7-needle" id="t7-needle"></div><div class="t7-ticks"></div><span class="t7-freq num" id="t7-freq"></span></div>
+        <!-- 4.2.0 7구역 정착지 지도: 제목 줄 → 지도(자리를 누르면 사람을 놓는다 · 송신탑을 누르면 주파수를 맞춘다) → 주파수 줄 → 큰 단추 → 고른 자리 → 무전 → 기록 한 줄 -->
+        <div class="order-head plat-head"><span class="label">정착지</span><span class="num" id="camp-head"></span></div>
+        <div class="ward-wrap" id="camp-wrap"><canvas class="belt plat labcv bridgecv" id="campscene" width="184" height="128" role="button" tabindex="0" data-tap aria-label="정착지 지도. 자리를 누르면 사람을 놓는다"></canvas><span class="br-level" id="camp-clock" hidden></span></div>
+        <div class="t7-dial slim" id="t7-dial" aria-hidden="true"><div class="t7-band" id="t7-band"></div><div class="t7-needle" id="t7-needle"></div><span class="t7-freq num" id="t7-freq"></span><span class="t7-gain num" id="t7-gain"></span></div>
         <button type="button" class="surge" id="t7-tune">맞춘다</button>
+        <button type="button" class="fortify sell plat-go camp-guard" id="camp-guard" hidden><span>울타리로 보내기</span><span class="num" id="camp-guard-n"></span></button>
+        <div class="order camp-card" id="camp-card" hidden><div class="order-head"><span class="label" id="camp-name"></span><span class="num" id="camp-need"></span></div><div class="autobar" id="camp-bar" aria-hidden="true"></div></div>
         <div class="order zev" id="zev-tower" hidden>
           <div class="order-head"><span class="label">무전</span><span class="num" id="zev-tower-left"></span></div>
           <p id="zev-tower-text"></p>
           <div class="zev-acts"><button type="button" class="order-fill" id="zev-tower-now"></button></div>
         </div>
+        <div class="label" id="camp-note"></div>
       </div>
       <div class="rows" id="rows-z5" hidden></div>
       <div class="rows" id="rows-z6" hidden></div>
@@ -1724,9 +1730,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="rows" id="ups-z5" hidden></div>
       <!-- 7구역 개조 화면의 위쪽: 정착지(건물 아홉)와 혈청 -->
       <div class="trade settle" id="settle" hidden>
-        <div class="t7-h"><span>정착지 · 생존자에게 일을 맡겨요</span><span class="num" id="settle-count"></span></div>
-        <div class="settle-grid" id="settle-grid"></div>
-        <div class="label" id="settle-free"></div>
+        <!-- 4.2.0: 정착지 표는 없앴다(운영 화면의 지도가 대신한다). 여기에는 혈청만 남는다 -->
         <div class="settle-serum">
           <div class="label" id="serum-note"></div>
           <div class="serum-steps" id="serum-steps" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -1860,7 +1864,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.1.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.2.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

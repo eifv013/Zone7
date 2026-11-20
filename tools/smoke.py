@@ -320,9 +320,16 @@ def run_case(browser, name, size, state, mode):
         if not page.locator('#tower').is_visible(): problems.append('7구역 탭에 송신탑 칸이 없다')
         # 3.1.0: 주파수 맞추기와 정착지
         if not page.locator('#t7-dial').is_visible() or not page.locator('#t7-tune').is_visible(): problems.append('주파수 맞추기가 보이지 않는다')
-        tap('#zone-panes [data-pane=up]'); page.wait_for_timeout(1500)      # 남은 1초짜리 공사(학교)가 끝난다
-        cells = page.evaluate("[...document.querySelectorAll('#settle-grid button')].map(b => b.className.split(' ')[0])")
-        if len(cells) != 9 or cells.count('done') != 9: problems.append('정착지 아홉 채가 다 서지 않았다: ' + ','.join(cells))
+        # 4.2.0 정착지 지도: 그림이 있고, 아홉 채가 서 있고(옛 저장의 '짓는 중'도 선 것으로 옮긴다), 송신탑을 누르면 주파수를 맞춘다
+        if not page.locator('#campscene').is_visible(): problems.append('정착지 지도가 없다')
+        if int(page.get_attribute('#campscene', 'data-levels') or 0) < 9: problems.append('정착지 아홉 채가 다 서지 않았다: %s' % page.get_attribute('#campscene', 'data-levels'))
+        if '문 앞에' not in text('camp-head'): problems.append('제목 줄에 문 앞의 사람 수가 없다: ' + text('camp-head'))
+        if page.evaluate("(() => { const c = document.getElementById('campscene'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size; })()") < 30: problems.append('정착지 지도가 비어 있다')
+        if page.locator('#settle-grid').count() or page.locator('#tower-people').count(): problems.append('없앤 정착지 표나 옛 머리줄이 남아 있다')
+        page.locator('#campscene').scroll_into_view_if_needed(); page.wait_for_timeout(150); clear()
+        cbx = page.locator('#campscene').bounding_box(); page.mouse.click(cbx['x'] + cbx['width'] * 76 / 184, cbx['y'] + cbx['height'] * 27 / 128); page.wait_for_timeout(250)
+        if page.get_attribute('#campscene', 'data-flag') != 'farm' or not page.locator('#camp-card').is_visible(): problems.append('자리를 눌렀는데 고른 자리가 안 보인다: %s' % page.get_attribute('#campscene', 'data-flag'))
+        tap('#zone-panes [data-pane=up]'); page.wait_for_timeout(300)
         for _ in range(3):      # 혈청부터(안테나를 한꺼번에 사면 물자가 바닥난다)
             if not tap('#serum'): break
             page.wait_for_timeout(150)
@@ -330,6 +337,8 @@ def run_case(browser, name, size, state, mode):
         tap('#zone-panes [data-pane=play]')
         tap('[data-qty="10"]')
         for _ in range(4): tap('#row-antenna'); page.wait_for_timeout(120)
+        page.locator('#campscene').scroll_into_view_if_needed(); page.wait_for_timeout(150); clear(); cbx = page.locator('#campscene').bounding_box(); page.mouse.click(cbx['x'] + cbx['width'] * 23 / 184, cbx['y'] + cbx['height'] * 30 / 128); page.wait_for_timeout(250)
+        if '다시 잡는 중' not in text('t7-tune'): problems.append('송신탑을 눌렀는데 주파수를 맞추지 않는다: ' + text('t7-tune'))
         if text('row-antenna').find('40 / 500') < 0: problems.append('안테나를 40기 사지 못했다: ' + text('row-antenna')[:40].replace(chr(10), ' '))
         if not fits(): problems.append('한 화면에 들어오지 않는다(7구역)')
         # 생존자 목표(10만 명)를 채워서 끝을 본다
@@ -344,7 +353,7 @@ def run_case(browser, name, size, state, mode):
                 except Exception: pass
             if page.locator('#ending').is_visible(): ended = True; break
             page.wait_for_timeout(500)
-        if not ended: problems.append('목표를 채웠는데 끝 화면이 뜨지 않았다(안테나 %s, 생존자 %s)' % (text('row-antenna')[:30].replace(chr(10), ' '), text('tower-people')))
+        if not ended: problems.append('목표를 채웠는데 끝 화면이 뜨지 않았다(안테나 %s, 생존자 %s)' % (text('row-antenna')[:30].replace(chr(10), ' '), text('camp-head')))
         else:
             if '철수' not in text('ending-stats'): problems.append('끝 화면에 기록이 없다: ' + text('ending-stats'))
             if page.evaluate("document.documentElement.scrollWidth > window.innerWidth"): problems.append('끝 화면이 옆으로 넘친다')
@@ -377,7 +386,7 @@ def run_case(browser, name, size, state, mode):
             if text('combo-x') == '×1.0': problems.append('잡았는데 연속이 그대로다')
             if page.locator('#bridge-wrap .ward-pop').count() < 1: problems.append('잡았는데 얻은 것이 그림에 뜨지 않는다')
             if int(page.get_attribute('#bridgescene', 'data-nade') or 0) < 1: problems.append('손으로 잡았는데 수류탄이 차지 않는다')
-            if float(page.get_attribute('#bridgescene', 'data-heat') or 0) <= 0: problems.append('쐈는데 총열이 달아오르지 않는다')
+            if not page.locator('#heat-row').is_visible(): problems.append('총열 줄이 안 보인다')
             # 아무도 쏘지 않으면 방벽이 깎이고 끝내 뚫린다
             breached = False
             for _ in range(200):

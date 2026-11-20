@@ -2672,37 +2672,62 @@ test('3.0.6 원정 목표는 다녀올 때마다 다른 것으로 바뀐다', ()
   assert.notEqual(C.stageGoalText(def, false, 0), C.stageGoalText(def, false, 1)); assert.equal(C.stageNeed(def, true, 1), def.goals[1].hardNeed);
 });
 
-test('3.1.0 7구역 정착지: 사람을 맡겨 짓고, 줄을 따라 열리고, 혈청의 문턱이 된다', () => {
-  const s = inLab(); s.zone = 6; s.antennas = 10; s.supplies = 1e60; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 };
-  const cost = id => C.SETTLE.find(d => d.id === id).cost, fin = () => { s.build.left = 0.01; return C.tick(s, 0.1, () => 0.5); };
-  assert.equal(C.SETTLE.length, 9);
-  assert.equal(C.settleBlock(inLab(), 'farm'), 'locked');
+/* 4.2.0 7구역 정착지: 지도에 사람을 놓는다(공사 시간은 없앴다) */
+function inCamp() { const s = inLab(); s.zone = 6; s.antennas = 10; s.supplies = 1e60; s.zevIn = { rail: 1e6, guard: 1e6, tower: 1e6 }; C.campOf(s); return s; }
+const fill7 = (s, id) => { let r, n = 0; do { r = C.buildSettle(s, id); n++; } while (r.ok && !r.done && n < 99); return r; };
+test('7구역 정착지: 자리에 사람을 놓으면 그만큼 차고, 다 차면 그 자리에서 선다. 줄을 따라 열리고, 혈청의 문턱이 된다', () => {
+  const s = inCamp(), cost = (id) => C.SETTLE.find((d) => d.id === id).cost;
+  assert.equal(C.SETTLE.length, 9); assert.equal(C.settleBlock(inLab(), 'farm'), 'locked');
   assert.equal(C.settleBlock(s, 'farm'), 'people'); assert.equal(C.settleBlock(s, 'mess'), 'prev'); assert.equal(C.buildSettle(s, 'nope').reason, 'unknown');
   s.survivors = cost('farm') + cost('clinic'); const prod0 = C.mods(s).prod, mult0 = C.towerMult(s);
-  // 맡기면 공사가 시작된다. 사람은 바로 맡긴 것으로 세고, 효과는 다 지은 뒤부터
-  const r = C.buildSettle(s, 'farm'); assert.ok(r.ok); assert.equal(r.seconds, C.settleTime(C.SETTLE.find(d => d.id === 'farm')));
-  assert.equal(C.settleBlock(s, 'farm'), 'building'); assert.equal(C.settleBlock(s, 'clinic'), 'busy', '한 번에 한 채만');
-  assert.equal(Math.round(C.settleFree(s)), cost('clinic')); near(C.mods(s).prod, prod0, '짓는 중에는 효과가 없다'); assert.equal(C.settleCount(s), 0);
-  const left0 = s.build.left; C.tick(s, 5, () => 0.5); near(s.build.left, left0 - 5);
-  const ev = fin(); assert.ok(ev.some(e => e.type === 'settle-done' && e.id === 'farm')); assert.equal(s.build, null);
-  near(C.mods(s).prod / prod0, 1.5); assert.equal(C.settleBlock(s, 'farm'), 'done'); assert.equal(C.buildSettle(s, 'farm').reason, 'done');
-  assert.ok(C.towerMult(s) >= mult0, '맡긴 사람도 생존자다: 생산 배수는 줄지 않는다');
-  // 주파수를 맞추면 공사가 앞당겨진다
-  assert.ok(C.buildSettle(s, 'clinic').ok); s.tune.cool = 0; s.tune.band = C.tunePos(s); const before = s.build.left;
-  assert.ok(C.tuneNow(s, () => 0.5).hit); near(s.build.left, before - C.TUNE_BUILD);
-  fin();
-  // 혈청: 단계마다 가운데 줄의 건물이 있어야 한다
-  assert.equal(C.serumNeeds(s), null); assert.ok(C.buySerum(s).ok); assert.equal(C.serumNeeds(s).id, 'lab7'); assert.equal(C.buySerum(s).reason, 'settle');
-  // 건물의 효과
+  const r = C.buildSettle(s, 'farm'); assert.ok(r.ok && !r.done); assert.equal(r.sent, Math.ceil(cost('farm') / C.SEND_PARTS)); assert.equal(C.settleWork(s, 'farm'), r.sent); assert.equal(s.camp.flag, 'farm');
+  assert.equal(C.settleFree(s), cost('farm') + cost('clinic') - r.sent, '놓은 사람은 문 앞에서 빠진다'); near(C.mods(s).prod, prod0, '다 차기 전에는 효과가 없다'); assert.equal(C.settleCount(s), 0);
+  const d = fill7(s, 'farm'); assert.ok(d.done && d.lv === 1 && !d.repaired); assert.equal(C.settleLv(s, 'farm'), 1); assert.equal(C.settleWork(s, 'farm'), 0); near(C.mods(s).prod / prod0, 1.5);
+  assert.equal(C.settleFree(s), cost('clinic')); assert.ok(C.towerMult(s) >= mult0, '놓은 사람도 생존자다');
+  assert.ok(fill7(s, 'clinic').done); assert.equal(C.serumNeeds(s), null); assert.ok(C.buySerum(s).ok); assert.equal(C.serumNeeds(s).id, 'lab7'); assert.equal(C.buySerum(s).reason, 'settle');
   const d0 = C.mods(s).defense, z0 = C.mods(s).z7, b0 = C.tuneBand(s);
-  s.survivors = 1e12; ['guard7', 'mess', 'watch'].forEach(id => { assert.ok(C.buildSettle(s, id).ok, id); fin(); });
-  near(C.mods(s).defense / d0, 2); near(C.mods(s).z7 / z0, 2); assert.ok(C.tuneBand(s) > b0);
-  assert.equal(C.settleCount(s), 5);
-  // 저장을 거쳐도 남고(짓는 중인 것도), 자리를 비운 동안에도 공사는 가고, 철수하면 처음으로
-  assert.ok(C.buildSettle(s, 'lab7').ok);
-  const back = C.deserialize(C.serialize(s), 0); assert.equal(C.settleCount(back), 5); assert.equal(back.build.id, 'lab7'); near(back.build.left, s.build.left);
-  C.applyOffline(back, 3 * 3600); assert.ok(C.settleHas(back, 'lab7')); assert.equal(back.build, null);
-  s.runEarned = 1e40; s.pendingPerks = []; s.perkOwed = 0; const fresh2 = C.retreat(s, 0, () => 0.5).state; assert.equal(C.settleCount(fresh2), 0); assert.equal(fresh2.build, null);
+  s.survivors = 1e7; ['guard7', 'mess', 'watch'].forEach((id) => assert.ok(fill7(s, id).done, id));
+  near(C.mods(s).defense / d0, 2); near(C.mods(s).z7 / z0, 2); assert.ok(C.tuneBand(s) > b0); assert.equal(C.settleCount(s), 5);
+  /* 단계: 세 단계까지 자란다. 값은 1 · 3 · 9배, 효과는 단계마다 조금 더 */
+  assert.equal(C.settleNeed(s, 'farm'), cost('farm') * 3); const u0 = C.settleUsed(s); assert.ok(fill7(s, 'farm').lv === 2); assert.equal(C.settleUsed(s), u0 + cost('farm') * 3);
+  near(C.mods(s).prod / prod0, Math.pow(1.5, 1.25)); assert.ok(fill7(s, 'farm').lv === 3); assert.equal(C.settleNeed(s, 'farm'), 0); assert.equal(C.settleBlock(s, 'farm'), 'done'); assert.equal(C.buildSettle(s, 'farm').reason, 'done'); assert.equal(C.settleLevels(s), 7);
+  /* 저장을 거쳐도 남고(놓는 중인 것도), 옛 저장의 '짓는 중'은 다 지은 것으로 옮기고, 철수하면 처음으로 */
+  C.buildSettle(s, 'lab7'); const w = C.settleWork(s, 'lab7'); assert.ok(w > 0);
+  const back = C.deserialize(C.serialize(s), 0); assert.equal(C.settleCount(back), 5); assert.equal(C.settleLv(back, 'farm'), 3); assert.equal(C.settleWork(back, 'lab7'), w); assert.equal(back.camp.flag, 'lab7');
+  const old = JSON.parse(C.serialize(s)); delete old.camp; delete old.settleLv; old.build = { id: 'lab7', left: 300 }; const mig = C.deserialize(JSON.stringify(old), 0); assert.ok(C.settleHas(mig, 'lab7')); assert.equal(C.settleLv(mig, 'farm'), 1); assert.equal(mig.build, null);
+  for (const junk of [null, 5, 'x', { work: 'x', broken: 3, flag: 'zzz', clock: -1, nightLv: 1e9, night: 'x' }, { work: { farm: -5, mess: 1e99, zzz: 4 }, broken: { farm: 1, store: 1 } }]) { const raw = JSON.parse(C.serialize(s)); raw.camp = junk; raw.settleLv = junk; const z = C.deserialize(JSON.stringify(raw), 0); assert.doesNotThrow(() => { C.stepCamp(z, 0.5, calm, []); C.buildSettle(z, 'lab7'); C.sendGuard(z); C.mods(z); }); assert.ok(C.settleFree(z) >= 0 && C.settleLv(z, 'farm') >= 1 && !C.settleBroken(z, 'store')); }
+  s.runEarned = 1e40; s.pendingPerks = []; s.perkOwed = 0; const fresh2 = C.retreat(s, 0, () => 0.5).state; assert.equal(C.settleCount(fresh2), 0); assert.equal(fresh2.build, null); assert.deepEqual(fresh2.camp.work, {});
+});
+
+test('7구역 습격: 손을 쓰고 있을 때만 온다. 울타리에 사람을 세워 막고, 넘기면 사람이 더 오고 단계가 오른다. 뚫리면 건물이 부서진다', () => {
+  const s = inCamp(), c = C.campOf(s), cost = (id) => C.SETTLE.find((d) => d.id === id).cost; s.survivors = 5e6; fill7(s, 'farm'); const ev = [];
+  assert.equal(C.sendGuard(s).reason, 'day'); assert.equal(C.sendGuard(inLab()).reason, 'locked');
+  c.hand = 999; c.clock = C.RAID_EVERY - 0.2; C.stepCamp(s, 1, calm, ev); assert.equal(c.night, null, '손을 안 쓰면 오지 않는다');
+  c.hand = 0; C.stepCamp(s, 1, calm, ev); const nv = ev.find((e) => e.type === 'camp-night'); assert.ok(nv && c.night && c.night.need === nv.need && nv.need >= 5); assert.ok(c.night.side >= 0 && c.night.side <= 2);
+  near(C.nightHold(s), 0); const free0 = C.settleFree(s), g = C.sendGuard(s); assert.ok(g.ok && g.sent === Math.ceil(c.night.need / C.GUARD_PARTS)); assert.equal(C.settleFree(s), free0 - g.sent, '세운 사람은 문 앞에서 빠진다');
+  while (C.sendGuard(s).ok) {} assert.equal(C.sendGuard(s).reason, 'full'); near(C.nightHold(s), 1);
+  const sv = s.survivors; for (let i = 0; i < 120 && c.night; i++) C.stepCamp(s, 0.25, calm, ev);
+  const hv = ev.find((e) => e.type === 'camp-held'); assert.ok(hv && hv.gain > 0 && hv.lv === 1); assert.ok(s.survivors > sv); assert.equal(c.nightLv, 1); assert.equal(s.nightsHeld, 1); assert.equal(c.night, null); assert.equal(C.settleFree(s), Math.floor(s.survivors) - cost('farm'), '아침에 돌아온다');
+  /* 아무도 세우지 않으면 뚫린다: 건물이 부서져 효과가 없고, 고치면 돌아온다 */
+  const p1 = C.mods(s).prod; c.nightLv = 5; c.clock = C.RAID_EVERY; c.hand = 0; C.stepCamp(s, 0.25, calm, ev); assert.ok(c.night); const ev2 = []; for (let i = 0; i < 200 && c.night; i++) { c.hand = 0; C.stepCamp(s, 0.25, calm, ev2); }
+  const bv = ev2.find((e) => e.type === 'camp-breach'); assert.ok(bv && bv.id === 'farm'); assert.ok(C.settleBroken(s, 'farm')); assert.equal(c.nightLv, 5 - C.NIGHT_DROP); assert.ok(C.mods(s).prod < p1, '부서진 동안에는 효과가 없다'); assert.equal(s.campBreaches, 1);
+  assert.equal(C.settleNeed(s, 'farm'), Math.ceil(cost('farm') * C.REPAIR_FRAC)); const rp = fill7(s, 'farm'); assert.ok(rp.done && rp.repaired && rp.lv === 1); assert.ok(!C.settleBroken(s, 'farm')); near(C.mods(s).prod, p1);
+  /* 경비대와 망루는 단계만큼 거든다 */
+  s.survivors = 1e9; fill7(s, 'guard7'); fill7(s, 'guard7'); c.night = { t: 9, need: 100, guards: 0, fence: 1, side: 1 }; near(C.nightHold(s), C.TOWER_HOLD.guard7 * 2); c.broken.guard7 = true; near(C.nightHold(s), 0); delete c.broken.guard7; c.night = null;
+  /* 단계가 오를수록 더 많이 세워야 한다. 자리를 비운 동안에는 오지 않는다 */
+  const need = (lv) => { const z = inCamp(); z.survivors = 5e6; fill7(z, 'farm'); const zc = C.campOf(z); zc.nightLv = lv; zc.clock = C.RAID_EVERY; zc.hand = 0; C.stepCamp(z, 0.25, calm, []); return zc.night.need; }; assert.ok(need(8) > need(0) * 2.5);
+  const a = inCamp(); a.survivors = 5e6; fill7(a, 'farm'); C.campOf(a).clock = C.RAID_EVERY - 1; C.campOf(a).hand = 0; C.stepCamp(a, 600, calm, []); assert.equal(a.camp.night, null); assert.equal(a.campBreaches || 0, 0);
+});
+
+test('7구역 이장: 깃발을 꽂아 둔 자리로 알아서 보낸다. 밤에는 울타리를 절반까지만 채운다. 가만히 둠 < 이장 < 손', () => {
+  const s = inCamp(); s.survivors = 1e7; s.upgrades.elder = 1; assert.ok(C.elderOn(s)); const c = C.campOf(s); c.hand = 999;
+  assert.equal(C.elderTarget(s), 'farm', '깃발이 없으면 가장 덜 드는 자리'); c.flag = 'clinic'; const ev = [];
+  for (let i = 0; i < 40; i++) C.stepCamp(s, 1, calm, ev); assert.ok(C.settleHas(s, 'clinic')); assert.ok(ev.some((e) => e.type === 'settle-done' && e.id === 'clinic' && e.auto)); assert.equal(c.hand >= 40, true, '이장이 보낸 것은 손으로 치지 않는다');
+  C.setAutoEvents(s, 6, false); const w0 = C.settleUsed(s); for (let i = 0; i < 10; i++) C.stepCamp(s, 1, calm, []); assert.equal(C.settleUsed(s), w0, '구역 자동을 끄면 쉰다'); C.setAutoEvents(s, 6, true);
+  c.night = { t: 20, need: 80000, guards: 0, fence: 1, side: 0 }; for (let i = 0; i < 15; i++) C.stepCamp(s, 1, calm, []); assert.ok(c.night.guards > 0 && C.nightHold(s) >= 0.5 && C.nightHold(s) < 0.7, '절반까지: ' + C.nightHold(s));
+  const away = inCamp(); away.survivors = 1e7; away.upgrades.elder = 1; C.campOf(away).flag = 'farm'; C.stepCamp(away, 3600, calm, []); assert.ok(C.settleLevels(away) >= 3, '자리를 비운 동안에도 보낸다');
+  const idle = inCamp(); idle.survivors = 1e7; C.stepCamp(idle, 3600, calm, []); assert.equal(C.settleLevels(idle), 0);
+  for (const junk of [NaN, -5, 'x', undefined, 1e99]) assert.doesNotThrow(() => C.stepCamp(inCamp(), junk, calm, []));
 });
 
 test('3.1.0 7구역 주파수: 바늘이 띠 안에 있을 때 맞추면 먼 무리가 온다', () => {

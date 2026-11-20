@@ -2798,51 +2798,235 @@
     $('t7-band').style.left = ((t.band - band / 2) * 100).toFixed(1) + '%'; $('t7-band').style.width = (band * 100).toFixed(1) + '%';
     dial.classList.toggle('cool', cool || !(rate > 0));
     setText($('t7-freq'), (87.5 + C.tunePos(state) * 20.5).toFixed(1) + ' MHz');
-    setText($('t7-gain'), rate > 0 ? '맞추면 먼 무리 +' + fmt(Math.floor(C.tuneGain(state))) + '명' + (C.mods(state).autotower > 0 && C.autoEvents(state, 6) ? ' · 자동은 절반' : '') : '');
+    setText($('t7-gain'), rate > 0 ? '+' + fmt(Math.floor(C.tuneGain(state))) + '명' : '');
     btn.disabled = cool || !(rate > 0);
-    setText(btn, !(rate > 0) ? '안테나를 먼저 세워요' : cool ? '다시 잡는 중 ' + Math.ceil(t.cool) + '초' : '맞춘다');
+    setText(btn, !(rate > 0) ? '안테나를 먼저 세워요' : cool ? '다시 잡는 중 ' + Math.ceil(t.cool) + '초' : '주파수 맞추기');
     fill(btn, cool ? 1 - t.cool / C.TUNE_COOL : 0);
   }
   function wireTower() {
+    wireCamp();
     $('t7-tune').addEventListener('click', function () {
       var r = C.tuneNow(state, Math.random), dial = $('t7-dial');
       if (!r.ok) return;
       dial.classList.remove('hit', 'miss'); void dial.offsetWidth; dial.classList.add(r.hit ? 'hit' : 'miss');
-      if (r.hit) { toast('먼 무리가 응답했어요 · 생존자 +' + fmt(Math.floor(r.gain)) + '명' + (state.build ? ' · 공사 −' + C.TUNE_BUILD + '초' : '')); log('주파수를 맞췄다. 먼 무리가 응답했다. 생존자 ' + fmt(Math.floor(r.gain)) + '명.', 'good'); sfx('answer'); buzz(25); }
-      else { toast('잡음뿐이에요 · 다시 잡는 중'); sfx('tab'); }
+      if (r.hit) { if (campPopFn) campPopFn(22, 60, '+' + fmt(Math.floor(r.gain)) + '명', 'done'); log('주파수를 맞췄다. 먼 무리가 응답했다. 생존자 ' + fmt(Math.floor(r.gain)) + '명.', 'good'); sfx('answer'); buzz(25); }
+      else { if (campPopFn) campPopFn(22, 60, '잡음뿐이에요', 'bad'); sfx('tab'); }
       Store.save(); render();
     });
   }
+  /*
+   * ---------- 4.2.0 7구역 정착지 지도(184×128) ----------
+   *   왼쪽: 송신탑(누르면 주파수를 맞춘다)과 문, 문 앞에 모인 사람들. 오른쪽: 아홉 자리(가로 = 살림 · 혈청 · 방어, 세로 = 줄의 차례).
+   *   자리를 누르면 문 앞의 사람이 한 무리 길을 따라 걸어가 놓인다. 건물은 3단계까지 자라고 단계마다 그림이 달라진다(CAMP_ART).
+   *   습격이 오면 어두워지고, 울타리 한쪽(북 · 동 · 남) 밖에 무리가 붙는다. 그쪽 울타리나 붉은 단추를 누르면 사람을 세운다.
+   *   바탕(campBackdrop)은 한 번만 그리고, 건물 · 사람 · 불빛은 매번 그린다.
+   */
+  var CAMP_PX = [57, 96, 135], CAMP_PY = [13, 49, 85], CAMP_W = 38, CAMP_H = 28, CAMP_COL = ['#7fb85a', '#6aaede', '#e98a3c'];
+  var campBack = null, campWalk = [], campFlash = null, campPopFn = null, campSel = '';
+  function campPlot(d) { return { x: CAMP_PX[d.col], y: CAMP_PY[d.row] }; }
+  function campBackdrop() {
+    if (campBack) return campBack;
+    var cv = document.createElement('canvas'); cv.width = 184; cv.height = 128; var g = cv.getContext('2d'), K = '#10140e';
+    var R = function (x, y, w, h, c) { px(g, x, y, w, h, c); };
+    R(0, 0, 184, 128, '#263022'); for (var y0 = 0; y0 < 128; y0 += 3) for (var x0 = (y0 * 7) % 11; x0 < 184; x0 += 11) R(x0, y0, 3, 1, (x0 * 3 + y0) % 4 ? '#2c3828' : '#20281c');      // 울타리 밖(어두운 들)
+    R(3, 9, 172, 110, '#2e3a2a'); for (var y = 9; y < 119; y += 3) for (var x = 3 + (y * 7) % 11; x < 175; x += 11) R(x, y, 3, 1, (x * 3 + y) % 4 ? '#35432f' : '#283224');      // 안쪽 풀밭
+    for (var i = 0; i < 60; i++) { var gx = 4 + (i * 53) % 170, gy = 10 + (i * 31) % 108; R(gx, gy, 1, 2, i % 5 ? '#44563a' : '#6a7a42'); if (i % 9 === 0) R(gx + 2, gy, 1, 1, '#e8d86a'); }
+    function roadH(x, y, w, h) { R(x, y, w, h, '#74694f'); R(x, y, w, 1, '#857a5e'); R(x, y + h - 1, w, 1, '#5c523c'); for (var k = x + 2; k < x + w - 2; k += 6) { R(k, y + 2, 3, 1, '#685e46'); R(k + 3, y + h - 3, 3, 1, '#685e46'); } for (var k2 = x; k2 < x + w; k2 += 13) { R(k2 + 4, y - 1, 2, 1, '#44563a'); R(k2 + 9, y + h, 3, 1, '#44563a'); } }
+    roadH(0, 78, 50, 7); R(48, 11, 8, 106, '#74694f'); R(48, 11, 1, 106, '#857a5e'); R(55, 11, 1, 106, '#5c523c'); for (var vy = 13; vy < 115; vy += 6) { R(50, vy, 1, 3, '#685e46'); R(53, vy + 3, 1, 3, '#685e46'); }
+    roadH(56, 42, 118, 7); roadH(56, 78, 118, 7);
+    function fenceH(y) { R(3, y + 1, 173, 1, '#a8854f'); R(3, y + 3, 173, 1, '#7a5f38'); for (var fx = 3; fx < 176; fx += 5) { R(fx, y, 1, 5, '#c9a868'); R(fx, y, 1, 1, '#e8cf98'); } for (var b = 5; b < 175; b += 4) R(b, y - 1, 1, 1, '#8a8f98'); }
+    function fenceV(x, a0, a1) { R(x + 1, a0, 1, a1 - a0, '#a8854f'); for (var fy = a0; fy < a1; fy += 5) { R(x, fy, 3, 1, '#c9a868'); R(x, fy + 1, 3, 1, '#7a5f38'); } }
+    fenceH(6); fenceH(117); fenceV(2, 8, 75); fenceV(2, 89, 119); fenceV(174, 8, 119);
+    R(0, 73, 6, 3, K); R(0, 88, 6, 3, K); R(1, 69, 4, 5, '#55564e'); R(1, 89, 4, 5, '#55564e'); R(1, 68, 4, 1, '#f0b400'); R(1, 94, 4, 1, '#f0b400');
+    function tree(x, y) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x, y + 10, 8, 2); R(x + 3, y + 7, 2, 4, '#4a3428'); R(x + 1, y + 1, 6, 7, '#335230'); R(x, y + 3, 8, 3, '#335230'); R(x + 2, y, 4, 9, '#335230'); R(x + 2, y + 1, 3, 3, '#4f7446'); R(x + 1, y + 3, 2, 2, '#4f7446'); R(x + 5, y + 5, 2, 2, '#26401f'); }
+    [[6, 14], [37, 15], [8, 100], [35, 103], [38, 62], [21, 106]].forEach(function (q) { tree(q[0], q[1]); });
+    // 송신소(탑은 drawCamp 가 그린다: 등이 깜빡인다)
+    g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(12, 62, 28, 2);
+    R(9, 52, 28, 10, K); R(10, 52, 26, 9, '#d8d4c4'); R(10, 52, 26, 2, '#b8b4a4'); R(8, 44, 30, 9, K); R(9, 45, 28, 7, '#7a4f24'); R(9, 45, 28, 1, '#a8743a'); R(9, 51, 28, 1, '#5a3818'); for (var rk = 3; rk < 7; rk += 3) R(10, 45 + rk, 26, 1, '#5a3818'); R(26, 54, 5, 7, '#3a3a36'); R(27, 55, 3, 5, '#55564e'); R(29, 58, 1, 1, '#f0b400');
+    R(30, 99, 5, 1, '#55564e'); R(31, 98, 3, 1, '#4a3428');      // 모닥불 자리
+    return (campBack = cv);
+  }
+  /* 건물 그림: CAMP_ART[id](g, x, y, lv, L). 38×28 자리 안에 그린다. L(x, y, w, h)는 창(밤에 불이 켜진다). 단계가 오르면 덧붙는다 */
+  var CAMP_ART = (function () {
+    var K = '#10140e';
+    function R(g, x, y, w, h, c) { px(g, x, y, w, h, c); }
+    function sh(g, x, y, w) { g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x + 2, y, w, 2); g.fillRect(x + 4, y + 2, w - 2, 1); }
+    function house(g, x, y, w, hw, hr, wall, wallD, roof, roofL, roofD) {
+      sh(g, x, y + hr + hw, w);
+      R(g, x, y + hr, w, hw, K); R(g, x + 1, y + hr, w - 2, hw - 1, wall); R(g, x + 1, y + hr, w - 2, 2, wallD); R(g, x + w - 3, y + hr, 2, hw - 1, wallD);
+      R(g, x - 1, y, w + 2, hr + 1, K); R(g, x, y + 1, w, hr - 1, roof); R(g, x, y + 1, w, 1, roofL); R(g, x, y + hr - 1, w, 1, roofD);
+      for (var k = 3; k < hr - 1; k += 3) R(g, x + 1, y + k, w - 2, 1, roofD); for (var q = 3 + (y % 2); q < w - 1; q += 5) R(g, x + q, y + 2, 1, hr - 3, 'rgba(0,0,0,.13)');
+    }
+    function bags(g, x, y, n) { for (var k = 0; k < n; k++) { R(g, x + k * 6, y, 6, 4, '#a89a6a'); R(g, x + k * 6, y, 6, 1, '#c9bc8a'); R(g, x + k * 6, y + 3, 6, 1, '#7a6e48'); } }
+    function tent(g, x, y, c1, c2) { sh(g, x, y + 9, 9); for (var a = 0; a < 9; a++) R(g, x + a, y + 4 - Math.min(a, 8 - a), 1, Math.min(a, 8 - a) + 5, a < 4 ? c1 : c2); R(g, x + 3, y + 6, 3, 3, '#3a3a36'); }
+    function crates(g, x, y, n) { for (var k = 0; k < n; k++) { var cx = x + (k % 2) * 5, cy = y - Math.floor(k / 2) * 4; R(g, cx, cy, 5, 4, K); R(g, cx + 1, cy + 1, 3, 2, k % 3 ? '#a8854f' : '#c9a868'); } }
+    return {
+      farm: function (g, x, y, lv, L) {
+        var top = lv >= 3 ? 16 : 3; R(g, x + 2, y + top, 34, 27 - top, '#5a4630'); for (var k = 0; top + 1 + k * 3 < 25; k++) { R(g, x + 3, y + top + 1 + k * 3, 32, 2, '#6b5238'); for (var q = 0; q < 8; q++) { R(g, x + 4 + q * 4, y + top + k * 3, 1, 2, '#7fb85a'); R(g, x + 5 + q * 4, y + top + 1 + k * 3, 1, 1, (q + k) % 3 ? '#a8d86a' : '#d8644e'); } }
+        if (lv < 3) { R(g, x + 30, y + 8, 1, 8, '#8a6a42'); R(g, x + 28, y + 10, 5, 1, '#8a6a42'); R(g, x + 29, y + 6, 3, 3, '#e8c890'); R(g, x + 29, y + 6, 3, 1, '#c9a868'); }
+        if (lv === 2) { R(g, x + 3, y + 4, 7, 9, K); R(g, x + 4, y + 5, 5, 7, '#6a8aa0'); R(g, x + 4, y + 5, 5, 2, '#9ab8c8'); }
+        if (lv >= 3) { sh(g, x + 2, y + 14, 22); R(g, x + 2, y + 2, 23, 13, K); R(g, x + 3, y + 3, 21, 11, '#8ac8c0'); R(g, x + 3, y + 3, 21, 4, '#b8e8e0'); for (var v = 0; v < 21; v += 5) R(g, x + 3 + v, y + 3, 1, 11, '#e8f6f0'); R(g, x + 3, y + 7, 21, 1, '#e8f6f0'); for (var s = 0; s < 4; s++) { R(g, x + 5 + s * 5, y + 10, 3, 3, '#4f9a4a'); R(g, x + 6 + s * 5, y + 9, 1, 1, '#d8644e'); } R(g, x + 28, y + 3, 7, 9, K); R(g, x + 29, y + 4, 5, 7, '#6a8aa0'); R(g, x + 29, y + 4, 5, 2, '#9ab8c8'); R(g, x + 30, y + 12, 1, 3, '#55564e'); R(g, x + 33, y + 12, 1, 3, '#55564e'); }
+      },
+      mess: function (g, x, y, lv, L) {
+        var w = lv >= 3 ? 30 : 24; house(g, x + 3, y + 2, w, 10, 8, '#c8a878', '#a88a5c', '#b8402e', '#d8644e', '#8a2a20'); R(g, x + 21, y - 1, 4, 5, K); R(g, x + 22, y, 2, 4, '#8a8a82');
+        for (var a = 0; a < w; a += 4) R(g, x + 3 + a, y + 10, 2, 3, a % 8 ? '#e8e6dc' : '#d8453a'); L(x + 6, y + 14, 4, 3); L(x + 19, y + 14, 4, 3); R(g, x + 12, y + 14, 4, 6, '#4a3428'); if (lv >= 3) { L(x + 27, y + 14, 3, 3); R(g, x + 8, y - 1, 3, 4, K); R(g, x + 9, y, 1, 3, '#8a8a82'); }
+        if (lv >= 2) [[lv >= 3 ? 4 : 29, lv >= 3 ? 23 : 12], [lv >= 3 ? 16 : 29, lv >= 3 ? 23 : 20], [lv >= 3 ? 28 : 99, 23]].forEach(function (q) { if (q[0] > 40) return; R(g, x + q[0], y + q[1], 7, 4, K); R(g, x + q[0] + 1, y + q[1] + 1, 5, 2, '#a8743a'); R(g, x + q[0] + 2, y + q[1] + 1, 1, 1, '#e8e6dc'); });
+      },
+      store: function (g, x, y, lv, L) {
+        if (lv === 1) { house(g, x + 4, y + 6, 18, 9, 6, '#8a8a82', '#6a6a62', '#55585f', '#7a7e86', '#3a3c42'); R(g, x + 10, y + 13, 6, 8, '#3a3a36'); crates(g, x + 25, y + 20, 3); return; }
+        house(g, x + 2, y + 2, 26, 12, 9, '#a8743a', '#8a5a2a', '#7a2a20', '#a84030', '#5a1a14'); R(g, x + 10, y + 12, 10, 11, K); R(g, x + 11, y + 13, 8, 10, '#5a3818'); R(g, x + 15, y + 13, 1, 10, K); R(g, x + 11, y + 13, 8, 1, '#e8e6dc'); R(g, x + 13, y + 5, 4, 3, '#e8e6dc'); crates(g, x + 29, y + 22, lv >= 3 ? 6 : 4);
+        if (lv >= 3) { R(g, x + 1, y + 23, 9, 4, K); R(g, x + 2, y + 24, 7, 2, '#4a6a3a'); R(g, x + 7, y + 22, 3, 2, '#9ab8c8'); R(g, x + 2, y + 26, 2, 1, '#17180f'); R(g, x + 7, y + 26, 2, 1, '#17180f'); }
+      },
+      clinic: function (g, x, y, lv, L) {
+        if (lv === 1) { tent(g, x + 5, y + 8, '#f0f0e8', '#c8c8be'); tent(g, x + 20, y + 10, '#f0f0e8', '#c8c8be'); R(g, x + 16, y + 3, 1, 12, '#8a8f98'); R(g, x + 17, y + 3, 6, 5, '#fff'); R(g, x + 19, y + 4, 2, 3, '#d8453a'); R(g, x + 18, y + 5, 4, 1, '#d8453a'); return; }
+        house(g, x + 3, y + 2, 22, 11, 8, '#e8e6dc', '#c4c2b6', '#6aaede', '#9ad0e8', '#3f7f9a'); R(g, x + 11, y + 3, 6, 6, '#fff'); R(g, x + 13, y + 4, 2, 4, '#d8453a'); R(g, x + 12, y + 5, 4, 2, '#d8453a'); L(x + 6, y + 13, 4, 4); L(x + 18, y + 13, 4, 4); R(g, x + 12, y + 14, 4, 7, '#55564e'); R(g, x + 13, y + 15, 2, 5, '#8aa0aa');
+        tent(g, x + 27, y + 15, '#f0f0e8', '#c8c8be'); R(g, x + 31, y + 15, 1, 1, '#d8453a');
+        if (lv >= 3) { R(g, x + 26, y + 5, 10, 6, K); R(g, x + 27, y + 6, 8, 4, '#f0f0e8'); R(g, x + 27, y + 6, 3, 2, '#9ab8c8'); R(g, x + 31, y + 7, 3, 2, '#d8453a'); R(g, x + 28, y + 10, 2, 1, '#17180f'); R(g, x + 33, y + 10, 2, 1, '#17180f'); }
+      },
+      lab7: function (g, x, y, lv, L) {
+        house(g, x + 3, y + 3, 24, 12, 7, '#b8c8d4', '#98a8b4', '#3f5f7a', '#5a7f9a', '#2c4458'); for (var k = 0; k < 3; k++) { R(g, x + 6 + k * 7, y + 1, 4, 3, K); R(g, x + 7 + k * 7, y + 2, 2, 2, '#8a8f98'); } L(x + 6, y + 13, 5, 4, '#b8f08a'); L(x + 15, y + 13, 5, 4, '#b8f08a'); R(g, x + 22, y + 14, 4, 7, '#55564e');
+        if (lv >= 2) { R(g, x + 31, y + 12, 1, 10, '#8a8f98'); R(g, x + 28, y + 7, 7, 5, K); R(g, x + 29, y + 8, 5, 3, '#c9d0d8'); R(g, x + 30, y + 9, 3, 1, '#8a8f98'); }
+        if (lv >= 3) { R(g, x + 28, y + 18, 8, 9, K); R(g, x + 29, y + 19, 6, 7, '#4a6a5a'); L(x + 30, y + 20, 4, 4, '#b8f08a'); R(g, x + 27, y + 22, 2, 1, '#8a8f98'); }
+      },
+      ward: function (g, x, y, lv, L) {
+        for (var k = 0; k < 38; k += 4) { R(g, x + k, y + 1, 1, 3, '#8a8f98'); R(g, x + k, y + 25, 1, 3, '#8a8f98'); } R(g, x, y + 2, 38, 1, '#b4b8c0'); R(g, x, y + 26, 38, 1, '#b4b8c0');
+        if (lv === 1) { tent(g, x + 4, y + 9, '#e0d8a0', '#b8b078'); tent(g, x + 15, y + 11, '#e0d8a0', '#b8b078'); tent(g, x + 26, y + 9, '#e0d8a0', '#b8b078'); return; }
+        house(g, x + 4, y + 5, 26, 10, 7, '#d8d4c4', '#b8b4a4', '#55585f', '#7a7e86', '#3a3c42'); for (var a = 0; a < 26; a += 4) R(g, x + 4 + a, y + 12, 2, 2, a % 8 ? '#f0b400' : '#17180f'); L(x + 7, y + 15, 3, 3); L(x + 13, y + 15, 3, 3); L(x + 19, y + 15, 3, 3); R(g, x + 25, y + 15, 3, 6, '#3a3a36');
+        if (lv >= 3) { R(g, x + 33, y + 6, 1, 16, '#8a8f98'); R(g, x + 32, y + 5, 3, 2, '#55564e'); L(x + 32, y + 7, 3, 1, '#fff2c0'); }
+      },
+      guard7: function (g, x, y, lv, L) {
+        if (lv >= 2) { house(g, x + 2, y + 3, 20, 9, 7, '#6a7a4a', '#55643a', '#4a6a3a', '#6a8a52', '#34502a'); L(x + 5, y + 12, 3, 3); R(g, x + 12, y + 12, 4, 7, '#2a2e26'); } else tent(g, x + 7, y + 6, '#6a8a52', '#4a6a3a');
+        bags(g, x + 2, y + 23, 6); for (var k3 = 0; k3 < 5; k3++) { R(g, x + 5 + k3 * 6, y + 20, 6, 3, '#958858'); R(g, x + 5 + k3 * 6, y + 20, 6, 1, '#b8ab78'); } if (lv >= 3) for (var k4 = 0; k4 < 4; k4++) { R(g, x + 8 + k4 * 6, y + 17, 6, 3, '#a89a6a'); R(g, x + 8 + k4 * 6, y + 17, 6, 1, '#c9bc8a'); }
+        R(g, x + 30, y + 2, 1, 16, '#8a8f98'); R(g, x + 31, y + 2, 6, 4, '#e98a3c'); R(g, x + 31, y + 2, 6, 1, '#ffb060'); R(g, x + 33, y + 3, 2, 2, '#17180f'); if (lv >= 2) { R(g, x + 25, y + 18, 7, 1, '#17180f'); R(g, x + 26, y + 19, 2, 2, '#3a3a36'); } if (lv >= 3) L(x + 24, y + 9, 2, 2, '#fff2c0');
+      },
+      watch: function (g, x, y, lv, L) {
+        var top = lv === 1 ? 8 : 0; sh(g, x + 10, y + 26, 18); R(g, x + 11, y + 12 + top, 2, 15 - top, '#8a6a42'); R(g, x + 25, y + 12 + top, 2, 15 - top, '#8a6a42'); for (var k = 0; k < 14 - top; k++) { R(g, x + 12 + k, y + 13 + top + k, 1, 1, '#6b5238'); R(g, x + 25 - k, y + 13 + top + k, 1, 1, '#6b5238'); } R(g, x + 18, y + 12 + top, 2, 15 - top, '#a8854f'); for (var l = 0; l < 14 - top; l += 3) R(g, x + 17, y + 13 + top + l, 4, 1, '#c9a868');
+        R(g, x + 8, y + 6 + top, 22, 7, K); R(g, x + 9, y + 7 + top, 20, 5, '#a8854f'); R(g, x + 9, y + 7 + top, 20, 1, '#c9a868'); for (var q = 0; q < 20; q += 4) R(g, x + 9 + q, y + 8 + top, 1, 4, '#7a5f38'); R(g, x + 7, y + 1 + top, 24, 4, K); R(g, x + 8, y + 2 + top, 22, 2, '#7a4f24'); R(g, x + 8, y + 2 + top, 22, 1, '#a8743a'); R(g, x + 12, y + 4 + top, 1, 3, '#8a6a42'); R(g, x + 26, y + 4 + top, 1, 3, '#8a6a42'); R(g, x + 17, y + 4 + top, 3, 3, '#e6c9a0'); R(g, x + 17, y + 4 + top, 3, 1, '#3a3028');
+        if (lv >= 2) { R(g, x + 27, y + 5, 4, 3, '#55564e'); L(x + 31, y + 5, 2, 3, '#fff2c0'); } if (lv >= 3) { R(g, x + 7, y + 5, 4, 3, '#55564e'); L(x + 5, y + 5, 2, 3, '#fff2c0'); R(g, x + 19, y - 3, 1, 5, '#8a8f98'); R(g, x + 20, y - 3, 4, 3, '#e98a3c'); }
+      },
+      school: function (g, x, y, lv, L) {
+        var w = lv >= 3 ? 30 : 22; house(g, x + 3, y + 4, w, 11, 7, '#e8d8a8', '#c8b888', '#3a7a5a', '#5a9a7a', '#2a5a40'); R(g, x + 11, y, 6, 5, K); R(g, x + 12, y + 1, 4, 4, '#e8d8a8'); R(g, x + 13, y + 2, 2, 2, '#f0b400'); L(x + 6, y + 14, 4, 4); L(x + 18, y + 14, 4, 4); R(g, x + 12, y + 15, 4, 7, '#4a3428'); if (lv >= 3) L(x + 27, y + 14, 4, 4);
+        if (lv >= 2) { var sx = lv >= 3 ? 4 : 28; R(g, x + sx, y + 23, 1, 4, '#8a8f98'); R(g, x + sx + 6, y + 23, 1, 4, '#8a8f98'); R(g, x + sx, y + 23, 7, 1, '#8a8f98'); R(g, x + sx + 2, y + 24, 1, 2, '#d8644e'); R(g, x + sx + 4, y + 24, 1, 2, '#6aaede'); }
+      }
+    };
+  })();
+  function drawCamp() {
+    var cv = $('campscene'); if (!cv) return;
+    var g = cv.getContext('2d'), now = Date.now(), c = C.campOf(state), n = c.night, K = '#10140e', lights = [];
+    var R = function (x, y, w, h, col) { px(g, x, y, w, h, col); }, L = function (x, y, w, h, col) { lights.push([x, y, w, h, col || '#ffe9a0']); R(x, y, w, h, '#4a5a66'); };
+    g.imageSmoothingEnabled = false; g.drawImage(campBackdrop(), 0, 0);
+    // 송신탑: 격자 탑과 깜빡이는 붉은 등, 전파
+    for (var ty = 12; ty < 44; ty++) { var hw = 1 + ((ty - 12) / 5 | 0); R(23 - hw, ty, 1, 1, '#c9d0d8'); R(23 + hw, ty, 1, 1, '#8a8f98'); if (ty % 5 === 2) R(23 - hw, ty, hw * 2 + 1, 1, '#a0a6b0'); if (ty % 5 === 4 && hw > 1) { R(23 - hw + 1, ty, 1, 1, '#6a6f78'); R(23 + hw - 1, ty + 1, 1, 1, '#6a6f78'); R(23, ty, 1, 1, '#6a6f78'); } }
+    var blink = Math.floor(now / 500) % 2; R(22, 9, 3, 3, blink ? '#ff5a4a' : '#8a2a20'); R(23, 7, 1, 2, '#c9d0d8'); if (blink) lights.push([20, 7, 7, 7, 'rgba(255,90,74,.3)']);
+    var wavesOn = state.antennas > 0, tuneHot = state.tune && state.tune.cool > C.TUNE_COOL - 1.2;
+    if (wavesOn) [[28, 14, 7], [31, 11, 11], [34, 8, 15]].forEach(function (q, i) { if (!tuneHot && (Math.floor(now / 350) + i) % 4 === 3) return; for (var a = 0; a < q[2]; a++) R(q[0] + Math.round(Math.sin(a / (q[2] - 1) * Math.PI) * 2), q[1] + a, 1, 1, tuneHot ? '#ffd95a' : 'rgba(240,180,0,.55)'); });
+    L(13, 55, 5, 4);
+    var ff = Math.floor(now / 140) % 2; R(32, 96 - ff, 1, 2 + ff, '#ffd95a'); R(31, 97, 3, 1, '#f08a3a'); lights.push([28, 93, 9, 7, 'rgba(240,138,58,.28)']);
+    // 아홉 자리
+    C.SETTLE.forEach(function (d) {
+      var p = campPlot(d), lv = C.settleLv(state, d.id), why = C.settleBlock(state, d.id), work = C.settleWork(state, d.id), need = C.settleNeed(state, d.id), broken = C.settleBroken(state, d.id), col = CAMP_COL[d.col];
+      if (lv > 0) { R(p.x, p.y, CAMP_W, CAMP_H, '#4c4638'); R(p.x, p.y, CAMP_W, 1, '#5e5848'); R(p.x, p.y + CAMP_H - 1, CAMP_W, 1, '#373226'); CAMP_ART[d.id](g, p.x, p.y, lv, L);
+        for (var k = 0; k < 3; k++) { R(p.x + 12 + k * 5, p.y - 3, 4, 2, K); R(p.x + 13 + k * 5, p.y - 3, 2, 1, k < lv ? col : '#3a4636'); }
+        if (broken) { g.fillStyle = 'rgba(20,10,6,.5)'; g.fillRect(p.x, p.y, CAMP_W, CAMP_H); for (var f = 0; f < 3; f++) { var fx = p.x + 8 + f * 10, fl = Math.floor(now / 120 + f) % 2; R(fx, p.y + 12 - fl, 3, 4 + fl, '#f08a3a'); R(fx + 1, p.y + 10 - fl, 1, 3, '#ffd95a'); lights.push([fx - 2, p.y + 8, 7, 9, 'rgba(240,138,58,.3)']); var sa = ((now + f * 700) % 2400) / 2400; R(fx + 1 + Math.round(sa * 3), Math.round(p.y + 8 - sa * 10), 2, 1, 'rgba(60,56,64,' + (0.8 - sa * 0.7).toFixed(2) + ')'); } }
+      } else {
+        var lock = why === 'prev' || why === 'locked', dc = lock ? '#3e4a38' : '#9aaa8a';
+        for (var e = 0; e < CAMP_W; e += 4) { R(p.x + e, p.y, 2, 1, dc); R(p.x + e, p.y + CAMP_H - 1, 2, 1, dc); } for (var e2 = 0; e2 < CAMP_H; e2 += 4) { R(p.x, p.y + e2, 1, 2, dc); R(p.x + CAMP_W - 1, p.y + e2, 1, 2, dc); }
+        if (lock) { R(p.x + 16, p.y + 13, 6, 5, '#343e2e'); R(p.x + 17, p.y + 11, 4, 3, '#343e2e'); R(p.x + 18, p.y + 12, 2, 2, '#2e3a2a'); } else if (!(work > 0)) { R(p.x + 13, p.y + 11, 12, 5, K); R(p.x + 14, p.y + 12, 10, 3, col); R(p.x + 18, p.y + 10, 2, 7, '#fff'); R(p.x + 15, p.y + 13, 8, 1, '#fff'); }
+      }
+      if (work > 0 && need > 0) {      // 놓는 중: 비계와 차오르는 줄
+        for (var s = 0; s < 4; s++) R(p.x + 3 + s * 10, p.y + 3, 1, 22, '#c9a868'); R(p.x + 3, p.y + 3, 31, 1, '#c9a868'); R(p.x + 3, p.y + 11, 31, 1, '#a88a50'); R(p.x + 3, p.y + 19, 31, 1, '#a88a50'); for (var dd = 0; dd < 30; dd += 3) R(p.x + 4 + dd, p.y + 5 + ((dd / 3) % 2) * 3, 1, 1, '#8a7040');
+        R(p.x + 1, p.y + CAMP_H - 4, CAMP_W - 2, 4, K); R(p.x + 2, p.y + CAMP_H - 3, Math.max(1, Math.round((CAMP_W - 4) * work / need)), 2, '#f0b400');
+      }
+      if (c.flag === d.id) { var bc = '#e8e6dc', X = p.x - 2, Y = p.y - 2, W = CAMP_W + 4, H = CAMP_H + 4; R(X, Y, 5, 1, bc); R(X, Y, 1, 5, bc); R(X + W - 5, Y, 5, 1, bc); R(X + W - 1, Y, 1, 5, bc); R(X, Y + H - 1, 5, 1, bc); R(X, Y + H - 5, 1, 5, bc); R(X + W - 5, Y + H - 1, 5, 1, bc); R(X + W - 1, Y + H - 5, 1, 5, bc); }
+    });
+    // 사람(3×6)
+    var SH = ['#3f5f7a', '#8a8a52', '#b8402e', '#6b4a3a', '#c9c7ba', '#5a7a3a', '#9a5ac8', '#d8a03a'];
+    function man(x, y, i, carry, gun) { x = Math.round(x); y = Math.round(y); R(x, y + 6, 3, 1, 'rgba(0,0,0,.3)'); R(x, y, 3, 2, '#e6c9a0'); R(x, y, 3, 1, i % 3 ? '#3a3028' : i % 2 ? '#6b4a3a' : '#17180f'); R(x, y + 2, 3, 2, gun ? '#4a6a3a' : SH[i % SH.length]); R(x, y + 4, 1, 2, '#2a2e36'); R(x + 2, y + 4, 1, 2, '#2a2e36'); if (carry) { R(x - 2, y + 1, 2, 2, K); R(x - 2, y + 1, 2, 1, '#c9a868'); } if (gun) R(x + 3, y + 2, 3, 1, '#17180f'); }
+    function zed(x, y, i) { x = Math.round(x); y = Math.round(y); R(x, y + 6, 3, 1, 'rgba(0,0,0,.3)'); R(x, y, 3, 2, i % 2 ? '#7fb85a' : '#6aa85a'); R(x + (i % 2 ? 0 : 2), y, 1, 1, '#17180f'); R(x, y + 2, 3, 2, ['#6b4a3a', '#3f5f7a', '#55585f'][i % 3]); R(x - 1, y + 2, 1, 1, '#7fb85a'); R(x, y + 4, 1, 2, '#3a3a36'); R(x + 2, y + 4, 1, 2, '#3a3a36'); }
+    // 지은 건물 곁에서 일하는 사람들(단계만큼)
+    C.SETTLE.forEach(function (d, di) { var lv = C.settleLv(state, d.id); if (!lv || C.settleBroken(state, d.id)) return; var p = campPlot(d); for (var k = 0; k < lv; k++) { var wob = Math.round(Math.sin(now / 900 + di * 2 + k * 3) * 3); man(p.x + 6 + k * 11 + wob, p.y + CAMP_H + 1, di + k); } });
+    // 문 앞의 사람들: 많을수록 많이 서 있다
+    var free = C.settleFree(state), crowd = free <= 0 ? 0 : Math.min(13, 1 + Math.floor(Math.log(free + 1) / Math.LN10 * 2.4));
+    [[0, 0], [4, 1], [8, 0], [12, 1], [2, 7], [6, 8], [10, 7], [14, 8], [16, 2], [0, 14], [5, 14], [9, 15], [13, 14]].slice(0, crowd).forEach(function (q, i) { man(7 + q[0], 71 + q[1] + ((Math.floor(now / 600) + i) % 5 === 0 ? -1 : 0), i); });
+    // 길을 따라 걸어가는 사람들(방금 보낸 무리)
+    campWalk = campWalk.filter(function (w) { return now - w.at < w.ms; });
+    campWalk.forEach(function (w, wi) { var tt = (now - w.at) / w.ms, pts = w.path, seg = Math.min(pts.length - 2, Math.floor(tt * (pts.length - 1))), lt = tt * (pts.length - 1) - seg, a = pts[seg], b = pts[seg + 1]; if (tt < 0) return; man(a[0] + (b[0] - a[0]) * lt, a[1] + (b[1] - a[1]) * lt + (Math.floor(now / 110 + wi) % 2), wi + 3, !w.gun, w.gun); });
+    // 습격: 그쪽 울타리 밖의 무리, 안쪽에 선 사람들, 깎인 울타리
+    if (n) {
+      var hold = C.nightHold(state), side = n.side, zN = Math.min(26, 8 + (c.nightLv || 0) * 2), gN = Math.round(Math.min(1, n.guards / Math.max(1, n.need)) * 14);
+      for (var zi = 0; zi < zN; zi++) { var u = (zi * 37 % 100) / 100, jig = Math.floor(now / 200 + zi) % 2; if (side === 1) zed(178 + (zi % 2) * 3 - jig, 12 + u * 100, zi); else zed(10 + u * 160, side === 0 ? 0 + (zi % 2) * 1 - 0 + jig - 1 : 122 + (zi % 2) - jig, zi); }
+      for (var gi = 0; gi < gN; gi++) { var gu = (gi + 0.5) / 14; if (side === 1) man(168 - (gi % 2) * 4, 12 + gu * 100, gi, 0, 1); else man(10 + gu * 160, side === 0 ? 12 + (gi % 2) * 3 : 108 - (gi % 2) * 3, gi, 0, 1); }
+      var dmg = 1 - Math.max(0, n.fence); for (var di2 = 0; di2 < Math.round(dmg * 12); di2++) { var du = (di2 * 53 % 100) / 100; if (side === 1) { R(174, 12 + du * 100, 3, 4, '#3a2a1a'); R(175, 13 + du * 100, 1, 2, '#f08a3a'); } else { R(10 + du * 160, side === 0 ? 6 : 117, 4, 5, '#3a2a1a'); R(11 + du * 160, side === 0 ? 8 : 119, 2, 1, '#f08a3a'); } }
+      if (gN > 0 && Math.floor(now / 90) % 3 === 0) { var tu = ((now / 90 | 0) * 29 % 100) / 100; if (side === 1) R(170, 12 + tu * 100, 5, 1, '#ffd95a'); else R(10 + tu * 160, side === 0 ? 9 : 115, 1, 4, '#ffd95a'); }
+    }
+    // 습격 중에는 어둡게 덮고 불빛만 다시 밝힌다
+    if (n) { g.fillStyle = 'rgba(8,12,34,.5)'; g.fillRect(0, 0, 184, 128); }
+    lights.forEach(function (l) { var glow = String(l[4]).indexOf('rgba') === 0; if (glow) { R(l[0], l[1], l[2], l[3], l[4]); return; } if (n) { R(l[0], l[1], l[2], l[3], l[4]); g.fillStyle = 'rgba(255,233,160,.16)'; g.fillRect(l[0] - 2, l[1] - 1, l[2] + 4, l[3] + 4); } });
+    if (n) {
+      var sideBand = n.side === 1 ? [160, 0, 24, 128] : n.side === 0 ? [0, 0, 184, 20] : [0, 108, 184, 20]; g.fillStyle = 'rgba(216,69,58,' + (Math.floor(now / 300) % 2 ? '.2' : '.12') + ')'; g.fillRect(sideBand[0], sideBand[1], sideBand[2], sideBand[3]);
+      var bx = n.side === 1 ? 150 : 76, by = n.side === 0 ? 22 : n.side === 2 ? 102 : 60; R(bx - 1, by - 1, 34, 6, K); R(bx, by, Math.round(32 * Math.max(0, n.fence)), 4, n.fence > 0.5 ? '#7fb85a' : n.fence > 0.25 ? '#e98a3c' : '#ff5a4a');
+    }
+    if (campFlash && now - campFlash.at < 400) { var fa = 1 - (now - campFlash.at) / 400; g.fillStyle = (campFlash.kind === 'done' ? 'rgba(240,180,0,' : campFlash.kind === 'held' ? 'rgba(127,184,90,' : 'rgba(216,69,58,') + (0.4 * fa).toFixed(2) + ')'; if (campFlash.rect) g.fillRect(campFlash.rect[0], campFlash.rect[1], campFlash.rect[2], campFlash.rect[3]); else g.fillRect(0, 0, 184, 128); }
+    for (var v = 0; v < 6; v++) { g.fillStyle = 'rgba(6,10,6,' + (0.2 - v * 0.03).toFixed(3) + ')'; g.fillRect(v, 0, 1, 128); g.fillRect(183 - v, 0, 1, 128); }
+    cv.classList.toggle('ward-shake', !!(campFlash && campFlash.kind === 'breach' && now - campFlash.at < 300));
+  }
+  /** 문에서 그 자리까지의 길(도트 자리들). */
+  function campPath(d) { var p = campPlot(d), ry = d.row === 0 ? 43 : 79; return [[8, 79], [48, 79], [50, ry + (d.row === 0 ? 0 : 0)], [p.x + 12, ry], [p.x + 14, p.y + (d.row === 2 ? 4 : CAMP_H - 6)]]; }
+  function campSendWalkers(path, n, gun) { var now = Date.now(); for (var k = 0; k < n; k++) campWalk.push({ at: now + k * 130, ms: 1300, path: path, gun: !!gun }); if (campWalk.length > 40) campWalk = campWalk.slice(-40); }
+  function renderCamp() {
+    var c = C.campOf(state), n = c.night, free = C.settleFree(state), has = C.survivorRate(state) > 0 || state.survivors > 0;
+    var head = $('camp-head'); setText(head, n ? '울타리 ' + Math.round(Math.max(0, n.fence) * 100) + '%' : '문 앞에 ' + fmt(free) + '명'); head.classList.toggle('bad', !!n && C.nightHold(state) < 1);
+    var ck = $('camp-clock'), left = C.RAID_EVERY - (c.clock || 0), showCk = !!n || (C.settleCount(state) >= 1 && c.hand < C.CAMP_HAND);
+    if (ck.hidden !== !showCk) ck.hidden = !showCk; if (showCk) setText(ck, n ? '습격 ' + clock(Math.max(0, n.t)) : ((c.nightLv || 0) > 0 ? c.nightLv + '단계 · ' : '') + '습격까지 ' + clock(Math.max(0, left))); ck.classList.toggle('raid', !!n);
+    var gb = $('camp-guard'), tb = $('t7-tune'); if (gb.hidden !== !n) gb.hidden = !n; if (tb.hidden !== !!n) tb.hidden = !!n;
+    if (n) { setText($('camp-guard-n'), fmt(n.guards) + ' / ' + fmt(n.need) + '명'); gb.disabled = n.guards >= n.need || !(free >= 1); }
+    var sel = c.flag ? C.SETTLE.filter(function (d) { return d.id === c.flag; })[0] : null, card = $('camp-card'); if (card.hidden !== !sel) card.hidden = !sel;
+    if (sel) { var lv = C.settleLv(state, sel.id), need = C.settleNeed(state, sel.id), work = C.settleWork(state, sel.id), brk = C.settleBroken(state, sel.id);
+      setText($('camp-name'), sel.name + (lv > 0 ? ' ' + lv + '단계' : '') + ' · ' + (brk ? '부서졌어요' : sel.desc)); setText($('camp-need'), need > 0 ? fmt(work) + ' / ' + fmt(need) + '명' : '다 자랐어요'); fill($('camp-bar'), need > 0 ? work / need : 1); }
+    drawCamp();
+    var sc = $('campscene'); sc.classList.toggle('tappable', has); sc.setAttribute('data-free', free); sc.setAttribute('data-levels', C.settleLevels(state)); sc.setAttribute('data-raid', n ? n.side : ''); sc.setAttribute('data-guards', n ? n.guards : 0); sc.setAttribute('data-flag', c.flag || '');
+    setText($('camp-note'), !has ? '안테나를 세우면 사람이 모여요' : n ? (C.nightHold(state) >= 1 ? '울타리가 버티고 있어요' : '사람을 세우지 않으면 울타리가 깎여요') : (state.sendsRun || 0) < 3 ? '지도의 자리를 누르면 문 앞의 사람이 가서 지어요' : C.settleCount(state) < 2 ? '송신탑을 눌러도 주파수를 맞춰요' : (state.nightsHeld || 0) + (state.campBreaches || 0) < 1 ? '손을 쓰고 있으면 습격이 와요. 울타리에 사람을 세워 막아요' : '모든 구역의 생산 ×' + C.towerMult(state).toFixed(2));
+  }
+  function wireCamp() {
+    function campPop(xd, yd, text, cls) {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var wrap = $('camp-wrap'); if (!wrap || wrap.querySelectorAll('.ward-pop').length > 10) return;
+      var s = el('span', 'ward-pop' + (cls ? ' ' + cls : ''), text); s.style.left = (xd / 184 * 100) + '%'; s.style.top = (yd / 128 * 100) + '%';
+      s.addEventListener('animationend', function () { s.remove(); }); wrap.appendChild(s);
+    }
+    campPopFn = campPop;
+    function guard() {
+      var r = C.sendGuard(state); if (!r.ok) return;
+      var n = C.campOf(state).night, tx = n.side === 1 ? 166 : 40 + Math.random() * 100, tyy = n.side === 0 ? 14 : n.side === 2 ? 106 : 30 + Math.random() * 60;
+      campSendWalkers([[8, 79], [48, 79], [50, n.side === 0 ? 43 : 79], [tx, tyy]], 3, true); campPop(tx, tyy - 8, '+' + fmt(r.sent), ''); sfx('fortify'); buzz(10); render();
+    }
+    $('camp-guard').addEventListener('click', guard);
+    $('campscene').addEventListener('click', function (e) {
+      var cv = $('campscene'), rc = cv.getBoundingClientRect(), key = !(e.clientX > 0) && !(e.clientY > 0), c = C.campOf(state);
+      var x = (e.clientX - rc.left) / rc.width * 184, y = (e.clientY - rc.top) / rc.height * 128;
+      if (key) { if (c.night) guard(); else if (c.flag) place(c.flag); return; }
+      if (c.night && ((c.night.side === 1 && x > 158) || (c.night.side === 0 && y < 12) || (c.night.side === 2 && y > 116))) { guard(); return; }
+      if (x < 46 && y < 66) { $('t7-tune').click(); return; }      // 송신탑: 주파수를 맞춘다
+      var hit = null; C.SETTLE.forEach(function (d) { var p = campPlot(d); if (x >= p.x - 1 && x <= p.x + CAMP_W + 1 && y >= p.y - 4 && y <= p.y + CAMP_H + 4) hit = d; });
+      if (hit) place(hit.id);
+    });
+    function place(id) {
+      var d = C.SETTLE.filter(function (q) { return q.id === id; })[0], p = campPlot(d), c = C.campOf(state), r = C.buildSettle(state, id);
+      if (!r.ok) { if (r.reason === 'people' || r.reason === 'done') { c.flag = id; if (r.reason === 'people') campPop(p.x + 19, p.y + 6, '문 앞에 사람이 없어요', 'bad'); render(); } return; }
+      campSendWalkers(campPath(d), Math.min(5, 2 + Math.floor(r.sent / Math.max(1, r.need) * 20)), false); campPop(p.x + 19, p.y + 4, '+' + fmt(r.sent) + '명', '');
+      if (r.done) campDone(d, r.lv, r.repaired, false); else { sfx('click'); buzz(8); }
+      Store.save(); render();
+    }
+  }
+  /** 다 놓았다: 팝업 없이, 그 자리의 반짝임과 뜨는 글 · 일지 한 줄로만 알린다. */
+  function campDone(d, lv, repaired, auto) {
+    var p = campPlot(d); campFlash = { at: Date.now(), kind: 'done', rect: [p.x - 2, p.y - 2, CAMP_W + 4, CAMP_H + 4] };
+    if (campPopFn) campPopFn(p.x + 19, p.y - 2, repaired ? d.name + ' 고침' : d.name + ' ' + lv + '단계', 'done');
+    log(repaired ? d.name + (C.hasBatchim(d.name) ? '을' : '를') + ' 고쳤다.' : lv === 1 ? d.name + (C.hasBatchim(d.name) ? '이' : '가') + ' 섰다. ' + d.desc + '.' : d.name + (C.hasBatchim(d.name) ? '이' : '가') + ' ' + lv + '단계가 됐다.', 'good');
+    if (!auto || (tab === 'z6' && pane === 'play')) { sfx('goal'); buzz(25); }
+  }
   var settleBuilt = '';      // 방금 지은 건물(한 번 반짝인다)
   function renderSettle() {
-    var grid = $('settle-grid'), freeP = C.settleFree(state);
-    if (!rows.settle) {
-      rows.settle = {};
-      // 화면의 줄 순서: 위에서 아래로 row 0 · 1 · 2, 왼쪽에서 오른쪽으로 col 0 · 1 · 2
-      C.SETTLE.slice().sort(function (a, b) { return a.row - b.row || a.col - b.col; }).forEach(function (d) {
-        var b = el('button', ''), name = el('b', '', d.name), sub = el('small', '', '');
-        b.type = 'button'; b.appendChild(name); b.appendChild(sub);
-        b.addEventListener('click', function () {
-          var r = C.buildSettle(state, d.id);
-          if (!r.ok) { if (r.reason === 'people') toast('맡길 사람이 모자라요 · ' + fmt(d.cost) + '명 필요'); else if (r.reason === 'busy') toast('다른 건물을 짓는 중이에요'); return; }
-          log(d.name + ' 공사를 시작했다. ' + fmt(d.cost) + '명에게 일을 맡겼다.', '');
-          toast(d.name + ' 공사 시작 · ' + clock(r.seconds) + ' · 주파수를 맞추면 빨라져요'); sfx('fortify'); buzz(20);
-          Store.save(); render();
-        });
-        rows.settle[d.id] = { btn: b, name: name, sub: sub }; grid.appendChild(b);
-      });
-    }
-    C.SETTLE.forEach(function (d) {
-      var r = rows.settle[d.id], why = C.settleBlock(state, d.id);
-      r.btn.className = (why === 'done' ? 'done' : why === 'building' ? 'building' : why === '' ? 'can' : why === 'people' || why === 'busy' ? 'wait' : 'hid') + (settleBuilt === d.id ? ' built' : '');
-      r.btn.disabled = why === 'done' || why === 'building' || why === 'prev' || why === 'locked';
-      setText(r.name, why === 'prev' || why === 'locked' ? HID : d.name);
-      setText(r.sub, why === 'prev' || why === 'locked' ? HID : why === 'done' ? d.desc : why === 'building' ? '짓는 중 ' + clock(Math.max(0, state.build.left)) : fmt(d.cost) + '명 · ' + clock(C.settleTime(d)) + '\n' + d.desc);
-      fill(r.btn, why === 'building' ? 1 - Math.max(0, state.build.left) / C.settleTime(d) : 0);
-    });
-    settleBuilt = '';
-    setText($('settle-count'), C.settleCount(state) + ' / ' + C.SETTLE.length);
-    setText($('settle-free'), '맡길 수 있는 사람 ' + fmt(freeP) + '명 · 한 번에 한 채씩 지어요');
     // 혈청: 가운데 줄의 건물이 문턱이다
     var stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state), need = C.serumNeeds(state), rNext = C.rescueNext(state);
     Array.prototype.forEach.call($('serum-steps').children, function (i, n) { i.className = n < stage ? 'on' : ''; });
@@ -3455,13 +3639,8 @@
     }
     if (tab === 'z6' && open) {
       renderZoneEvent('tower');
-      // 7구역 운영(3.1.0): 생존자, 맡긴 사람과 맡길 수 있는 사람, 주파수
-      var sRate = C.survivorRate(state), people = Math.floor(state.survivors), used = Math.min(people, C.settleUsed(state)), freeP = C.settleFree(state);
-      setText($('tower-people'), fmt(people) + '명');
-      setText($('tower-rate'), sRate > 0 ? '초당 +' + fmt(sRate) + '명' : '안테나를 세우면 사람이 모여요');
-      setText($('tower-mult'), '모든 구역의 생산 ×' + C.towerMult(state).toFixed(2));
-      $('t7-busy').style.width = (people > 0 ? used / people * 100 : 0).toFixed(1) + '%'; $('t7-free').style.width = (people > 0 ? freeP / people * 100 : 0).toFixed(1) + '%';
-      setText($('t7-busy-text'), state.build ? C.SETTLE.filter(function (x) { return x.id === state.build.id; })[0].name + ' 짓는 중 ' + clock(Math.max(0, state.build.left)) : '일하는 중 ' + fmt(used) + '명'); setText($('t7-free-text'), '맡길 수 있는 사람 ' + fmt(freeP) + '명');
+      var sRate = C.survivorRate(state);
+      renderCamp();
       renderTune();
       var aq = qtyFor(C.maxAntennas(state), C.COUNT_MAX - state.antennas), acost = C.antennaCost(state, aq);
       setText(rows.antenna.count, state.antennas + ' / ' + C.COUNT_MAX);
@@ -3819,9 +3998,20 @@
           toast('목표 달성 · ' + ev.text); sfx('goal');
           break;
         case 'surge': if (tab === 'z2' && pane === 'play') sfx('surge'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
-        case 'settle-done':      // 7구역: 건물이 다 지어졌다(3.1.0)
-          settleBuilt = ev.id; log(ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 다 지어졌다. ' + ev.desc + '.', 'good');
-          toast('정착지 · ' + ev.name + ' 완공 · ' + ev.desc); sfx('goal'); buzz(30); if (fxShow) fxShow('완공', ev.name, 1, -1, -1);
+        case 'settle-done':      // 4.2.0: 이장이 다 놓았다(손으로 놓은 것은 누른 자리에서 바로 알린다). 팝업은 띄우지 않는다
+          if (ev.auto) campDone(C.SETTLE.filter(function (q) { return q.id === ev.id; })[0], ev.lv, ev.repaired, true);
+          break;
+        case 'camp-night':
+          campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([40, 40, 40]); if (campPopFn) campPopFn(92, 56, ['북쪽', '동쪽', '남쪽'][ev.side] + ' 울타리에 습격', 'bad'); }
+          log(['북쪽', '동쪽', '남쪽'][ev.side] + ' 울타리에 무리가 붙었다.', 'bad');
+          break;
+        case 'camp-held':
+          campFlash = { at: Date.now(), kind: 'held' }; if (tab === 'z6' && pane === 'play') { sfx('goal'); buzz(30); if (campPopFn) campPopFn(92, 56, '습격을 막았다 +' + fmt(Math.floor(ev.gain)) + '명', 'done'); }
+          log('습격을 막았다. 사람이 ' + fmt(Math.floor(ev.gain)) + '명 더 왔다.', 'good');
+          break;
+        case 'camp-breach':
+          campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([80, 40, 140]); if (campPopFn) campPopFn(92, 56, ev.name ? '뚫렸다 · ' + ev.name + ' 부서짐' : '뚫렸다', 'bad'); }
+          log(ev.name ? '울타리가 뚫렸다. ' + ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 부서졌다.' : '울타리가 뚫렸다.', 'bad');
           break;
         case 'train':      // 3.4.0: 승강장의 열차가 떠났다(why: hand 손으로 · auto 역무원 · full 만차 · horde 무리에 닿음)
           platAnim = { at: Date.now(), kept: ev.kept, cut: ev.cars - ev.kept, why: ev.why };
