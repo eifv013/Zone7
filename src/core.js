@@ -586,7 +586,7 @@
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, boons: { rich: 0, slow: 0, box: 0, quick: 0 }, chartBonus: 0, chartNo: 0, savedRun: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8, mix: 0, boost: 0, hand: 999, erNext: 35, er: null, pick: null }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, dosesAll: 0, serumTaps: 0, labV: 3, labV4: 1,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
-      posts: 0, guardEarned: 0, safeNights: 0, bridge: { zs: [], spawn: 1, n: 0, shot: 0, combo: 1, hold: 0, wall: 10, fix: 0, down: 0, hand: 999, waveIn: 25, wave: 0, warn: 0, hurt: 0, nade: 0, streak: 0, heat: 0, jam: 0 }, streakBest: 0, breaches: 0, wavesHeld: 0, firepower: 0, morale: 0, bridgeKills: 0, handKills: 0, bigKills: 0, shotsRun: 0, comboBest: 1,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
+      posts: 0, guardEarned: 0, safeNights: 0, bridge: { zs: [], spawn: 1, n: 0, shot: 0, combo: 1, hold: 0, wall: 14, fix: 0, down: 0, hand: 999, waveIn: 25, wave: 0, warn: 0, hurt: 0, nade: 0, streak: 0, heat: 0, jam: 0 }, streakBest: 0, breaches: 0, wavesHeld: 0, firepower: 0, morale: 0, bridgeKills: 0, handKills: 0, bigKills: 0, shotsRun: 0, comboBest: 1,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
       // 밤
       day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false, siegeNights: 0, defStreak: 0, edge: 0, nightEase: 1, counterAt: 0, perkOwed: 0, bossPerks: 0, perkFrom: 'goal',      // defStreak 연속으로 막은 밤, perkOwed 변이체를 막고 아직 못 고른 특전
       // 구조 신호
@@ -2728,24 +2728,24 @@
    * 가만히: 아무도 쏘지 않으면 자꾸 뚫린다. 가만히 둠 < 초소장 < 손.
    * 긴 dt(자리 비움 · 굵은 걸음)에서는 하나하나 세지 않고 초소장이 있으면 AWAY_AUTO 배, 없으면 BRIDGE_LEAK 배로 친다(뚫리는 벌칙도 없다).
    */
-  var BRIDGE_SPAWN = 0.8, BRIDGE_BIG_EVERY = 12, BRIDGE_LEAK = 0.2, BRIDGE_HP = 2, BRIDGE_BIG_HP = 14, BRIDGE_WALK = 11, BRIDGE_WALK_BIG = 18, BRIDGE_BIG_CARRY = 5;
+  var BRIDGE_SPAWN = 0.55, BRIDGE_BIG_EVERY = 16, BRIDGE_LEAK = 0.2, BRIDGE_HP = 2, BRIDGE_BIG_HP = 14, BRIDGE_WALK = 11, BRIDGE_WALK_BIG = 18, BRIDGE_BIG_CARRY = 5;
   var BRIDGE_KINDS = {
-    norm:  { hp: 2,  walk: 11, carry: 1, hit: 1 },
+    norm:  { hp: 2,  walk: 9,  carry: 1, hit: 1 },
     run:   { hp: 1,  walk: 5,  carry: 1, hit: 1 },
     tough: { hp: 4,  walk: 14, carry: 2, hit: 2 },
     big:   { hp: 14, walk: 18, carry: 5, hit: 5 }
   };
-  var WALL_BASE = 10, WALL_FIX = 2.5, BREACH_SECONDS = 4, BRIDGE_HAND = 30, AUTO_DMG = 2, AWAY_AUTO = 0.6;
+  var WALL_BASE = 14, WALL_FIX = 2, BREACH_SECONDS = 4, BRIDGE_HAND = 30, AUTO_DMG = 2, AWAY_AUTO = 0.6;
   var WAVE_FIRST = 25, WAVE_EVERY = 45, WAVE_WARN = 3, WAVE_SECONDS = 7, WAVE_RATE = 3, WAVE_PAY = 12;
   /* 4.1.3 다리 단계(b.streak): 떼를 막을 때마다 1 오르고, 뚫리면 LV_DROP 내려간다. 단계가 오를수록 더 많이(LV_RATE), 더 질긴 것이(LV_HP) 오고, 받는 것도 는다(LV_PAY).
      왜: 화력을 올리거나 빨리 누르면 아무리 해도 안 뚫렸다. 이제는 잘 막을수록 다리가 세져서, 누구든 자기 손이 감당하는 단계의 끝에서 논다(언젠가는 뚫린다).
      손을 놓고 있으면(BRIDGE_HAND 초) LV_DECAY 초에 1씩 내려가, 자동에 맡긴 다리는 쉬운 채로 있다 */
-  var WAVE_STREAK_MAX = 40, LV_RATE = 0.12, LV_HP = 0.18, LV_PAY = 0.1, LV_DROP = 2, LV_DECAY = 20, WAVE_GROW_PAY = 0.1;
+  var WAVE_STREAK_MAX = 40, LV_RATE = 0.12, LV_HP = 0.18, LV_PAY = 0.1, LV_DROP = 3, LV_DECAY = 20, WAVE_GROW_PAY = 0.1;
   /* 4.1.3 총열: 누르고만 있으면 절대 안 뚫린다는 말씀에. 쏠 때마다 총열이 달아오르고(HEAT_SHOT), 쉬면 식는다(초당 HEAT_COOL).
      다 달아오르면 '과열': JAM_SECONDS 초 동안 쏠 수 없다. 그래서 마구 누르는 것보다 끊어 쏘는 것이 낫고, 급할 때는 수류탄이 있다(수류탄은 과열과 상관없다) */
   var HEAT_SHOT = 0.08, HEAT_COOL = 0.2, JAM_SECONDS = 2.5;
   var NADE_KILLS = 20, NADE_MIN = 8, NADE_DMG = 6;
-  var BRIDGE_COMBO_STEP = 0.1, BRIDGE_COMBO_HOLD = 4, BRIDGE_COMBO_BASE = 2, BRIDGE_SHOT_SECONDS = 1, BRIDGE_SHOT_MIN = 0.8, BRIDGE_WAVE = 20, FIRE_MAX = 3, MORALE_MAX = 4, MORALE_STEP = 0.5;
+  var BRIDGE_COMBO_STEP = 0.1, BRIDGE_COMBO_HOLD = 4, BRIDGE_COMBO_BASE = 2, BRIDGE_SHOT_SECONDS = 0.7, BRIDGE_SHOT_MIN = 0.55, BRIDGE_WAVE = 20, FIRE_MAX = 3, MORALE_MAX = 4, MORALE_STEP = 0.5;
   var FIRE_COST = 2e26, FIRE_GROWTH = 60, MORALE_COST = 4e26, MORALE_GROWTH = 25;
   function newBridge() { return { zs: [], spawn: 1, n: 0, shot: 0, combo: 1, hold: 0, wall: WALL_BASE, fix: 0, down: 0, hand: 999, waveIn: WAVE_FIRST, wave: 0, warn: 0, hurt: 0, nade: 0, streak: 0, heat: 0, jam: 0 }; }
   function bridgeOf(state) {
