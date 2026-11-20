@@ -1506,6 +1506,7 @@
       if (r.jam) { bridgePop(40, 34, '과열', 'wave'); sfx('rush'); buzz(40); }
       var hx = BR_X0 + Math.min(1, r.x) * BR_W, now = Date.now();
       bridgeFx.push({ at: now, x: hx, kind: r.kill ? 'kill' : 'hit', big: r.big, hand: true }); if (bridgeFx.length > 60) bridgeFx.shift();
+      (r.booms || []).forEach(function (bx6) { bridgeFx.push({ at: now, x: BR_X0 + Math.min(1, bx6) * BR_W, kind: 'boom' }); }); (r.also || []).forEach(function (a6) { bridgeFx.push({ at: now + 60, x: BR_X0 + Math.min(1, a6.x) * BR_W, kind: 'kill', big: a6.big, hand: true, quiet: true }); }); if (r.booms) { bridgeFlash = { at: now, kind: 'nade' }; sfx('rush'); buzz([20, 20, 40]); }
       if (r.kill) bridgePop(hx, r.big ? 30 : 38, '+' + fmt(r.gain), r.big ? 'big' : ''); else bridgePop(hx + 4, r.big ? 34 : 42, '-' + r.dmg, 'hit');
       sfx(r.kill ? (r.big ? 'signal' : 'buy') : 'click'); buzz(r.kill ? (r.big ? 30 : 12) : 5); if (r.kill) Store.save(); render();
     });
@@ -2400,6 +2401,8 @@
   var BR_A = ['.ggg.', 'gkgkg', '.ggg.', '.grg.', 'cccccg', 'gccc..', '.ccc.', '.ccc.', '.d.d.', '.d.d.', 'dd.dd'], BR_B = ['.ggg.', 'kgkgg', '.ggg.', '.ggg.', '.cccg', 'gccc.', 'gccc.', '.ccc.', '.dd..', 'd..d.', 'd..dd'];
   var BR_BIG = ['...ppppp...', '..ppppppp..', '..pkpppkp..', '..ppppppp..', '...prrrp...', '.ppppppppp.', 'pppcccccppp', 'pp.ccccc.pp', 'pp.ccccc.pp', 'p..ccccc..p', '...ccccc...', '...cc.cc...', '...dd.dd...', '...dd.dd...', '..ddd.ddd..'];
   var BR_BIG2 = ['...ppppp...', '..ppppppp..', '..pkpppkp..', '..ppppppp..', '...prrrp...', '.ppppppppp.', 'pppcccccppp', 'pp.ccccc.pp', 'pp.ccccc.pp', '.p.ccccc.p.', '...ccccc...', '...cc.cc...', '..dd...dd..', '..dd...dd..', '.ddd...ddd.'];
+  var BR_DOG = ['......gg', 'kgggggkg', 'gggggggr', '.gcccg..', '.d...d..'], BR_DOG2 = ['......gg', 'kgggggkg', 'gggggggr', '.gcccg..', 'd.....d.'];
+  var BR_BOMB = ['..ggg..', '.gkgkg.', '.ggggg.', 'yyyyyyy', 'yyoyyoy', 'yyyyyyy', 'yoyyyoy', '.yyyyy.', '.d...d.', '.d...d.', 'dd..dd.'];
   var BR_SHIRT = ['#6b4a3a', '#3f5f7a', '#8a8a52', '#b8402e', '#c9c7ba', '#55585f'];
   function bridgeBackdrop() {
     if (bridgeBack) return bridgeBack;
@@ -2407,12 +2410,14 @@
     var R = function (x, y, w, h, c) { px(g, x, y, w, h, c); }, P = function (x, y, c) { px(g, x, y, 1, 1, c); };
     ['#0d1326', '#101a30', '#14213a', '#1a2944', '#22324e', '#2c3a56'].forEach(function (c, i) { R(0, i * 8, 184, 8, c); });      // 밤하늘
     [[12, 6], [40, 12], [70, 4], [98, 16], [130, 8], [160, 14], [176, 5], [54, 22], [116, 26], [24, 28], [146, 30]].forEach(function (s, i) { P(s[0], s[1], i % 3 ? '#8a9ac0' : '#e8f0ff'); });
+    g.save(); g.translate(-30, 2);      // 4.1.7: 달을 왼쪽으로 옮겼다(오른쪽 위 모서리에 단계 딱지가 붙는다)
     R(148, 8, 10, 10, '#e8e6dc'); R(147, 10, 12, 6, '#e8e6dc'); R(150, 7, 6, 12, '#e8e6dc'); P(151, 11, '#c9c7ba'); P(154, 14, '#c9c7ba'); R(152, 9, 2, 1, '#c9c7ba');      // 달
     /* 4.1.2: 달 둘레에 깔았던 네모난 빛을 없앴다(네모가 그대로 보였다). 대신 달무리를 점으로 둥글게 찍는다 */
     [[146, 6], [159, 6], [145, 19], [160, 19], [143, 12], [162, 13], [152, 4], [153, 21]].forEach(function (q) { P(q[0], q[1], '#3a4a6a'); });
+    g.restore();
     [[0, 34, 10, 14], [10, 30, 8, 18], [20, 36, 12, 12], [34, 28, 6, 20], [42, 35, 10, 13], [56, 31, 7, 17], [66, 37, 12, 11], [82, 29, 8, 19], [94, 35, 9, 13], [108, 32, 7, 16], [118, 37, 12, 11], [134, 30, 8, 18], [146, 36, 10, 12], [160, 33, 8, 15], [170, 36, 14, 12]].forEach(function (b, i) { R(b[0], b[1], b[2], b[3], '#131a2c'); if (i % 2) P(b[0] + 2, b[1] + 3, '#f0b878'); if (i % 3 === 0) P(b[0] + b[2] - 3, b[1] + 6, '#f0b878'); });      // 강 건너 도시
     R(0, 48, 184, 60, '#0b1424'); for (var y = 50; y < 108; y += 3) for (var x = (y * 7) % 11; x < 184; x += 13) R(x, y, 5, 1, y < 70 ? '#16243c' : '#111c30');      // 강
-    for (var y2 = 74; y2 < 106; y2 += 2) R(150 - (y2 % 4), y2, 8 - (y2 % 3), 1, '#3a4a6a');      // 달빛
+    for (var y2 = 74; y2 < 106; y2 += 2) R(120 - (y2 % 4), y2, 8 - (y2 % 3), 1, '#3a4a6a');      // 달빛
     R(0, 36, 184, 2, '#3a4252'); for (var tx = -6; tx < 184; tx += 24) { for (var k = 0; k < 24; k++) { P(tx + k, 60 - k, '#2c3442'); P(tx + k, 36 + k, '#2c3442'); } R(tx, 36, 2, 26, '#3a4252'); }      // 트러스
     R(0, 62, 184, 3, '#8a8f98'); R(0, 62, 184, 1, '#b4b8c0'); R(0, 65, 184, 7, '#4a4f58'); R(0, 71, 184, 1, '#2a2e36'); for (var dx = 0; dx < 184; dx += 16) R(dx, 65, 1, 6, '#3a3f48');      // 상판
     for (var lx = 6; lx < 184; lx += 14) R(lx, 63, 6, 1, '#f0b400');
@@ -2443,9 +2448,16 @@
     // 강 건너의 불과 연기(네모난 빛은 쓰지 않는다)
     var fl = Math.floor(now / 160) % 2; R(84, 27, 4, 2, '#f08a3a'); R(85, 26 - fl, 2, 1 + fl, '#ffd95a'); R(83 + fl * 5, 28, 1, 1, '#ffb060'); R(136, 28, 3, 2, '#f08a3a'); R(137, 27 - fl, 1, 1 + fl, '#ffd95a');
     [[86, 0], [86, 1400], [137, 700]].forEach(function (s) { var a = ((now + s[1]) % 4200) / 4200, sy = Math.round(25 - a * 16), sx = Math.round(s[0] + Math.sin(a * 5 + s[1]) * 2 + a * 3); if (sy > 6) { R(sx, sy, 2, 1, a < 0.5 ? '#4a4048' : '#2e2c3a'); if (a > 0.3) R(sx + 1, sy - 1, 2, 1, '#2e2c3a'); } });
+    /* 4.1.7 단계가 오를수록 풍경이 달라진다.
+       3단계부터: 강 건너에 불이 번진다(단계마다 한 곳씩, 여섯 곳까지). 5단계부터: 비가 내린다. 8단계부터: 달이 붉어지고 번개가 친다. 12단계부터: 하늘이 붉고 불티가 날린다 */
+    var lvS = b.streak || 0;
+    if (on && lvS >= 3) { [[22, 35], [58, 30], [110, 31], [162, 32], [44, 34], [148, 35]].slice(0, Math.min(6, lvS - 2)).forEach(function (q, i) { var f2 = Math.floor(now / 150 + i) % 2; R(q[0], q[1], 3, 2, '#f08a3a'); R(q[0] + 1, q[1] - 1 - f2, 1, 1 + f2, '#ffd95a'); var sa = ((now + i * 900) % 3800) / 3800; if (q[1] - 2 - sa * 14 > 6) R(Math.round(q[0] + 1 + sa * 4), Math.round(q[1] - 2 - sa * 14), 2, 1, '#3a3440'); R(q[0] + (f2 ? 0 : 1), 50 + i % 3, 3, 1, '#6a3a2a'); }); }
+    if (on && lvS >= 8) { R(118, 10, 10, 10, '#d8644e'); R(117, 12, 12, 6, '#d8644e'); R(120, 9, 6, 12, '#d8644e'); R(121, 13, 1, 1, '#a84030'); R(124, 16, 1, 1, '#a84030'); R(122, 11, 2, 1, '#a84030'); }      // 붉은 달
+    if (on && lvS >= 12) { g.fillStyle = 'rgba(160,30,20,.16)'; g.fillRect(0, 0, 184, 48); for (var em = 0; em < 9; em++) { var ea = ((now / 30 + em * 47) % 120) / 120; R(Math.round((em * 23 + now / 90) % 184), Math.round(46 - ea * 44), 1, 1, em % 2 ? '#ffb060' : '#f08a3a'); } }
+    else if (on && lvS >= 5) { g.fillStyle = 'rgba(8,12,24,' + Math.min(0.22, 0.1 + lvS * 0.01).toFixed(2) + ')'; g.fillRect(0, 0, 184, 48); }
     // 강: 흐르는 물결, 달빛, 불빛
     for (var wy = 51; wy < 108; wy += 6) { var wo = Math.floor(now / (wy < 72 ? 260 : 180) + wy * 3) % 23; for (var wx = -wo; wx < 184; wx += 23) R(wx, wy, 4, 1, wy < 72 ? '#1e3050' : '#18263e'); }
-    for (var my = 74; my < 106; my += 2) { var mo = Math.round(Math.sin(now / 500 + my) * 1.5); R(150 - (my % 4) + mo, my, 8 - (my % 3), 1, (my + Math.floor(now / 400)) % 6 ? '#3a4a6a' : '#5a6c90'); }
+    for (var my = 74; my < 106; my += 2) { var mo = Math.round(Math.sin(now / 500 + my) * 1.5); R(120 - (my % 4) + mo, my, 8 - (my % 3), 1, (my + Math.floor(now / 400)) % 6 ? '#3a4a6a' : '#5a6c90'); }
     for (var fy = 49; fy < 56; fy += 2) { R(84 + ((fy + Math.floor(now / 200)) % 3), fy, 3, 1, '#6a3a2a'); }
     if (!on) { g.fillStyle = 'rgba(8,10,16,.45)'; g.fillRect(0, 0, 184, 108); R(0, 56, 184, 1, '#b4b8c0'); for (var rx0 = 2; rx0 < 184; rx0 += 8) R(rx0, 57, 1, 5, '#8a8f98'); return; }
     // 탐조등: 다리 위를 천천히 훑는다(맨 앞의 것을 따라간다)
@@ -2471,8 +2483,11 @@
         R(x - 8, 41, 17, 4, K); R(x - 7, 42, Math.max(1, Math.round(15 * z.hp / z.max)), 2, '#b07ae0');
       } else {
         g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x - 2, 62, 6, 1);
-        var pal = hurt ? WH : k === 'run' ? { g: '#a8c86a', h: '#5a8a3e', k: '#d8453a', c: '#b8402e', d: '#3a3a36', r: '#b8402e' } : k === 'tough' ? { g: '#6a9a5a', h: '#5a8a3e', k: '#17180f', c: '#55585f', d: '#2a2e36', r: '#b8402e' } : { g: (z.id || 0) % 3 ? '#7fb85a' : '#6aa85a', h: '#5a8a3e', k: '#17180f', c: BR_SHIRT[(z.id || 0) % 5], d: '#3a3a36', r: '#b8402e' };
+        if (k === 'dog') { g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x - 3, 62, 8, 1); spr(g, x - 3, 57, step ? BR_DOG : BR_DOG2, hurt ? WH : { g: '#8aa86a', k: '#17180f', r: '#d8453a', c: '#6a8a52', d: '#4a5a3a' }); R(x + 6, 59, 3, 1, 'rgba(232,230,220,.3)'); return; }
+        if (k === 'bomb') { var pu = Math.floor(now / 260 + (z.id || 0)) % 2; spr(g, x - 3, 51 - pu, BR_BOMB, hurt ? { g: '#fff', k: '#fff', y: '#fff', o: '#fff', d: '#fff' } : { g: '#9ab86a', k: '#17180f', y: pu ? '#d8c84a' : '#c9b83a', o: '#e98a3c', d: '#3a3a36' }); if (z.hp < z.max) { R(x - 3, 46, 8, 3, K); R(x - 2, 47, Math.max(1, Math.round(6 * z.hp / z.max)), 1, '#d8453a'); } return; }
+        var pal = hurt ? WH : k === 'shield' ? { g: '#6a9a5a', h: '#5a8a3e', k: '#17180f', c: '#2a3a4a', d: '#1a1e24', r: '#b8402e' } : k === 'run' ? { g: '#a8c86a', h: '#5a8a3e', k: '#d8453a', c: '#b8402e', d: '#3a3a36', r: '#b8402e' } : k === 'tough' ? { g: '#6a9a5a', h: '#5a8a3e', k: '#17180f', c: '#55585f', d: '#2a2e36', r: '#b8402e' } : { g: (z.id || 0) % 3 ? '#7fb85a' : '#6aa85a', h: '#5a8a3e', k: '#17180f', c: BR_SHIRT[(z.id || 0) % 5], d: '#3a3a36', r: '#b8402e' };
         spr(g, x - 2 + (hurt ? 1 : 0) - (k === 'run' ? 1 : 0), 51, step ? BR_A : BR_B, pal);
+        if (k === 'shield') { R(x - 4, 50, 3, 12, '#3a4a5a'); R(x - 4, 50, 1, 12, '#8aa0b4'); R(x - 3, 53, 1, 2, '#c9d8e0'); R(x - 1, 50, 5, 2, '#2a2e36'); }      // 방패 든 놈: 앞에 든 진압 방패와 검은 투구
         if (k === 'run') { R(x + 5, 54, 3, 1, 'rgba(232,230,220,.35)'); R(x + 6, 58, 2, 1, 'rgba(232,230,220,.25)'); }      // 뛰는 놈: 뒤로 바람 줄
         if (k === 'tough') { R(x - 1, 50, 5, 2, '#8a8f98'); R(x - 1, 50, 5, 1, '#b4b8c0'); R(x - 3, 56, 2, 5, '#6a6f78'); }      // 튼튼한 놈: 철모와 방패
         if (z.hp < z.max) { R(x - 3, 46, 8, 3, K); R(x - 2, 47, Math.max(1, Math.round(6 * z.hp / z.max)), 1, '#d8453a'); }
@@ -2494,6 +2509,8 @@
       }
     });
     R(0, 56, 184, 1, '#b4b8c0'); for (var rx = 2; rx < 184; rx += 8) R(rx, 57, 1, 5, '#8a8f98');      // 난간(맨 앞)
+    if (lvS >= 5) { var rn = Math.min(46, 14 + lvS * 3); for (var ri = 0; ri < rn; ri++) { var rxp = (ri * 37 + Math.floor(now / 16) * 2) % 196 - 6, ryp = (ri * 53 + Math.floor(now / 16) * 5) % 108; R(rxp, ryp, 1, 3, 'rgba(160,190,230,.35)'); } for (var sp6 = 0; sp6 < 6; sp6++) { if ((Math.floor(now / 120) + sp6 * 3) % 5 === 0) R((sp6 * 31 + 50) % 184, 61, 2, 1, 'rgba(200,220,250,.5)'); } }      // 비: 빗줄기와 상판에 튀는 물
+    if (lvS >= 8) { var lt = now % 6100; if (lt < 70 || (lt > 140 && lt < 190)) { g.fillStyle = 'rgba(220,230,255,.28)'; g.fillRect(0, 0, 184, 108); [[60, 0], [58, 6], [62, 12], [59, 18], [64, 24], [61, 30]].forEach(function (q) { R(q[0] + (lvS % 3) * 20, q[1], 2, 6, '#e8f0ff'); }); } }      // 번개
     // 떼가 온다(미리 알림): 오른쪽 끝이 붉게 깜빡이고 화살표가 보인다. 떼가 오는 동안에는 위아래에 붉은 띠
     if (b.warn > 0 && Math.floor(now / 180) % 2) { g.fillStyle = 'rgba(216,69,58,.35)'; g.fillRect(150, 36, 34, 28); [0, 8, 16].forEach(function (o) { R(176 - o, 49, 5, 1, '#ff5a4a'); R(176 - o, 48, 2, 3, '#ff5a4a'); R(177 - o, 47, 1, 5, '#ff5a4a'); }); }
     if (b.wave > 0) { var wp = Math.floor(now / 250) % 2 ? '.55' : '.3'; g.fillStyle = 'rgba(216,69,58,' + wp + ')'; g.fillRect(0, 0, 184, 2); g.fillRect(0, 106, 184, 2); R(0, 0, Math.round(184 * b.wave / C.WAVE_SECONDS), 2, '#ff5a4a'); }
@@ -3850,7 +3867,7 @@
           if (tab === 'z4' && pane === 'play') { sfx('rush'); buzz([60, 40, 120]); }
           break;
         case 'bridge-shot':      // 4.1.0: 초소장이 쏜다
-          if (tab === 'z5' && pane === 'play') { bridgeFx.push({ at: Date.now(), x: BR_X0 + Math.min(1, ev.x) * BR_W, kind: ev.kill ? 'kill' : 'hit', big: ev.big, hand: false }); if (bridgeFx.length > 60) bridgeFx.shift(); if (ev.kill && ev.gain > 0 && bridgePopFn) bridgePopFn(BR_X0 + ev.x * BR_W, 40, '+' + fmt(ev.gain), 'hit'); }
+          if (tab === 'z5' && pane === 'play') { bridgeFx.push({ at: Date.now(), x: BR_X0 + Math.min(1, ev.x) * BR_W, kind: ev.kill ? 'kill' : 'hit', big: ev.big, hand: false }); if (bridgeFx.length > 60) bridgeFx.shift(); (ev.booms || []).forEach(function (bx6) { bridgeFx.push({ at: Date.now(), x: BR_X0 + Math.min(1, bx6) * BR_W, kind: 'boom' }); }); if (ev.kill && ev.gain > 0 && bridgePopFn) bridgePopFn(BR_X0 + ev.x * BR_W, 40, '+' + fmt(ev.gain), 'hit'); }
           break;
         case 'bridge-leak':
           bridgeLeak = Date.now(); if (tab === 'z5' && pane === 'play' && ev.big) { sfx('rush'); buzz(40); if (bridgePopFn) bridgePopFn(46, 30, '연속이 끊겼다', 'bad'); }

@@ -3200,6 +3200,14 @@ test('6구역 다리: 떼는 손을 쓰고 있을 때만 온다. 미리 알리�
   const lo = cnt(0), hi = cnt(10); assert.ok(hi.n > lo.n * 1.6, lo.n + ' → ' + hi.n); assert.equal(lo.hp, 2); assert.ok(hi.hp >= 5);
   const pz = onBridge(); near(C.bridgeLvPay(pz), 1); C.bridgeOf(pz).streak = 10; assert.ok(C.bridgeLvPay(pz) < 1, '한 마리의 몫은 줄지만'); assert.ok(C.bridgeLvPay(pz) * (1 + 0.12 * 10) > 1.9, '다 잡으면 더 번다');
   const dz = onBridge(), db = C.bridgeOf(dz); db.streak = 3; db.hand = 999; for (let i = 0; i < 100; i++) C.stepBridge(dz, 0.25, calm, []); assert.equal(db.streak, 2, '손을 놓고 있으면 내려간다');
+  /* 4.1.7 단계가 오르면 새 종류가 섞여 온다: 3단계부터 개, 6단계부터 부푼 놈, 9단계부터 방패 든 놈 */
+  const kindsAt = (lv) => { const z = onBridge(), zb = C.bridgeOf(z), r = lcg(4), seen = new Set(); zb.spawn = 0.1; zb.streak = lv; for (let i = 0; i < 1500; i++) { zb.hand = 0; zb.waveIn = 99; C.stepBridge(z, 0.1, r, []); zb.zs.forEach((q) => seen.add(q.k)); zb.zs = []; zb.wall = 99; } return seen; };
+  const k0 = kindsAt(0), k3 = kindsAt(3), k6 = kindsAt(6), k9 = kindsAt(9);
+  assert.ok(!k0.has('dog') && !k0.has('bomb') && !k0.has('shield')); assert.ok(k3.has('dog') && !k3.has('bomb')); assert.ok(k6.has('bomb') && !k6.has('shield')); assert.ok(k9.has('shield') && k9.has('dog') && k9.has('bomb') && k9.has('norm'));
+  /* 부푼 놈은 쓰러지면 터진다: 곁의 것들이 깎이고, 쓰러진 것도 손이 잡은 것으로 친다. 잇달아 터지기도 한다 */
+  const bz = onBridge(), bb = C.bridgeOf(bz); bz.firepower = 2; bb.zs.push(zom(0.5, 'bomb'), zom(0.53), zom(0.56, 'bomb'), zom(0.62, 'run'), zom(0.9));
+  const br = C.shootBridge(bz, 0.5); assert.ok(br.kill && br.booms.length === 2 && br.also.length === 3, JSON.stringify(br)); assert.equal(bb.zs.length, 1); near(bb.zs[0].x, 0.9); assert.equal(bz.handKills, 4);
+  const nz = onBridge(), nb = C.bridgeOf(nz); nb.nade = C.nadeNeed(nz); nb.zs.push(zom(0.3, 'bomb'), zom(0.33, 'shield'), zom(0.8, 'shield')); const nr = C.throwNade(nz); assert.equal(nr.kills, 2, '수류탄에 터진 부푼 놈이 곁의 방패까지'); assert.equal(nb.zs.length, 1);
   /* 총열: 쏠 때마다 달아오르고, 다 달아오르면 과열되어 잠깐 쏠 수 없다. 쉬면 식는다. 수류탄은 과열과 상관없다 */
   const hz = onBridge(), hb = C.bridgeOf(hz); let shots = 0, jr = null; while (shots < 40) { hb.zs.push(zom(0.5, 'big')); const r = C.shootBridge(hz); shots++; if (r.jam) { jr = r; break; } hb.zs = []; }
   assert.ok(jr && shots >= 10 && shots <= 14, '열두 발쯤: ' + shots); assert.equal(C.shootBridge(hz).reason, 'jam'); assert.equal(hz.jamsRun, 1);
