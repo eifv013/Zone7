@@ -3775,26 +3775,48 @@
     { id: 'coat-black',  slot: 'coat', name: '검은 우비',   rarity: 1, look: { y: '#3a3d45', j: '#2b2d33' } },
     { id: 'coat-night',  slot: 'coat', name: '밤하늘 우비', rarity: 2, look: { y: '#27336e', j: '#4a5fb8' } },
     { id: 'coat-neon',   slot: 'coat', name: '형광 우비',   rarity: 2, look: { y: '#c6ff4a', j: '#8fe01f' } },
+    // 4.5.2 더한 우비. 투톤(후드와 몸의 색이 다르다)은 희귀 · 전설로 둔다
+    { id: 'coat-mint',   slot: 'coat', name: '민트 우비',   rarity: 0, look: { y: '#7fd8c0', j: '#7fd8c0' } },
+    { id: 'coat-pink',   slot: 'coat', name: '분홍 우비',   rarity: 0, look: { y: '#ff9fc0', j: '#ff9fc0' } },
+    { id: 'coat-sky',    slot: 'coat', name: '하늘 우비',   rarity: 0, look: { y: '#8fc8f0', j: '#8fc8f0' } },
+    { id: 'coat-cocoa',  slot: 'coat', name: '코코아 우비', rarity: 0, look: { y: '#8a5a3a', j: '#8a5a3a' } },
+    { id: 'coat-duo',    slot: 'coat', name: '노랑 파랑 우비', rarity: 1, look: { y: '#f0b400', j: '#3f7fb5' } },
+    { id: 'coat-berry',  slot: 'coat', name: '딸기 우비',   rarity: 1, look: { y: '#4f9a4a', j: '#d8384a' } },
+    { id: 'coat-sunset', slot: 'coat', name: '노을 우비',   rarity: 2, look: { y: '#ff8f50', j: '#8a5fc0' } },
     // 2.0.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
     { id: 'hood-none',   slot: 'hood', name: '기본 후드',   rarity: 0, base: true, look: 'none' },
     { id: 'hood-cat',    slot: 'hood', name: '고양이 귀',   rarity: 1, look: 'cat' },
     { id: 'hood-bear',   slot: 'hood', name: '곰 귀',       rarity: 1, look: 'bear' },
     { id: 'hood-rabbit', slot: 'hood', name: '토끼 귀',     rarity: 1, look: 'rabbit' },
     { id: 'hood-horn',   slot: 'hood', name: '뿔 후드',     rarity: 2, look: 'horn' },
+    { id: 'hood-sprout', slot: 'hood', name: '새싹',        rarity: 0, look: 'sprout' },      // 4.5.2 더한 후드
+    { id: 'hood-pompom', slot: 'hood', name: '털방울',      rarity: 1, look: 'pompom' },
+    { id: 'hood-fox',    slot: 'hood', name: '여우 귀',     rarity: 1, look: 'fox' },
+    { id: 'hood-panda',  slot: 'hood', name: '판다 귀',     rarity: 1, look: 'panda' },
+    { id: 'hood-dino',   slot: 'hood', name: '공룡 가시',   rarity: 2, look: 'dino' },
     { id: 'pat-none',    slot: 'pat',  name: '무늬 없음',   rarity: 0, base: true, look: 'none' },
     { id: 'pat-stripe',  slot: 'pat',  name: '체크 밑단',   rarity: 0, look: 'stripe' },      // 2.7.5: 줄무늬가 보기 좋지 않다는 말에 그림을 바꿨다. 이미 가진 사람의 것이 사라지지 않게 id 와 look 의 이름은 그대로 둔다
     { id: 'pat-zigzag',  slot: 'pat',  name: '지그재그',    rarity: 0, look: 'zigzag' },      // 2.7.7 추가
     { id: 'pat-dot',     slot: 'pat',  name: '물방울',      rarity: 0, look: 'dot' },
     { id: 'pat-camo',    slot: 'pat',  name: '위장 무늬',   rarity: 1, look: 'camo' },
     { id: 'pat-star',    slot: 'pat',  name: '별 무늬',     rarity: 1, look: 'star' },
+    { id: 'pat-rain',    slot: 'pat',  name: '빗방울',      rarity: 0, look: 'rain' },      // 4.5.2 더한 무늬
+    { id: 'pat-heart',   slot: 'pat',  name: '하트',        rarity: 1, look: 'heart' },
+    { id: 'pat-reflect', slot: 'pat',  name: '반사띠',      rarity: 1, look: 'reflect' },
     { id: 'bag-cooler',  slot: 'bag',  name: '냉장 상자',   rarity: 0, base: true, look: 'cooler' },
     { id: 'bag-ruck',    slot: 'bag',  name: '낡은 배낭',   rarity: 0, look: 'ruck' },
     { id: 'bag-medkit',  slot: 'bag',  name: '구급 상자',   rarity: 1, look: 'medkit' },
     { id: 'bag-teddy',   slot: 'bag',  name: '곰 인형 가방', rarity: 1, look: 'teddy' },
+    { id: 'bag-lunch',   slot: 'bag',  name: '보자기 도시락', rarity: 0, look: 'lunch' },      // 4.5.2 더한 든 것
+    { id: 'bag-pot',     slot: 'bag',  name: '새싹 화분',   rarity: 0, look: 'pot' },
+    { id: 'bag-radio',   slot: 'bag',  name: '무전기',      rarity: 1, look: 'radio' },
+    { id: 'bag-lantern', slot: 'bag',  name: '등불',        rarity: 2, look: 'lantern' },
     { id: 'fx-none',     slot: 'fx',   name: '효과 없음',   rarity: 0, base: true, look: 'none' },
     { id: 'fx-glow',     slot: 'fx',   name: '야광',        rarity: 2, look: 'glow' },
     { id: 'fx-sparkle',  slot: 'fx',   name: '반짝이 가루', rarity: 2, look: 'sparkle' },
     { id: 'fx-star',     slot: 'fx',   name: '머리 위 별',  rarity: 2, look: 'star' },
+    { id: 'fx-petal',    slot: 'fx',   name: '꽃잎',        rarity: 2, look: 'petal' },      // 4.5.2 더한 효과
+    { id: 'fx-bubble',   slot: 'fx',   name: '비눗방울',    rarity: 2, look: 'bubble' },
     // 2.0.3: 동물 친구의 옷. 친구는 늘 라라 옆에 붙어 다닌다
     { id: 'pet-none',    slot: 'pet',  name: '옷 없음',     rarity: 0, base: true, look: 'none' },
     { id: 'pet-scarf',   slot: 'pet',  name: '빨간 목도리', rarity: 0, look: 'scarf' },

@@ -1605,7 +1605,7 @@
     var panel = $('hub-panel'); if (!panel) return;
     var any = C.CHALLENGES.some(function (d) { return C.challengeOpen(state, d.id); }) || !!state.challenge;
     renderStageBar(); applyLaraArt();
-    panel.hidden = !!home;      // 4.5.1 모험은 상황 탭의 칸으로만 연다(아래 탭에서 뺐다)      // 스테이지 중에는 모험 창을 열 수 없다
+    panel.hidden = !!home; $('scene-hub').hidden = !!home;      // 4.5.2 모험은 도트 화면의 단추로 연다. 스테이지 중에는 열 수 없다      // 스테이지 중에는 모험 창을 열 수 없다
     if (!$('hub').hidden && hubTab === 'exped') renderStages();
     if (home) return;
           // 1.7.3: 모험 탭은 처음부터 보인다. 아직 못 고르는 도전은 잠긴 채로 보여서 앞으로 무엇이 있는지 알 수 있다
@@ -1795,7 +1795,7 @@
   function renderShop() {
     if (home) return;
     setText($('shop-count'), '뽑기권 ' + state.tickets + '장 · 조각 ' + state.shards + '개 · 간식 ' + fmt(state.treats) + '개');
-    setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번\n이미 가진 것이 나오면 조각으로 바뀌어요');
+    setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번');      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
     $('gacha-pull').disabled = false;      // 4.4.1: 뽑기권이 없어도 기계는 열어 볼 수 있다(단추가 꺼진다)
     setText($('gacha-pull'), '뽑기 기계');
     $('ticket-buy').disabled = !(state.treats >= C.TICKET_TREATS);
@@ -1810,6 +1810,7 @@
         $('odds').appendChild(el('div', 'odds-items', items.map(function (t) { return t.name; }).join(', ')));
       });
       $('odds').appendChild(el('div', 'odds-items', C.GACHA_PITY + '번 안에 전설이 한 번은 나와요. 전설이 나오면 다시 세요.'));
+      $('odds').appendChild(el('div', 'odds-items', '이미 가진 것이 나오면 조각으로 바뀌어요.'));
     }
     if (!rows.shop) {
       rows.shop = {};
@@ -2351,7 +2352,7 @@
     var tabs = $('dex-tabs'), box = $('dex');
     tabs.textContent = ''; box.textContent = '';
     function have(kind) { return C.PET_BREEDS.filter(function (b) { return b.kind === kind && state.kennel[b.id]; }).length; }
-    [['dog', '강아지 ' + have('dog') + '/12'], ['cat', '고양이 ' + have('cat') + '/12'], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['cargo', '화물 ' + C.cargoCount(state) + '/' + C.CARGOS.length], ['record', '서류 ' + C.recordCount(state) + '/' + C.RECORDS.length], ['passer', '통행인 ' + C.passerCount(state) + '/' + C.PASSERS.length], ['wall', '방어 수단']].forEach(function (t) {
+    [['dog', '강아지 ' + have('dog') + '/' + C.PET_BREEDS.filter(function (b) { return b.kind === 'dog'; }).length], ['cat', '고양이 ' + have('cat') + '/' + C.PET_BREEDS.filter(function (b) { return b.kind === 'cat'; }).length], ['zombie', '좀비 ' + C.zdexCount(state) + '/' + C.ZOMBIE_KINDS.length], ['regular', '단골 ' + C.regularCount(state) + '/' + C.REGULARS.length], ['client', '거래처 ' + C.clientCount(state) + '/' + C.CLIENTS.length], ['cargo', '화물 ' + C.cargoCount(state) + '/' + C.CARGOS.length], ['record', '서류 ' + C.recordCount(state) + '/' + C.RECORDS.length], ['passer', '통행인 ' + C.passerCount(state) + '/' + C.PASSERS.length], ['wall', '방어 수단']].forEach(function (t) {
       var b = el('button', '', t[1]);
       b.type = 'button'; b.setAttribute('aria-pressed', t[0] === dexTab ? 'true' : 'false');
       b.addEventListener('click', function () { dexTab = t[0]; renderDex(); });
@@ -4759,6 +4760,7 @@
       confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 여기까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });
     });
     $('hub-open').addEventListener('click', openHub);
+    $('scene-hub').addEventListener('click', function () { sfx('click'); openHub(); });
     $('away-ok').addEventListener('click', function () { $('away').hidden = true; sfx('buy'); });
     ['goal-go', 'm-goal-go'].forEach(function (id) { $(id).addEventListener('click', function () { if (guideNow && guideNow.view) goTo(guideNow.view); }); });
     $('signal').addEventListener('click', function () {

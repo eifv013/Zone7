@@ -276,6 +276,10 @@ body { word-break: keep-all; }
 .story-card .chal[disabled] { border-style: dashed; }
 .story-card .chal.on { background: #f0b400; color: #17180f; border-color: #f0b400; }
 /* ── 위험 단계(2.1.0): 철수 칸에서 다음 회차의 단계를 고른다 ── */
+/* 4.5.2 모험은 도트 화면 오른쪽 아래 단추(아래 탭은 상황 · 구역 · 특성 · 일행 · 상점 · 기록) */
+.scene-hub { position: absolute; right: 8px; bottom: 6px; display: flex; align-items: center; gap: 4px; padding: 3px 10px 3px 8px; border-radius: 99px; background: #f0b400; color: #17180f; border: 2px solid #17180f; font: 700 12px/1.3 var(--font-body); cursor: pointer; }
+.scene-hub svg { width: 12px; height: 12px; fill: currentColor; }
+.scene-hub[hidden] { display: none; }
 .danger-tag { position: absolute; top: 6px; right: 8px; padding: 2px 8px; background: #a8261b; color: #f4f2e6; font: 700 12px/1.5 var(--font-mono); border: 1px solid #17180f; }
 .danger-tag[hidden] { display: none; }
 #danger-row { margin: 6px 0 10px; padding: 8px 10px; border: 1px dashed var(--ink); }
@@ -356,16 +360,14 @@ body { word-break: keep-all; }
 /* 4.4.8 상점이 일행 탭의 칸이 됐다. 모험 창에서 쓰던 어두운 그림(story-card)을 그대로 쓰고, 옷장은 탭과 함께 스크롤한다 */
 .shop-card { width: auto; background: #17180f; --ink: #e6e5db; --ink-soft: #b9b8ab; --rule: #6d6d60; gap: 8px; }
 .shop-card #wardrobe { max-height: none; overflow: visible; }
+.story-card.shop-card { gap: 8px; }
+.shop-card .panel-head { margin-bottom: 0; align-items: baseline; }
+.shop-card .gacha-result:empty { display: none; }
+.story-card.shop-card .shop-acts button { padding: 8px 6px; }
+.shop-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.story-card .shop-line .odds-toggle { align-self: center; }
 .shop-card .look { position: sticky; top: -8px; z-index: 2; }      /* 4.5.1 입은 모습은 위에 붙어 있다(옷장을 내려도 고른 것을 입혀 본다) */
-.mast-record { display: none; }
-@media (max-width: 640px) {
-  .mast { position: relative; }
-  .mast-record { display: flex; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; background: transparent; color: var(--ink); border: 2px solid var(--ink); border-radius: 6px; cursor: pointer; }
-  .mast-record span { display: none; }
-  .mast-record svg { width: 16px; height: 16px; fill: currentColor; }
-  .mast-record[aria-pressed="true"] { background: var(--hazard); color: #17171a; border-color: var(--hazard); }
-  .dplus { margin-right: 34px; }
-}
+
 /* 도전 목록은 길다: 창은 그대로 두고 목록만 그 안에서 넘긴다(제목과 탭이 밀려 올라가지 않게) */
 #chal-list { max-height: calc(100dvh - 250px); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 #stage-detail { padding: 8px 10px; gap: 4px; }
@@ -1180,7 +1182,7 @@ canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
   .log, .journal { max-height: none; }
   .m-only { display: block; }
   .m-story { margin: 4px 0 0; font-size: 14px; line-height: 1.55; }
-  .mnav { grid-row: 8; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 2px solid var(--ink); background: var(--paper); }
+  .mnav { grid-row: 8; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 2px solid var(--ink); background: var(--paper); }
   /* 2.9.7: 폰에서는 상황 화면 아래의 '모험' 칸을 숨긴다. 아래 메뉴에 모험이 따로 있어서 같은 것이 두 번 나왔다(넓은 화면에는 아래 메뉴가 없으므로 그대로 둔다). */
   #hub-panel { display: none !important; }
   .mnav button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; background: transparent; border: 0; border-top: 3px solid transparent; padding: 7px 4px 8px; font: 600 12px/1 var(--font-body); color: var(--ink-soft); cursor: pointer; }
@@ -1446,7 +1448,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.5.1</div>
+  <div class="boot-ver">7구역 알파 4.5.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1514,8 +1516,6 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <button type="button" data-sound-toggle aria-pressed="true">소리 켬</button>
     </div>
   </div>
-  <!-- 4.5.1 기록은 머리줄 오른쪽 책 단추로 연다(아래 탭은 상황 · 구역 · 특성 · 일행 · 상점 다섯) -->
-  <button type="button" class="mast-record" data-mview-set="record" id="mnav-record" aria-pressed="false" aria-label="기록"><svg viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h7v7H1zM2 2v5h2V2zM5 2v5h2V2z"/></svg><span>기록</span></button>
 </header>
 
 <main class="grid">
@@ -1531,7 +1531,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
     </div>
   </section>
-  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="danger-tag" id="danger-tag" hidden></span><span class="tag" id="tag-hero" aria-hidden="true" hidden><b id="tag-hero-name"></b><i id="tag-pet-name"></i></span></div>
+  <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="danger-tag" id="danger-tag" hidden></span><span class="tag" id="tag-hero" aria-hidden="true" hidden><b id="tag-hero-name"></b><i id="tag-pet-name"></i></span><button type="button" class="scene-hub" id="scene-hub"><svg viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M4 0h1v2H4zM1 2h7v1H1zM2 3h5v4H2zM3 7h3v1H3zM4 8h1v1H4z"/></svg>모험</button></div>
   <div class="col col-main">
     <div class="notice" id="notice" role="status" hidden>
       <p id="notice-text"></p>
@@ -1846,12 +1846,11 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <div class="col" data-view="shop">
     <!-- 4.5.1 상점은 아래 탭 하나(4.4.8 에는 일행 탭 안). 입은 모습(look)은 위에 붙어 있어 옷장을 내려도 보인다 -->
     <section class="panel hub-pane story-card shop-card" aria-labelledby="h-shop" id="shop-panel">
-      <div class="panel-head"><h2 id="h-shop">상점</h2></div>
-      <div class="hub-line num" id="shop-count"></div>
+      <!-- 4.5.2 칸 사이를 좁혔다: 제목 줄에 가진 것, 단추 둘, 보장 · 확률 한 줄 -->
+      <div class="panel-head"><h2 id="h-shop">상점</h2><span class="hub-line num" id="shop-count"></span></div>
       <div class="shop-acts"><button type="button" id="gacha-pull">뽑기</button><button type="button" class="stage-hard" id="ticket-buy">뽑기권 사기</button></div>
       <div class="gacha-result" id="gacha-result" aria-live="polite"></div>
-      <div class="hub-line" id="shop-pity"></div>
-      <button type="button" class="odds-toggle" id="odds-toggle">확률 보기</button>
+      <div class="shop-line"><span class="hub-line" id="shop-pity"></span><button type="button" class="odds-toggle" id="odds-toggle">확률 보기</button></div>
       <div id="odds" hidden></div>
       <div class="look"><canvas id="look-pic" width="166" height="76"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div></div>
       <div id="wardrobe"></div>
@@ -1942,7 +1941,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.5.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.5.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2124,6 +2123,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <button type="button" data-mview-set="exped" id="mnav-exped" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 0h1v9H1zM2 1h5v1H2zM2 2h6v1H2zM2 3h5v1H2zM2 4h4v1H2z"/></svg><span>특성</span></button>
   <button type="button" data-mview-set="party" id="mnav-party" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 2h2v2H1zM6 2h2v2H6zM3 0h1v2H3zM5 0h1v2H5zM2 4h5v1H2zM1 5h7v3H1zM3 8h3v1H3z"/></svg><span>일행</span></button>
   <button type="button" data-mview-set="shop" id="mnav-shop" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 3h7v6H1zM3 1h3v1H3zM2 2h1v1H2zM6 2h1v1H6z"/></svg><span>상점</span></button>
+  <button type="button" data-mview-set="record" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h7v7H1zM2 2v5h2V2zM5 2v5h2V2z"/></svg><span>기록</span></button>
 </nav>
 
 <script>

@@ -537,14 +537,25 @@
     cat:    { 0: '...y......y...', 1: '...yi....iy...' },
     bear:   { 0: '...yy....yy...', 1: '...yy....yy...' },
     rabbit: { 0: '.....y..y.....', 1: '.....i..i.....' },
-    horn:   { 0: '..w........w..', 1: '...w......w...' }
+    horn:   { 0: '..w........w..', 1: '...w......w...' },
+    // 4.5.2 더한 후드. 아이 우비의 동물 후드(털모자 방울 · 공룡 가시 · 여우 귀 · 판다 귀 · 새싹)에서 가져왔다. g 는 새싹 · 공룡 가시의 초록, n 은 판다 귀의 검정(어두운 바탕에서도 보이게 조금 밝다)
+    pompom: { 0: '......ww......', 1: '.....wwww.....' },      // 방울 털모자처럼 꼭대기에 흰 방울
+    dino:   { 0: '......g.......', 1: '....g.g.g.....' },
+    fox:    { 0: '...O......O...', 1: '..owo....owo..' },      // 여우 귀: 우비 색과 상관없이 주황 귀에 끝은 검게, 안쪽은 희게
+    panda:  { 0: '...nn....nn...', 1: '...nn....nn...' },
+    sprout: { 0: '.....g..g.....', 1: '......gg......' }
   };
   /* 가방: 줄 번호 → 오른쪽 네 칸(10~13번 칸)에 덮어 그린다. '.' 은 아래 그림을 그대로 둔다. 색은 c(몸), C(밝은 곳), e(눈) */
   var LARA_BAGS = {
     cooler: { c: '#3f6f8f', C: '#e6e5db', rows: { 11: '..c.', 12: 'cccc', 13: 'cCcc', 14: 'cccc' } },      // 파란 냉장 상자(기본, 예전 그림 그대로)
     medkit: { c: '#c0392b', C: '#f1f0e6', rows: { 11: '..c.', 12: 'cccc', 13: 'cCCc', 14: 'cccc' } },      // 구급 상자
     ruck:   { c: '#6b6f45', C: '#9a9f68', rows: { 11: '.cc.', 12: 'cccc', 13: 'cCCc', 14: 'cccc' } },      // 낡은 배낭
-    teddy:  { c: '#a8733f', C: '#e0b98a', rows: { 11: 'c..c', 12: 'cccc', 13: 'cecc', 14: 'cCCc' } }       // 곰 인형 가방(귀와 눈)
+    teddy:  { c: '#a8733f', C: '#e0b98a', rows: { 11: 'c..c', 12: 'cccc', 13: 'cecc', 14: 'cCCc' } },      // 곰 인형 가방(귀와 눈)
+    // 4.5.2 더한 든 것
+    lunch:  { c: '#ff7fb0', C: '#f8d8e6', rows: { 11: '.CC.', 12: 'cCCc', 13: 'cccc', 14: 'cccc' } },      // 분홍 보자기 도시락(위에 묶은 매듭)
+    radio:  { c: '#30343c', C: '#7fc98a', rows: { 9: '.c..', 10: '.c..', 11: '.c..', 12: 'cccc', 13: 'cCCc', 14: 'cccc' } },      // 무전기(안테나와 초록 화면)
+    pot:    { c: '#b8683c', C: '#5cb85c', rows: { 10: '.C.C', 11: '..C.', 12: 'cccc', 13: 'cccc', 14: '.cc.' } },      // 새싹 화분
+    lantern: { c: '#5a4a3a', C: '#ffd95a', rows: { 10: '..c.', 11: '.cc.', 12: 'cCCc', 13: 'cCCc', 14: '.cc.' } }      // 등불(밤에 둘레가 밝다)
   };
   /** 무늬: 우비 칸 (x, y) 를 무늬 색으로 칠할지. */
   function laraPattern(pat, x, y) {
@@ -554,6 +565,10 @@
     if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
     if (pat === 'star') return (x === 3 && y === 9) || (x === 9 && y === 10) || (x === 4 && y === 13) || (x === 8 && y === 12);
     if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
+    // 4.5.2 더한 무늬
+    if (pat === 'heart') return (y === 10 && (x === 3 || x === 5)) || (y === 11 && x === 4) || (y === 12 && (x === 8 || x === 10)) || (y === 13 && x === 9);      // 하트 둘
+    if (pat === 'reflect') return y === 11 || y === 14;      // 반사띠(소방 우비처럼 가슴과 밑단에 두 줄)
+    if (pat === 'rain') return (x === 2 && y === 10) || (x === 8 && y === 11) || (x === 4 && y === 13) || (x === 10 && y === 14) || (x === 6 && y === 9);      // 빗방울
     return false;
   }
   /** 두 색이 비슷한가(빨강·초록·파랑의 차이를 더해 120 아래). */
@@ -574,10 +589,10 @@
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
     // 든 것이 우비와 비슷한 색이면(빨간 우비에 빨간 구급 상자) 묻혀서 보이지 않았다(2.7.7). 그럴 때는 든 것의 몸 색과 밝은 색을 맞바꿔 그린다
     if (colorNear(bag.c, coat.j)) bag = { c: bag.C, C: bag.c, rows: bag.rows };
-    var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : '#f1f0e6';
+    var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : pat === 'heart' ? '#ff6f9f' : pat === 'reflect' ? '#dfe6ea' : pat === 'rain' ? '#8fc3ff' : '#f1f0e6';
     // 2.8.9: 무늬 색이 우비 색과 비슷하면(흰 우비에 흰 무늬, 노란 우비에 노란 별) 보이지 않았다. 그럴 때는 우비를 어둡게 한 색으로 그린다
     if (pat && pat !== 'none' && colorNear(patCol, coat.j)) patCol = darker(coat.j, 0.55);
-    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C };
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22' };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
@@ -595,6 +610,10 @@
    *   glow 둘레가 은은하게 깜박인다 · sparkle 뒤로 반짝이 가루가 떨어진다 · star 머리 위에 작은 별이 떠 있다
    */
   function paintLaraFx(ctx, x, y, scale, flip, look, t, pose, step, dark) {
+    if (ctx && look && look.bag === 'lantern' && (dark || 0) > 0.3) {      // 4.5.2 등불은 밤에 둘레가 밝다(효과 칸과 따로)
+      var la = Math.min(0.5, (dark - 0.3)) * (0.8 + 0.2 * Math.sin((t || 0) * 5)), lc = 'rgba(255, 217, 90, ' + la.toFixed(2) + ')', ls = scale || 1;
+      ctx.fillStyle = lc; for (var ly = 10; ly <= 15; ly++) { var lw = ly === 10 || ly === 15 ? 4 : 6; ctx.fillRect(Math.round(x + (flip ? LARA_W - (10 - (lw - 4) / 2) - lw : 10 - (lw - 4) / 2) * ls), Math.round(y + ly * ls), lw * ls, ls); }
+    }
     var fx = look && look.fx; if (!ctx || !fx || fx === 'none') return;
     scale = scale || 1; t = t || 0;
     function px(col, cx, cy, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? LARA_W - cx - (w || 1) : cx) * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
@@ -610,6 +629,9 @@
       }
     }
     if (fx === 'sparkle') for (var k = 0; k < 4; k++) { var ph = (t * 1.6 + k * 0.25) % 1; px(k % 2 ? '#ffffff' : '#ffe9a0', 1 - (k % 2), 6 + Math.floor(ph * 11), 1, 1); if (ph < 0.5) px('rgba(255, 233, 160, .5)', 3 - k % 3, 5 + Math.floor(ph * 9), 1, 1); }
+    // 4.5.2 더한 효과: 꽃잎(분홍 잎이 천천히 떨어진다) · 비눗방울(둥근 방울이 떠오른다) · 등불 빛(밤에 든 등불 둘레가 밝다)
+    if (fx === 'petal') for (var q = 0; q < 3; q++) { var pp = (t * 0.7 + q / 3) % 1, sx = 2 + q * 4 + Math.round(Math.sin(t * 2 + q) * 1.5); px(q % 2 ? '#ffb8d0' : '#ff8fb8', sx, -2 + Math.floor(pp * 18), 1, 1); }
+    if (fx === 'bubble') for (var u = 0; u < 3; u++) { var bp = (t * 0.5 + u / 3) % 1, bx = 11 + (u % 2) + Math.round(Math.sin(t * 3 + u) * 1), by = 12 - Math.floor(bp * 14); px('rgba(160, 220, 255, .85)', bx, by, 1, 1); if (u === 1) { px('rgba(160, 220, 255, .6)', bx + 1, by, 1, 1); px('rgba(160, 220, 255, .6)', bx, by - 1, 1, 1); px('#ffffff', bx + 1, by - 1, 1, 1); } }
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
   }
   /*
