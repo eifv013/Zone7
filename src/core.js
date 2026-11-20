@@ -446,7 +446,7 @@
     { id: 'coupler', zone: 3, name: '튼튼한 연결기', desc: '무리에 닿아도 뒤쪽 3분의 1만 떼인다', key: 'keepmore', per: 1, baseCost: 5e20, growth: 1, max: 1 },
     { id: 'cooler',  zone: 4, name: '냉장 상자',  desc: '혈청을 2대 더 쌓아 둘 수 있다',   key: 'peak',    per: 1,    baseCost: 3e23, growth: 30, max: 3 },
     { id: 'sterile', zone: 4, name: '진정제',    desc: '변하는 줄이 15% 느리게 찬다', key: 'sterile', per: 0.15, baseCost: 2e23, growth: 20, max: 3 },
-    { id: 'notes',   zone: 4, name: '연구 노트', desc: '연구 성과에 드는 혈청 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
+    { id: 'notes',   zone: 4, name: '연구 노트', desc: '혈청 한 대의 값 +10%',   key: 'lab', per: 0.1, baseCost: 3e23, growth: 3.5, max: 10 },
     { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 1.5e27, growth: 2.4, max: 40 },
     { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 5e27, growth: 6,   max: 4 },
     { id: 'amp',     zone: 6, name: '증폭기',    desc: '생존자가 모이는 속도 +25%', key: 'z7',    per: 0.25, baseCost: 1.5e30, growth: 2.4, max: 40 },
@@ -487,7 +487,7 @@
     { id: 'bargain', name: '입담',      desc: '상품 값 +40%',    key: 'z2',      per: 0.4, zone: 1, retired: true },
     { id: 'foreman', name: '작업 반장', desc: '완제품 값 +40%',  key: 'z3',      per: 0.4, zone: 2, retired: true },
     { id: 'driver',  name: '기관사',    desc: '화물 값 +40%',    key: 'z4',      per: 0.4, zone: 3, retired: true },
-    { id: 'aide',    name: '조교',      desc: '연구 속도 +40%',  key: 'lab',     per: 0.4, zone: 4, retired: true },
+    { id: 'aide',    name: '조교',      desc: '5구역 물자 +40%',  key: 'lab',     per: 0.4, zone: 4, retired: true },
     // 대신 어느 구역에서나 듣는 둘: 현재 있는 구역을 따라다니는 생산, 그리고 철수 항체
     { id: 'local',   name: '현장 일손', desc: '현재 구역 생산 +20%', key: 'here', per: 0.2 },
     { id: 'sample',  name: '채혈',      desc: '철수 항체 샘플 +10%', key: 'antibody', per: 0.1, max: 3 },      // 2.8.6: 3레벨까지만. 다시 뽑기로 이것만 쌓으면 샘플이 끝없이 불었다
@@ -507,7 +507,7 @@
     { id: 'dealer',  name: '장사 수완', desc: '상품 값 +30%',              key: 'z2',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'engineer', name: '기술자',   desc: '완제품 값 +30%',            key: 'z3',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'railman', name: '철도원',    desc: '화물 값 +30%',              key: 'z4',      per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
-    { id: 'scholar', name: '연구자',    desc: '연구 속도 +30%',            key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
+    { id: 'scholar', name: '연구자',    desc: '5구역 물자 +30%',           key: 'lab',     per: 0.3,  baseCost: 3, growth: 1.5,  max: 30 },
     { id: 'rest',    name: '교대 근무', desc: '자리 비움 효율 +5%p',       key: 'offline', per: 0.05, baseCost: 2, growth: 1.6,  max: 10 },
     { id: 'legacy',  name: '기록 보관', desc: '철수로 얻는 항체 샘플 +10%', key: 'antibody', per: 0.1, baseCost: 4, growth: 1.6,  max: 20 },
     { id: 'reroll',  name: '다시 뽑기', desc: '특전 후보를 한 회차에 1번 더 다시 뽑을 수 있다', key: 'reroll', per: 1, baseCost: 3, growth: 1.8, max: 5 },
@@ -533,7 +533,7 @@
       { id: 'z4b', text: '10칸 이상 열차 3번 보내기', need: 3, value: function (s) { return s.longRuns || 0; } },
       { id: 'z4c', text: '화물로 번 물자 누적 10해', need: 1e21, value: function (s) { return s.railEarned; } } ],
     [ { id: 'z5a', text: '연구원 28명', need: 28, value: function (s) { return s.staff; } },
-      { id: 'z5b', text: '연구 성과 10번 고르기', need: 10, value: function (s) { return s.projectsDone; } },
+      { id: 'z5b', text: '혈청 200대 놓기', need: 200, value: function (s) { return s.dosesAll || 0; } },
       { id: 'z5c', text: '사람 20명 되돌리기', need: 20, value: function (s) { return s.curesRun || 0; } } ],
     [ { id: 'z6a', text: '초소 28곳', need: 28, value: function (s) { return s.posts; } },
       { id: 'z6b', text: '6구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 5); } },
@@ -578,7 +578,7 @@
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
-      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0 }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, serumTaps: 0, labV: 3,
+      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0 }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, dosesAll: 0, serumTaps: 0, labV: 3, labV4: 1,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
@@ -741,7 +741,9 @@
     if (raw.labV !== 3) {
       var extra5 = clamp(safeCount(raw.racks), 0, 8) - (SEAT_MAX - SEAT_BASE); if (extra5 > 0) s.reagent = Math.min(REAGENT_MAX, s.reagent + Math.ceil(extra5 / 2));
     }
-    s.labV = 3;
+    if (raw.labV !== 3 || raw.labV4 !== 1) { s.points = 0; s.offers = []; }      // 4.0.5: 연구 성과를 없앴다. 쌓여 있던 점수와 내밀던 과제는 버린다(이미 고른 효과는 이번 회차 동안 남는다)
+    s.labV = 3; s.labV4 = 1;
+    s.dosesAll = clamp(safeCount(raw.dosesAll), 0, 1e12);
     s.posts = clamp(safeCount(raw.posts), 0, COUNT_MAX); s.guardEarned = Math.max(0, safeNum(raw.guardEarned, 0)); s.safeNights = clamp(safeCount(raw.safeNights), 0, 1e9);
     if (s.zone < 5) { s.posts = 0; }
     s.antennas = s.zone >= 6 ? clamp(safeCount(raw.antennas), 0, COUNT_MAX) : 0; s.survivors = s.zone >= 6 ? clamp(safeNum(raw.survivors, 0), 0, 1e15) : 0;
@@ -767,6 +769,7 @@
     s.research = counts(PROJECTS, raw.research, 200);
     s.offers = [];
     (Array.isArray(raw.offers) ? raw.offers : []).forEach(function (id) { if (findById(PROJECTS, id) && s.offers.indexOf(id) < 0 && s.offers.length < OFFER_COUNT) s.offers.push(id); });
+    if (raw.labV4 !== 1) s.offers = [];      // 4.0.5: 연구 성과를 없앴다
     s.trains = Math.min(s.trains, TRAIN_MAX);
     s.greenCool = clamp(safeNum(raw.greenCool, 0), 0, GREEN_COOLDOWN);
     s.routes = counts(ROUTES, raw.routes, ROUTE_MAX); ROUTES.forEach(function (d) { s.routes[d.id] = Math.min(d.max, s.routes[d.id] || 0); });
@@ -1968,7 +1971,7 @@
   }
   /** 초당 모이는 연구 점수. 연구원 수가 10·25·50…명에 닿을 때마다 2배(시설과 같다). */
   /*
-   * 병원 서류(1.1.3, 5구역): 과제를 끝낼 때 RECORD_CHANCE 의 확률로 병원에 남아 있던 서류 한 장을 찾는다.
+   * 병원 서류(1.1.3, 5구역): (4.0.5 부터) 사람을 손으로 되돌릴 때 RECORD_CHANCE 의 확률로 병원에 남아 있던 서류 한 장을 찾는다.
    *   찾으면 간식을 받고, 그 서류가 도감에 적힌다(철수해도 남는다). 이번 회차에 찾은 한 장마다 연구 속도가 RECORD_BONUS 씩 오른다(RECORD_BONUS_MAX 까지).
    *   다른 구역의 주문·의뢰·화물과 달리 시간 제한이 없다: 이 구역의 할 일은 과제를 고르는 것이고, 서류는 그 덤이다.
    */
@@ -2027,7 +2030,7 @@
     return w;
   }
   function doseValue(state) { return labRate(state) * SERUM_SECONDS; }
-  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab * recordMult(state) * seatCount(state) / SEAT_BASE : 0; }
+  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab * seatCount(state) / SEAT_BASE : 0; }      // 옛 연구 점수의 빠르기(이제 쓰지 않는다)
   function rackCost(state) { return zoneOpen(state, 4) && seatCount(state) < SEAT_MAX ? Math.ceil(RACK_COST * Math.pow(RACK_GROWTH, state.racks || 0) * mods(state).cost * mods(state).staffcost) : Infinity; }
   function buyRack(state) { if (!zoneOpen(state, 4)) return fail('locked'); return pay(state, rackCost(state), function () { state.racks = (state.racks || 0) + 1; wardOf(state); }); }
   function reagentCost(state) { return zoneOpen(state, 4) && (state.reagent || 0) < REAGENT_MAX ? Math.ceil(REAGENT_COST * Math.pow(REAGENT_GROWTH, state.reagent || 0) * mods(state).cost * mods(state).staffcost) : Infinity; }
@@ -2044,7 +2047,13 @@
     return { ok: true, made: made, stock: w.stock };
   }
   /** i번째 의자의 사람에게 한 대 놓는다. auto: 간호사가 놓았다(횟수에 안 든다). */
-  function injectSeat(state, i, auto) {
+  /*
+   * 4.0.5 '연구 성과'(점수를 모아 둘 가운데 하나를 고르던 것)를 없앴다.
+   *   왜: 이 구역의 할 일은 이제 병실이다. 연구 성과는 값이 차기를 기다리는 것 말고는 할 일이 없었고, 고를수록 '전체 생산 1.3배' 같은 효과가 끝없이 쌓였다.
+   *   대신 다른 구역과 같은 꼴로 맞춘다(3구역 거래처 · 4구역 화물처럼): 사람을 손으로 되돌릴 때 가끔 병원 서류를 한 장 찾고, 이번 회차에 찾은 한 장마다 혈청 값이 1%씩 오른다(최대 50%).
+   *   runProject 등 옛 함수는 남겨 두었지만(이번 회차에 이미 고른 효과는 철수할 때까지 남는다) 점수가 더는 쌓이지 않아 새로 고를 수는 없다.
+   */
+  function injectSeat(state, i, auto, rng) {
     if (!zoneOpen(state, 4)) return fail('locked');
     if (!(state.staff > 0)) return fail('stopped');
     i = Math.floor(safeNum(i, -1));
@@ -2053,13 +2062,14 @@
     if (!p || !(p.dose >= 0)) return fail('empty');
     if (!(w.stock >= 1)) return fail('nostock');
     w.stock--; p.dose++; p.stay = p.dose === 1 ? WARD_STAY_ONE : WARD_STAY;      // 한 대만 맞은 사람은 금방 자리를 비우고, 되돌리는 중인 사람은 더 기다려 준다
-    var mult = p.dose === 1 ? 1 : p.dose >= WARD_DOSES ? WARD_CURE - 1 : 0, gain = doseValue(state) * mult, points = recordMult(state);      // 연구 성과: 한 대에 1(서류가 늘려 준다)
+    var mult = p.dose === 1 ? 1 : p.dose >= WARD_DOSES ? WARD_CURE - 1 : 0, gain = doseValue(state) * mult, points = 0;
     if (gain > 0) { earn(state, gain); state.labEarned = (state.labEarned || 0) + gain; }
     state.points += points;
     var out = { ok: true, at: i, dose: p.dose, stop: p.dose === 1, cure: p.dose >= WARD_DOSES, gain: gain, points: points, auto: !!auto };
+    state.dosesAll = (state.dosesAll || 0) + 1;
     if (!auto) state.dosesRun = (state.dosesRun || 0) + 1;
     if (out.stop) state.stopsRun = (state.stopsRun || 0) + 1;
-    if (out.cure) { state.curesRun = (state.curesRun || 0) + 1; w.seats[i] = { wait: WARD_ARRIVE }; }
+    if (out.cure) { state.curesRun = (state.curesRun || 0) + 1; w.seats[i] = { wait: WARD_ARRIVE }; if (!auto) out.record = findRecord(state, rng); }      // 손으로 되돌리면 가끔 병원 서류를 찾는다
     return out;
   }
   function stepWard(state, dt, rng, events) {
@@ -2067,7 +2077,7 @@
     dt = safeNum(dt, 0); if (!(dt > 0)) return;
     var w = wardOf(state), auto = autoEvents(state, 4), aide = auto && (state.upgrades.autolab || 0) > 0, nurse = nurseOn(state), roll = typeof rng === 'function' ? rng : Math.random;
     if (dt > 5) {      // 굵은 걸음(자리 비움 등): 하나하나 세지 않는다. 조교와 간호사가 다 있어야 돌아간다
-      if (aide && nurse) { var flat = labRate(state) * dt; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; state.points += dt / SERUM_SECONDS * recordMult(state); }
+      if (aide && nurse) { var flat = labRate(state) * dt; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; }
       w.seats = []; w.make = 0; w.nurse = 0; wardOf(state); return;
     }
     var steps = Math.max(1, Math.ceil(dt / 0.25)), h = dt / steps, turn = turnSeconds(state), cap = serumCap(state);
@@ -2380,7 +2390,7 @@
    */
   function labRate(state) {
     if (!zoneOpen(state, 4) || !(state.staff > 0)) return 0;
-    return state.staff * milestoneMult(state.staff) * LAB_VALUE * LAB_SCALE * mods(state).lab * globalMult(state) * seatCount(state) / SEAT_BASE * Math.pow(REAGENT_STEP, state.reagent || 0);
+    return state.staff * milestoneMult(state.staff) * LAB_VALUE * LAB_SCALE * mods(state).lab * globalMult(state) * seatCount(state) / SEAT_BASE * Math.pow(REAGENT_STEP, state.reagent || 0) * recordMult(state);      // 4.0.5: 병원 서류는 혈청 값을 올린다
   }
   function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + labRate(state) + guardRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
@@ -3804,10 +3814,10 @@
     { id: 'z4auto', group: 'z4', name: '맡겨 둔 승강장', tier: 2, needs: [1], value: function (s) { return s.upgrades.autosig; }, text: function () { return '역무원 두기'; } },
     // 5구역 대학 병원
     { id: 'z5staff', group: 'z5', name: '연구실장', needs: [5, 25, 100, 250], value: function (s) { return s.staff; }, text: function (n) { return '연구원 ' + n + '명 뽑기'; } },
-    { id: 'z5done', group: 'z5', name: '끝낸 과제', needs: [1, 10, 30, 60], value: function (s) { return s.projectsDone; }, text: function (n) { return '한 회차에 연구 성과 ' + n + '번 고르기'; } },
-    { id: 'z5points', group: 'z5', name: '쌓인 연구', needs: [1000, 1000000], value: function (s) { return s.points; }, text: function (n) { return '연구 점수 ' + formatNumber(n) + ' 모아 두기'; } },
+    { id: 'z5done', group: 'z5', name: '퇴원', needs: [5, 50, 200, 500], value: function (s) { return s.curesRun || 0; }, text: function (n) { return '한 회차에 사람 ' + n + '명 되돌리기'; } },
+    { id: 'z5points', group: 'z5', name: '놓은 혈청', needs: [100, 2000], value: function (s) { return s.dosesAll || 0; }, text: function (n) { return '한 회차에 혈청 ' + formatNumber(n) + '대 놓기'; } },
     { id: 'z5up', group: 'z5', name: '실험 도구', needs: [10, 30], value: function (s) { return zoneUpgrades(s, 4); }, text: function (n) { return '5구역 개조를 모두 합쳐 ' + n + '번 하기'; } },
-    { id: 'z5deep', group: 'z5', name: '한 우물', needs: [5, 10], value: function (s) { return maxOf(s.research); }, text: function (n) { return '같은 과제를 ' + n + '번 끝내기'; } },
+    { id: 'z5deep', group: 'z5', name: '한 사람도', needs: [10, 40], value: function (s) { return (s.turnedRun || 0) > 0 ? 0 : (s.curesRun || 0); }, text: function (n) { return '아무도 변하지 않게 하면서 ' + n + '명 되돌리기'; } },
     { id: 'z5gate', group: 'z5', name: '다리 앞에서', tier: 4, needs: [1], value: function (s) { return s.zone >= 5 ? 1 : 0; }, text: function () { return '6구역의 문 열기'; } },
     // 6구역 강변 검문소(1.0.5)
     { id: 'z6post', group: 'z6', name: '검문소장', needs: [5, 25, 100, 250], value: function (s) { return s.posts; }, text: function (n) { return '초소 ' + n + '곳 세우기'; } },
@@ -3979,7 +3989,7 @@
     if (railAway > 0) { earn(state, railAway); state.railEarned += railAway; report.gain += railAway; report.trains = Math.floor(counted / (carSeconds(state) * AUTO_CARS)); state.trainsSent = (state.trainsSent || 0) + report.trains; }
     if (elapsed >= 60) state.plat = newPlat();
     // 5구역 연구: 점수도 자리 비움 효율로 모인다
-    report.points = (state.upgrades.autolab || 0) > 0 && (state.upgrades.nurse || 0) > 0 && zoneOpen(state, 4) && state.staff > 0 ? counted * rate / SERUM_SECONDS * recordMult(state) : 0;      // 4.0.4: 자리를 비운 동안에도 조교와 간호사가 혈청을 놓은 만큼 연구 성과가 찬다
+    report.points = 0;      // 4.0.5: 연구 성과를 없앴다
     if (elapsed >= 60) { state.ward = newWard(); wardOf(state); }      // 자리를 비운 사이 병실은 새로 찬다
     state.points += report.points;
     state.awaySeconds += counted; state.runSeconds += counted;

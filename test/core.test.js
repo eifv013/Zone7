@@ -817,8 +817,6 @@ test('연구: 과제를 끝내면 점수를 쓰고 효과가 곱으로 쌓이며
   s.offers = ['soil', 'drill', 'serum']; s.points = 1e9;
   C.runProject(s, 'soil', half);
   near(C.searchRate(s), before * 4);
-  s.upgrades.notes = 2;
-  assert.equal(C.projectCost(s), Math.ceil((C.PROJECT_BASE + C.PROJECT_STEP * 2) * 0.95 * 0.95));
 });
 
 test('연구: 내밀지 않은 과제와 모르는 과제는 끝낼 수 없다', () => {
@@ -856,12 +854,14 @@ test('연구: 보급 요청은 효과가 남지 않고 물자를 바로 준다',
   assert.ok(C.runProject(empty, 'drop', half).gain >= 1, '생산이 0 이어도 0 을 주지는 않는다');
 });
 
-test('연구: 자리를 비운 동안에도 점수가 모인다', () => {
-  const s = inLab(); s.staff = 10; s.defenses.rail = 1e9; s.upgrades.autolab = 1; s.upgrades.nurse = 1;      // 4.0.4: 조교와 간호사가 혈청을 놓은 만큼 찬다(4초에 한 대)
-  const rep = C.applyOffline(s, 1000);
-  near(s.points, 1000 * C.OFFLINE_RATE / C.SERUM_SECONDS);
-  near(rep.points, s.points);
-  const no = inLab(); no.staff = 10; no.defenses.rail = 1e9; assert.equal(C.applyOffline(no, 1000).points, 0, '자동이 없으면 차지 않는다');
+test('연구 성과는 없앴다(4.0.5): 자리를 비워도, 혈청을 놓아도 점수가 쌓이지 않는다', () => {
+  const s = inLab(); s.staff = 10; s.defenses.rail = 1e9; s.upgrades.autolab = 1; s.upgrades.nurse = 1;
+  assert.equal(C.applyOffline(s, 1000).points, 0); assert.equal(s.points, 0);
+  C.wardOf(s).stock = 3; C.wardOf(s).seats[0] = { m: 0, dose: 0, r: 1, look: 1, stay: 0 }; C.injectSeat(s, 0); assert.equal(s.points, 0);
+  // 옛 저장에 쌓여 있던 점수와 내밀던 과제는 버린다. 이미 고른 효과는 이번 회차 동안 남는다
+  const old = JSON.parse(C.serialize(s)); delete old.labV4; old.points = 6.9e7; old.offers = ['serum', 'drop']; old.research = { serum: 3 }; old.projectsDone = 3;
+  const m = C.deserialize(JSON.stringify(old), 0); assert.equal(m.points, 0); assert.deepEqual(m.offers, []); assert.equal(m.research.serum, 3);
+  C.tick(m, 0.5, half); assert.equal(m.points, 0);
 });
 
 test('연구: 목표와 일지, 그리고 철수하면 연구가 사라진다', () => {
@@ -889,7 +889,7 @@ test('저장: 연구를 안전하게 읽는다', () => {
   const s = inLab();
   s.staff = 7; s.points = 123.5; s.research.soil = 2; s.offers = ['soil', 'drop']; s.projectsDone = 2;
   assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
-  const bad = C.sanitizeState({ version: 2, zone: 4, staff: 1e9, points: -3, research: { soil: 1e9, ghost: 4, drill: 'x' }, offers: ['soil', 'soil', 'ghost', 42, 'drop', 'serum', 'drill'], projectsDone: 3.9 }, 0);
+  const bad = C.sanitizeState({ version: 2, zone: 4, labV: 3, labV4: 1, staff: 1e9, points: -3, research: { soil: 1e9, ghost: 4, drill: 'x' }, offers: ['soil', 'soil', 'ghost', 42, 'drop', 'serum', 'drill'], projectsDone: 3.9 }, 0);
   assert.equal(bad.staff, C.COUNT_MAX);
   assert.equal(bad.points, 0);
   assert.equal(bad.research.soil, 200);
@@ -1750,13 +1750,13 @@ test('표류 화물: 4구역에서만 발견되고, 열차가 싣고 온 값이 
 
 test('병원 서류: 과제를 끝낼 때 가끔 한 장을 찾고, 간식·도감·연구 속도를 얻는다', () => {
   const s = inLab(); s.staff = 10; s.points = 1e12; s.offers = ['soil', 'serum', 'drop'];
-  const rate = C.researchRate(s), treats = s.treats;
+  const rate = C.researchRate(s), treats = s.treats, lab0 = C.labRate(s);
   // 주사위가 낮으면(0.1 < 0.35) 찾는다
   const r = C.runProject(s, 'soil', () => 0.1);
   assert.ok(r.ok && r.record && r.record.first);
   assert.equal(s.records[r.record.id], 1); assert.equal(C.recordCount(s), 1); assert.equal(s.recordsRun, 1);
   assert.equal(s.treats, treats + C.RECORD_TREATS);
-  near(C.researchRate(s), rate * (1 + C.RECORD_BONUS));
+  near(C.labRate(s) / lab0, 1 + C.RECORD_BONUS, '서류 한 장마다 혈청 값 +1%(4.0.5)');
   // 주사위가 높으면 못 찾는다
   s.offers = ['soil', 'serum', 'drop'];
   const r2 = C.runProject(s, 'soil', () => 0.9);
@@ -3015,7 +3015,7 @@ test('5구역 병실: 한 대면 멈추고 한 대의 값을, 여섯 대째에 �
   assert.equal(C.seatCount(s), 4); near(v, C.labRate(s) * C.SERUM_SECONDS);
   assert.equal(C.injectSeat(s, 0).reason, 'nostock');
   w.stock = 6; const sup = s.supplies, pts = s.points;
-  const a = C.injectSeat(s, 0); assert.ok(a.ok && a.stop && !a.cure); near(a.gain, v); near(s.supplies - sup, v); near(s.points - pts, 1, '연구 성과: 한 대에 1'); assert.equal(s.stopsRun, 1); assert.equal(w.stock, 5);
+  const a = C.injectSeat(s, 0); assert.ok(a.ok && a.stop && !a.cure); near(a.gain, v); near(s.supplies - sup, v); assert.equal(s.stopsRun, 1); assert.equal(w.stock, 5);
   for (let i = 2; i <= 5; i++) { const r = C.injectSeat(s, 0); assert.equal(r.dose, i); assert.equal(r.gain, 0, '사이의 대는 받는 것이 없다'); }
   w.stock = 1; const c = C.injectSeat(s, 0); assert.ok(c.cure); near(c.gain, v * (C.WARD_CURE - 1)); near(s.supplies - sup, v * C.WARD_CURE, '모두 합쳐 열두 대의 값'); assert.equal(s.curesRun, 1); assert.equal(s.dosesRun, 6);
   assert.ok(w.seats[0].wait > 0, '되돌아온 사람은 자리를 비운다');
@@ -3069,9 +3069,9 @@ test('5구역 줄 · 연구 성과 · 저장 · 옛 저장 옮기기 · 자리 �
   assert.ok(C.buyRack(s).ok); assert.equal(C.seatCount(s), 5); assert.equal(C.wardOf(s).seats.length, 5); near(C.labRate(s), r0 * 5 / 4); near(C.researchRate(s), p0 * 5 / 4);
   const r1 = C.labRate(s); assert.ok(C.buyReagent(s).ok); near(C.labRate(s), r1 * C.REAGENT_STEP);
   for (let i = 0; i < 20; i++) C.buyRack(s); assert.equal(C.seatCount(s), C.SEAT_MAX); assert.equal(C.rackCost(s), Infinity);
-  // 연구 성과: 점수가 차면 둘 가운데 하나
-  const f = onWard(4); C.tick(f, 0.1, half); assert.equal(f.offers.length, 2); f.points = C.projectCost(f); assert.ok(C.runProject(f, f.offers[0], half).ok); assert.equal(f.projectsDone, 1);
-  assert.equal(C.rerollOffers(f, half).reason, 'gone'); assert.equal(C.focusLab(f).reason, 'gone');
+  // 손으로 되돌리면 가끔 병원 서류를 찾는다(간호사가 놓은 것은 아니다). 서류는 혈청 값을 올린다
+  const f = onWard(4), fw = C.wardOf(f); fw.stock = 6; fw.seats[0].dose = 5; const l0 = C.labRate(f); const cr = C.injectSeat(f, 0, false, () => 0.1); assert.ok(cr.cure && cr.record && cr.record.first); assert.equal(f.recordsRun, 1); near(C.labRate(f) / l0, 1 + C.RECORD_BONUS);
+  fw.seats[1].dose = 5; assert.equal(C.injectSeat(f, 1, false, () => 0.9).record, null, '주사위가 높으면 못 찾는다'); assert.equal(f.dosesAll, 2);
   // 저장
   const v = onWard(6); v.reagent = 2; v.ward.stock = 3; v.ward.make = 0.4; v.ward.seats[1] = { m: 0.5, dose: 3, r: 1.1, look: 7, stay: 4 }; v.ward.seats[2] = { wait: 1.5 }; v.curesRun = 4; v.stopsRun = 9; v.turnedRun = 1;
   const back = C.deserialize(C.serialize(v), 0); assert.deepEqual(back.ward.seats, v.ward.seats); assert.equal(back.ward.stock, 3); assert.equal(back.curesRun, 4); assert.equal(back.racks, 2);

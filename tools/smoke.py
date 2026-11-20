@@ -362,21 +362,16 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다(6구역 상황)')
     elif mode == 'lab':
-        # 5구역(4.0.3 여섯 대): 연구 성과 둘 → 하나를 고른다 → 연구원을 뽑으면 사람들이 온다 → 상자를 두드려 혈청을 만든다(손가락으로도) → 사람에게 놓는다 → 못 맞은 사람은 변한다 → 줄을 산다
+        # 5구역(4.0.3 여섯 대): 연구원을 뽑으면 사람들이 온다 → 상자를 두드려 혈청을 만든다(손가락으로도) → 사람에게 놓는다 → 못 맞은 사람은 변한다 → 줄을 산다
         tap('[data-mview-set=manage]'); tap('[data-tab=z4]')
         if not page.locator('#lab').is_visible(): problems.append('5구역 탭에 병실이 없다')
-        if page.locator('.lab-offer:visible').count() != 2: problems.append('연구 성과가 둘이 아니다: %d' % page.locator('.lab-offer:visible').count())
+        if page.locator('#fork').is_visible() or page.locator('.lab-offer:visible').count(): problems.append('없앤 연구 성과 카드가 보인다')
+        if '서류' not in text('lab-record') or '혈청 값' not in text('lab-record'): problems.append('병원 서류 줄이 없다: ' + text('lab-record'))
         if '연구원을 뽑으면' not in text('lab-rate'): problems.append('연구원이 없을 때의 안내가 없다: ' + text('lab-rate'))
         for old in ['#lab-reroll', '#lab-focus', '#row-scope', '#lab-done', '#tubes']:
             if page.locator(old).count(): problems.append('옛 단추나 개조가 남아 있다: ' + old)
         for up in ['#row-cooler', '#row-sterile', '#row-autolab', '#row-nurse', '#row-rack', '#row-reagent']:
             if not page.locator(up).count(): problems.append('새 줄이나 개조가 없다: ' + up)
-        if not tap('#offer-0'): problems.append('연구 성과를 고를 수 없다')
-        if page.get_attribute('#lab', 'data-forks') != '1': problems.append('연구 성과를 골랐는데 횟수가 안 오른다')
-        for _ in range(12):      # 가진 만큼 다 고르고 나면 단추가 꺼져야 한다
-            if page.is_disabled('#offer-0'): break
-            tap('#offer-0')
-        if not page.is_disabled('#offer-0'): problems.append('혈청 수가 모자란데 연구 성과 단추가 켜져 있다')
         if not tap('#row-staff'): problems.append('연구원을 뽑을 수 없다')
         tap('[data-qty="10"]'); tap('#row-staff'); tap('[data-qty="1"]')
         if not fits(): problems.append('한 화면에 들어오지 않는다(5구역)')
