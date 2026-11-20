@@ -1502,7 +1502,8 @@
       var cv = $('bridgescene'), rc = cv.getBoundingClientRect(), key = !(e.clientX > 0) && !(e.clientY > 0);
       var xd = (e.clientX - rc.left) / rc.width * 184, zx = Math.max(0, Math.min(1, (xd - BR_X0) / BR_W));
       var r = key ? C.shootBridge(state) : C.shootBridge(state, zx);
-      if (!r.ok) return;
+      if (!r.ok) { if (r.reason === 'jam') { var hr = $('heat-row'); hr.classList.remove('nope'); void hr.offsetWidth; hr.classList.add('nope'); } return; }
+      if (r.jam) { bridgePop(40, 34, '과열', 'wave'); sfx('rush'); buzz(40); }
       var hx = BR_X0 + Math.min(1, r.x) * BR_W, now = Date.now();
       bridgeFx.push({ at: now, x: hx, kind: r.kill ? 'kill' : 'hit', big: r.big, hand: true }); if (bridgeFx.length > 60) bridgeFx.shift();
       if (r.kill) bridgePop(hx, r.big ? 30 : 38, '+' + fmt(r.gain), r.big ? 'big' : ''); else bridgePop(hx + 4, r.big ? 34 : 42, '-' + r.dmg, 'hit');
@@ -2452,6 +2453,7 @@
     var aimX = front ? BR_X0 + front.x * BR_W : 150; bridgeBeam += (aimX - bridgeBeam) * 0.05; var bx = bridgeBeam + Math.sin(now / 1300) * 6;
     g.fillStyle = 'rgba(255,242,192,.09)'; g.beginPath(); g.moveTo(18, 23); g.lineTo(bx - 14, 62); g.lineTo(bx + 16, 62); g.closePath(); g.fill();
     g.fillStyle = 'rgba(255,242,192,.10)'; g.fillRect(Math.round(bx - 12), 62, 26, 2);
+    if (b.heat > 0.5 || b.jam > 0) { R(36, 48, 5, 1, b.jam > 0 ? '#ff5a4a' : '#c96a3a'); if (b.jam > 0) { var st6 = (now % 900) / 900; R(39 + Math.round(Math.sin(st6 * 6) * 1.5), Math.round(46 - st6 * 9), 1, 2, 'rgba(232,230,220,' + (0.7 * (1 - st6)).toFixed(2) + ')'); R(41, Math.round(45 - ((st6 + 0.5) % 1) * 9), 1, 2, 'rgba(232,230,220,.35)'); } }
     // 방벽(초소 앞): 남은 만큼 쌓여 있다. 위의 줄이 남은 양
     var wmax = C.wallMax(state), wl = Math.max(0, b.wall) / wmax, rowsW = b.down > 0 ? 0 : Math.max(1, Math.ceil(wl * 3)), hurtW = bridgeLeak && now - bridgeLeak < 160;
     for (var wr = 0; wr < rowsW; wr++) for (var wc = 0; wc < 2; wc++) { var sbx = 43 + wc * 5 + (wr % 2) * 2 + (hurtW ? 1 : 0), sby = 58 - wr * 4; R(sbx, sby, 6, 4, hurtW ? '#e8d8a8' : '#a89a6a'); R(sbx, sby, 6, 1, '#c9bc8a'); R(sbx, sby + 3, 6, 1, '#7a6e48'); }
@@ -3457,6 +3459,8 @@
       var gr = $('guard-rate'), urgent = br.down > 0 || br.warn > 0 || br.wave > 0;
       setText(gr, !(state.posts > 0) ? '' : br.down > 0 ? '뚫렸다 · 방벽을 다시 세우는 중' : br.warn > 0 ? '떼가 몰려온다' : br.wave > 0 ? '떼 · ' + Math.ceil(br.wave) + '초' : '한 마리 +' + fmt(gRate * C.BRIDGE_SPAWN * br.combo));
       gr.classList.toggle('bad', urgent);
+      setText($('guard-title'), (br.streak || 0) > 0 ? '다리 · ' + br.streak + '단계' : '다리');
+      var hr6 = $('heat-row'), jam6 = br.jam > 0; $('heat-bar').style.width = (Math.min(1, br.heat || 0) * 100).toFixed(1) + '%'; setText($('heat-label'), jam6 ? '과열' : '총열'); hr6.classList.toggle('jam', jam6); hr6.classList.toggle('hot', !jam6 && br.heat > 0.75); bsc0 = $('bridgescene'); bsc0.setAttribute('data-heat', (br.heat || 0).toFixed(2)); bsc0.setAttribute('data-jam', jam6 ? 1 : 0);
       var nb = $('nade-btn'), nNeed = C.nadeNeed(state), nReady = (br.nade || 0) >= nNeed, nShow = state.posts > 0; if (nb.hidden !== !nShow) nb.hidden = !nShow;
       setText($('nade-name'), nReady ? '수류탄 던지기' : '수류탄'); setText($('nade-count'), nReady ? '' : (br.nade || 0) + ' / ' + nNeed); nb.disabled = !nReady || br.down > 0 || !br.zs.length;
       bsc0 = $('bridgescene'); bsc0.setAttribute('data-wall', br.wall); bsc0.setAttribute('data-down', br.down > 0 ? 1 : 0); bsc0.setAttribute('data-wave', br.wave > 0 ? 'wave' : br.warn > 0 ? 'warn' : ''); bsc0.setAttribute('data-nade', br.nade || 0);
@@ -3467,7 +3471,7 @@
       var gb = $('guard-bar'), gbOn = state.posts > 0 && gAuto && gSw; if (gb.hidden !== !gbOn) gb.hidden = !gbOn; if (gbOn) fill(gb, br.zs.length ? br.shot : 0);
       drawBridge();
       var bsc = $('bridgescene'); bsc.setAttribute('data-zs', br.zs.length); bsc.setAttribute('data-kills', state.handKills || 0); bsc.classList.toggle('tappable', state.posts > 0);
-      setText($('guard-note'), !(state.posts > 0) ? '' : (state.handKills || 0) < 3 ? '건너오는 것을 눌러 쏘아요. 연달아 잡으면 더 받아요' : (state.breaches || 0) < 1 && (state.handKills || 0) < 40 ? '닿으면 방벽이 깎여요. 다 깎이면 뚫려요' : (br.streak || 0) > 0 ? '떼를 ' + br.streak + '번 잇달아 막았어요 · 다음 떼가 더 세져요' : '다리 안전도 ×' + C.bridgeSafety(state).toFixed(2) + ' · 통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length);
+      setText($('guard-note'), !(state.posts > 0) ? '' : (state.handKills || 0) < 3 ? '건너오는 것을 눌러 쏘아요. 연달아 잡으면 더 받아요' : (state.breaches || 0) < 1 && (state.handKills || 0) < 40 ? '닿으면 방벽이 깎여요. 다 깎이면 뚫려요' : (br.streak || 0) > 0 && (state.wavesHeld || 0) < 4 ? '떼를 막으면 단계가 올라요. 더 많이 오고 더 받아요' : '다리 안전도 ×' + C.bridgeSafety(state).toFixed(2) + ' · 통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length);
       var fl6 = state.firepower || 0, fc6 = C.fireCost(state), ml6 = state.morale || 0, mc6 = C.moraleCost(state);
       setText(rows.fire.count, 'Lv ' + fl6 + ' / ' + C.FIRE_MAX); setText(rows.fire.info, '한 발 ' + (1 + fl6) + (isFinite(fc6) ? ' → ' + (2 + fl6) : ''));
       setText(rows.fire.cost, isFinite(fc6) ? '×1 ' + fmt(fc6) : '최대'); rows.fire.btn.disabled = !(fc6 <= state.supplies); afford(rows.fire.cost, fc6); rows.fire.btn.classList.toggle('row-max', !isFinite(fc6));
@@ -3852,6 +3856,7 @@
           break;
         case 'bridge-held':
           if (tab === 'z5' && pane === 'play') { sfx('goal'); buzz(30); if (bridgePopFn) bridgePopFn(100, 24, '떼를 막았다 +' + fmt(ev.gain), 'held'); }
+          log('떼를 막았다. 다리 ' + ev.streak + '단계.', 'good');
           break;
         case 'bridge-breach':
           bridgeFlash = { at: Date.now(), kind: 'breach' }; bridgeFx = [];

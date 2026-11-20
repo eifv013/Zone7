@@ -362,7 +362,7 @@ def run_case(browser, name, size, state, mode):
         page.evaluate("GameCore.TEST.wave = 0")      # 떼는 따로 본다(여기서는 오지 않게)
         if not page.locator('#nade-btn').is_visible() or '/' not in text('nade-count'): problems.append('수류탄 단추가 없다: ' + text('nade-count'))
         if not (page.get_attribute('#bridgescene', 'data-wall') or '').isdigit(): problems.append('방벽의 남은 양이 없다')
-        for up in ['#row-fire', '#row-morale', '#row-sandbag', '#row-sapper', '#row-nadebox', '#row-flare']:
+        for up in ['#row-fire', '#row-morale', '#row-sandbag', '#row-sapper', '#row-nadebox', '#row-flare', '#row-coolant']:
             if not page.locator(up).count(): problems.append('6구역 줄이 없다: ' + up)
         # 4.1.0 다리: 무리가 건너오고 → 누르면 쏘고 → 잡으면 얻은 것이 뜨고 연속이 오른다(손가락으로도)
         for _ in range(30):
@@ -377,6 +377,7 @@ def run_case(browser, name, size, state, mode):
             if text('combo-x') == '×1.0': problems.append('잡았는데 연속이 그대로다')
             if page.locator('#bridge-wrap .ward-pop').count() < 1: problems.append('잡았는데 얻은 것이 그림에 뜨지 않는다')
             if int(page.get_attribute('#bridgescene', 'data-nade') or 0) < 1: problems.append('손으로 잡았는데 수류탄이 차지 않는다')
+            if float(page.get_attribute('#bridgescene', 'data-heat') or 0) <= 0: problems.append('쐈는데 총열이 달아오르지 않는다')
             # 아무도 쏘지 않으면 방벽이 깎이고 끝내 뚫린다
             breached = False
             for _ in range(200):
