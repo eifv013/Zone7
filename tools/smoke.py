@@ -133,6 +133,9 @@ def run_case(browser, name, size, state, mode):
         if loc.count() and loc.first.is_visible() and loc.first.is_enabled():
             loc.first.click(); page.wait_for_timeout(120); return True
         return False
+    def open_record():      # 4.6.0 기록 단추는 한 번 더 누르면 닫힌다: 열려 있지 않을 때만 누른다
+        if page.get_attribute('[data-mview-set=record]', 'aria-pressed') != 'true': return tap('[data-mview-set=record]')
+        return True
     def fits():
         return page.evaluate("document.documentElement.scrollWidth <= window.innerWidth && (window.innerWidth > 900 || document.documentElement.scrollHeight <= window.innerHeight)")
     def text(i):
@@ -178,10 +181,10 @@ def run_case(browser, name, size, state, mode):
         page.fill('#pet-input', '나비'); page.click('#pet-rename'); page.wait_for_timeout(150)
         if text('pet-name') != '나비': problems.append('이름이 바뀌지 않았다: ' + text('pet-name'))
         if not fits(): problems.append('한 화면에 들어오지 않는다(특성)')
-        tap('[data-mview-set=record]')
+        open_record()
         for t in ['radio', 'stats', 'notes', 'help', 'journal', 'save']: tap('[data-rtab-set=%s]' % t)
         # 0.9.0 업적: 탭 여섯, 고른 묶음의 업적 카드, 머리줄의 달성 수
-        tap('[data-mview-set=record]'); tap('[data-rtab-set=ach]')
+        open_record(); tap('[data-rtab-set=ach]')
         if page.locator('#ach-tabs button').count() != 8: problems.append('업적 탭이 여덟이 아니다')
         if page.locator('#ach .ach-card').count() != 30: problems.append('공통 업적 30개가 보이지 않는다: %d' % page.locator('#ach .ach-card').count())
         page.locator('#ach-tabs button').nth(2).click(); page.wait_for_timeout(100)
@@ -192,7 +195,7 @@ def run_case(browser, name, size, state, mode):
         if page.locator('#update-bar button').count() != 1 or not page.locator('#update-now').is_visible(): problems.append('업데이트 알림에는 단추가 하나(지금 업데이트)만 있어야 한다')
         page.evaluate("document.getElementById('update-bar').hidden = true")
         # 0.8.10 저장 코드: 한글 이름이 있어도 코드가 만들어지고, 그 코드를 다시 불러올 수 있다
-        tap('[data-mview-set=record]'); tap('[data-rtab-set=save]')
+        open_record(); tap('[data-rtab-set=save]')
         tap('#export'); page.wait_for_timeout(200)
         code = page.input_value('#save-code')
         if len(code) < 200: problems.append('저장 코드가 만들어지지 않았다: ' + text('save-msg'))
@@ -227,7 +230,7 @@ def run_case(browser, name, size, state, mode):
         # 0.8.3 자동화 설명: 영구 특성 '자동화' 줄에 전력 투입 대기 시간(초)이 나온다
         tap('#mnav-exped'); tap('[data-view=party] [data-grow-set=exped]')
         if '조립공' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
-        tap('[data-mview-set=record]')
+        open_record()
         # 0.8.0 기록 화면: 일지의 장 탭과 소설 본문, 도움말 탭, 지난 구역, 설정 단추
         tap('[data-rtab-set=journal]')
         if page.locator('#journal-tabs button').count() < 5: problems.append('일지에 장 탭이 없다')
@@ -321,7 +324,7 @@ def run_case(browser, name, size, state, mode):
         tap('[data-tab=z3]')
         if '아직 열지 않은' not in text('soon'): problems.append('잠긴 4구역 탭에 안내가 없다: ' + text('soon'))
         if page.locator('[data-tab=z4]').is_visible(): problems.append('아직 먼 5구역 탭이 보인다')
-        tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
+        open_record(); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
     elif mode == 'tower':
         # 7구역: 안테나를 사면 생존자가 모이고 → 혈청 세 단계를 끝내고 목표를 채우면 → 일지 뒤에 끝 화면이 뜨고 → 닫으면 게임이 이어진다
@@ -498,7 +501,7 @@ def run_case(browser, name, size, state, mode):
         if not tap('#row-reagent') or text('row-reagent') == rg0 or '×2 →' not in text('row-reagent'): problems.append('시약 등급을 샀는데 그대로다: ' + text('row-reagent'))
         tap('[data-tab=z5]')
         if '아직 열지 않은' not in text('soon'): problems.append('아직 열지 않은 6구역 탭에 안내가 없다: ' + text('soon'))
-        tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=radio]'); tap('[data-mview-set=base]')
+        open_record(); tap('[data-rtab-set=help]'); tap('[data-rtab-set=radio]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
     elif mode == 'rail':
         page.evaluate("window.GameCore.TEST.rush = 0")      # 돌진은 운에 달려 있어서, 아래 확인들이 끝날 때까지 꺼 둔다(맨 끝에서 따로 본다)
@@ -580,7 +583,7 @@ def run_case(browser, name, size, state, mode):
         tap('[data-tab=z4]')
         if '아직 열지 않은' not in text('soon'): problems.append('잠긴 5구역 탭에 안내가 없다: ' + text('soon'))
         if page.locator('[data-tab=z5]').is_visible(): problems.append('아직 먼 6구역 탭이 보인다')
-        tap('[data-mview-set=record]'); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
+        open_record(); tap('[data-rtab-set=help]'); tap('[data-rtab-set=journal]'); tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')
     else:
         # 시세판: 막대가 보이고(지금 시세 하나는 반드시), 연속 호가 칸이 다섯 개다
@@ -611,7 +614,7 @@ def run_case(browser, name, size, state, mode):
         if not page.locator('#pet-empty, #pet-card').first.is_visible() and not page.locator('#adopt-dog').is_visible(): problems.append('일행 칸이 안 열린다')
         tap('#mnav-exped'); tap('[data-view=party] [data-grow-set=exped]')
         tap('#row-immune'); tap('#row-bulwark')
-        tap('[data-mview-set=record]')
+        open_record()
         for t in ['radio', 'stats', 'notes', 'help', 'save', 'journal']: tap('[data-rtab-set=%s]' % t)
         tap('[data-mview-set=base]')
         if not fits(): problems.append('한 화면에 들어오지 않는다')

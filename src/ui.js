@@ -1794,6 +1794,15 @@
    *   옷장   : 가진 것은 눌러서 입는다. 없는 것은 조각이 모이면 눌러서 얻는다.
    */
   var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', pet: '친구 옷', flag: '깃발 · 도전과 원정의 보상' };
+  /** 4.6.0 아래 탭의 붉은 점: can 이 거짓→참으로 바뀌면 켜고, 그 탭을 누르면(dotSeen) 끈다. */
+  var dotSeen = {};
+  function navDot(id, can) {
+    var b = $(id); if (!b) return;
+    if (!can) dotSeen[id] = false;
+    var on = can && !dotSeen[id] && b.getAttribute('aria-pressed') !== 'true';
+    if (can && b.getAttribute('aria-pressed') === 'true') dotSeen[id] = true;      // 보고 있는 탭은 본 것으로 친다
+    if (b.classList.contains('dot') !== on) b.classList.toggle('dot', on);
+  }
   function renderShop() {
     if (home) return;
     setText($('shop-count'), '뽑기권 ' + state.tickets + '장 · 조각 ' + state.shards + '개 · 간식 ' + fmt(state.treats) + '개');
@@ -2058,12 +2067,15 @@
     else if (gst.mode === 'fly' || gst.mode === 'grid') { gst.items.forEach(function (it) { it.open = 1; }); gGridDone(); }
   }
   function gReveal() {
-    var r = gst.items[0].r; gst.mode = 'reveal'; gst.at = gNow(); sfx('gopen' + r.rarity); if (r.rarity === 2) buzz([30, 40, 30]);
+    var r = gst.items[0].r; gst.mode = 'reveal'; gst.at = gNow(); gGet(r.rarity); if (r.rarity === 2) buzz([30, 40, 30]);
     gMsg(C.RARITIES[r.rarity] + ' · ' + r.name + (r.dup ? ' · 이미 있어요 · 조각 +' + r.shards : ' · NEW') + (r.pity ? ' · 보장' : ''));
     var can = C.ownsCosmetic(state, r.id);
     gActs([['입어 보기', function () { if (C.wearCosmetic(state, r.id).ok) { sfx('tab'); applyLaraArt(); Store.save(); gMsg(r.name + ' 입었어요'); } }, !can, ''], ['다시 뽑기', function () { gStart(1); }, (state.tickets || 0) < 1, 'y'], ['닫기', gClose, false, '']]);
   }
+  /** 4.6.0 뽑은 것이 나올 때: 녹음한 '얻음' 소리(없으면 예전 소리). 전설은 화음을 함께 낸다. */
+  function gGet(rar) { var ok = false; try { ok = !!(window.Sound && window.Sound.sample && window.Sound.sample('item')); } catch (e) { ok = false; } if (!ok || rar === 2) sfx('gopen' + rar); }
   function gGridDone() {
+    if (gst.sndFor !== gst.items) { gst.sndFor = gst.items; gGet(gst.items.reduce(function (m, it) { return Math.max(m, it.r.rarity); }, 0)); }      // 10개를 다 열면 한 번(더 눌러도 다시 울리지 않는다)
     gst.mode = 'grid'; var best = 0, news = 0, sh = 0; gst.items.forEach(function (it) { best = Math.max(best, it.r.rarity); if (!it.r.dup) news++; sh += it.r.shards || 0; });
     gMsg('새 외형 ' + news + '개' + (sh ? ' · 조각 +' + sh : '') + (best === 2 ? ' · 전설!' : ''));
     gActs([['10회 더', function () { gStart(10); }, (state.tickets || 0) < 10, 'y'], ['닫기', gClose, false, '']]);
@@ -2073,7 +2085,7 @@
     var now = gNow();
     if (gst.mode === 'idle') return;
     if (gst.mode === 'turn' || gst.mode === 'zoom' || gst.mode === 'fly') { gst.at -= 5000; return; }      // 기다리는 장면은 눌러서 넘긴다
-    if (gst.mode === 'open') { gst.taps++; gst.tapAt = now; sfx(gst.taps >= 3 ? 'gcrack' : 'gtap'); buzz(8); if (gst.taps >= 3) { gst.mode = 'burst'; gst.at = now; sfx('gopen' + gst.items[0].r.rarity); } return; }
+    if (gst.mode === 'open') { gst.taps++; gst.tapAt = now; sfx(gst.taps >= 3 ? 'gcrack' : 'gtap'); buzz(8); if (gst.taps >= 3) { gst.mode = 'burst'; gst.at = now; gGet(gst.items[0].r.rarity); } return; }
     if (gst.mode === 'burst') { gst.items[0].open = 1; gReveal(); return; }
     if (gst.mode === 'grid') { gst.items.forEach(function (it, i) { var c = gCell(i); if (!it.open && Math.abs(x - c[0]) < 16 && Math.abs(y - c[1]) < 28) { it.open = 1; it.openAt = now; sfx('gopen' + it.r.rarity); } }); if (gst.items.every(function (it) { return it.open; })) gGridDone(); }
   }
@@ -3572,11 +3584,12 @@
     var canFeed = isFinite(feedCost) && feedCost <= state.treats;
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
     var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.wait > 0) && !(nz.soon && state.gate);
-    $('mnav-exped').classList.toggle('dot', canTrait || canFeed);      // 4.5.4 성장(특성 · 일행)
-    $('mnav-shop').classList.toggle('dot', state.tickets > 0);      // 4.5.4 상점: 뽑기권이 있을 때만(간식으로 살 수 있을 때까지 켜면 늘 켜져 있어 뜻이 없다)
     var canFill = fillReady(state.zone);      // 지금 있는 구역의 것만(2.8.0: 지나온 구역은 부르지 않는다)      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
-    $('mnav-manage').classList.toggle('dot', canOpen || canFill);
-    $('mnav-base').classList.toggle('dot', C.strikeReady(state) || C.counterReady(state));      // 상황: 선제 공격이나 반격을 쓸 수 있다
+    // 4.6.0 붉은 점은 '새로 할 수 있게 됐을 때'만 켜지고, 그 탭을 한 번 보면 꺼진다. 할 수 없게 됐다가 다시 할 수 있게 되면 또 켜진다
+    navDot('mnav-exped', canTrait || canFeed);      // 성장(특성 · 일행)
+    navDot('mnav-shop', state.tickets > 0);      // 상점: 뽑기권으로 뽑을 수 있을 때
+    navDot('mnav-manage', canOpen || canFill);
+    navDot('mnav-base', C.strikeReady(state) || C.counterReady(state));      // 상황: 선제 공격이나 반격을 쓸 수 있다
     $('pet-feed').classList.toggle('ready', canFeed);
     // 줄을 문장 끝에서 나눈다: 문장마다 한 줄, 진행 숫자(괄호)는 아랫줄. 좁은 화면에서 낱말 중간이나 문장 중간에서 꺾이지 않게 한다
     var guideText = goalLines(guideNow.text);
@@ -5180,10 +5193,17 @@
     });
     $('mnav-hub').addEventListener('click', function () { sfx('click'); openHub(); });      // 4.5.5 모험 단추는 창을 연다
     var shopNav = document.querySelector('[data-mview-set="shop"]'); if (shopNav) shopNav.addEventListener('click', function () { renderShop(); });      // 4.5.1 상점 탭
+    var lastNav = null;      // 4.6.0 기록 단추를 한 번 더 누르면 보던 탭으로 돌아간다
     document.querySelectorAll('[data-mview-set]').forEach(function (b) {
       b.addEventListener('click', function () {
-        document.body.setAttribute('data-mview', b.dataset.mviewSet);
-        document.querySelectorAll('[data-mview-set]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+        var target = b;
+        if (b.id === 'mnav-record' && b.getAttribute('aria-pressed') === 'true') target = lastNav || $('mnav-base');
+        else if (b.id !== 'mnav-record') lastNav = b;
+        else { var cur = document.querySelector('.mnav [data-mview-set][aria-pressed="true"]'); if (cur) lastNav = cur; }
+        if (target.id) dotSeen[target.id] = true;
+        document.body.setAttribute('data-mview', target.dataset.mviewSet);
+        document.querySelectorAll('[data-mview-set]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === target)); });
+        if (target.classList.contains('dot')) target.classList.remove('dot');
       });
     });
 

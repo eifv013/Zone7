@@ -38,7 +38,7 @@ try {
   const sfx = {}, sfxDir = path.join(__dirname, 'assets', 'sfx');
   if (fs.existsSync(sfxDir)) for (const f of fs.readdirSync(sfxDir).sort()) {
     const ext = path.extname(f).toLowerCase(), name = path.basename(f, ext);
-    if (!bgmTypes[ext] || !['cat', 'dog'].includes(name) || sfx[name]) continue;
+    if (!bgmTypes[ext] || !['cat', 'dog', 'item'].includes(name) || sfx[name]) continue;
     sfx[name] = `data:${bgmTypes[ext]};base64,${fs.readFileSync(path.join(sfxDir, f)).toString('base64')}`;
   }
   // 음원을 만든 사람: assets/bgm/CREDIT.txt 의 첫 줄(설정에 보인다)

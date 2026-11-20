@@ -532,19 +532,24 @@
   var LARA_STAND = ['....pp.pp.....', '....pp.pp.....', '...bbb.bbb....'];
   // 걸음: 한 발씩 번갈아 든다(두 발이 양옆으로 벌어지지 않게)
   var LARA_LEGS = [['....pp.pp.....', '....pp.bbb....', '...bbb........'], ['....pp.pp.....', '...bbb.pp.....', '.......bbb....']];
+  /*
+   * 4.6.0 후드를 다시 그렸다(외형 품질). 전에는 머리 위 두 줄에 점 몇 개라 귀 · 뿔이 모두 비슷한 작은 혹으로 보였다.
+   *   이제 위 세 줄(0~2)을 쓴다: 귀는 세 줄 높이에 안쪽 색(i 분홍 · w 흰색)을 넣고, 2번 줄(후드 꼭대기)까지 이어 붙여 머리에서 자라난 것처럼 그린다.
+   *   g 초록(새싹 · 공룡), k 갈색(새싹 줄기), n 판다 귀의 검정, o · O 여우 귀의 주황 · 끝.
+   */
   var LARA_HOODS = {
     none:   {},
-    cat:    { 0: '...y......y...', 1: '...yi....iy...' },
-    bear:   { 0: '...yy....yy...', 1: '...yy....yy...' },
-    rabbit: { 0: '.....y..y.....', 1: '.....i..i.....' },
-    horn:   { 0: '..w........w..', 1: '...w......w...' },
-    // 4.5.2 더한 후드. 아이 우비의 동물 후드(털모자 방울 · 공룡 가시 · 여우 귀 · 판다 귀 · 새싹)에서 가져왔다. g 는 새싹 · 공룡 가시의 초록, n 은 판다 귀의 검정(어두운 바탕에서도 보이게 조금 밝다)
-    pompom: { 0: '......ww......', 1: '.....wwww.....' },      // 방울 털모자처럼 꼭대기에 흰 방울
-    dino:   { 0: '......g.......', 1: '....g.g.g.....' },
-    fox:    { 0: '...O......O...', 1: '..owo....owo..' },      // 여우 귀: 우비 색과 상관없이 주황 귀에 끝은 검게, 안쪽은 희게
-    panda:  { 0: '...nn....nn...', 1: '...nn....nn...' },
-    sprout: { 0: '.....g..g.....', 1: '......gg......' }
+    cat:    { 0: '...y......y...', 1: '...yi....iy...', 2: '...yiyyyyiy...' },
+    bear:   { 0: '...yy....yy...', 1: '..yiiy..yiiy..', 2: '...yyyyyyyy...' },
+    rabbit: { 0: '....yi..iy....', 1: '....yi..iy....', 2: '....yyyyyy....' },
+    horn:   { 0: '..w........w..', 1: '...ww....ww...', 2: '....wyyyyw....' },
+    pompom: { 0: '......ww......', 1: '.....wwww.....', 2: '....wwwwww....' },      // 털모자: 흰 방울과 흰 단
+    dino:   { 0: '.....g...g....', 1: '....ggg.ggg...', 2: '....yyyyyy....' },      // 공룡 가시 둘
+    fox:    { 0: '..O........O..', 1: '..oo......oo..', 2: '...owyyyywo...' },      // 여우 귀: 주황 귀, 검은 끝, 흰 속
+    panda:  { 0: '...nn....nn...', 1: '..nnnn..nnnn..', 2: '...nyyyyyyn...' },
+    sprout: { 0: '....gg..gg....', 1: '.....gkkg.....' }      // 새싹: 잎 둘과 줄기
   };
+
   /* 가방: 줄 번호 → 오른쪽 네 칸(10~13번 칸)에 덮어 그린다. '.' 은 아래 그림을 그대로 둔다. 색은 c(몸), C(밝은 곳), e(눈) */
   var LARA_BAGS = {
     cooler: { c: '#3f6f8f', C: '#e6e5db', rows: { 11: '..c.', 12: 'cccc', 13: 'cCcc', 14: 'cccc' } },      // 파란 냉장 상자(기본, 예전 그림 그대로)
@@ -562,15 +567,26 @@
     // 'stripe' 는 이제 체크 밑단이다(2.7.5, 전에는 몸 전체의 가로 줄무늬였는데 보기 좋지 않다는 말이 있었다). 우비의 아래 두 줄만 바둑판으로 칠한다
     if (pat === 'stripe') return y >= 13 && (x + y) % 2 === 0;
     if (pat === 'zigzag') return (y === 11 && x % 2 === 0) || (y === 12 && x % 2 === 1);      // 지그재그(2.7.7): 허리에 두 줄이 엇갈린다
-    if (pat === 'dot') return (x + y) % 3 === 0 && y % 2 === 1;
-    if (pat === 'star') return (x === 3 && y === 9) || (x === 9 && y === 10) || (x === 4 && y === 13) || (x === 8 && y === 12);
-    if (pat === 'camo') return (x * 3 + y * 5) % 7 < 3;
-    // 4.5.2 더한 무늬
-    if (pat === 'heart') return (y === 10 && (x === 3 || x === 5)) || (y === 11 && x === 4) || (y === 12 && (x === 8 || x === 10)) || (y === 13 && x === 9);      // 하트 둘
+    // 4.6.0 물방울 · 별 · 위장 · 하트 · 빗방울을 다시 그렸다(점이 흩어져 무늬로 보이지 않았다)
+    if (pat === 'dot') return y % 2 === 0 && y >= 10 && (x + (y % 4 === 0 ? 0 : 2)) % 4 === 1;      // 엇갈린 물방울
+    if (pat === 'star') return PAT_CELLS.star[x + ',' + y] || false;      // 십자 별 둘
+    if (pat === 'camo') return PAT_CELLS.camo[x + ',' + y] || false;      // 두 빛깔 얼룩(1 짙은, 2 옅은)
+    if (pat === 'heart') return PAT_CELLS.heart[x + ',' + y] || false;      // 하트 둘(3칸 너비)
     if (pat === 'reflect') return y === 11 || y === 14;      // 반사띠(소방 우비처럼 가슴과 밑단에 두 줄)
-    if (pat === 'rain') return (x === 2 && y === 10) || (x === 8 && y === 11) || (x === 4 && y === 13) || (x === 10 && y === 14) || (x === 6 && y === 9);      // 빗방울
+    if (pat === 'rain') return PAT_CELLS.rain[x + ',' + y] || false;      // 길쭉한 빗방울
     return false;
   }
+  var PAT_CELLS = (function () {
+    function cells(list, v) { var o = {}; list.forEach(function (c) { o[c[0] + ',' + c[1]] = v || 1; }); return o; }
+    var camo = cells([[3, 10], [4, 10], [2, 11], [3, 11], [8, 11], [9, 11], [9, 12], [4, 14], [5, 14], [5, 15], [8, 15], [9, 15], [9, 16]], 1);
+    [[6, 11], [7, 11], [7, 12], [2, 13], [3, 13], [3, 14], [7, 14], [8, 14], [3, 16], [4, 16]].forEach(function (c) { camo[c[0] + ',' + c[1]] = 2; });
+    return {
+      star: cells([[4, 10], [3, 11], [4, 11], [5, 11], [4, 12], [8, 13], [7, 14], [8, 14], [9, 14], [8, 15]]),
+      heart: cells([[3, 10], [5, 10], [3, 11], [4, 11], [5, 11], [4, 12], [7, 13], [9, 13], [7, 14], [8, 14], [9, 14], [8, 15]]),
+      rain: cells([[2, 10], [2, 11], [8, 10], [8, 11], [4, 13], [4, 14], [9, 14], [9, 15], [3, 16]]),
+      camo: camo
+    };
+  })();
   /** 두 색이 비슷한가(빨강·초록·파랑의 차이를 더해 120 아래). */
   function colorNear(a, b) { try { var x = hexToRgb(a), y = hexToRgb(b); return Math.abs(x[0] - y[0]) + Math.abs(x[1] - y[1]) + Math.abs(x[2] - y[2]) < 120; } catch (e) { return false; } }
   function darker(hex, k) { return lerpColor(hex, '#000000', 1 - k); }
@@ -592,13 +608,14 @@
     var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : pat === 'heart' ? '#ff6f9f' : pat === 'reflect' ? '#dfe6ea' : pat === 'rain' ? '#8fc3ff' : '#f1f0e6';
     // 2.8.9: 무늬 색이 우비 색과 비슷하면(흰 우비에 흰 무늬, 노란 우비에 노란 별) 보이지 않았다. 그럴 때는 우비를 어둡게 한 색으로 그린다
     if (pat && pat !== 'none' && colorNear(patCol, coat.j)) patCol = darker(coat.j, 0.55);
+    var patCol2 = pat === 'camo' ? lerpColor(coat.j, '#ffffff', 0.35) : patCol;
     var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22' };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
       if (ch === '.') continue;
       var col = pal[ch];
-      if (pat && pat !== 'none' && (ch === 'j' || (pat === 'camo' && ch === 'y')) && laraPattern(pat, c, r)) col = patCol;
+      if (pat && pat !== 'none' && ch === 'j') { var pv = laraPattern(pat, c, r); if (pv) col = pv === 2 ? patCol2 : patCol; }      // 4.6.0 무늬는 우비 몸(j)에만. 위장은 두 빛깔
       if (look.fx === 'glow' && (ch === 'j' || ch === 'J') && (r === glowBand || r === glowBand + 3)) col = '#d8ff7a';      // 야광: 가슴과 옷자락의 야광 띠(낮에도 보인다)
       ctx.fillStyle = col;
       ctx.fillRect(Math.round(x + (flip ? LARA_W - 1 - c : c) * scale), Math.round(y + r * scale), scale, scale);
