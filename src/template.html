@@ -384,7 +384,9 @@ body { word-break: keep-all; }
 .story-card.shop-card .shop-acts button { padding: 8px 6px; }
 .shop-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .story-card .shop-line .odds-toggle { align-self: center; }
-.shop-card .look { position: sticky; top: -8px; z-index: 2; }      /* 4.5.1 입은 모습은 위에 붙어 있다(옷장을 내려도 고른 것을 입혀 본다) */
+.shop-card .look { position: sticky; top: -8px; z-index: 2; }
+.shop-card #look-pic { width: auto; max-width: 100%; height: 112px; margin: 0 auto; }      /* 4.5.9 위에 붙은 미리 보기가 화면의 절반을 가려 옷장이 거의 안 보였다. 높이를 줄인다 */
+.shop-card .look { padding-bottom: 4px; gap: 2px; } .shop-card .look-side { min-height: 26px; }      /* 4.5.1 입은 모습은 위에 붙어 있다(옷장을 내려도 고른 것을 입혀 본다) */
 
 /* 도전 목록은 길다: 창은 그대로 두고 목록만 그 안에서 넘긴다(제목과 탭이 밀려 올라가지 않게) */
 #chal-list { max-height: calc(100dvh - 250px); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
@@ -1467,7 +1469,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.5.8</div>
+  <div class="boot-ver">7구역 알파 4.5.9</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1964,7 +1966,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.5.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.5.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
