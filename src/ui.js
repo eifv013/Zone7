@@ -1605,8 +1605,8 @@
     var panel = $('hub-panel'); if (!panel) return;
     var any = C.CHALLENGES.some(function (d) { return C.challengeOpen(state, d.id); }) || !!state.challenge;
     renderStageBar(); applyLaraArt();
-    panel.hidden = !!home; $('scene-hub').hidden = !!home;      // 4.5.2 모험은 도트 화면의 단추로 연다. 스테이지 중에는 열 수 없다      // 스테이지 중에는 모험 창을 열 수 없다
-    if (!$('hub').hidden && hubTab === 'exped') renderStages();
+    panel.hidden = !!home; $('mnav-hub').disabled = !!home;      // 4.5.4 모험은 아래 탭. 원정 중에는 열 수 없다      // 스테이지 중에는 모험 창을 열 수 없다
+    if (hubShown() && hubTab === 'exped') renderStages();
     if (home) return;
           // 1.7.3: 모험 탭은 처음부터 보인다. 아직 못 고르는 도전은 잠긴 채로 보여서 앞으로 무엇이 있는지 알 수 있다
     var actNow = C.activeChallenge(state), mn = C.medalCount(state);
@@ -1638,7 +1638,14 @@
     });
   }
   /** 모험 창을 연다. 아래 탭과 상황 화면의 단추가 같이 쓴다. 스테이지 중에는 열지 않는다. */
-  function openHub() { if (home) { toast('원정 중에는 열 수 없어요'); return; } $('hub').hidden = false; renderChallenges(); renderStages(); }
+  /** 4.5.4 모험은 아래 탭의 한 화면이다. 지금 보고 있는가(넓은 화면에서는 늘 보인다). */
+  function hubShown() { var h = $('hub'); return !!h && h.getClientRects().length > 0; }
+  function openHub() {
+    if (home) { toast('원정 중에는 열 수 없어요'); return; }
+    var nav = document.querySelector('[data-mview-set="hub"]');
+    if (nav && nav.getClientRects().length) nav.click(); else { try { $('hub').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* 못 옮겨도 된다 */ } }
+    renderChallenges(); renderStages();
+  }
   var hubTab = 'chal', MARK_NAME = { clear: '클리어', speed: '스피드', hard: '하드', hardSpeed: '하드 스피드', safe: '무결', hardSafe: '하드 무결' };
   function setHubTab(t) {
     hubTab = t;
@@ -2149,7 +2156,7 @@
     if (!st) return;
     Store.save();      // 본 게임을 지금 시각으로 저장해 둔다: 도중에 창이 닫혀도 여기서부터 정산된다
     home = state; stageEnter = Date.now(); state = st;
-    $('hub').hidden = true; tab = 'z0'; pane = 'play'; perkShown = '';
+    tab = 'z0'; pane = 'play'; perkShown = '';
     log('원정 〈' + d.name + '〉에 나섰다. ' + C.stageGoalText(d, hard, C.stageGoalIndex(home, d.id)) + '.', 'good');
     sfx('relocate'); if (fxShow) fxShow('원정', d.name + (hard ? ' · 하드' : ''), 1, 0, -1);
     goTo('manage'); render();
@@ -2208,7 +2215,7 @@
     if (C.challengeBlock(state, d.id)) return;
     confirmBox('도전 〈' + d.name + '〉', d.rule + '. 목표는 ' + C.challengeGoalText(d) + '이에요. 보상은 ' + d.perk.text + '예요. 한 회차에 도전은 한 번만 켤 수 있어요.', '그만둔다', '도전한다', function () {
       var s = C.startChallenge(state, d.id);
-      if (s.ok) { log('도전 〈' + d.name + '〉을 시작했다. ' + d.rule.replace('없어요', '없다').replace('해요', '한다').replace('돼요', '된다').replace('와요', '온다').replace('이에요', '이다').replace('가요', '간다') + '.', 'good'); sfx('relocate'); $('hub').hidden = true; if (fxShow) fxShow('도전', d.name + ' · ' + C.challengeGoalText(d), 1, -1, -1); Store.save(); render(); }
+      if (s.ok) { log('도전 〈' + d.name + '〉을 시작했다. ' + d.rule.replace('없어요', '없다').replace('해요', '한다').replace('돼요', '된다').replace('와요', '온다').replace('이에요', '이다').replace('가요', '간다') + '.', 'good'); sfx('relocate'); goTo('base'); if (fxShow) fxShow('도전', d.name + ' · ' + C.challengeGoalText(d), 1, -1, -1); Store.save(); render(); }
     });
   }
   function buy(result, sound) { if (result && result.ok) { sfx(sound || 'buy'); render(); } }
@@ -3570,8 +3577,8 @@
     var canFeed = isFinite(feedCost) && feedCost <= state.treats;
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
     var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.wait > 0) && !(nz.soon && state.gate);
-    $('mnav-exped').classList.toggle('dot', canTrait);
-    $('mnav-party').classList.toggle('dot', canFeed);      // 4.4.6 일행이 따로 탭이 됐다
+    $('mnav-exped').classList.toggle('dot', canTrait || canFeed);      // 4.5.4 성장(특성 · 일행)
+    $('mnav-shop').classList.toggle('dot', state.tickets > 0);      // 4.5.4 상점: 뽑기권이 있을 때만(간식으로 살 수 있을 때까지 켜면 늘 켜져 있어 뜻이 없다)
     var canFill = fillReady(state.zone);      // 지금 있는 구역의 것만(2.8.0: 지나온 구역은 부르지 않는다)      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
     $('mnav-base').classList.toggle('dot', C.strikeReady(state) || C.counterReady(state));      // 상황: 선제 공격이나 반격을 쓸 수 있다
@@ -4725,11 +4732,12 @@
   }
   /** '바로 가기': 안내가 가리키는 화면을 연다. */
   function goTo(view) {
-    var target = view === 'trait' ? 'exped' : 'manage';
+    var target = view === 'trait' ? 'exped' : view === 'base' ? 'base' : 'manage';
     if (view === 'zone') { tab = 'z' + state.zone; pane = C.goals(state, state.zone).some(function (g) { return !g.done; }) && state.buildings.scouts > 0 ? 'goal' : 'play'; }
     if (view === 'wall') tab = 'wall';
-    var nav = document.querySelector('[data-mview-set="' + target + '"]');
+    var nav = target === 'exped' ? $('mnav-exped') : document.querySelector('[data-mview-set="' + target + '"]');
     if (nav) nav.click();
+    if (target === 'exped') { var gs = document.querySelector('[data-grow-set="exped"]'); if (gs) gs.click(); }      // 4.5.4 성장 탭의 특성 칸으로
     render();
     var box = document.querySelector('[data-view="' + target + '"]');
     try { if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* 오래된 브라우저: 화면만 바뀐다 */ }
@@ -4828,7 +4836,6 @@
     $('zmap-close').addEventListener('click', function () { $('zmap').hidden = true; });
     $('perk-open').addEventListener('click', function () { renderTraits(); $('perks-veil').hidden = false; sfx('click'); });      // 4.4.0 특전 팝업
     $('perks-close').addEventListener('click', function () { $('perks-veil').hidden = true; });
-    $('hub-close').addEventListener('click', function () { $('hub').hidden = true; });
     $('danger-down').addEventListener('click', function () { if (C.setDangerNext(state, (state.dangerNext || 0) - 1).ok) { sfx('tab'); Store.save(); render(); } });
     $('danger-up').addEventListener('click', function () { if (C.setDangerNext(state, (state.dangerNext || 0) + 1).ok) { sfx('tab'); Store.save(); render(); } });
     Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (b) { b.addEventListener('click', function () { if (b.disabled) return; setHubTab(b.dataset.hub); if (b.dataset.hub === 'exped') renderStages(); }); });
@@ -4843,7 +4850,6 @@
       confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 여기까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });
     });
     $('hub-open').addEventListener('click', openHub);
-    $('scene-hub').addEventListener('click', function () { sfx('click'); openHub(); });
     // 4.5.3 친구 만들기 창: 그림이나 단추를 누르면 간식을 던진다. 건너뛰기는 바로 결과로
     $('bf-cv').addEventListener('click', bfTap);
     $('bf-act').addEventListener('click', bfTap);
@@ -5067,10 +5073,10 @@
       var sx = 0, sy = 0, st = 0, ok = false, strip = null, stripAt = 0, onZoneTabs = false;
       function vis(el) { return !!el && !el.hidden && el.getClientRects().length > 0; }
       function group() {
-        if (vis($('hub'))) return Array.prototype.slice.call(document.querySelectorAll('#hub [data-hub]'));
         if (Array.prototype.slice.call(document.querySelectorAll('.story-veil, [role="dialog"], [role="alertdialog"]')).some(vis)) return null;      // 다른 창이 떠 있다
         var now = document.querySelector('[data-mview-set][aria-pressed="true"]'), view = now ? now.getAttribute('data-mview-set') : '';
         if (view === 'record') return Array.prototype.slice.call(document.querySelectorAll('[data-rtab-set]'));
+        if (view === 'hub') return Array.prototype.slice.call(document.querySelectorAll('#hub [data-hub]'));
         if (view === 'manage') return Array.prototype.slice.call(document.querySelectorAll('#zone-tabs button'));
         return null;
       }
@@ -5167,6 +5173,16 @@
 
     // 폰 하단 메뉴: 네 가지 보기 중 하나를 고른다(데스크톱에서는 메뉴가 숨겨져 있고 전부 보인다).
     // 4.4.8 일행 탭을 열면 상점(옷장 · 뽑기)을 새로 그린다
+    // 4.5.4 성장 탭의 두 칸(특성 · 일행). 아래 탭 '성장'은 마지막으로 본 칸을 연다
+    document.querySelectorAll('[data-grow-set]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var v = b.getAttribute('data-grow-set'), nav = $('mnav-exped');
+        nav.setAttribute('data-mview-set', v); document.body.setAttribute('data-mview', v); sfx('tab');
+        document.querySelectorAll('[data-grow-set]').forEach(function (o) { o.setAttribute('aria-pressed', String(o.getAttribute('data-grow-set') === v)); });
+        render();
+      });
+    });
+    $('mnav-hub').addEventListener('click', function () { if (home) { toast('원정 중에는 열 수 없어요'); return; } renderChallenges(); renderStages(); });      // 4.5.4 모험 탭
     var shopNav = document.querySelector('[data-mview-set="shop"]'); if (shopNav) shopNav.addEventListener('click', function () { renderShop(); });      // 4.5.1 상점 탭
     document.querySelectorAll('[data-mview-set]').forEach(function (b) {
       b.addEventListener('click', function () {

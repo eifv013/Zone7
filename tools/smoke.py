@@ -160,7 +160,7 @@ def run_case(browser, name, size, state, mode):
         if not tap('#row-wire'): problems.append('첫 철조망을 살 수 없다')
         tap('[data-tab=z1]'); tap('[data-tab=z2]'); tap('[data-tab=z0]')
         # 동물 친구: 고양이를 맞이하고 이름을 바꾼다
-        tap('[data-mview-set=party]')      # 4.4.6: 일행은 아래 탭
+        tap('#mnav-exped'); tap('[data-view=exped] [data-grow-set=party]')      # 4.4.6: 일행은 아래 탭
         if not tap('#adopt-cat'): problems.append('고양이를 맞이할 수 없다')
         # 4.5.3 친구 만들기 연출: 간식을 던져 결과까지 보고 닫는다(눈빛 · 걸음 · 하트)
         if not page.locator('#bf-veil').is_visible(): problems.append('친구 만들기 창이 뜨지 않았다')
@@ -220,12 +220,12 @@ def run_case(browser, name, size, state, mode):
         page.locator('#notes .note-head').nth(2).click(); page.wait_for_timeout(100)
         if page.locator('#notes .note.open').count() != 2: problems.append('패치노트 줄을 눌러도 펼쳐지지 않는다')
         # 0.8.8 성별: 일행 칸에서 '여'를 고르면 일지의 호칭이 바뀐다(기관사 → 기관사 언니는 4구역 일지라 여기서는 단추만 본다)
-        tap('[data-mview-set=party]')
+        tap('#mnav-exped'); tap('[data-view=exped] [data-grow-set=party]')
         tap('[data-gender=f]')
         if page.get_attribute('[data-gender=f]', 'aria-pressed') != 'true': problems.append('성별 단추가 눌린 표시가 안 된다')
         tap('[data-gender=none]')
         # 0.8.3 자동화 설명: 영구 특성 '자동화' 줄에 전력 투입 대기 시간(초)이 나온다
-        tap('[data-mview-set=exped]')
+        tap('#mnav-exped'); tap('[data-view=party] [data-grow-set=exped]')
         if '조립공' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
         tap('[data-mview-set=record]')
         # 0.8.0 기록 화면: 일지의 장 탭과 소설 본문, 도움말 탭, 지난 구역, 설정 단추
@@ -602,14 +602,14 @@ def run_case(browser, name, size, state, mode):
         if page.locator('[data-tab=z3]').is_visible(): problems.append('아직 먼 4구역 탭이 보인다')
         tap('[data-tab=wall]'); tap('#row-wire')
         # 특성: 하나 찍고, 되돌리고, 다시 찍는다
-        tap('[data-mview-set=exped]')
+        tap('#mnav-exped'); tap('[data-view=party] [data-grow-set=exped]')
         if not tap('#row-immune'): problems.append('특성을 찍을 수 없다')
         if tap('#trait-reset'): tap('#confirm-yes')
         if 'Lv 0 /' not in page.inner_text('#row-immune'): problems.append('특성을 되돌렸는데 레벨이 남았다: ' + page.inner_text('#row-immune'))      # 4.4.0: '사용 n' 글은 뺐다
         if not page.locator('#perks').count(): problems.append('특전 목록이 없다')
-        tap('[data-mview-set=party]')
+        tap('#mnav-exped'); tap('[data-view=exped] [data-grow-set=party]')
         if not page.locator('#pet-empty, #pet-card').first.is_visible() and not page.locator('#adopt-dog').is_visible(): problems.append('일행 칸이 안 열린다')
-        tap('[data-mview-set=exped]')
+        tap('#mnav-exped'); tap('[data-view=party] [data-grow-set=exped]')
         tap('#row-immune'); tap('#row-bulwark')
         tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'save', 'journal']: tap('[data-rtab-set=%s]' % t)
@@ -640,9 +640,9 @@ def run_case(browser, name, size, state, mode):
     # 끝 검수(1.0.2): 어떤 경우든 마지막에 모든 화면을 돌며 "예전 것이 꼬였는지"를 본다. 새 기능을 넣다가 다른 곳이 망가지는 일을 잡으려는 것이다
     try:
         if os.environ.get('SELFTEST'): page.evaluate("document.querySelector('.mast, header, body').insertAdjacentHTML('beforeend', '<span>[object 시험]</span>')")      # 검수가 정말 잡아내는지 확인할 때만 쓴다
-        views = ['base', 'manage', 'exped', 'record'] if page.locator('.mnav').first.is_visible() else [None]
+        views = ['#mnav-base', '#mnav-manage', '#mnav-hub', '#mnav-exped', '[data-view=party] [data-grow-set=exped]', '#mnav-shop', '#mnav-record'] if page.locator('.mnav').first.is_visible() else [None]      # 4.5.4 아래 탭 다섯 + 성장의 두 칸 + 머리줄 기록
         for v in views:
-            if v: page.evaluate("document.querySelector('[data-mview-set=%s]').click()" % v); page.wait_for_timeout(250)
+            if v: page.evaluate("(document.querySelector(%s) || {click(){}}).click()" % json.dumps(v)); page.wait_for_timeout(250)
             where = v or '넓은 화면'
             found = page.evaluate("""() => {
               const out = [], vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
