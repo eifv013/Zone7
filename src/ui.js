@@ -4204,11 +4204,11 @@
   }
 
   /** 일행 칸: 주인공 이름, 지금 데리고 다니는 친구, 함께 있는 친구들(누르면 바꾼다), 데려오기 단추와 값. */
-  /** 4.4.4 품종 그림(큰 그림 24×19칸)을 작은 이미지로 만들어 둔다(품종마다 한 번). */
+  /** 4.4.5 품종 그림(칸 그림 15×12칸을 3배로)을 작은 이미지로 만들어 둔다(품종마다 한 번). */
   var petIcons = {};
   function petIcon(b) {
     if (petIcons[b.id]) return petIcons[b.id];
-    var u = 'none'; try { var cv = document.createElement('canvas'); cv.width = 48; cv.height = 40; var g = cv.getContext('2d'); if (g && window.Scene && window.Scene.paintPetBig) { window.Scene.paintPetBig(g, 0, 1, 2, { kind: b.kind, id: b.id }); u = 'url("' + cv.toDataURL('image/png') + '")'; } } catch (e) { /* 그림이 없어도 된다 */ }
+    var u = 'none'; try { var cv = document.createElement('canvas'); cv.width = 47; cv.height = 38; var g = cv.getContext('2d'); if (g && window.Scene && window.Scene.paintPetBig) { window.Scene.paintPetBig(g, 1, 1, 3, { kind: b.kind, id: b.id }); u = 'url("' + cv.toDataURL('image/png') + '")'; } } catch (e) { /* 그림이 없어도 된다 */ }
     return (petIcons[b.id] = u);
   }
   function renderPet() {

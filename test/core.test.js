@@ -2509,14 +2509,14 @@ test('2.0.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기의
   assert.ok(!C.gachaTable().some(t => t.slot === 'flag'), '깃발은 뽑기에 없다');
 });
 
-test('2.0.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 개 10×8칸·고양이 9×8칸', () => {
+test('2.0.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 15×12칸', () => {
   const S = require('../src/scene.js');
   assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 7);
   // 4.4.4: 작은 그림은 12×10칸(앞모습). 품종마다 그림이 있고, 모르는 품종은 그 종류의 첫 그림으로 그린다
   ['dog', 'cat', 'zzz'].forEach(k => [0, 1].forEach(w => { const r = S.petRows(k, w); assert.equal(r.length, S.PET_H); r.forEach(row => assert.equal(row.length, S.PET_W)); assert.ok(r.some(row => row.includes('e')), '눈'); }));
   C.PET_BREEDS.forEach(b => { assert.ok(S.PET_SPEC[b.id], '그림이 없다: ' + b.id); assert.equal(S.PET_SPEC[b.id].kind, b.kind, b.id); });
   assert.notDeepEqual(S.petRows('dog', 0, 'shiba'), S.petRows('dog', 0, 'beagle'), '품종마다 다르다');
-  { const log = []; const ctx = { fillStyle: '', fillRect() { log.push(1); } }; assert.ok(S.paintPetBig(ctx, 0, 0, 2, { kind: 'cat', id: 'golden' })); assert.ok(log.length > 100); }
+  { const log = []; const ctx = { fillStyle: '', fillRect() { log.push(1); } }; assert.ok(S.paintPetBig(ctx, 0, 0, 2, { kind: 'cat', id: 'golden' })); assert.ok(log.length > 60, '칸 그림이 다 그려진다(테두리 없이 60칸 넘게)'); }
   const s = C.createState(0); s.cosmetics['pet-crown'] = true; assert.ok(C.wearCosmetic(s, 'pet-crown').ok); assert.equal(C.cosmeticLook(s).pet, 'crown');
   // 그리기: 어떤 옷이든 오류 없이 그려지고, 옷을 입히면 칠하는 칸이 달라진다
   const calls = (outfit) => { const log = []; const ctx = { fillStyle: '', fillRect(x, y, w, h) { log.push([this.fillStyle, x, y, w, h].join()); } }; S.paintPet(ctx, 0, 0, 1, false, { kind: 'dog' }, outfit, 0); return log; };
