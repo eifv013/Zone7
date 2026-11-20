@@ -1133,10 +1133,10 @@ test('동물 친구(4.4.6): 장착 칸 둘(강아지 · 고양이), 종류 효�
   const d = mk('dog', 0), dr = mk('dog', 0.99), c = mk('cat', 0), cr = mk('cat', 0.99);
   assert.equal(d.pet.breed, 'jindo'); assert.equal(dr.pet.breed, 'bernese'); assert.equal(c.pet.breed, 'cheese'); assert.equal(cr.pet.breed, 'turkish');
   const def = (s) => C.defensePower(s), near1 = (a, b) => assert.ok(Math.abs(a - b) <= 1, a + ' ≈ ' + b);
-  near1(def(d), def(n) * 1.005 * 1.1);                  // 보유 0.5% × 장착 10%
-  near1(def(dr), def(n) * 1.02 * 1.35);                 // 보유 2% × 장착 35%
-  near(C.productionPerSec(c), C.productionPerSec(n) * 1.005 * 1.05 * 1.2);    // 치즈의 특기: 1구역 생산 +20%
-  near(C.productionPerSec(cr), C.productionPerSec(n) * 1.02 * 1.2);           // 터키시 앙고라의 특기는 밤 전리품이라 생산에는 없다
+  near1(def(d), def(n) * 1.01 * 1.1);                   // 보유 1% × 장착 10%
+  near1(def(dr), def(n) * 1.04 * 1.35);                 // 보유 4% × 장착 35%
+  near(C.productionPerSec(c), C.productionPerSec(n) * 1.01 * 1.05 * 1.2);    // 치즈의 특기: 1구역 생산 +20%
+  near(C.productionPerSec(cr), C.productionPerSec(n) * 1.04 * 1.2);           // 터키시 앙고라의 특기는 밤 전리품이라 생산에는 없다
   near(C.mods(cr).loot, C.mods(n).loot * 1.3);
   near(C.mods(d).loot, C.mods(n).loot * 1.15);      // 흰둥이의 특기
   near(C.productionPerSec(d), C.productionPerSec(n)); assert.equal(def(c), def(n));
@@ -1147,8 +1147,8 @@ test('동물 친구(4.4.6): 장착 칸 둘(강아지 · 고양이), 종류 효�
   // 강아지와 고양이를 함께 장착한다: 둘 다 효과가 있다
   d.antibodies = 99; C.adoptPet(d, 'cat', () => 0.99);
   assert.deepEqual(d.party, { dog: 'jindo', cat: 'turkish' });
-  near1(def(d), def(n) * (1.005 + 0) * 1.1);
-  near(C.productionPerSec(d), C.productionPerSec(n) * 1.02 * 1.2);
+  near1(def(d), def(n) * 1.01 * 1.1);
+  near(C.productionPerSec(d), C.productionPerSec(n) * 1.04 * 1.2);
   // 강아지를 다시 고르면 데리고 다니는 아이만 바뀌고 고양이 칸은 그대로
   assert.ok(C.choosePet(d, 'jindo').ok); assert.equal(d.pet.breed, 'jindo'); assert.equal(d.party.cat, 'turkish');
   assert.equal(C.choosePet(d, 'siam').reason, 'unknown', '아직 없는 아이는 고를 수 없다');
@@ -1156,9 +1156,9 @@ test('동물 친구(4.4.6): 장착 칸 둘(강아지 · 고양이), 종류 효�
   // 같은 종류는 한 칸: 강아지를 하나 더 데려오면 강아지 칸만 바뀐다
   d.antibodies = 1e9; C.adoptPet(d, 'dog', () => 0.99);
   assert.equal(d.party.dog, 'bernese'); assert.equal(d.party.cat, 'turkish');
-  near1(def(d), def(n) * (1.005 + 0.02) * 1.35);       // 흰둥이는 장착에서 빠져도 보유 효과는 남는다
-  // 보유 효과는 레벨마다 10% 커진다
-  d.petLv.jindo = 10; near(C.petOwnBonus(d).dog, 0.005 * 2 + 0.02);
+  near1(def(d), def(n) * (1.01 + 0.04) * 1.35);       // 흰둥이는 장착에서 빠져도 보유 효과는 남는다
+  // 4.4.9 보유 효과는 강화(레벨)로 커지지 않는다
+  d.petLv.jindo = 10; near(C.petOwnBonus(d).dog, 0.01 + 0.04);
   // 36종 모두 특기가 있고, 있는 배수 항목에만 얹는다
   const m0 = C.mods(fresh());
   C.PET_BREEDS.forEach(b => { const k = C.PET_SKILLS[b.id]; assert.ok(k && k.text, b.id); assert.ok(k.key in m0, b.id + ' ' + k.key); assert.ok((k.mult > 0) !== !!k.add, b.id); });

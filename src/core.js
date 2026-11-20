@@ -176,10 +176,11 @@
    * 4.4.6 친구의 효과는 셋이다.
    *   장착 효과: 강아지 칸 하나 · 고양이 칸 하나(party). 장착한 아이는 종류 효과(강아지 방어력 · 고양이 전체 생산, 등급 × 레벨)와 특기를 준다.
    *   특기(PET_SKILLS): 품종마다 하나. 이미 있는 배수 항목(mods)에만 얹는다(새 규칙을 만들지 않아 가볍다). mult 는 곱, add 는 더하기.
-   *   보유 효과: 만난 아이마다 종류 효과를 조금씩(PET_OWN: 기본 0.5% · 고급 1% · 희귀 2%, 레벨마다 +10%) 더한다. 장착하지 않아도 붙는다.
-   *   왜 보유 효과를 작게 했나: 48종을 다 모으면 종류마다 28%(모두 최대 레벨이면 56%)라서, 장착한 한 아이(최대 105%)보다 앞서지 않게 했다.
+   *   보유 효과: 만난 아이마다 종류 효과를 조금씩(PET_OWN: 기본 1% · 고급 2% · 희귀 4%) 더한다. 장착하지 않아도 붙는다.
+   *   4.4.9 보유 효과는 간식(강화)으로 커지지 않는다. 모으는 것만으로 정해진다. 강화는 장착 효과만 키운다.
+   *   48종을 다 모으면 종류마다 56%로, 장착한 한 아이(최대 105%)보다 작다.
    */
-  var PET_OWN = { common: 0.005, fine: 0.01, rare: 0.02 }, PET_OWN_STEP = 0.1;
+  var PET_OWN = { common: 0.01, fine: 0.02, rare: 0.04 };
   var PET_SKILLS = {
     jindo: { key: 'loot', mult: 1.15, text: '밤 전리품 +15%' },
     nureong: { key: 'click', mult: 1.2, text: '수색 배수 +20%' },
@@ -2725,7 +2726,7 @@
   /** 보유 효과: 만난 아이 모두가 종류마다 조금씩 올려 주는 비율 { dog: 방어력, cat: 전체 생산 }. */
   function petOwnBonus(state) {
     var o = { dog: 0, cat: 0 };
-    PET_BREEDS.forEach(function (b) { if (state.kennel && state.kennel[b.id]) o[b.kind] += (PET_OWN[b.rarity] || 0) * (1 + PET_OWN_STEP * petLevel(state, b.id)); });
+    PET_BREEDS.forEach(function (b) { if (state.kennel && state.kennel[b.id]) o[b.kind] += PET_OWN[b.rarity] || 0; });      // 레벨(강화)과 상관없다
     return o;
   }
   /** 친구들이 주는 배수를 m(mods)에 얹는다: 보유 효과, 장착한 두 아이의 종류 효과와 특기. */
@@ -4775,7 +4776,7 @@
     ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
     PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND,
-    cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, petOwnBonus: petOwnBonus, petSkillText: petSkillText, partyOf: partyOf, PET_SKILLS: PET_SKILLS, PET_OWN: PET_OWN, PET_OWN_STEP: PET_OWN_STEP, breedDesc: breedDesc, petInfo: petInfo,
+    cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, petOwnBonus: petOwnBonus, petSkillText: petSkillText, partyOf: partyOf, PET_SKILLS: PET_SKILLS, PET_OWN: PET_OWN, breedDesc: breedDesc, petInfo: petInfo,
     MOM_CHAPTER: MOM_CHAPTER, MOM_PAGES: MOM_PAGES, momRead: momRead, afterEnding: afterEnding,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE, peakPrice: peakPrice,
