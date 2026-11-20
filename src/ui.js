@@ -1605,7 +1605,7 @@
     var panel = $('hub-panel'); if (!panel) return;
     var any = C.CHALLENGES.some(function (d) { return C.challengeOpen(state, d.id); }) || !!state.challenge;
     renderStageBar(); applyLaraArt();
-    panel.hidden = !!home; $('mnav-hub').hidden = !!home;      // 스테이지 중에는 모험 창을 열 수 없다
+    panel.hidden = !!home;      // 4.5.1 모험은 상황 탭의 칸으로만 연다(아래 탭에서 뺐다)      // 스테이지 중에는 모험 창을 열 수 없다
     if (!$('hub').hidden && hubTab === 'exped') renderStages();
     if (home) return;
           // 1.7.3: 모험 탭은 처음부터 보인다. 아직 못 고르는 도전은 잠긴 채로 보여서 앞으로 무엇이 있는지 알 수 있다
@@ -1850,7 +1850,7 @@
     lookNow = lookWith(worn, pc);
     drawLookScene($('look-pic'), lookNow, lookFrame);
     if (!lookTimer) lookTimer = setInterval(function () {      // 미리 보기의 라라는 제자리걸음을 하고 깃발은 펄럭인다(상점을 보고 있을 때만 그린다)
-      if (document.body.getAttribute('data-mview') !== 'party' || !lookNow) return;      // 일행 탭을 보고 있을 때만 그린다
+      if (document.body.getAttribute('data-mview') !== 'shop' || !lookNow) return;      // 상점 탭을 보고 있을 때만 그린다
       lookFrame = (lookFrame + 1) % 240; drawLookScene($('look-pic'), lookNow, lookFrame);
     }, 130);
     setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '현재 입은 모습');
@@ -4759,7 +4759,6 @@
       confirmBox('원정에서 돌아가기', '스테이지를 그만두고 거점으로 돌아가요. 여기까지 한 것은 남지 않아요.', '계속한다', '돌아간다', function () { endStage(true); });
     });
     $('hub-open').addEventListener('click', openHub);
-    $('mnav-hub').addEventListener('click', openHub);
     $('away-ok').addEventListener('click', function () { $('away').hidden = true; sfx('buy'); });
     ['goal-go', 'm-goal-go'].forEach(function (id) { $(id).addEventListener('click', function () { if (guideNow && guideNow.view) goTo(guideNow.view); }); });
     $('signal').addEventListener('click', function () {
@@ -5082,7 +5081,7 @@
 
     // 폰 하단 메뉴: 네 가지 보기 중 하나를 고른다(데스크톱에서는 메뉴가 숨겨져 있고 전부 보인다).
     // 4.4.8 일행 탭을 열면 상점(옷장 · 뽑기)을 새로 그린다
-    var partyNav = document.querySelector('[data-mview-set="party"]'); if (partyNav) partyNav.addEventListener('click', function () { renderShop(); });
+    var shopNav = document.querySelector('[data-mview-set="shop"]'); if (shopNav) shopNav.addEventListener('click', function () { renderShop(); });      // 4.5.1 상점 탭
     document.querySelectorAll('[data-mview-set]').forEach(function (b) {
       b.addEventListener('click', function () {
         document.body.setAttribute('data-mview', b.dataset.mviewSet);

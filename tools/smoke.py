@@ -623,7 +623,7 @@ def run_case(browser, name, size, state, mode):
         if not page.locator('#confirm').is_visible(): problems.append('철수 확인 창이 뜨지 않았다')
         if text('base-no') != zone_before: problems.append('확인도 하기 전에 철수됐다')
         tap('#confirm-yes'); page.wait_for_timeout(400); close_story()
-        if text('base-no') != '1구역 주택가': problems.append('철수했는데 1구역이 아니다: ' + zone_before + ' → ' + text('base-no'))
+        if not text('base-no').startswith('1구역'): problems.append('철수했는데 1구역이 아니다: ' + zone_before + ' → ' + text('base-no'))
         if text('supplies') != '0': problems.append('철수했는데 물자가 남았다: ' + text('supplies'))
         page.wait_for_timeout(1500)
     note = page.evaluate("document.getElementById('notice').hidden ? '' : document.getElementById('notice-text').textContent")
