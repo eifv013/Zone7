@@ -3156,38 +3156,71 @@ test('5구역 저장: 급한 환자 · 차트 · 강화 혈청 · 고른 것을 
   const r = C.deserialize(C.serialize(s), 0); if (C.canRetreat ? C.canRetreat(r) : false) { C.retreat(r, 0, calm); assert.equal(r.chartBonus, 0); assert.equal(r.boons.slow, 0); assert.equal(r.ward.er, null); }
 });
 
-/* 4.1.0 6구역: 다리 막기 */
-function onBridge() { const s = inLab(); s.zone = 5; s.posts = 12; s.defenses.rail = 1e9; s.zevIn = { rail: 1e9, guard: 1e9, tower: 1e9 }; s.jamIn = 1e9; s.truckIn = 1e9; C.bridgeOf(s); return s; }
-test('6구역 다리: 무리가 건너오고, 손으로 쏘면 깎이고, 잡으면 몫을 받는다. 연달아 잡으면 배수가 오른다', () => {
+/* 6구역: 다리 막기 (4.1.0 에 처음, 4.1.2 에 다시: 무더기 · 방벽 · 떼 · 수류탄) */
+function onBridge() { const s = inLab(); s.zone = 5; s.posts = 12; s.defenses.rail = 1e9; s.zevIn = { rail: 1e9, guard: 1e9, tower: 1e9 }; s.jamIn = 1e9; s.truckIn = 1e9; const b = C.bridgeOf(s); b.spawn = 1e9; return s; }      // spawn 을 미뤄 두어 시험이 넣은 것만 다리에 있다
+const zom = (x, k) => { const d = C.BRIDGE_KINDS[k || 'norm']; return { x, hp: d.hp, max: d.hp, big: k === 'big' ? 1 : 0, k: k || 'norm', id: 1 }; };
+test('6구역 다리: 손으로 쏘면 깎이고, 잡으면 몫을 받는다. 연달아 잡으면 배수가 오른다', () => {
   const s = onBridge(), b = C.bridgeOf(s); assert.equal(C.shootBridge(s).reason, 'empty'); assert.equal(C.shootBridge(inLab()).reason, 'locked');
   const e = onBridge(); e.posts = 0; assert.equal(C.shootBridge(e).reason, 'stopped');
-  C.stepBridge(s, C.BRIDGE_SPAWN + 0.1, calm, []); assert.equal(b.zs.length, 1); assert.ok(b.zs[0].x < 1 && b.zs[0].x > 0.8);
-  const before = s.supplies; let r; for (let i = 0; i < C.BRIDGE_HP - 1; i++) { r = C.shootBridge(s); assert.ok(r.ok && !r.kill); }
-  r = C.shootBridge(s); assert.ok(r.kill && r.gain > 0); near(s.supplies - before, C.guardRate(s) * C.BRIDGE_SPAWN, '첫 마리는 1배'); assert.equal(s.handKills, 1); assert.ok(b.combo > 1);
-  s.firepower = 2; b.zs.push({ x: 0.5, hp: C.BRIDGE_HP, max: C.BRIDGE_HP, big: 0 }); assert.ok(C.shootBridge(s).kill, '화력: 한 발에 3'); 
-  b.zs.push({ x: 0.2, hp: 3, max: 3, big: 0 }, { x: 0.9, hp: 3, max: 3, big: 0 }); r = C.shootBridge(s, 0.88); assert.ok(Math.abs(r.x - 0.9) < 1e-9, '누른 자리에서 가장 가까운 것'); r = C.shootBridge(s); assert.ok(Math.abs(r.x - 0.2) < 1e-9, '자리를 안 주면 맨 앞');
-  for (let i = 0; i < 80; i++) { b.zs.push({ x: 0.5, hp: 1, max: 3, big: 0 }); C.shootBridge(s); } near(b.combo, C.comboCap(s), '상한에서 멈춘다'); s.morale = 4; assert.ok(C.comboCap(s) > C.comboCap(onBridge()));
-  b.zs = []; b.spawn = 0; C.stepBridge(s, 0.5, calm, []); const c0 = b.combo; for (let i = 0; i < 24; i++) { b.zs = []; b.spawn = 0; C.stepBridge(s, 0.5, calm, []); } assert.ok(b.combo < c0 && b.combo >= 1, '한동안 못 잡으면 줄어든다');
+  b.zs.push(zom(0.9)); const before = s.supplies; let r = C.shootBridge(s); assert.ok(r.ok && !r.kill && r.left === 1);
+  r = C.shootBridge(s); assert.ok(r.kill && r.gain > 0); near(s.supplies - before, C.guardRate(s) * C.BRIDGE_SPAWN, '첫 마리는 1배'); assert.equal(s.handKills, 1); assert.ok(b.combo > 1); assert.equal(b.nade, 1);
+  b.combo = 1; b.zs.push(zom(0.5, 'tough')); for (let i = 0; i < 3; i++) C.shootBridge(s); const t0 = s.supplies; C.shootBridge(s); near(s.supplies - t0, C.guardRate(s) * C.BRIDGE_SPAWN * 2, '튼튼한 놈은 몫이 2배');
+  s.firepower = 1; b.zs.push(zom(0.5)); assert.ok(C.shootBridge(s).kill, '화력 1: 보통 것은 한 발');
+  b.zs.push(zom(0.2), zom(0.9)); r = C.shootBridge(s, 0.88); near(r.x, 0.9, '누른 자리에서 가장 가까운 것'); r = C.shootBridge(s); near(r.x, 0.2, '자리를 안 주면 맨 앞');
+  for (let i = 0; i < 80; i++) { b.zs.push(zom(0.5, 'run')); C.shootBridge(s); } near(b.combo, C.comboCap(s), '상한에서 멈춘다'); s.morale = 4; assert.ok(C.comboCap(s) > C.comboCap(onBridge()));
+  C.stepBridge(s, 0.5, calm, []); const c0 = b.combo; for (let i = 0; i < 24; i++) C.stepBridge(s, 0.5, calm, []); assert.ok(b.combo < c0 && b.combo >= 1, '한동안 못 잡으면 줄어든다');
   for (const junk of [NaN, -1, 9, 'x', null, undefined]) assert.doesNotThrow(() => C.shootBridge(s, junk));
 });
 
-test('6구역 다리: 큰 놈이 초소에 닿으면 연속이 처음으로. 가만히 둠 < 초소장 < 초소장 + 손', () => {
-  const s = onBridge(), b = C.bridgeOf(s); b.combo = 2; b.hold = 99; b.zs.push({ x: 0.001, hp: 12, max: 12, big: 1 }); const ev = [];
-  C.stepBridge(s, 0.25, calm, ev); assert.ok(ev.some((e) => e.type === 'bridge-leak' && e.big)); assert.equal(b.combo, 1);
-  const run = (auto, tps) => { const z = onBridge(); if (auto) z.upgrades.autoguard = 1; let acc = 0; const s0 = z.guardEarned;
-    for (let t = 0; t < 6000; t++) { C.stepBridge(z, 0.1, calm, []); acc += tps * 0.1; while (acc >= 1) { acc -= 1; const bb = C.bridgeOf(z); if (!bb.zs.length) break; const big = bb.zs.find((q) => q.big && q.x < 0.5); C.shootBridge(z, big ? big.x : undefined); } }
-    return (z.guardEarned - s0) / (C.guardRate(z) * 600); };
-  const idle = run(false, 0), auto = run(true, 0), hand = run(true, 4), solo = run(false, 4);
-  assert.ok(idle > 0.1 && idle < 0.35, '가만히: ' + idle.toFixed(2)); assert.ok(auto > idle * 1.5 && auto < 1.3, '초소장: ' + auto.toFixed(2)); assert.ok(hand > auto * 1.5, '손: ' + hand.toFixed(2)); assert.ok(solo > auto, '손만: ' + solo.toFixed(2));
-  const off = onBridge(); off.upgrades.autoguard = 1; C.setAutoEvents(off, 5, false); const evo = []; for (let i = 0; i < 100; i++) C.stepBridge(off, 0.1, calm, evo); assert.ok(!evo.some((e) => e.type === 'bridge-shot'));
+test('6구역 다리: 무더기로 오고, 닿으면 방벽을 깎는다. 방벽이 다 깎이면 뚫려서 한동안 쏠 수 없다', () => {
+  const s = onBridge(), b = C.bridgeOf(s), r = lcg(3); b.spawn = 0.1; let most = 0, kinds = new Set();
+  for (let i = 0; i < 400; i++) { const n0 = b.zs.length; C.stepBridge(s, 0.1, r, []); most = Math.max(most, b.zs.length - n0); b.zs.forEach((z) => kinds.add(z.k)); b.wall = C.wallMax(s); }
+  assert.ok(most >= 2, '한 번에 여럿이 온다: ' + most); assert.ok(kinds.has('run') && kinds.has('tough') && kinds.has('big'), [...kinds].join());
+  const w = onBridge(), wb = C.bridgeOf(w), ev = []; wb.combo = 2; wb.hold = 99; wb.zs.push(zom(0.001, 'big'));
+  C.stepBridge(w, 0.25, calm, ev); assert.ok(ev.some((e) => e.type === 'bridge-leak' && e.big)); assert.equal(wb.combo, 1, '큰 놈이 닿으면 연속이 처음으로'); assert.equal(wb.wall, C.WALL_BASE - C.BRIDGE_KINDS.big.hit);
+  C.stepBridge(w, C.WALL_FIX + 0.1, calm, []); assert.equal(wb.wall, C.WALL_BASE - C.BRIDGE_KINDS.big.hit + 1, '방벽은 조금씩 고쳐진다');
+  w.upgrades.sandbag = 2; assert.equal(C.wallMax(w), C.WALL_BASE + 8);
+  wb.wall = 1; wb.zs.push(zom(0.001), zom(0.5)); const ev2 = []; C.stepBridge(w, 0.25, calm, ev2); assert.ok(ev2.some((e) => e.type === 'bridge-breach')); assert.equal(w.breaches, 1); assert.equal(wb.zs.length, 0); assert.ok(wb.down > 0);
+  assert.equal(C.shootBridge(w).reason, 'down'); assert.equal(C.throwNade(w).reason, 'down'); const g0 = w.guardEarned;
+  const ev3 = []; C.stepBridge(w, C.BREACH_SECONDS + 0.3, calm, ev3); assert.ok(ev3.some((e) => e.type === 'bridge-back')); assert.equal(wb.down, 0); assert.equal(wb.wall, C.wallMax(w)); assert.equal(w.guardEarned, g0, '뚫린 동안에는 아무것도 못 받는다');
 });
 
-test('6구역 다리: 자리를 비운 동안에는 하나하나 세지 않는다. 화력과 사기를 사고, 저장을 안전하게 읽는다', () => {
-  const a = onBridge(), b = onBridge(); b.upgrades.autoguard = 1; C.stepBridge(a, 600, calm, []); C.stepBridge(b, 600, calm, []);
-  near(a.guardEarned, C.guardRate(a) * 600 * C.BRIDGE_LEAK); near(b.guardEarned, C.guardRate(b) * 600); assert.equal(C.bridgeOf(a).zs.length, 0);
+test('6구역 다리: 떼는 손을 쓰고 있을 때만 온다. 미리 알리고, 뚫리지 않고 넘기면 받는다. 잇달아 막을수록 세진다', () => {
+  const s = onBridge(), b = C.bridgeOf(s), ev = []; b.waveIn = 1; b.hand = 999;
+  C.stepBridge(s, 3, calm, ev); assert.ok(!ev.some((e) => e.type === 'bridge-warn'), '손을 안 쓰면 오지 않는다');
+  b.zs.push(zom(0.9)); C.shootBridge(s); C.stepBridge(s, 1.2, calm, ev); assert.ok(ev.some((e) => e.type === 'bridge-warn')); assert.ok(b.warn > 0 && !(b.wave > 0));
+  C.stepBridge(s, C.WAVE_WARN, calm, ev); assert.ok(ev.some((e) => e.type === 'bridge-wave')); assert.ok(b.wave > 0);
+  b.zs = []; b.spawn = 1e9; const g0 = s.guardEarned; for (let i = 0; i < 40; i++) C.stepBridge(s, 0.25, calm, ev);
+  const hv = ev.find((e) => e.type === 'bridge-held'); assert.ok(hv && hv.gain > 0 && hv.streak === 1); near(s.guardEarned - g0, C.guardRate(s) * C.WAVE_PAY); assert.equal(s.wavesHeld, 1); assert.equal(b.streak, 1);
+  s.upgrades.flare = 2; b.wave = 0.1; b.combo = 1; const g1 = s.guardEarned; C.stepBridge(s, 0.25, calm, []); near(s.guardEarned - g1, C.guardRate(s) * C.WAVE_PAY * 2 * 1.25, '조명탄 + 잇달아 한 번');
+  b.wall = 1; b.zs.push(zom(0.001)); C.stepBridge(s, 0.25, calm, []); assert.equal(b.streak, 0, '뚫리면 처음부터');
+  const m = onBridge(); C.bridgeOf(m).streak = 99; C.bridgeOf(m).wave = 0.1; C.stepBridge(m, 0.25, calm, []); assert.ok(C.bridgeOf(m).streak <= 10, '상한');
+});
+
+test('6구역 수류탄: 손으로 잡은 만큼 차고, 던지면 다리 위의 모두가 깎인다', () => {
+  const s = onBridge(), b = C.bridgeOf(s), need = C.nadeNeed(s); assert.equal(C.throwNade(s).reason, 'notready'); assert.equal(C.throwNade(inLab()).reason, 'locked');
+  for (let i = 0; i < need + 5; i++) { b.zs.push(zom(0.5, 'run')); C.shootBridge(s); } assert.equal(b.nade, need, '넘치지 않는다'); assert.equal(C.throwNade(s).reason, 'empty'); assert.equal(b.nade, need);
+  b.zs.push(zom(0.3), zom(0.5, 'tough'), zom(0.7, 'run'), zom(0.9, 'big')); const k0 = s.handKills, r = C.throwNade(s); assert.ok(r.ok && r.kills === 3 && r.gain > 0 && r.hits.length === 4); assert.equal(s.handKills, k0 + 3);
+  assert.equal(b.zs.length, 1); assert.equal(b.zs[0].hp, C.BRIDGE_KINDS.big.hp - C.NADE_DMG); assert.equal(b.nade, 0, '수류탄으로 잡은 것으로는 차지 않는다');
+  s.upgrades.nadebox = 3; assert.equal(C.nadeNeed(s), need - 12 < 8 ? 8 : need - 12);
+});
+
+test('6구역 다리: 가만히 둠 < 초소장 < 초소장 + 손. 자리를 비운 동안에는 하나하나 세지 않고 뚫리지도 않는다', () => {
+  const run = (auto, tps) => { const z = onBridge(), r = lcg(11); C.bridgeOf(z).spawn = 1; if (auto) z.upgrades.autoguard = 1; let acc = 0; const s0 = z.guardEarned;
+    for (let t = 0; t < 6000; t++) { C.stepBridge(z, 0.1, r, []); acc += tps * 0.1; while (acc >= 1) { acc -= 1; const bb = C.bridgeOf(z); if (bb.nade >= C.nadeNeed(z) && bb.zs.length >= 5) C.throwNade(z); if (!bb.zs.length) break; C.shootBridge(z); } }
+    return { x: (z.guardEarned - s0) / (C.guardRate(z) * 600), br: z.breaches || 0 }; };
+  const idle = run(false, 0), auto = run(true, 0), hand = run(true, 3);
+  assert.ok(idle.x < 0.3 && idle.br > 5, '가만히: ' + idle.x.toFixed(2)); assert.ok(auto.x > idle.x * 2 && auto.x < 1.2, '초소장: ' + auto.x.toFixed(2)); assert.ok(hand.x > auto.x * 2, '손: ' + hand.x.toFixed(2)); assert.ok(hand.br < auto.br);
+  const off = onBridge(); off.upgrades.autoguard = 1; C.bridgeOf(off).zs.push(zom(0.9)); C.setAutoEvents(off, 5, false); const evo = []; for (let i = 0; i < 30; i++) C.stepBridge(off, 0.1, calm, evo); assert.ok(!evo.some((e) => e.type === 'bridge-shot'));
+  const a = onBridge(), b = onBridge(); b.upgrades.autoguard = 1; C.bridgeOf(a).wall = 1; C.stepBridge(a, 600, calm, []); C.stepBridge(b, 600, calm, []);
+  near(a.guardEarned, C.guardRate(a) * 600 * C.BRIDGE_LEAK); near(b.guardEarned, C.guardRate(b) * 600 * C.AWAY_AUTO); assert.equal(C.bridgeOf(a).zs.length, 0); assert.equal(a.breaches || 0, 0); assert.equal(C.bridgeOf(a).wall, C.wallMax(a));
   for (const junk of [NaN, -5, 'x', undefined, 1e99]) assert.doesNotThrow(() => C.stepBridge(onBridge(), junk, calm, []));
+});
+
+test('6구역 다리: 화력과 사기를 사고, 저장을 안전하게 읽는다', () => {
   const s = onBridge(); s.supplies = 1e80; let n = 0; while (C.buyFire(s).ok) n++; assert.equal(n, 3); assert.equal(C.fireCost(s), Infinity); n = 0; while (C.buyMorale(s).ok) n++; assert.equal(n, 4); assert.equal(C.buyFire(inLab()).reason, 'locked');
-  C.stepBridge(s, 4, calm, []); s.bridge.combo = 1.7; const back = C.deserialize(C.serialize(s), 0); assert.equal(back.firepower, 3); assert.equal(back.morale, 4); assert.equal(back.bridge.zs.length, s.bridge.zs.length); near(back.bridge.combo, 1.7);
-  for (const junk of [null, 5, 'x', { zs: 'x' }, { zs: [null, 1, { x: 9, hp: 1 }, { x: 0.5, hp: -1 }, { x: 0.5, hp: 1e9, big: 1 }], combo: 1e9, spawn: -3 }]) { const raw = JSON.parse(JSON.stringify(s)); raw.bridge = junk; raw.firepower = junk; raw.morale = junk;
-    const z = C.deserialize(JSON.stringify(raw), 0); assert.doesNotThrow(() => { C.stepBridge(z, 0.5, calm, []); C.shootBridge(z); }); assert.ok(z.bridge.combo <= 10 && z.bridge.zs.every((q) => q.x > 0 && q.x <= 1 && q.hp > 0 && q.hp <= C.BRIDGE_BIG_HP)); }
+  const b = C.bridgeOf(s); b.zs.push(zom(0.4), zom(0.8, 'big'), zom(0.6, 'run')); b.zs[2].w = 1; b.combo = 1.7; b.wall = 6; b.nade = 5; b.streak = 3; s.breaches = 2;
+  const back = C.deserialize(C.serialize(s), 0); assert.equal(back.firepower, 3); assert.equal(back.morale, 4); assert.equal(back.bridge.zs.length, 3); near(back.bridge.combo, 1.7); assert.equal(back.bridge.wall, 6); assert.equal(back.bridge.nade, 5); assert.equal(back.bridge.streak, 3); assert.equal(back.breaches, 2); assert.equal(back.bridge.zs[1].k, 'big'); assert.equal(back.bridge.zs[2].w, 1);
+  for (const junk of [null, 5, 'x', { zs: 'x' }, { zs: [null, 1, { x: 9, hp: 1 }, { x: 0.5, hp: -1 }, { x: 0.5, hp: 1e9, big: 1 }, { x: 0.5, hp: 2, k: 'zzz' }], combo: 1e9, spawn: -3, wall: -9, down: 1e9, nade: 1e9, streak: 1e9, waveIn: -1 }]) { const raw = JSON.parse(JSON.stringify(s)); raw.bridge = junk; raw.firepower = junk; raw.morale = junk;
+    const z = C.deserialize(JSON.stringify(raw), 0); assert.doesNotThrow(() => { C.stepBridge(z, 0.5, calm, []); C.shootBridge(z); C.throwNade(z); }); assert.ok(z.bridge.combo <= 10 && z.bridge.down <= C.BREACH_SECONDS && z.bridge.streak <= 99 && z.bridge.zs.every((q) => q.x > 0 && q.x <= 1.2 && q.hp > 0 && q.hp <= C.BRIDGE_BIG_HP && C.BRIDGE_KINDS[q.k])); }
 });

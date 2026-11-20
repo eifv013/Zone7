@@ -874,6 +874,8 @@ canvas.labcv { background: #1c2a2e; margin-bottom: 0; border-bottom-left-radius:
 .chart-line.ok { background: var(--safe); border-color: var(--safe); color: #fff; } .chart-line.ok em { color: #fff; }
 .ward-chart .pick-two { margin-top: 0; }
 .bridgecv { border-radius: 8px !important; margin-bottom: 8px !important; background: #0b1424 !important; } #bridge-wrap .ward-pop { color: #ffd95a; } #bridge-wrap .ward-pop.hit { color: #e8e6dc; font-size: 11px; } #bridge-wrap .ward-pop.big { color: #d8b0ff; font-size: 16px; }
+#nade-btn { padding-top: 10px; padding-bottom: 10px; margin-bottom: 8px; } #guard-rate.bad { color: var(--blood); animation: plat-full .4s steps(2) infinite; }
+#bridge-wrap .ward-pop.wave { color: #ff7a6a; font-size: 17px; } #bridge-wrap .ward-pop.held { color: #ffd95a; font-size: 17px; }
 .combo-row .track i { background: var(--hazard) !important; } .combo-row b { color: var(--hazard) !important; font-size: 14px !important; } .combo-row.cold b { color: var(--ink-soft) !important; }
 #guard-auto { margin: 0 0 4px; } #guard-auto[hidden] { display: none; } #guard-bar { margin: 0 0 8px; }
 canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
@@ -1380,7 +1382,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.1.1</div>
+  <div class="boot-ver">7구역 알파 4.1.2</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1677,6 +1679,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="order-head plat-head"><span class="label">다리</span><span class="num" id="guard-rate"></span></div>
         <div class="ward-wrap" id="bridge-wrap"><canvas class="belt plat labcv bridgecv" id="bridgescene" width="184" height="108" role="button" tabindex="0" data-tap aria-label="다리. 건너오는 것을 누르면 쏜다"></canvas></div>
         <div class="plat-horde combo-row"><span class="label">연속</span><div class="track"><i id="combo-bar"></i></div><b class="num" id="combo-x"></b></div>
+        <!-- 4.1.2 수류탄: 손으로 잡은 만큼 찬다. 다 차면 던질 수 있다 -->
+        <button type="button" class="fortify sell plat-go" id="nade-btn"><span id="nade-name">수류탄</span><span class="num" id="nade-count"></span></button>
         <div class="label" id="guard-auto"></div>
         <div class="autobar" id="guard-bar" aria-hidden="true"></div>
         <div class="order zev" id="zev-guard" hidden>
@@ -1847,7 +1851,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.1.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.1.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

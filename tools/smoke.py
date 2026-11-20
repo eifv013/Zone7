@@ -359,7 +359,10 @@ def run_case(browser, name, size, state, mode):
         page.wait_for_timeout(300)
         if not text('row-post').strip().startswith('초소') or '1 / 500' not in text('row-post'): problems.append('초소를 샀는데 수가 그대로다: ' + text('row-post')[:40])
         if '한 마리 +' not in text('guard-rate'): problems.append('제목 줄에 한 마리를 잡으면 받는 것이 없다: ' + text('guard-rate'))
-        for up in ['#row-fire', '#row-morale']:
+        page.evaluate("GameCore.TEST.wave = 0")      # 떼는 따로 본다(여기서는 오지 않게)
+        if not page.locator('#nade-btn').is_visible() or '/' not in text('nade-count'): problems.append('수류탄 단추가 없다: ' + text('nade-count'))
+        if not (page.get_attribute('#bridgescene', 'data-wall') or '').isdigit(): problems.append('방벽의 남은 양이 없다')
+        for up in ['#row-fire', '#row-morale', '#row-sandbag', '#row-sapper', '#row-nadebox', '#row-flare']:
             if not page.locator(up).count(): problems.append('6구역 줄이 없다: ' + up)
         # 4.1.0 다리: 무리가 건너오고 → 누르면 쏘고 → 잡으면 얻은 것이 뜨고 연속이 오른다(손가락으로도)
         for _ in range(30):
@@ -373,6 +376,14 @@ def run_case(browser, name, size, state, mode):
             if int(page.get_attribute('#bridgescene', 'data-kills') or 0) < 1: problems.append('다리의 것을 여덟 번 눌렀는데 하나도 못 잡았다')
             if text('combo-x') == '×1.0': problems.append('잡았는데 연속이 그대로다')
             if page.locator('#bridge-wrap .ward-pop').count() < 1: problems.append('잡았는데 얻은 것이 그림에 뜨지 않는다')
+            if int(page.get_attribute('#bridgescene', 'data-nade') or 0) < 1: problems.append('손으로 잡았는데 수류탄이 차지 않는다')
+            # 아무도 쏘지 않으면 방벽이 깎이고 끝내 뚫린다
+            breached = False
+            for _ in range(200):
+                if page.get_attribute('#bridgescene', 'data-down') == '1': breached = True; break
+                page.wait_for_timeout(200)
+            if not breached: problems.append('가만히 두었는데 다리가 뚫리지 않는다: 방벽 %s' % page.get_attribute('#bridgescene', 'data-wall'))
+            elif '뚫렸다' not in text('guard-rate'): problems.append('뚫렸는데 제목 줄에 안 보인다: ' + text('guard-rate'))
         if page.evaluate("(() => { const c = document.getElementById('bridgescene'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size; })()") < 20: problems.append('다리 그림이 비어 있다')
         if not fits(): problems.append('한 화면에 들어오지 않는다(6구역)')
         tap('[data-mview-set=base]')

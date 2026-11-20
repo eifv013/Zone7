@@ -448,6 +448,10 @@
     { id: 'sterile', zone: 4, name: '진정제',    desc: '변하는 줄이 15% 느리게 찬다', key: 'sterile', per: 0.15, baseCost: 2e23, growth: 20, max: 3 },
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '혈청 한 대의 값 +10%',   key: 'lab', per: 0.1, baseCost: 3e23, growth: 3.5, max: 10 },
     { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 1.5e27, growth: 2.4, max: 40 },
+    { id: 'sandbag', zone: 5, name: '모래주머니', desc: '방벽이 4 더 버틴다',        key: 'wall',    per: 4,    baseCost: 2e27, growth: 5,   max: 5 },
+    { id: 'sapper',  zone: 5, name: '공병',      desc: '방벽을 25% 더 빨리 고친다', key: 'wallfix', per: 0.25, baseCost: 3e27, growth: 5,   max: 4 },
+    { id: 'nadebox', zone: 5, name: '수류탄 상자', desc: '수류탄이 4마리 빨리 찬다', key: 'nade',    per: 1,    baseCost: 4e27, growth: 8,   max: 3 },
+    { id: 'flare',   zone: 5, name: '조명탄',    desc: '떼를 막으면 받는 것 +50%',  key: 'held',    per: 0.5,  baseCost: 3e27, growth: 4,   max: 6 },
     { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 5e27, growth: 6,   max: 4 },
     { id: 'amp',     zone: 6, name: '증폭기',    desc: '생존자가 모이는 속도 +25%', key: 'z7',    per: 0.25, baseCost: 1.5e30, growth: 2.4, max: 40 },
     { id: 'dorm',    zone: 4, name: '기숙사',    desc: '5구역 시설 값 -4%',          key: 'staffcost', per: -0.04, baseCost: 2e23, growth: 3, max: 12 },
@@ -581,7 +585,7 @@
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, boons: { rich: 0, slow: 0, box: 0, quick: 0 }, chartBonus: 0, chartNo: 0, savedRun: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8, mix: 0, boost: 0, hand: 999, erNext: 35, er: null, pick: null }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, dosesAll: 0, serumTaps: 0, labV: 3, labV4: 1,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
-      posts: 0, guardEarned: 0, safeNights: 0, bridge: { zs: [], spawn: 0, n: 0, shot: 0, combo: 1, hold: 0 }, firepower: 0, morale: 0, bridgeKills: 0, handKills: 0, bigKills: 0, shotsRun: 0, comboBest: 1,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
+      posts: 0, guardEarned: 0, safeNights: 0, bridge: { zs: [], spawn: 1, n: 0, shot: 0, combo: 1, hold: 0, wall: 10, fix: 0, down: 0, hand: 999, waveIn: 25, wave: 0, warn: 0, hurt: 0, nade: 0, streak: 0 }, streakBest: 0, breaches: 0, wavesHeld: 0, firepower: 0, morale: 0, bridgeKills: 0, handKills: 0, bigKills: 0, shotsRun: 0, comboBest: 1,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
       // 밤
       day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false, siegeNights: 0, defStreak: 0, edge: 0, nightEase: 1, counterAt: 0, perkOwed: 0, bossPerks: 0, perkFrom: 'goal',      // defStreak 연속으로 막은 밤, perkOwed 변이체를 막고 아직 못 고른 특전
       // 구조 신호
@@ -735,7 +739,7 @@
     if (rc5 && rc5.lines.length === 3 && rc5.lines.every(function (l) { return l && typeof l === 'object' && CHART_TEXT[l.k]; })) s.ward.chart = { hard: !!rc5.hard, done: !!rc5.done, lines: rc5.lines.map(function (l) { var need = clamp(safeCount(l.need), 1, 999); return { k: l.k, need: need, have: clamp(safeCount(l.have), 0, need) }; }) };
     (Array.isArray(rw.seats) ? rw.seats : []).slice(0, SEAT_MAX).forEach(function (p) {
       p = p && typeof p === 'object' ? p : {};
-      if (typeof p.dose === 'number' && p.dose >= 0) s.ward.seats.push({ m: clamp(safeNum(p.m, 0), 0, 0.999), dose: clamp(safeCount(p.dose), 0, WARD_DOSES - 1), r: clamp(safeNum(p.r, 1), 0.5, 1.5), look: clamp(safeCount(p.look), 0, 999), since: clamp(safeNum(p.since, 0), 0, 1e6) });
+      if (typeof p.dose === 'number' && p.dose >= 0) s.ward.seats.push({ m: clamp(safeNum(p.m, 0), 0, 0.999), dose: clamp(safeCount(p.dose), 0, WARD_DOSES - 1), r: clamp(safeNum(p.r, 1), 0.5, 3), look: clamp(safeCount(p.look), 0, 999), since: clamp(safeNum(p.since, 0), 0, 1e6) });
       else s.ward.seats.push({ wait: 0 });
     });
     /* 옛 저장 옮기기.
@@ -758,8 +762,11 @@
     s.firepower = clamp(safeCount(raw.firepower), 0, FIRE_MAX); s.morale = clamp(safeCount(raw.morale), 0, MORALE_MAX);
     s.bridgeKills = clamp(safeCount(raw.bridgeKills), 0, 1e12); s.handKills = clamp(safeCount(raw.handKills), 0, 1e12); s.bigKills = clamp(safeCount(raw.bigKills), 0, 1e12); s.shotsRun = clamp(safeCount(raw.shotsRun), 0, 1e12); s.comboBest = clamp(safeNum(raw.comboBest, 1), 1, 10);
     var rb = raw.bridge && typeof raw.bridge === 'object' ? raw.bridge : {};
-    s.bridge = { zs: [], spawn: clamp(safeNum(rb.spawn, 0), 0, 2), n: clamp(safeCount(rb.n), 0, 1e12), shot: clamp(safeNum(rb.shot, 0), 0, 2), combo: clamp(safeNum(rb.combo, 1), 1, 10), hold: clamp(safeNum(rb.hold, 0), 0, 60) };
-    (Array.isArray(rb.zs) ? rb.zs : []).slice(0, 40).forEach(function (z) { if (!z || typeof z !== 'object') return; var big = z.big ? 1 : 0, mx = big ? BRIDGE_BIG_HP : BRIDGE_HP; if (!(z.x > 0 && z.x <= 1) || !(z.hp > 0)) return; s.bridge.zs.push({ x: z.x, hp: Math.min(mx, z.hp), max: mx, big: big, id: clamp(safeCount(z.id), 0, 999) }); });
+    s.bridge = { zs: [], spawn: clamp(safeNum(rb.spawn, 1), 0, 6), n: clamp(safeCount(rb.n), 0, 1e12), shot: clamp(safeNum(rb.shot, 0), 0, 2), combo: clamp(safeNum(rb.combo, 1), 1, 10), hold: clamp(safeNum(rb.hold, 0), 0, 60),
+      wall: clamp(safeCount(rb.wall === undefined ? WALL_BASE : rb.wall), 0, 99), fix: clamp(safeNum(rb.fix, 0), 0, 1), down: clamp(safeNum(rb.down, 0), 0, BREACH_SECONDS), hand: 999, waveIn: clamp(safeNum(rb.waveIn, WAVE_FIRST), 1, WAVE_EVERY), wave: 0, warn: 0, hurt: 0, nade: clamp(safeCount(rb.nade), 0, NADE_KILLS), streak: clamp(safeCount(rb.streak), 0, 99) };
+    s.streakBest = clamp(safeCount(raw.streakBest), 0, 99);
+    s.breaches = clamp(safeCount(raw.breaches), 0, 1e12); s.wavesHeld = clamp(safeCount(raw.wavesHeld), 0, 1e12);
+    (Array.isArray(rb.zs) ? rb.zs : []).slice(0, 60).forEach(function (z) { if (!z || typeof z !== 'object') return; var kk = BRIDGE_KINDS[z.k] ? z.k : z.big ? 'big' : 'norm', mx = BRIDGE_KINDS[kk].hp; if (!(z.x > 0 && z.x <= 1.2) || !(z.hp > 0)) return; s.bridge.zs.push({ x: z.x, hp: Math.min(mx, z.hp), max: mx, big: kk === 'big' ? 1 : 0, k: kk, id: clamp(safeCount(z.id), 0, 999) }); if (z.w) s.bridge.zs[s.bridge.zs.length - 1].w = 1; });
     s.antennas = s.zone >= 6 ? clamp(safeCount(raw.antennas), 0, COUNT_MAX) : 0; s.survivors = s.zone >= 6 ? clamp(safeNum(raw.survivors, 0), 0, 1e15) : 0;
     s.serumStage = s.zone >= 6 ? clamp(safeCount(raw.serumStage), 0, SERUM_COSTS.length) : 0;
     s.endedRun = !!raw.endedRun && s.zone >= 6;
@@ -936,8 +943,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { peak: 1, sterile: 1, horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, nurse: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { wall: 0, wallfix: 1, nade: 0, held: 1, prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { wall: 1, nade: 1, peak: 1, sterile: 1, horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, nurse: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -1839,7 +1846,7 @@
    */
   var CAR_SECONDS = 5, CAR_BASE = 8, CAR_MAX = 12, CAR_STEP = 0.12, AUTO_CARS = 6, AUTO_NEAR = 0.36, RAIL_SCALE = 0.9;
   var PULL_SECONDS = 0.25, HORN_PUSH = 0.2, HORN_BASE = 1;
-  var TEST = { rush: 1, er: 1 };      // er: 급한 환자가 오는 빠르기에 곱한다(0 이면 오지 않는다)
+  var TEST = { rush: 1, er: 1, wave: 1 };      // er: 급한 환자가 오는 빠르기에 곱한다(0 이면 오지 않는다)
   void 0;      // 화면 테스트용 손잡이: 돌진이 오는 확률에 곱한다(0 이면 오지 않는다). 게임에서는 늘 1
   var HORDE_SECONDS = 45, HORDE_SPRINT = 0.08, HORDE_WARN = 1.5, HORDE_RUSH_SPEED = 0.6, HORDE_RUSH_DIST = 0.45, HORDE_RUSH_CARS = 2, LONG_CARS = 10;      // 3.8.4: 돌진. 드물게 조금 건너뛰던 것을, 눈에 보이게 한참 달려오도록 바꿨다
   /* 칸 수에 따른 배수. 8칸까지는 한 칸에 +0.1, 그 뒤로는 크게 뛴다(9칸 1.95 · 10칸 2.25 · 11칸 2.6 · 12칸 3.0): 욕심낼 값어치가 있어야 긴장이 생긴다 */
@@ -2031,8 +2038,9 @@
    * 값:   한 대의 값 = 약품 초당(labRate) × SERUM_SECONDS. 연구 점수도 같은 식(researchRate).
    * 줄:   연구원(값) · 의자(자리 수, 값도 그만큼) · 시약 등급(2배씩). 개조: 냉장 상자(쌓아 두는 수) · 진정제(변하는 줄이 느리게) · 연구 조교 · 간호사.
    */
-  var SEAT_BASE = 4, SEAT_MAX = 6, SERUM_SECONDS = 4, SERUM_CAP = 6, SERUM_CAP_STEP = 2, SERUM_TAP = 0.12, TURN_SECONDS = 16, TURN_BREAK = 2, TURN_STUN = 1.2, WARD_DOSES = 6, WARD_CURE = 12, WARD_STAY = 12, WARD_STAY_ONE = 5, WARD_ARRIVE = 4.5, WARD_FILL = 1.2, NURSE_SECONDS = 2, NURSE_FROM = 0.7, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
+  var SEAT_BASE = 4, SEAT_MAX = 6, SERUM_SECONDS = 4, SERUM_CAP = 6, SERUM_CAP_STEP = 2, SERUM_TAP = 0.12, TURN_SECONDS = 16, TURN_BREAK = 2, TURN_STUN = 1.2, WARD_DOSES = 6, WARD_CURE = 12, WARD_STAY = 12, WARD_STAY_ONE = 5, WARD_ARRIVE = 4.5, WARD_FILL = 1.2, NURSE_SECONDS = 3.5, NURSE_FROM = 0.7, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
   var RACK_COST = 2e23, RACK_GROWTH = 30, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
+  var ACUTE_CHANCE = 1 / 6, ACUTE_RATE = 2.6, HARD_SPEED = 1.3;      // 급성 환자가 올 확률 · 그 빠르기 · 빡빡한 차트를 하는 동안의 빠르기
   var ER_FIRST = 35, ER_EVERY = 70, ER_TIME = 22, ER_HAND = 30;      // 급한 환자: 첫 침대까지 · 그 뒤 간격 · 여섯 대를 놓을 시간 · '손을 쓰고 있다'로 치는 시간(초)
   var BOOST_DOSES = 3, MIX_BASE = 14, MIX_MIN = 6;                    // 강화 혈청: 몇 대 몫인지 · 손으로 몇 대마다 오는지(연구원 5명마다 1대씩 줄어 MIX_MIN 까지)
   var CHART_EASY = 0.1, CHART_HARD = 0.3;                             // 회진 차트를 끝낼 때마다 혈청 값에 더해지는 몫
@@ -2222,14 +2230,16 @@
         var seat = -1, old = -1;
         for (var q0 = 0; q0 < w.seats.length; q0++) { var sq = w.seats[q0]; if (!(sq.dose >= 0)) { if (seat < 0) seat = q0; } else if (sq.dose === 1 && (old < 0 || sq.since > w.seats[old].since)) old = q0; }
         if (seat < 0 && old >= 0) { seat = old; if (events) events.push({ type: 'ward-out', at: old }); }
-        if (seat >= 0) { w.arrive -= 1; w.seats[seat] = { m: 0, dose: 0, r: 0.75 + roll() * 0.5, look: Math.floor(roll() * 1000), since: 0 }; if (events) events.push({ type: 'ward-in', at: seat }); }
+        if (seat >= 0) { w.arrive -= 1; /* 4.1.2: 사람마다 변하는 빠르기가 더 다르다(0.8~1.8배, 여섯에 하나는 '급성' 2.6배). 이미 조금 진행된 채로 오기도 한다.
+           왜: 전에는 다들 비슷하게 천천히 변해서, 자동 둘만 있으면 변하는 사람을 볼 일이 없었다(빡빡한 차트도 걸 것이 없었다) */
+        var acute = roll() < ACUTE_CHANCE; w.seats[seat] = { m: roll() * 0.3, dose: 0, r: acute ? ACUTE_RATE : 0.8 + roll(), look: Math.floor(roll() * 1000), since: 0 }; if (events) events.push({ type: 'ward-in', at: seat }); }
         else w.arrive = 1;
       }
       for (var i = 0; i < w.seats.length; i++) {
         var p = w.seats[i];
         if (!(p.dose >= 0)) continue;
         p.since = (p.since || 0) + h;
-        if (p.dose === 0) { p.m += h / turn * p.r; if (p.m >= 1) {
+        if (p.dose === 0) { p.m += h / turn * p.r * (w.chart && w.chart.hard && !w.chart.done ? HARD_SPEED : 1); if (p.m >= 1) {
           /* 변했다(벌칙): 변한 사람이 달려들어 냉장 상자의 혈청을 TURN_BREAK 대 깨뜨리고, TURN_STUN 초 동안 아무것도 누를 수 없다(화면 가득 달려든다).
              굵은 걸음이 아닐 때만 일어나니, 자리를 비운 동안에는 벌칙이 없다 */
           var broke = Math.min(w.stock, TURN_BREAK); w.stock -= broke; w.stun = TURN_STUN; w.seats[i] = { wait: 0 }; state.turnedRun = (state.turnedRun || 0) + 1;
@@ -2703,39 +2713,61 @@
     return dt > 0 ? 1 + (PUSH_MULT - 1) * on / dt : 1;
   }
   /*
-   * ---------- 3.9.7 6구역을 새로 만들었다: 다리 막기 ----------
-   * 왜: 전에는 초소를 사 두면 통행 물자가 저절로 들어오고, 손이 할 일은 1분에 한 번 누르는 '순찰'뿐이었다.
-   * 그림: 무리가 다리 건너편(x = 1)에서 초소(x = 0)로 걸어온다. BRIDGE_SPAWN 초마다 하나, BRIDGE_BIG_EVERY 번째마다 '큰 놈'.
-   * 손:   그림에서 좀비를 누르면 그 좀비를 쏜다(누른 자리에서 가장 가까운 것). 한 발의 피해는 1 + 화력. 다 깎으면 잡는다.
-   *       잡으면 그 좀비가 지고 온 몫(통행 물자 초당 × BRIDGE_SPAWN 초 × 큰 놈은 BRIDGE_BIG_CARRY 배)을 받는다.
-   *       손으로 연달아 잡으면 '연속' 배수가 오른다(한 마리에 BRIDGE_COMBO_STEP, 상한 comboCap). BRIDGE_COMBO_HOLD 초 동안 못 잡으면 줄어든다.
-   *       큰 놈이 초소에 닿으면 연속이 처음으로 돌아간다. 그래서 "앞의 약한 것부터 치워 연속을 올릴까, 큰 놈부터 잡을까"를 고른다.
-   * 자동: 초소장은 bridgeShotSeconds 초마다 맨 앞의 것을 쏜다(보통 것은 두 발, 큰 놈은 네 발). 연속은 쌓지 못한다(1배).
-   * 가만히: 아무도 쏘지 않으면 무리는 초소에 닿고, 초소가 막으면서 몫의 BRIDGE_LEAK 만 건진다. 가만히 둠 < 초소장 < 손.
-   * 줄:   초소(값) · 화력(한 발의 피해) · 사기(연속 상한).
-   * 긴 dt(자리 비움 · 굵은 걸음)에서는 좀비를 하나하나 세지 않고 초소장이 있으면 1배, 없으면 BRIDGE_LEAK 배로 친다.
+   * ---------- 6구역 다리 막기 (3.9.7 에 처음, 4.1.2 에 다시) ----------
+   * 4.1.2 에 고친 까닭(해 보신 말씀): ① 누르기만 하면 절대 안 뚫린다 ② 좀비가 적다 ③ 1초마다 하나씩 와서 띡-띡-띡뿐이다 ④ 긴박한 때가 없다.
+   * 그림: 무리가 다리 건너편(x = 1)에서 초소(x = 0)로 온다. 하나씩이 아니라 '무더기'로 온다(1~4마리, 사이는 들쭉날쭉). 평균은 BRIDGE_SPAWN 초에 한 마리.
+   * 종류: 보통(2발) · 뛰는 놈(1발, 빠르다) · 튼튼한 놈(4발, 느리다, 몫 2배) · 큰 놈(BRIDGE_BIG_EVERY 번째마다, 14발, 몫 5배).
+   * 방벽: 초소 앞의 방벽이 wallMax 만큼 버틴다. 닿은 놈은 방벽을 깎고(종류마다 hit) 몫의 BRIDGE_LEAK 만 남긴다. 방벽은 WALL_FIX 초에 1씩 고쳐진다.
+   *       방벽이 다 깎이면 '뚫렸다': BREACH_SECONDS 초 동안 쏠 수 없고 아무것도 못 받는다. 연속은 처음으로. 그 뒤 방벽을 다시 세운다.
+   * 떼:   손을 쓰고 있을 때(BRIDGE_HAND 초 안에 쏜 적이 있을 때) WAVE_EVERY 초마다 떼가 온다. WAVE_WARN 초 미리 알리고, WAVE_SECONDS 초 동안 세 배로 몰려온다.
+   *       뚫리지 않고 넘기면 '떼를 막았다': 통행 물자 WAVE_PAY 초 치 × 연속 배수.
+   * 손:   그림에서 누른 자리에서 가장 가까운 것을 쏜다. 한 발의 피해는 1 + 화력. 잡으면 몫 × 연속 배수.
+   *       손으로 잡을 때마다 수류탄이 찬다(nadeNeed 마리). 던지면 다리 위의 모두가 NADE_DMG 만큼 깎인다. 언제 던질지 고른다.
+   * 자동: 초소장은 bridgeShotSeconds 초마다 맨 앞의 것을 쏜다(한 발에 AUTO_DMG). 연속은 쌓지 못한다(1배). 혼자서는 다 못 막아 가끔 뚫린다.
+   * 가만히: 아무도 쏘지 않으면 자꾸 뚫린다. 가만히 둠 < 초소장 < 손.
+   * 긴 dt(자리 비움 · 굵은 걸음)에서는 하나하나 세지 않고 초소장이 있으면 AWAY_AUTO 배, 없으면 BRIDGE_LEAK 배로 친다(뚫리는 벌칙도 없다).
    */
-  var BRIDGE_SPAWN = 1.5, BRIDGE_WALK = 12, BRIDGE_WALK_BIG = 18, BRIDGE_HP = 3, BRIDGE_BIG_HP = 12, BRIDGE_BIG_EVERY = 8, BRIDGE_BIG_CARRY = 4, BRIDGE_LEAK = 0.2;
-  var BRIDGE_COMBO_STEP = 0.1, BRIDGE_COMBO_HOLD = 4, BRIDGE_COMBO_BASE = 2, BRIDGE_SHOT_SECONDS = 1, BRIDGE_WAVE = 20, FIRE_MAX = 3, MORALE_MAX = 4, MORALE_STEP = 0.5;
+  var BRIDGE_SPAWN = 0.8, BRIDGE_BIG_EVERY = 12, BRIDGE_LEAK = 0.2, BRIDGE_HP = 2, BRIDGE_BIG_HP = 14, BRIDGE_WALK = 11, BRIDGE_WALK_BIG = 18, BRIDGE_BIG_CARRY = 5;
+  var BRIDGE_KINDS = {
+    norm:  { hp: 2,  walk: 11, carry: 1, hit: 1 },
+    run:   { hp: 1,  walk: 5,  carry: 1, hit: 1 },
+    tough: { hp: 4,  walk: 14, carry: 2, hit: 2 },
+    big:   { hp: 14, walk: 18, carry: 5, hit: 5 }
+  };
+  var WALL_BASE = 10, WALL_FIX = 2.5, BREACH_SECONDS = 4, BRIDGE_HAND = 30, AUTO_DMG = 2, AWAY_AUTO = 0.6;
+  var WAVE_FIRST = 25, WAVE_EVERY = 45, WAVE_WARN = 3, WAVE_SECONDS = 7, WAVE_RATE = 3, WAVE_PAY = 12;
+  var WAVE_STREAK_MAX = 10, WAVE_GROW = 0.2, WAVE_GROW_PAY = 0.25;      // 잇달아 막은 떼 하나마다: 다음 떼의 빽빽함 +20%, 받는 것 +25%
+  var NADE_KILLS = 20, NADE_MIN = 8, NADE_DMG = 6;
+  var BRIDGE_COMBO_STEP = 0.1, BRIDGE_COMBO_HOLD = 4, BRIDGE_COMBO_BASE = 2, BRIDGE_SHOT_SECONDS = 1, BRIDGE_SHOT_MIN = 0.8, BRIDGE_WAVE = 20, FIRE_MAX = 3, MORALE_MAX = 4, MORALE_STEP = 0.5;
   var FIRE_COST = 2e26, FIRE_GROWTH = 60, MORALE_COST = 4e26, MORALE_GROWTH = 25;
-  var BRIDGE_SHOT_MIN = 0.8;
-  function newBridge() { return { zs: [], spawn: 0, n: 0, shot: 0, combo: 1, hold: 0 }; }
-  function bridgeOf(state) { var b = state.bridge; if (!b || typeof b !== 'object' || !Array.isArray(b.zs)) b = state.bridge = newBridge(); return b; }
+  function newBridge() { return { zs: [], spawn: 1, n: 0, shot: 0, combo: 1, hold: 0, wall: WALL_BASE, fix: 0, down: 0, hand: 999, waveIn: WAVE_FIRST, wave: 0, warn: 0, hurt: 0, nade: 0, streak: 0 }; }
+  function bridgeOf(state) {
+    var b = state.bridge; if (!b || typeof b !== 'object' || !Array.isArray(b.zs)) b = state.bridge = newBridge();
+    if (!(b.wall >= 0)) b.wall = wallMax(state); if (!(b.waveIn > 0) && !(b.wave > 0) && !(b.warn > 0)) b.waveIn = WAVE_EVERY; if (!(b.hand >= 0)) b.hand = 999; if (!(b.nade >= 0)) b.nade = 0;
+    return b;
+  }
+  function wallMax(state) { return WALL_BASE + Math.round(mods(state).wall); }
+  function nadeNeed(state) { return Math.max(NADE_MIN, NADE_KILLS - 4 * Math.round(mods(state).nade)); }
   function comboCap(state) { return BRIDGE_COMBO_BASE + MORALE_STEP * clamp(safeCount(state.morale), 0, MORALE_MAX); }
   function tapDamage(state) { return 1 + clamp(safeCount(state.firepower), 0, FIRE_MAX); }
-  function bridgeShotSeconds(state) { return Math.max(BRIDGE_SHOT_MIN, BRIDGE_SHOT_SECONDS * assistFactor(state)); }      // 4.1.0: 특성으로 빨라져도 바닥이 있다(초소장 혼자 다 잡아 버리면 손이 할 일이 없다)
+  function bridgeShotSeconds(state) { return Math.max(BRIDGE_SHOT_MIN, BRIDGE_SHOT_SECONDS * assistFactor(state)); }      // 특성으로 빨라져도 바닥이 있다(초소장 혼자 다 잡아 버리면 손이 할 일이 없다)
   function fireCost(state) { return zoneOpen(state, 5) && (state.firepower || 0) < FIRE_MAX ? Math.ceil(FIRE_COST * Math.pow(FIRE_GROWTH, state.firepower || 0) * mods(state).cost) : Infinity; }
   function buyFire(state) { if (!zoneOpen(state, 5)) return fail('locked'); return pay(state, fireCost(state), function () { state.firepower = (state.firepower || 0) + 1; }); }
   function moraleCost(state) { return zoneOpen(state, 5) && (state.morale || 0) < MORALE_MAX ? Math.ceil(MORALE_COST * Math.pow(MORALE_GROWTH, state.morale || 0) * mods(state).cost) : Infinity; }
   function buyMorale(state) { if (!zoneOpen(state, 5)) return fail('locked'); return pay(state, moraleCost(state), function () { state.morale = (state.morale || 0) + 1; }); }
   function bridgeWave(state) { return 1 + Math.floor((state.bridgeKills || 0) / BRIDGE_WAVE); }
+  function kindOf(z) { return BRIDGE_KINDS[z.k] || (z.big ? BRIDGE_KINDS.big : BRIDGE_KINDS.norm); }
   /** 좀비 하나의 몫을 준다. mult: 손 = 연속 배수, 초소장 = 1, 닿았다 = BRIDGE_LEAK. */
-  function bridgePay(state, z, mult) { var gain = guardRate(state) * BRIDGE_SPAWN * (z.big ? BRIDGE_BIG_CARRY : 1) * mult; if (gain > 0) { earn(state, gain); state.guardEarned += gain; } return gain; }
+  function bridgePay(state, z, mult) { var gain = guardRate(state) * BRIDGE_SPAWN * kindOf(z).carry * mult * (z.w ? 0.5 : 1); if (gain > 0) { earn(state, gain); state.guardEarned += gain; } return gain; }
   function bridgeKill(state, idx, byHand) {
     var b = bridgeOf(state), z = b.zs[idx]; b.zs.splice(idx, 1);
     var gain = bridgePay(state, z, byHand ? b.combo : 1);
     state.bridgeKills = (state.bridgeKills || 0) + 1;
-    if (byHand) { state.handKills = (state.handKills || 0) + 1; if (z.big) state.bigKills = (state.bigKills || 0) + 1; b.combo = Math.min(comboCap(state), b.combo + BRIDGE_COMBO_STEP * (z.big ? 3 : 1)); b.hold = BRIDGE_COMBO_HOLD; if (b.combo > (state.comboBest || 1)) state.comboBest = b.combo; }
+    if (byHand) {
+      state.handKills = (state.handKills || 0) + 1; if (z.big) state.bigKills = (state.bigKills || 0) + 1;
+      b.combo = Math.min(comboCap(state), b.combo + BRIDGE_COMBO_STEP * (z.big ? 3 : 1)); b.hold = BRIDGE_COMBO_HOLD; if (b.combo > (state.comboBest || 1)) state.comboBest = b.combo;
+      b.nade = Math.min(nadeNeed(state), (b.nade || 0) + 1);
+    }
     return gain;
   }
   /** 손으로 쏜다. x(0~1)를 주면 그 자리에서 가장 가까운 좀비, 안 주면 맨 앞의 것. */
@@ -2743,38 +2775,79 @@
     if (!zoneOpen(state, 5)) return fail('locked');
     if (!(state.posts > 0)) return fail('stopped');
     var b = bridgeOf(state);
+    if (b.down > 0) return fail('down');
+    b.hand = 0;
     if (!b.zs.length) return fail('empty');
     var idx = 0, best = Infinity, aim = typeof x === 'number' && isFinite(x);
     b.zs.forEach(function (z, i) { var d = aim ? Math.abs(z.x - x) : z.x; if (d < best) { best = d; idx = i; } });
-    var z = b.zs[idx], dmg = tapDamage(state), out = { ok: true, x: z.x, big: !!z.big, dmg: dmg, kill: false, gain: 0, combo: b.combo, left: 0 };
+    var z = b.zs[idx], dmg = tapDamage(state), out = { ok: true, x: z.x, big: !!z.big, k: z.k || 'norm', dmg: dmg, kill: false, gain: 0, combo: b.combo, left: 0 };
     z.hp -= dmg; state.shotsRun = (state.shotsRun || 0) + 1;
     if (z.hp <= 0) { out.kill = true; out.gain = bridgeKill(state, idx, true); out.combo = b.combo; } else out.left = z.hp;
     return out;
   }
+  /** 수류탄을 던진다: 다리 위의 모두가 NADE_DMG 만큼 깎인다. 쓰러진 것은 손이 잡은 것으로 친다. */
+  function throwNade(state) {
+    if (!zoneOpen(state, 5)) return fail('locked');
+    if (!(state.posts > 0)) return fail('stopped');
+    var b = bridgeOf(state);
+    if (b.down > 0) return fail('down');
+    if (!((b.nade || 0) >= nadeNeed(state))) return fail('notready');
+    if (!b.zs.length) return fail('empty');
+    b.nade = 0; b.hand = 0;
+    var gain = 0, kills = 0, hits = [];
+    for (var i = b.zs.length - 1; i >= 0; i--) { var z = b.zs[i]; z.hp -= NADE_DMG; hits.push({ x: z.x, big: !!z.big, kill: z.hp <= 0 }); if (z.hp <= 0) { gain += bridgeKill(state, i, true); kills++; } }
+    b.nade = 0;      // 수류탄으로 잡은 것으로 다음 수류탄이 차지는 않는다
+    return { ok: true, gain: gain, kills: kills, hits: hits, combo: b.combo };
+  }
+  function spawnOne(b, roll, x, wave) {
+    b.n = (b.n || 0) + 1;
+    var r = roll(), k = b.n % BRIDGE_BIG_EVERY === 0 ? 'big' : r < 0.18 ? 'run' : r < 0.33 ? 'tough' : 'norm', d = BRIDGE_KINDS[k];
+    b.zs.push({ x: x, hp: d.hp, max: d.hp, big: k === 'big' ? 1 : 0, k: k, id: b.n % 1000 }); if (wave) b.zs[b.zs.length - 1].w = 1;      // 떼로 온 것은 몫이 절반(떼를 막은 값은 따로 받는다)
+  }
   function stepBridge(state, dt, rng, events) {
     if (!zoneOpen(state, 5) || !(state.posts > 0)) return;
     dt = safeNum(dt, 0); if (!(dt > 0)) return;
-    var b = bridgeOf(state), auto = autoEvents(state, 5);
-    if (dt > 5) {      // 굵은 걸음: 하나하나 세지 않는다
-      var flat = guardRate(state) * dt * (auto ? 1 : BRIDGE_LEAK); earn(state, flat); state.guardEarned += flat;
-      b.zs = []; b.spawn = 0; b.shot = 0; b.combo = 1; b.hold = 0; return;
+    var b = bridgeOf(state), auto = autoEvents(state, 5) && (state.upgrades.autoguard || 0) > 0, roll = typeof rng === 'function' ? rng : Math.random;
+    if (dt > 5) {      // 굵은 걸음: 하나하나 세지 않는다. 뚫리는 벌칙도 없다
+      var flat = guardRate(state) * dt * (auto ? AWAY_AUTO : BRIDGE_LEAK); earn(state, flat); state.guardEarned += flat;
+      b.zs = []; b.spawn = 1; b.shot = 0; b.combo = 1; b.hold = 0; b.wall = wallMax(state); b.down = 0; b.wave = 0; b.warn = 0; b.hurt = 0; b.hand = 999; b.streak = 0; return;
     }
-    var steps = Math.max(1, Math.ceil(dt / 0.25)), h = dt / steps, shotEvery = bridgeShotSeconds(state);
+    var steps = Math.max(1, Math.ceil(dt / 0.25)), h = dt / steps, shotEvery = bridgeShotSeconds(state), wmax = wallMax(state);
+    b.hand = Math.min(999, (b.hand || 0) + dt);
     for (var k = 0; k < steps; k++) {
-      b.spawn += h / BRIDGE_SPAWN;
-      while (b.spawn >= 1) { b.spawn -= 1; b.n = (b.n || 0) + 1; var big = b.n % BRIDGE_BIG_EVERY === 0; b.zs.push({ x: 1, hp: big ? BRIDGE_BIG_HP : BRIDGE_HP, max: big ? BRIDGE_BIG_HP : BRIDGE_HP, big: big ? 1 : 0, id: b.n % 1000 }); }
+      if (b.down > 0) {      // 뚫려 있다: 다시 세우는 동안 아무 일도 없다
+        b.down -= h; if (b.down <= 0) { b.down = 0; b.wall = wmax; b.spawn = 1; if (events) events.push({ type: 'bridge-back' }); }
+        continue;
+      }
+      // 떼: 손을 쓰고 있을 때만 다음 떼까지의 시간이 간다
+      if (b.wave > 0) { b.wave -= h; if (b.wave <= 0) { b.wave = 0; b.waveIn = WAVE_EVERY; if (!(b.wall <= 0)) { var held = guardRate(state) * WAVE_PAY * mods(state).held * b.combo * (1 + WAVE_GROW_PAY * (b.streak || 0)); earn(state, held); state.guardEarned += held; state.wavesHeld = (state.wavesHeld || 0) + 1; b.streak = Math.min(WAVE_STREAK_MAX, (b.streak || 0) + 1); if (b.streak > (state.streakBest || 0)) state.streakBest = b.streak; if (events) events.push({ type: 'bridge-held', gain: held, streak: b.streak }); } } }
+      else if (b.warn > 0) { b.warn -= h; if (b.warn <= 0) { b.warn = 0; b.wave = WAVE_SECONDS; b.hurt = 0; if (events) events.push({ type: 'bridge-wave' }); } }
+      else if (b.hand < BRIDGE_HAND && TEST.wave !== 0) { b.waveIn -= h * TEST.wave; if (b.waveIn <= 0) { b.warn = WAVE_WARN; if (events) events.push({ type: 'bridge-warn' }); } }
+      // 무더기로 온다: 1~4마리, 다음 무더기까지는 마릿수 × BRIDGE_SPAWN × (0.6~1.4)초
+      b.spawn -= h * (b.wave > 0 ? WAVE_RATE * (1 + WAVE_GROW * (b.streak || 0)) : 1);      // 떼를 잇달아 막을수록 다음 떼가 더 빽빽하다(언젠가는 뚫린다). 받는 것도 그만큼 는다
+      if (b.spawn <= 0 && b.zs.length < 60) {
+        var pr = roll(), pack = pr < 0.4 ? 1 : pr < 0.7 ? 2 : pr < 0.9 ? 3 : 4;
+        for (var q = 0; q < pack; q++) spawnOne(b, roll, 1 + q * 0.035, b.wave > 0);
+        b.spawn += pack * BRIDGE_SPAWN * (0.6 + roll() * 0.8);
+      }
       for (var i = b.zs.length - 1; i >= 0; i--) {
-        var z = b.zs[i]; z.x -= h / (z.big ? BRIDGE_WALK_BIG : BRIDGE_WALK);
-        if (z.x <= 0) {      // 초소에 닿았다: 초소가 막고 조금만 건진다. 큰 놈이면 연속이 처음으로
-          b.zs.splice(i, 1); bridgePay(state, z, BRIDGE_LEAK);
+        var z = b.zs[i], kd = kindOf(z); z.x -= h / kd.walk;
+        if (z.x <= 0) {      // 방벽에 닿았다: 방벽을 깎고, 몫은 조금만 남긴다. 큰 놈이면 연속이 처음으로
+          b.zs.splice(i, 1); bridgePay(state, z, BRIDGE_LEAK); b.wall -= kd.hit; b.hurt = 1;
           if (z.big) { b.combo = 1; b.hold = 0; }
-          if (events) events.push({ type: 'bridge-leak', big: !!z.big });
+          if (events) events.push({ type: 'bridge-leak', big: !!z.big, wall: Math.max(0, b.wall) });
         }
       }
+      if (b.wall <= 0) {      // 뚫렸다
+        b.wall = 0; b.down = BREACH_SECONDS; b.zs = []; b.combo = 1; b.hold = 0; b.wave = 0; b.warn = 0; b.waveIn = WAVE_EVERY; b.streak = 0; state.breaches = (state.breaches || 0) + 1;
+        if (events) events.push({ type: 'bridge-breach' });
+        continue;
+      }
+      if (b.wall < wmax) { b.fix = (b.fix || 0) + h / (WALL_FIX / mods(state).wallfix); while (b.fix >= 1 && b.wall < wmax) { b.fix -= 1; b.wall++; } } else b.fix = 0;
       if (auto) {
         b.shot += h / shotEvery;
         if (b.shot >= 1) {
-          if (b.zs.length) { b.shot -= 1; var fi = 0; b.zs.forEach(function (zz, ii) { if (zz.x < b.zs[fi].x) fi = ii; }); var t = b.zs[fi]; t.hp -= t.big ? BRIDGE_BIG_HP / 4 : t.max / 2;      /* 4.1.0: 초소장의 한 발은 보통 것의 절반만 깎는다. 혼자서는 절반쯤 놓치고, 손이 마무리하면(마지막 한 발이 손이면 손이 잡은 것) 다 잡는다 */ var ev = { type: 'bridge-shot', x: t.x, big: !!t.big, kill: t.hp <= 0 }; if (t.hp <= 0) ev.gain = bridgeKill(state, fi, false); if (events) events.push(ev); }
+          if (b.zs.length) { b.shot -= 1; var fi = 0; b.zs.forEach(function (zz, ii) { if (zz.x < b.zs[fi].x) fi = ii; }); var t = b.zs[fi]; t.hp -= AUTO_DMG; var ev = { type: 'bridge-shot', x: t.x, big: !!t.big, kill: t.hp <= 0 }; if (t.hp <= 0) ev.gain = bridgeKill(state, fi, false); if (events) events.push(ev); }
           else b.shot = 1;
         }
       }
@@ -4327,7 +4400,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    seatCount: seatCount, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    seatCount: seatCount, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
@@ -4347,7 +4420,7 @@
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
     AUTO_MERGE_ROOM: AUTO_MERGE_ROOM, boardRoom: boardRoom, BOARD_SIZE: BOARD_SIZE, BOX_MAX: BOX_MAX, BOX_STEP: BOX_STEP, FEED_SECONDS: FEED_SECONDS, MERGE_SECONDS: MERGE_SECONDS, BOARD_BASE: BOARD_BASE, BOARD_MAX: BOARD_MAX, FEED_STEP: FEED_STEP, AUTO_MERGE_SECONDS: AUTO_MERGE_SECONDS, autoMergeSeconds: autoMergeSeconds, BOXES: BOXES, feedSeconds: feedSeconds, spawnLevel: spawnLevel, boardSize: boardSize, boardFull: boardFull, machineGain: machineGain, contractHave: contractHave, heldLevel: heldLevel, CONTRACT_PAY_SECONDS: CONTRACT_PAY_SECONDS, boxName: boxName,
     boxWorth: boxWorth, boardSum: boardSum, boxRate: boxRate, boxPartner: boxPartner, mergeBox: mergeBox, mergeable: mergeable, stepBoard: stepBoard, lowestPair: lowestPair,
-    CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, TEST: TEST, BRIDGE_SPAWN: BRIDGE_SPAWN, BRIDGE_WALK: BRIDGE_WALK, BRIDGE_WALK_BIG: BRIDGE_WALK_BIG, BRIDGE_HP: BRIDGE_HP, BRIDGE_BIG_HP: BRIDGE_BIG_HP, BRIDGE_BIG_EVERY: BRIDGE_BIG_EVERY, BRIDGE_BIG_CARRY: BRIDGE_BIG_CARRY, BRIDGE_LEAK: BRIDGE_LEAK, BRIDGE_COMBO_STEP: BRIDGE_COMBO_STEP, BRIDGE_COMBO_HOLD: BRIDGE_COMBO_HOLD, BRIDGE_WAVE: BRIDGE_WAVE, FIRE_MAX: FIRE_MAX, MORALE_MAX: MORALE_MAX, bridgeOf: bridgeOf, comboCap: comboCap, tapDamage: tapDamage, bridgeShotSeconds: bridgeShotSeconds, fireCost: fireCost, buyFire: buyFire, moraleCost: moraleCost, buyMorale: buyMorale, bridgeWave: bridgeWave, shootBridge: shootBridge, stepBridge: stepBridge, HORDE_SECONDS: HORDE_SECONDS, HORDE_WARN: HORDE_WARN, HORDE_RUSH_SPEED: HORDE_RUSH_SPEED, HORDE_RUSH_DIST: HORDE_RUSH_DIST, HORDE_RUSH_CARS: HORDE_RUSH_CARS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, GRADE_STEP: GRADE_STEP, CREW_STEP: CREW_STEP, PULL_SECONDS: PULL_SECONDS, HORN_PUSH: HORN_PUSH, pullCar: pullCar, blowHorn: blowHorn, hornMax: hornMax, carMax: carMax,
+    CAR_SECONDS: CAR_SECONDS, CAR_BASE: CAR_BASE, CAR_MAX: CAR_MAX, CAR_STEP: CAR_STEP, AUTO_CARS: AUTO_CARS, AUTO_NEAR: AUTO_NEAR, TEST: TEST, BRIDGE_SPAWN: BRIDGE_SPAWN, BRIDGE_WALK: BRIDGE_WALK, BRIDGE_WALK_BIG: BRIDGE_WALK_BIG, BRIDGE_HP: BRIDGE_HP, BRIDGE_BIG_HP: BRIDGE_BIG_HP, BRIDGE_BIG_EVERY: BRIDGE_BIG_EVERY, BRIDGE_BIG_CARRY: BRIDGE_BIG_CARRY, BRIDGE_LEAK: BRIDGE_LEAK, BRIDGE_COMBO_STEP: BRIDGE_COMBO_STEP, BRIDGE_COMBO_HOLD: BRIDGE_COMBO_HOLD, BRIDGE_WAVE: BRIDGE_WAVE, FIRE_MAX: FIRE_MAX, MORALE_MAX: MORALE_MAX, bridgeOf: bridgeOf, wallMax: wallMax, nadeNeed: nadeNeed, throwNade: throwNade, BRIDGE_KINDS: BRIDGE_KINDS, WALL_BASE: WALL_BASE, WALL_FIX: WALL_FIX, BREACH_SECONDS: BREACH_SECONDS, WAVE_EVERY: WAVE_EVERY, WAVE_WARN: WAVE_WARN, WAVE_SECONDS: WAVE_SECONDS, WAVE_PAY: WAVE_PAY, NADE_DMG: NADE_DMG, AWAY_AUTO: AWAY_AUTO, AUTO_DMG: AUTO_DMG, comboCap: comboCap, tapDamage: tapDamage, bridgeShotSeconds: bridgeShotSeconds, fireCost: fireCost, buyFire: buyFire, moraleCost: moraleCost, buyMorale: buyMorale, bridgeWave: bridgeWave, shootBridge: shootBridge, stepBridge: stepBridge, HORDE_SECONDS: HORDE_SECONDS, HORDE_WARN: HORDE_WARN, HORDE_RUSH_SPEED: HORDE_RUSH_SPEED, HORDE_RUSH_DIST: HORDE_RUSH_DIST, HORDE_RUSH_CARS: HORDE_RUSH_CARS, LONG_CARS: LONG_CARS, CAR_NORM: CAR_NORM, RAIL_SCALE: RAIL_SCALE, GRADE_STEP: GRADE_STEP, CREW_STEP: CREW_STEP, PULL_SECONDS: PULL_SECONDS, HORN_PUSH: HORN_PUSH, pullCar: pullCar, blowHorn: blowHorn, hornMax: hornMax, carMax: carMax,
     stepRail: stepRail, carMult: carMult, carSeconds: carSeconds, railUnits: railUnits, trainInfo: trainInfo, sendTrain: sendTrain, trainGain: trainGain,
     totalBuildings: totalBuildings, sweepRate: sweepRate, incomePerSec: incomePerSec, nextAntibodyAt: nextAntibodyAt, ANTI_STEP: ANTI_STEP, ANTI_CURVE: ANTI_CURVE, AUTO_DEF_STEPS: AUTO_DEF_STEPS, repairInterval: repairInterval, cycleAutoDef: cycleAutoDef, autoDefLeft: autoDefLeft, rerollsLeft: rerollsLeft, rerollPerks: rerollPerks, siegeFactor: siegeFactor, SIEGE_FADE: SIEGE_FADE, SIEGE_FLOOR: SIEGE_FLOOR, RECORDS: RECORDS, RECORD_CHANCE: RECORD_CHANCE, RECORD_BONUS: RECORD_BONUS, RECORD_BONUS_MAX: RECORD_BONUS_MAX, RECORD_TREATS: RECORD_TREATS, recordMult: recordMult, recordCount: recordCount, CARGOS: CARGOS, SALVAGE_SECONDS: SALVAGE_SECONDS, SALVAGE_BONUS: SALVAGE_BONUS, SALVAGE_BONUS_MAX: SALVAGE_BONUS_MAX, SALVAGE_TREATS: SALVAGE_TREATS, salvageMult: salvageMult, cargoCount: cargoCount, salvageReward: salvageReward, fillSalvage: fillSalvage, cargoValue: cargoValue, CLIENTS: CLIENTS, CONTRACT_SECONDS: CONTRACT_SECONDS, CONTRACT_BONUS: CONTRACT_BONUS, CONTRACT_BONUS_MAX: CONTRACT_BONUS_MAX, CONTRACT_TREATS: CONTRACT_TREATS, contractMult: contractMult, clientCount: clientCount, contractReward: contractReward, fillContract: fillContract, REGULARS: REGULARS, ORDER_SECONDS: ORDER_SECONDS, ORDER_BONUS: ORDER_BONUS, ORDER_BONUS_MAX: ORDER_BONUS_MAX, ORDER_TREATS: ORDER_TREATS, orderMult: orderMult, regularCount: regularCount, orderReward: orderReward, fillOrder: fillOrder, PASSERS: PASSERS, PASSER_CHANCE: PASSER_CHANCE, PASSER_BONUS_MAX: PASSER_BONUS_MAX, passerMult: passerMult, passerCount: passerCount, passBridge: passBridge, postDefense: postDefense, POST_DEFENSE: POST_DEFENSE, LOW_RUN_MAX: LOW_RUN_MAX, RECIPES: RECIPES, JAM_SELF_FIX: JAM_SELF_FIX, TRUCK_WAIT: TRUCK_WAIT, TRUCK_STOCK_MAX: TRUCK_STOCK_MAX, recipeOf: recipeOf, setRecipe: setRecipe, repairJam: repairJam, truckReward: truckReward, loadTruck: loadTruck, stepLineEvents: stepLineEvents, stepContracts: stepContracts, ZONE_EVENTS: ZONE_EVENTS, ZEV_WAIT: ZEV_WAIT, ZEV_NOW: ZEV_NOW, ZEV_BOOST: ZEV_BOOST, ZEV_BOOST_MAX: ZEV_BOOST_MAX, ZEV_AUTO: ZEV_AUTO, ZEV_MIN_PEOPLE: ZEV_MIN_PEOPLE, zevReward: zevReward, answerZoneEvent: answerZoneEvent, stepZoneEvents: stepZoneEvents, FOCUS_SECONDS: FOCUS_SECONDS, FOCUS_MULT: FOCUS_MULT, FOCUS_COOL: FOCUS_COOL, PUSHES: PUSHES, PUSH_SECONDS: PUSH_SECONDS, PUSH_MULT: PUSH_MULT, PUSH_COOL: PUSH_COOL, pushZone: pushZone, focusLab: focusLab, researchNow: researchNow, CAP_BASE: CAP_BASE, CAP_PER: CAP_PER, CAP_OVER: CAP_OVER, experience: experience, upgradeSoftCap: upgradeSoftCap, autoEvents: autoEvents, setAutoEvents: setAutoEvents, AUTO_SHARE: AUTO_SHARE, autoShare: autoShare, SCOUT_MINUTES: SCOUT_MINUTES, scoutNeed: scoutNeed, scoutLeft: scoutLeft, zoneEntered: zoneEntered, DANGER_PROD: DANGER_PROD, dangerPower: dangerPower, UNBROKEN_MULT: UNBROKEN_MULT, ONEWALL_MULT: ONEWALL_MULT, HORDE_BREACHES: HORDE_BREACHES, ONESHOT_SECONDS: ONESHOT_SECONDS, DANGER_SERUM: DANGER_SERUM, dangerSerum: dangerSerum, DANGER_COST_LATE: DANGER_COST_LATE, DANGER_COST_KNEE: DANGER_COST_KNEE, DANGER_MAX: DANGER_MAX, DANGER_HORDE: DANGER_HORDE, DANGER_COST: DANGER_COST, DANGER_ANTIBODY: DANGER_ANTIBODY, DANGER_TICKETS: DANGER_TICKETS, RESCUE_TIERS: RESCUE_TIERS, RESCUE_BONUS: RESCUE_BONUS, dangerOf: dangerOf, dangerMax: dangerMax, dangerHorde: dangerHorde, dangerCost: dangerCost, setDangerNext: setDangerNext, rescueTier: rescueTier, rescueMult: rescueMult, rescueNext: rescueNext, COSMETICS: COSMETICS, COS_SLOTS: COS_SLOTS, COS_BASE: COS_BASE, FLAG_REWARDS: FLAG_REWARDS, grantFlags: grantFlags, RARITIES: RARITIES, GACHA_ODDS: GACHA_ODDS, GACHA_PITY: GACHA_PITY, TICKET_TREATS: TICKET_TREATS, SHARDS_DUP: SHARDS_DUP, SHARDS_COST: SHARDS_COST, gachaTable: gachaTable, gachaPityLeft: gachaPityLeft, pullGacha: pullGacha, buyTicket: buyTicket, craftCosmetic: craftCosmetic, wearCosmetic: wearCosmetic, ownsCosmetic: ownsCosmetic, cosmeticLook: cosmeticLook, STAGES: STAGES, REGIONS: REGIONS, STAGE_RULES: STAGE_RULES, STAGE_TREATS: STAGE_TREATS, STAGE_OPEN_ZONE: STAGE_OPEN_ZONE, stagesOpen: stagesOpen, stageMarks: stageMarks, stageBlock: stageBlock, createStage: createStage, stageStatus: stageStatus, stageDef: stageDef, stageRuleTexts: stageRuleTexts, stageGoalText: stageGoalText, finishStage: finishStage, stageMarkCount: stageMarkCount, badgeCount: badgeCount, stageRule: stageRule, CHALLENGES: CHALLENGES, challengeBlock: challengeBlock, startChallenge: startChallenge, quitChallenge: quitChallenge, streakTreats: streakTreats, STREAK_TREATS_MAX: STREAK_TREATS_MAX, MEDAL_BONUS: MEDAL_BONUS, SPRINT_SECONDS: SPRINT_SECONDS, HORDE_MULT: HORDE_MULT, challengeOpen: challengeOpen, challengeOn: challengeOn, activeChallenge: activeChallenge, challengeGoalText: challengeGoalText, setNextChallenge: setNextChallenge, medalCount: medalCount, medalMult: medalMult, checkChallenge: checkChallenge, ROUTE_MAX: ROUTE_MAX, rebalanceLine: rebalanceLine, NIGHT_EASE: NIGHT_EASE, EDGE_GAIN: EDGE_GAIN, COUNTER_NIGHTS: COUNTER_NIGHTS, easeOn: easeOn, strikeReady: strikeReady, counterReady: counterReady, strike: strike, counterAttack: counterAttack, BOSS_PERKS_MAX: BOSS_PERKS_MAX, DEF_STREAK_STEP: DEF_STREAK_STEP, DEF_STREAK_MAX: DEF_STREAK_MAX, defStreakMult: defStreakMult, effectNow: effectNow, stepOrders: stepOrders, findRecord: findRecord, towerMult: towerMult, antennaCost: antennaCost, maxAntennas: maxAntennas, buyAntenna: buyAntenna, survivorRate: survivorRate, serumCost: serumCost, buySerum: buySerum, SERUM_COSTS: SERUM_COSTS, bridgeSafety: bridgeSafety, postCost: postCost, maxPosts: maxPosts, buyPost: buyPost, guardRate: guardRate, SAFETY_MAX: SAFETY_MAX, SAFE_NIGHT: SAFE_NIGHT, milestoneMult: milestoneMult, milestoneTier: milestoneTier, isTap: isTap, nextMilestone: nextMilestone, buildingCost: buildingCost, maxBuildings: maxBuildings, buyBuilding: buyBuilding,
     buildingRate: buildingRate, searchRate: searchRate,

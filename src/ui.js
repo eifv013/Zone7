@@ -1490,13 +1490,21 @@
       s.addEventListener('animationend', function () { s.remove(); }); wrap.appendChild(s);
     }
     bridgePopFn = bridgePop;
+    $('nade-btn').addEventListener('click', function () {
+      var r = C.throwNade(state); if (!r.ok) return;
+      var now = Date.now(); bridgeFlash = { at: now, kind: 'nade' };
+      r.hits.forEach(function (h, i) { var hx = BR_X0 + Math.min(1, h.x) * BR_W; if (i % 2 === 0 || r.hits.length < 6) bridgeFx.push({ at: now + i * 15, x: hx, kind: 'boom' }); if (h.kill) bridgeFx.push({ at: now, x: hx, kind: 'kill', big: h.big, hand: true, quiet: true }); });
+      if (bridgeFx.length > 60) bridgeFx = bridgeFx.slice(-60);
+      if (r.gain > 0) bridgePop(110, 30, r.kills + '마리 +' + fmt(r.gain), 'held');
+      sfx('rush'); buzz([30, 20, 60]); Store.save(); render();
+    });
     $('bridgescene').addEventListener('click', function (e) {
       var cv = $('bridgescene'), rc = cv.getBoundingClientRect(), key = !(e.clientX > 0) && !(e.clientY > 0);
       var xd = (e.clientX - rc.left) / rc.width * 184, zx = Math.max(0, Math.min(1, (xd - BR_X0) / BR_W));
       var r = key ? C.shootBridge(state) : C.shootBridge(state, zx);
       if (!r.ok) return;
-      var hx = BR_X0 + r.x * BR_W, now = Date.now();
-      bridgeFx.push({ at: now, x: hx, kind: r.kill ? 'kill' : 'hit', big: r.big, hand: true }); if (bridgeFx.length > 24) bridgeFx.shift();
+      var hx = BR_X0 + Math.min(1, r.x) * BR_W, now = Date.now();
+      bridgeFx.push({ at: now, x: hx, kind: r.kill ? 'kill' : 'hit', big: r.big, hand: true }); if (bridgeFx.length > 60) bridgeFx.shift();
       if (r.kill) bridgePop(hx, r.big ? 30 : 38, '+' + fmt(r.gain), r.big ? 'big' : ''); else bridgePop(hx + 4, r.big ? 34 : 42, '-' + r.dmg, 'hit');
       sfx(r.kill ? (r.big ? 'signal' : 'buy') : 'click'); buzz(r.kill ? (r.big ? 30 : 12) : 5); if (r.kill) Store.save(); render();
     });
@@ -2399,8 +2407,8 @@
     ['#0d1326', '#101a30', '#14213a', '#1a2944', '#22324e', '#2c3a56'].forEach(function (c, i) { R(0, i * 8, 184, 8, c); });      // 밤하늘
     [[12, 6], [40, 12], [70, 4], [98, 16], [130, 8], [160, 14], [176, 5], [54, 22], [116, 26], [24, 28], [146, 30]].forEach(function (s, i) { P(s[0], s[1], i % 3 ? '#8a9ac0' : '#e8f0ff'); });
     R(148, 8, 10, 10, '#e8e6dc'); R(147, 10, 12, 6, '#e8e6dc'); R(150, 7, 6, 12, '#e8e6dc'); P(151, 11, '#c9c7ba'); P(154, 14, '#c9c7ba'); R(152, 9, 2, 1, '#c9c7ba');      // 달
-    g.fillStyle = 'rgba(232,230,220,.08)'; g.fillRect(140, 2, 26, 22);
-    [[20, 18, 26], [96, 10, 20], [120, 22, 30]].forEach(function (c) { R(c[0], c[1], c[2], 2, '#26324c'); R(c[0] + 4, c[1] - 1, c[2] - 10, 1, '#26324c'); R(c[0] + 2, c[1] + 2, c[2] - 6, 1, '#1c2740'); });      // 구름
+    /* 4.1.2: 달 둘레에 깔았던 네모난 빛을 없앴다(네모가 그대로 보였다). 대신 달무리를 점으로 둥글게 찍는다 */
+    [[146, 6], [159, 6], [145, 19], [160, 19], [143, 12], [162, 13], [152, 4], [153, 21]].forEach(function (q) { P(q[0], q[1], '#3a4a6a'); });
     [[0, 34, 10, 14], [10, 30, 8, 18], [20, 36, 12, 12], [34, 28, 6, 20], [42, 35, 10, 13], [56, 31, 7, 17], [66, 37, 12, 11], [82, 29, 8, 19], [94, 35, 9, 13], [108, 32, 7, 16], [118, 37, 12, 11], [134, 30, 8, 18], [146, 36, 10, 12], [160, 33, 8, 15], [170, 36, 14, 12]].forEach(function (b, i) { R(b[0], b[1], b[2], b[3], '#131a2c'); if (i % 2) P(b[0] + 2, b[1] + 3, '#f0b878'); if (i % 3 === 0) P(b[0] + b[2] - 3, b[1] + 6, '#f0b878'); });      // 강 건너 도시
     R(0, 48, 184, 60, '#0b1424'); for (var y = 50; y < 108; y += 3) for (var x = (y * 7) % 11; x < 184; x += 13) R(x, y, 5, 1, y < 70 ? '#16243c' : '#111c30');      // 강
     for (var y2 = 74; y2 < 106; y2 += 2) R(150 - (y2 % 4), y2, 8 - (y2 % 3), 1, '#3a4a6a');      // 달빛
@@ -2411,46 +2419,88 @@
     R(2, 34, 26, 28, '#c9c7ba'); R(2, 34, 26, 2, '#e8e6dc'); R(2, 58, 26, 4, '#8a8a82'); R(0, 30, 30, 4, '#7a4f24'); R(0, 30, 30, 1, '#a8743a'); R(6, 40, 10, 8, K); R(7, 41, 8, 6, '#ffe9a0'); R(9, 42, 3, 5, '#3a3a36'); R(9, 41, 3, 2, '#e6c9a0'); R(19, 46, 6, 16, '#55564e'); R(20, 47, 4, 6, '#3a3a36');      // 초소
     R(18, 36, 8, 7, K); R(19, 37, 6, 5, '#f0b400'); spr(g, 20, 37, ['###', '#..', '###', '#.#', '###'], { '#': K });      // 표지 6
     R(12, 24, 4, 6, '#55564e'); R(11, 22, 6, 3, '#8a8a82'); R(16, 22, 2, 3, '#fff2c0');      // 탐조등
-    g.fillStyle = 'rgba(255,242,192,.10)'; g.beginPath(); g.moveTo(18, 23); g.lineTo(184, 34); g.lineTo(184, 64); g.closePath(); g.fill();
-    g.fillStyle = 'rgba(255,242,192,.07)'; g.beginPath(); g.moveTo(18, 23); g.lineTo(184, 44); g.lineTo(184, 58); g.closePath(); g.fill();
-    [[30, 58], [36, 58], [42, 58], [33, 54], [39, 54]].forEach(function (b) { R(b[0], b[1], 6, 4, '#a89a6a'); R(b[0], b[1], 6, 1, '#c9bc8a'); R(b[0], b[1] + 3, 6, 1, '#7a6e48'); });      // 모래주머니
+    [[30, 58], [36, 58], [33, 54]].forEach(function (b) { R(b[0], b[1], 6, 4, '#a89a6a'); R(b[0], b[1], 6, 1, '#c9bc8a'); R(b[0], b[1] + 3, 6, 1, '#7a6e48'); });      // 사수 앞의 모래주머니(방벽은 drawBridge 가 남은 만큼 쌓는다)
+    for (var v = 0; v < 8; v++) { g.fillStyle = 'rgba(4,6,12,' + (0.26 - v * 0.03).toFixed(3) + ')'; g.fillRect(v, 0, 1, 108); g.fillRect(183 - v, 0, 1, 108); }      // 가장자리를 어둡게
     spr(g, 32, 45, ['.kk.', '.ss.', 'gggg', 'gggg=====', '.gg.', '.pp.'], { k: '#3a3a36', s: '#e6c9a0', g: '#4a6a3a', p: '#2a2e36', '=': '#17180f' });      // 사수와 기관총
     return (bridgeBack = cv);
   }
+  /*
+   * 4.1.2 다리 그림을 다듬었다(도트는 그대로, 움직임을 더했다).
+   *   하늘: 구름이 흐르고 별이 깜빡인다. 강 건너 불에서 연기가 오른다. 강: 물결이 흐르고 달빛과 불빛이 일렁인다.
+   *   탐조등이 다리 위를 천천히 훑는다. 쓰러진 것은 난간 너머 강으로 떨어져 물이 튄다. 방벽은 남은 만큼 쌓여 있고 위에 남은 양이 보인다.
+   *   고친 버그: 달 둘레와 불 둘레에 깔았던 반투명 네모가 깜빡여 보였다 → 네모를 없애고 점으로 찍는다.
+   */
+  var bridgeFlash = null;      // 화면을 덮는 한 번의 번쩍임 { at, kind: 'breach' | 'nade' | 'warn' }
   function drawBridge() {
     var cv = $('bridgescene'); if (!cv) return;
     var g = cv.getContext('2d'), now = Date.now(), b = C.bridgeOf(state), K = '#0c0e14', on = state.posts > 0;
     var R = function (x, y, w, h, c) { px(g, x, y, w, h, c); };
     g.imageSmoothingEnabled = false; g.drawImage(bridgeBackdrop(), 0, 0);
-    // 강 건너의 불(깜빡인다)
-    var fl = Math.floor(now / 160) % 2; R(84, 27, 4, 2, '#f08a3a'); R(85, 26 - fl, 1, 1 + fl, '#ffd95a'); R(86, 24, 1, 1, '#5a4a50'); R(87, 22 - fl, 1, 1, '#4a4048'); R(136, 28, 3, 2, '#f08a3a'); R(137, 27, 1, 1, fl ? '#ffd95a' : '#f08a3a'); g.fillStyle = 'rgba(240,138,58,' + (fl ? '.15' : '.10') + ')'; g.fillRect(78, 22, 16, 10);
+    // 하늘: 흐르는 구름, 깜빡이는 별
+    [[20, 18, 26, 9000], [96, 10, 20, 14000], [120, 22, 30, 11000]].forEach(function (c) { var cx = Math.round(((c[0] + now / c[3] * 8) % 230) - 40); R(cx, c[1], c[2], 2, '#26324c'); R(cx + 4, c[1] - 1, c[2] - 10, 1, '#26324c'); R(cx + 2, c[1] + 2, c[2] - 6, 1, '#1c2740'); });
+    [[40, 12, 0], [130, 8, 700], [70, 4, 1300], [176, 5, 400]].forEach(function (s) { if (Math.floor((now + s[2]) / 900) % 3 === 0) R(s[0], s[1], 1, 1, '#ffffff'); });
+    // 강 건너의 불과 연기(네모난 빛은 쓰지 않는다)
+    var fl = Math.floor(now / 160) % 2; R(84, 27, 4, 2, '#f08a3a'); R(85, 26 - fl, 2, 1 + fl, '#ffd95a'); R(83 + fl * 5, 28, 1, 1, '#ffb060'); R(136, 28, 3, 2, '#f08a3a'); R(137, 27 - fl, 1, 1 + fl, '#ffd95a');
+    [[86, 0], [86, 1400], [137, 700]].forEach(function (s) { var a = ((now + s[1]) % 4200) / 4200, sy = Math.round(25 - a * 16), sx = Math.round(s[0] + Math.sin(a * 5 + s[1]) * 2 + a * 3); if (sy > 6) { R(sx, sy, 2, 1, a < 0.5 ? '#4a4048' : '#2e2c3a'); if (a > 0.3) R(sx + 1, sy - 1, 2, 1, '#2e2c3a'); } });
+    // 강: 흐르는 물결, 달빛, 불빛
+    for (var wy = 51; wy < 108; wy += 6) { var wo = Math.floor(now / (wy < 72 ? 260 : 180) + wy * 3) % 23; for (var wx = -wo; wx < 184; wx += 23) R(wx, wy, 4, 1, wy < 72 ? '#1e3050' : '#18263e'); }
+    for (var my = 74; my < 106; my += 2) { var mo = Math.round(Math.sin(now / 500 + my) * 1.5); R(150 - (my % 4) + mo, my, 8 - (my % 3), 1, (my + Math.floor(now / 400)) % 6 ? '#3a4a6a' : '#5a6c90'); }
+    for (var fy = 49; fy < 56; fy += 2) { R(84 + ((fy + Math.floor(now / 200)) % 3), fy, 3, 1, '#6a3a2a'); }
     if (!on) { g.fillStyle = 'rgba(8,10,16,.45)'; g.fillRect(0, 0, 184, 108); R(0, 56, 184, 1, '#b4b8c0'); for (var rx0 = 2; rx0 < 184; rx0 += 8) R(rx0, 57, 1, 5, '#8a8f98'); return; }
+    // 탐조등: 다리 위를 천천히 훑는다(맨 앞의 것을 따라간다)
+    var front = null; b.zs.forEach(function (z) { if (!front || z.x < front.x) front = z; });
+    var aimX = front ? BR_X0 + front.x * BR_W : 150; bridgeBeam += (aimX - bridgeBeam) * 0.05; var bx = bridgeBeam + Math.sin(now / 1300) * 6;
+    g.fillStyle = 'rgba(255,242,192,.09)'; g.beginPath(); g.moveTo(18, 23); g.lineTo(bx - 14, 62); g.lineTo(bx + 16, 62); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,242,192,.10)'; g.fillRect(Math.round(bx - 12), 62, 26, 2);
+    // 방벽(초소 앞): 남은 만큼 쌓여 있다. 위의 줄이 남은 양
+    var wmax = C.wallMax(state), wl = Math.max(0, b.wall) / wmax, rowsW = b.down > 0 ? 0 : Math.max(1, Math.ceil(wl * 3)), hurtW = bridgeLeak && now - bridgeLeak < 160;
+    for (var wr = 0; wr < rowsW; wr++) for (var wc = 0; wc < 2; wc++) { var sbx = 43 + wc * 5 + (wr % 2) * 2 + (hurtW ? 1 : 0), sby = 58 - wr * 4; R(sbx, sby, 6, 4, hurtW ? '#e8d8a8' : '#a89a6a'); R(sbx, sby, 6, 1, '#c9bc8a'); R(sbx, sby + 3, 6, 1, '#7a6e48'); }
+    if (b.down > 0) { [[42, 60], [47, 59], [52, 61], [45, 61]].forEach(function (q, i) { R(q[0], q[1], 4, 2, i % 2 ? '#7a6e48' : '#a89a6a'); }); }
+    R(40, 40, 16, 4, K); R(41, 41, Math.round(14 * wl), 2, wl > 0.5 ? '#7fb85a' : wl > 0.25 ? '#e98a3c' : (Math.floor(now / 140) % 2 ? '#ff5a4a' : '#d8453a'));
     // 건너오는 것들(먼 것부터 그려 가까운 것이 앞에 온다)
     var zs = b.zs.slice().sort(function (p, q) { return q.x - p.x; });
     zs.forEach(function (z) {
-      var x = Math.round(BR_X0 + z.x * BR_W), step = Math.floor(now / (z.big ? 320 : 220) + (z.id || 0)) % 2, hurt = bridgeFx.some(function (f) { return f.kind === 'hit' && now - f.at < 90 && Math.abs(f.x - (BR_X0 + z.x * BR_W)) < 3; });
-      if (z.big) {
+      if (z.x > 1.03) return;
+      var zx = BR_X0 + z.x * BR_W, x = Math.round(zx), k = z.k || (z.big ? 'big' : 'norm'), step = Math.floor(now / (k === 'big' ? 320 : k === 'run' ? 110 : 220) + (z.id || 0)) % 2, hurt = bridgeFx.some(function (f) { return f.kind === 'hit' && now - f.at < 90 && Math.abs(f.x - zx) < 3; });
+      var WH = { g: '#fff', h: '#fff', k: '#fff', c: '#fff', d: '#fff', r: '#fff', p: '#fff', a: '#fff' };
+      if (k === 'big') {
         g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x - 5, 62, 11, 1);
-        spr(g, x - 5 + (hurt ? 1 : 0), 47, step ? BR_BIG : BR_BIG2, hurt ? { p: '#f0e0ff', k: '#fff', r: '#fff', c: '#f0e0ff', d: '#f0e0ff' } : { p: '#9a5ac8', k: '#ffd95a', r: '#3a1a4a', c: '#5a3a7a', d: '#2a2e36' });
+        spr(g, x - 5 + (hurt ? 1 : 0), 47, step ? BR_BIG : BR_BIG2, hurt ? WH : { p: '#9a5ac8', k: '#ffd95a', r: '#3a1a4a', c: '#5a3a7a', d: '#2a2e36' });
         R(x - 8, 41, 17, 4, K); R(x - 7, 42, Math.max(1, Math.round(15 * z.hp / z.max)), 2, '#b07ae0');
       } else {
         g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x - 2, 62, 6, 1);
-        spr(g, x - 2 + (hurt ? 1 : 0), 51, step ? BR_A : BR_B, hurt ? { g: '#fff', h: '#fff', k: '#fff', c: '#fff', d: '#fff', r: '#fff' } : { g: (z.id || 0) % 3 ? '#7fb85a' : '#6aa85a', h: '#5a8a3e', k: '#17180f', c: BR_SHIRT[(z.id || 0) % BR_SHIRT.length], d: '#3a3a36', r: '#b8402e' });
-        if (z.hp < z.max) { R(x - 3, 47, 8, 3, K); R(x - 2, 48, Math.max(1, Math.round(6 * z.hp / z.max)), 1, '#d8453a'); }
+        var pal = hurt ? WH : k === 'run' ? { g: '#a8c86a', h: '#5a8a3e', k: '#d8453a', c: '#b8402e', d: '#3a3a36', r: '#b8402e' } : k === 'tough' ? { g: '#6a9a5a', h: '#5a8a3e', k: '#17180f', c: '#55585f', d: '#2a2e36', r: '#b8402e' } : { g: (z.id || 0) % 3 ? '#7fb85a' : '#6aa85a', h: '#5a8a3e', k: '#17180f', c: BR_SHIRT[(z.id || 0) % 5], d: '#3a3a36', r: '#b8402e' };
+        spr(g, x - 2 + (hurt ? 1 : 0) - (k === 'run' ? 1 : 0), 51, step ? BR_A : BR_B, pal);
+        if (k === 'run') { R(x + 5, 54, 3, 1, 'rgba(232,230,220,.35)'); R(x + 6, 58, 2, 1, 'rgba(232,230,220,.25)'); }      // 뛰는 놈: 뒤로 바람 줄
+        if (k === 'tough') { R(x - 1, 50, 5, 2, '#8a8f98'); R(x - 1, 50, 5, 1, '#b4b8c0'); R(x - 3, 56, 2, 5, '#6a6f78'); }      // 튼튼한 놈: 철모와 방패
+        if (z.hp < z.max) { R(x - 3, 46, 8, 3, K); R(x - 2, 47, Math.max(1, Math.round(6 * z.hp / z.max)), 1, '#d8453a'); }
       }
     });
-    // 쏘는 순간: 총구의 불꽃, 예광탄, 맞은 자리의 불티 / 쓰러진 자리의 먼지
-    bridgeFx = bridgeFx.filter(function (f) { return now - f.at < 420; });
+    // 쏘는 순간: 총구의 불꽃, 예광탄, 맞은 자리의 불티. 쓰러진 것은 난간 너머 강으로 떨어져 물이 튄다
+    bridgeFx = bridgeFx.filter(function (f) { return now - f.at < (f.kind === 'kill' ? 900 : f.kind === 'boom' ? 500 : 300); });
     bridgeFx.forEach(function (f) {
       var a = now - f.at, ty = f.big ? 52 : 55;
-      if (a < 110) { R(41, 48, 2, 1, '#fff2c0'); R(43, 47, 1, 1, '#ffd95a'); R(43, 49, 1, 1, '#ffd95a'); var t0 = a / 110, sx = 44, ex = f.x, hx = sx + (ex - sx) * t0, hy = 48 + (ty - 48) * t0; for (var s = 0; s < 3; s++) { var qx = hx - s * 5; if (qx > sx) R(Math.round(qx), Math.round(hy - s * 0.3), 4, 1, f.hand ? '#ffd95a' : '#e8a04a'); } }
+      if (a < 0) return;
+      if (f.kind === 'boom') { var e = a / 500, rr = Math.round(3 + e * 9); g.fillStyle = 'rgba(255,' + Math.round(230 - e * 120) + ',' + Math.round(140 - e * 120) + ',' + (0.85 * (1 - e)).toFixed(2) + ')'; g.fillRect(Math.round(f.x - rr), 60 - rr, rr * 2, rr); g.fillRect(Math.round(f.x - rr + 2), 58 - rr, rr * 2 - 4, 2); if (e < 0.4) R(Math.round(f.x - 1), 54, 3, 6, '#fff2c0'); for (var sk = 0; sk < 4; sk++) R(Math.round(f.x + (sk - 1.5) * (3 + e * 10)), Math.round(54 - e * 18 + sk * 2 + e * e * 22), 1, 1, '#ffd95a'); return; }
+      if (!f.quiet && a < 110) { R(41, 48, 2, 1, '#fff2c0'); R(43, 47, 1, 1, '#ffd95a'); R(43, 49, 1, 1, '#ffd95a'); R(40, 46, 1, 1, 'rgba(255,217,90,.5)'); var t0 = a / 110, sx = 44, hx = sx + (f.x - sx) * t0, hy = 48 + (ty - 48) * t0; for (var s = 0; s < 3; s++) { var qx = hx - s * 5; if (qx > sx) R(Math.round(qx), Math.round(hy - s * 0.3), 4, 1, f.hand ? '#ffd95a' : '#e8a04a'); } }
+      if (!f.quiet && a < 260) R(38 - Math.round(a / 40), 50 + Math.round(a * a / 9000), 1, 1, '#c9a820');      // 탄피
       if (a >= 60 && a < 260) { [[-1, -2], [3, 0], [0, 2], [-3, 1]].forEach(function (q, i) { var d = (a - 60) / 200; R(Math.round(f.x + q[0] * (1 + d * 2)), Math.round(ty + q[1] * (1 + d * 2)), 1, 1, i % 2 ? '#fff2c0' : '#b8402e'); }); }
-      if (f.kind === 'kill') { var d2 = a / 420; g.fillStyle = 'rgba(232,230,220,' + (0.5 * (1 - d2)).toFixed(2) + ')'; g.fillRect(Math.round(f.x - 3 - d2 * 3), Math.round(60 - d2 * 5), Math.round(7 + d2 * 6), 2); R(Math.round(f.x - 2), 61, 5, 1, f.big ? '#5a3a7a' : '#5a8a3e'); }
+      if (f.kind === 'kill') {
+        var d2 = Math.max(0, (a - 80) / 820), fx2 = f.x + d2 * 6, fy2 = 52 + d2 * d2 * 150, col = f.big ? '#9a5ac8' : '#7fb85a', col2 = f.big ? '#5a3a7a' : '#6b4a3a';
+        if (fy2 < 96) { var tw = Math.floor(a / 90) % 2; if (tw) { R(Math.round(fx2), Math.round(fy2), f.big ? 6 : 3, f.big ? 9 : 6, col2); R(Math.round(fx2), Math.round(fy2) - 2, f.big ? 5 : 3, 2, col); } else { R(Math.round(fx2) - 1, Math.round(fy2), f.big ? 9 : 6, f.big ? 6 : 3, col2); R(Math.round(fx2) + (f.big ? 8 : 5), Math.round(fy2), 2, f.big ? 5 : 3, col); } }
+        else { var sp2 = Math.min(1, (fy2 - 96) / 40), sxw = Math.round(fx2); R(sxw - Math.round(2 + sp2 * 5), 97, 2, 1, '#8ab0d8'); R(sxw + Math.round(2 + sp2 * 5), 97, 2, 1, '#8ab0d8'); R(sxw - 1, 96 - Math.round((1 - sp2) * 5), 1, 2, '#c9e0f8'); R(sxw + 1, 95 - Math.round((1 - sp2) * 3), 1, 2, '#c9e0f8'); R(sxw - Math.round(sp2 * 7), 99, Math.round(sp2 * 14) + 1, 1, '#2a3c5c'); }
+      }
     });
-    // 초소에 닿았다: 초소 앞이 붉게 번쩍인다
-    if (bridgeLeak && now - bridgeLeak < 300) { g.fillStyle = 'rgba(216,69,58,' + (0.45 * (1 - (now - bridgeLeak) / 300)).toFixed(2) + ')'; g.fillRect(28, 40, 24, 24); }
     R(0, 56, 184, 1, '#b4b8c0'); for (var rx = 2; rx < 184; rx += 8) R(rx, 57, 1, 5, '#8a8f98');      // 난간(맨 앞)
+    // 떼가 온다(미리 알림): 오른쪽 끝이 붉게 깜빡이고 화살표가 보인다. 떼가 오는 동안에는 위아래에 붉은 띠
+    if (b.warn > 0 && Math.floor(now / 180) % 2) { g.fillStyle = 'rgba(216,69,58,.35)'; g.fillRect(150, 36, 34, 28); [0, 8, 16].forEach(function (o) { R(176 - o, 49, 5, 1, '#ff5a4a'); R(176 - o, 48, 2, 3, '#ff5a4a'); R(177 - o, 47, 1, 5, '#ff5a4a'); }); }
+    if (b.wave > 0) { var wp = Math.floor(now / 250) % 2 ? '.55' : '.3'; g.fillStyle = 'rgba(216,69,58,' + wp + ')'; g.fillRect(0, 0, 184, 2); g.fillRect(0, 106, 184, 2); R(0, 0, Math.round(184 * b.wave / C.WAVE_SECONDS), 2, '#ff5a4a'); }
+    // 뚫렸다: 어둡고 붉게. 다시 세우는 동안 가운데에 차오르는 줄
+    if (b.down > 0) { g.fillStyle = 'rgba(60,8,8,.55)'; g.fillRect(0, 0, 184, 108); R(60, 50, 64, 6, K); R(61, 51, Math.round(62 * (1 - b.down / C.BREACH_SECONDS)), 4, '#e98a3c'); }
+    if (bridgeFlash && now - bridgeFlash.at < 350) { var fa = 1 - (now - bridgeFlash.at) / 350; g.fillStyle = (bridgeFlash.kind === 'nade' ? 'rgba(255,240,200,' : 'rgba(216,69,58,') + (0.5 * fa).toFixed(2) + ')'; g.fillRect(0, 0, 184, 108); }
+    cv.classList.toggle('ward-shake', !!(bridgeFlash && bridgeFlash.kind !== 'warn' && now - bridgeFlash.at < 260));
   }
+  var bridgeBeam = 150, bsc0 = null;
   var W_H = 112;        // 4.0.8: 병실 그림의 높이(도트). 아래 16도트는 이동 침대가 다니는 복도
   var wardEr = null, wardErFx = null, wardBoostFx = 0, wardArmed = false;      // 급한 환자가 들어온 때 · 살리거나 놓친 때 · 연구원이 강화 혈청을 가져온 때 · 강화 혈청을 들었는지
   var W_GURNEY = ['.....hhhh', '....hhhhhh.......bbbbbbbbbbbbbbbbbbbb', '...hhsssss..bbbbbBBBBBBBbbbbbbbbbbbbbbbbff', '..pPesssmsdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbfff', '.pppPssssddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbff', '.ppppppppbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb..r', 'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww.r', 'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWrr', 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk', '..KkKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKkK', '...k.k................................k.k', '....k..................................k', '...k.k................................k.k', '..k...k..............................k...k', '.ooo.ooo............................ooo.ooo', '.oOo.oOo............................oOo.oOo', '.ooo.ooo............................ooo.ooo'];
@@ -3404,7 +3454,12 @@
       renderZoneEvent('guard');
       /* 4.1.0 6구역 다리. 제목 줄 오른쪽: 지금 한 마리를 잡으면 받는 것(연속 배수까지). 그림 아래: 연속 줄 → 초소장 바 → 행렬 카드 → 기록 한 줄 */
       var gRate = C.guardRate(state), br = C.bridgeOf(state), cap = C.comboCap(state), gAuto = (state.upgrades.autoguard || 0) > 0, gSw = C.autoEvents(state, 5);
-      setText($('guard-rate'), state.posts > 0 ? '한 마리 +' + fmt(gRate * C.BRIDGE_SPAWN * br.combo) : '');
+      var gr = $('guard-rate'), urgent = br.down > 0 || br.warn > 0 || br.wave > 0;
+      setText(gr, !(state.posts > 0) ? '' : br.down > 0 ? '뚫렸다 · 방벽을 다시 세우는 중' : br.warn > 0 ? '떼가 몰려온다' : br.wave > 0 ? '떼 · ' + Math.ceil(br.wave) + '초' : '한 마리 +' + fmt(gRate * C.BRIDGE_SPAWN * br.combo));
+      gr.classList.toggle('bad', urgent);
+      var nb = $('nade-btn'), nNeed = C.nadeNeed(state), nReady = (br.nade || 0) >= nNeed, nShow = state.posts > 0; if (nb.hidden !== !nShow) nb.hidden = !nShow;
+      setText($('nade-name'), nReady ? '수류탄 던지기' : '수류탄'); setText($('nade-count'), nReady ? '' : (br.nade || 0) + ' / ' + nNeed); nb.disabled = !nReady || br.down > 0 || !br.zs.length;
+      bsc0 = $('bridgescene'); bsc0.setAttribute('data-wall', br.wall); bsc0.setAttribute('data-down', br.down > 0 ? 1 : 0); bsc0.setAttribute('data-wave', br.wave > 0 ? 'wave' : br.warn > 0 ? 'warn' : ''); bsc0.setAttribute('data-nade', br.nade || 0);
       $('combo-bar').style.width = (Math.max(0, Math.min(1, (br.combo - 1) / Math.max(0.01, cap - 1))) * 100).toFixed(1) + '%';
       setText($('combo-x'), '×' + br.combo.toFixed(1)); $('combo-x').parentNode.classList.toggle('cold', br.combo <= 1.001);
       var ga = $('guard-auto'), gaText = !(state.posts > 0) ? '초소를 세우면 다리를 막아요' : !gAuto ? '' : !gSw ? '초소장이 쉬고 있어요' : '초소장 · ' + secs(C.bridgeShotSeconds(state)) + '마다 한 발';
@@ -3412,7 +3467,7 @@
       var gb = $('guard-bar'), gbOn = state.posts > 0 && gAuto && gSw; if (gb.hidden !== !gbOn) gb.hidden = !gbOn; if (gbOn) fill(gb, br.zs.length ? br.shot : 0);
       drawBridge();
       var bsc = $('bridgescene'); bsc.setAttribute('data-zs', br.zs.length); bsc.setAttribute('data-kills', state.handKills || 0); bsc.classList.toggle('tappable', state.posts > 0);
-      setText($('guard-note'), !(state.posts > 0) ? '' : (state.handKills || 0) < 3 ? '건너오는 것을 눌러 쏘아요. 연달아 잡으면 더 받아요' : (state.bigKills || 0) < 1 ? '큰 놈이 초소에 닿으면 연속이 끊겨요' : '다리 안전도 ×' + C.bridgeSafety(state).toFixed(2) + ' · 통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length);
+      setText($('guard-note'), !(state.posts > 0) ? '' : (state.handKills || 0) < 3 ? '건너오는 것을 눌러 쏘아요. 연달아 잡으면 더 받아요' : (state.breaches || 0) < 1 && (state.handKills || 0) < 40 ? '닿으면 방벽이 깎여요. 다 깎이면 뚫려요' : (br.streak || 0) > 0 ? '떼를 ' + br.streak + '번 잇달아 막았어요 · 다음 떼가 더 세져요' : '다리 안전도 ×' + C.bridgeSafety(state).toFixed(2) + ' · 통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length);
       var fl6 = state.firepower || 0, fc6 = C.fireCost(state), ml6 = state.morale || 0, mc6 = C.moraleCost(state);
       setText(rows.fire.count, 'Lv ' + fl6 + ' / ' + C.FIRE_MAX); setText(rows.fire.info, '한 발 ' + (1 + fl6) + (isFinite(fc6) ? ' → ' + (2 + fl6) : ''));
       setText(rows.fire.cost, isFinite(fc6) ? '×1 ' + fmt(fc6) : '최대'); rows.fire.btn.disabled = !(fc6 <= state.supplies); afford(rows.fire.cost, fc6); rows.fire.btn.classList.toggle('row-max', !isFinite(fc6));
@@ -3787,10 +3842,20 @@
           if (tab === 'z4' && pane === 'play') { sfx('rush'); buzz([60, 40, 120]); }
           break;
         case 'bridge-shot':      // 4.1.0: 초소장이 쏜다
-          if (tab === 'z5' && pane === 'play') { bridgeFx.push({ at: Date.now(), x: BR_X0 + ev.x * BR_W, kind: ev.kill ? 'kill' : 'hit', big: ev.big, hand: false }); if (bridgeFx.length > 24) bridgeFx.shift(); if (ev.kill && ev.gain > 0 && bridgePopFn) bridgePopFn(BR_X0 + ev.x * BR_W, 40, '+' + fmt(ev.gain), 'hit'); }
+          if (tab === 'z5' && pane === 'play') { bridgeFx.push({ at: Date.now(), x: BR_X0 + Math.min(1, ev.x) * BR_W, kind: ev.kill ? 'kill' : 'hit', big: ev.big, hand: false }); if (bridgeFx.length > 60) bridgeFx.shift(); if (ev.kill && ev.gain > 0 && bridgePopFn) bridgePopFn(BR_X0 + ev.x * BR_W, 40, '+' + fmt(ev.gain), 'hit'); }
           break;
         case 'bridge-leak':
           bridgeLeak = Date.now(); if (tab === 'z5' && pane === 'play' && ev.big) { sfx('rush'); buzz(40); if (bridgePopFn) bridgePopFn(46, 30, '연속이 끊겼다', 'bad'); }
+          break;
+        case 'bridge-warn':      // 4.1.2: 떼가 온다
+          if (tab === 'z5' && pane === 'play') { bridgeFlash = { at: Date.now(), kind: 'warn' }; sfx('rush'); buzz([40, 40, 40]); if (bridgePopFn) bridgePopFn(130, 24, '떼가 몰려온다', 'wave'); }
+          break;
+        case 'bridge-held':
+          if (tab === 'z5' && pane === 'play') { sfx('goal'); buzz(30); if (bridgePopFn) bridgePopFn(100, 24, '떼를 막았다 +' + fmt(ev.gain), 'held'); }
+          break;
+        case 'bridge-breach':
+          bridgeFlash = { at: Date.now(), kind: 'breach' }; bridgeFx = [];
+          if (tab === 'z5' && pane === 'play') { sfx('rush'); buzz([80, 40, 140]); if (bridgePopFn) bridgePopFn(92, 30, '뚫렸다', 'wave'); }
           break;
         case 'ward-er':      // 4.0.8: 이동 침대가 들어온다
           wardEr = Date.now(); wardErFx = null; if (tab === 'z4' && pane === 'play') { sfx('signal'); buzz(20); }
