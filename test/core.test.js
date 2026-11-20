@@ -1395,14 +1395,14 @@ test('업적: 조건을 채우면 달성되어 알림이 오고, 하나마다 �
 });
 
 /* ---------- 알파 0.9.1: 동물 친구 24종, 좀비 도감 15종 ---------- */
-test('동물 친구는 강아지 12종, 고양이 12종이고 등급마다 넷씩 있다', () => {
+test('동물 친구는 강아지 18종, 고양이 18종이고 등급마다 여섯씩 있다(4.4.4)', () => {
   for (const kind of ['dog', 'cat']) {
     const list = C.PET_BREEDS.filter(b => b.kind === kind);
-    assert.equal(list.length, 12, kind);
-    for (const r of C.PET_RARITIES) assert.equal(list.filter(b => b.rarity === r.id).length, 4, kind + ' ' + r.id);
+    assert.equal(list.length, 18, kind);
+    for (const r of C.PET_RARITIES) assert.equal(list.filter(b => b.rarity === r.id).length, 6, kind + ' ' + r.id);
   }
-  assert.equal(new Set(C.PET_BREEDS.map(b => b.id)).size, 24);
-  assert.equal(new Set(C.PET_BREEDS.map(b => b.name)).size, 24);
+  assert.equal(new Set(C.PET_BREEDS.map(b => b.id)).size, 36);
+  assert.equal(new Set(C.PET_BREEDS.map(b => b.name)).size, 36);
 });
 
 test('좀비 도감: 15종. 밤이 지나면 만난 것이 적히고, 처음 만난 것은 사건에 실린다. 구역을 열어야 나오는 것이 있다', () => {
@@ -2512,8 +2512,11 @@ test('2.0.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기의
 test('2.0.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 개 10×8칸·고양이 9×8칸', () => {
   const S = require('../src/scene.js');
   assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 7);
-  ['dog', 'cat', 'zzz'].forEach(k => [0, 1].forEach(w => { const r = S.petRows(k, w); assert.equal(r.length, S.PET_H); r.forEach(row => assert.equal(row.length, k === 'cat' ? 9 : 10)); assert.ok(r.some(row => row[0] === 't'), '꼬리'); }));
-  assert.notDeepEqual(S.petRows('dog', 0), S.petRows('dog', 1), '꼬리가 움직인다');
+  // 4.4.4: 작은 그림은 12×10칸(앞모습). 품종마다 그림이 있고, 모르는 품종은 그 종류의 첫 그림으로 그린다
+  ['dog', 'cat', 'zzz'].forEach(k => [0, 1].forEach(w => { const r = S.petRows(k, w); assert.equal(r.length, S.PET_H); r.forEach(row => assert.equal(row.length, S.PET_W)); assert.ok(r.some(row => row.includes('e')), '눈'); }));
+  C.PET_BREEDS.forEach(b => { assert.ok(S.PET_SPEC[b.id], '그림이 없다: ' + b.id); assert.equal(S.PET_SPEC[b.id].kind, b.kind, b.id); });
+  assert.notDeepEqual(S.petRows('dog', 0, 'shiba'), S.petRows('dog', 0, 'beagle'), '품종마다 다르다');
+  { const log = []; const ctx = { fillStyle: '', fillRect() { log.push(1); } }; assert.ok(S.paintPetBig(ctx, 0, 0, 2, { kind: 'cat', id: 'golden' })); assert.ok(log.length > 100); }
   const s = C.createState(0); s.cosmetics['pet-crown'] = true; assert.ok(C.wearCosmetic(s, 'pet-crown').ok); assert.equal(C.cosmeticLook(s).pet, 'crown');
   // 그리기: 어떤 옷이든 오류 없이 그려지고, 옷을 입히면 칠하는 칸이 달라진다
   const calls = (outfit) => { const log = []; const ctx = { fillStyle: '', fillRect(x, y, w, h) { log.push([this.fillStyle, x, y, w, h].join()); } }; S.paintPet(ctx, 0, 0, 1, false, { kind: 'dog' }, outfit, 0); return log; };
@@ -3314,4 +3317,10 @@ test('뽑기 기계 10회: 뽑기권 10장을 쓰고 열 개가 나온다. 모�
   s.tickets = 25; const r = C.pullGachaMany(s, 10, () => 0.99); assert.ok(r.ok); assert.equal(r.list.length, 10); assert.equal(s.tickets, 15); assert.ok(r.list.every((x) => x.ok && x.name));
   assert.equal(s.gachaPulls, 10); for (const bad of [0, 11, NaN, 'x']) assert.equal(C.pullGachaMany(s, bad).ok, false);
   const p = fresh(); p.tickets = 100; p.gachaPity = C.GACHA_PITY - 5; const pr = C.pullGachaMany(p, 10, () => 0.99); assert.ok(pr.list.some((x) => x.rarity === 2), '10회 안에서도 보장이 걸린다');
+});
+
+test('4.4.4 금냥이는 브리티시 숏헤어가 됐다: 기본 이름 그대로였으면 새 이름으로, 지어 준 이름은 그대로', () => {
+  const s = C.createState(0); s.kennel = { golden: '금냥이' }; s.pet = { kind: 'cat', breed: 'golden', name: '금냥이' };
+  const a = C.deserialize(C.serialize(s), 0); assert.equal(a.kennel.golden, '브리티시 숏헤어');
+  s.kennel = { golden: '노랑이' }; const b = C.deserialize(C.serialize(s), 0); assert.equal(b.kennel.golden, '노랑이');
 });

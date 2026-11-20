@@ -1886,7 +1886,7 @@
   function lookWith(worn, c) { var o = {}; for (var k in worn) if (Object.prototype.hasOwnProperty.call(worn, k)) o[k] = worn[k]; if (c) o[c.slot] = c.look; return o; }
   function shade(hex, k) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; function c(v) { return Math.max(0, Math.min(255, Math.round(v * k))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
   /** 옷장에 그릴 친구: 지금 데리고 있는 친구. 없으면 기본 누렁이(옷이 어떻게 보이는지는 알 수 있게). */
-  function petLook() { var p = C.petInfo(mainState()); return p ? { kind: p.kind, body: p.breed.body, patch: p.breed.patch } : { kind: 'dog', body: '#b8864a', patch: '#e6d2a8' }; }
+  function petLook() { var p = C.petInfo(mainState()); return p ? { kind: p.kind, id: p.breed.id, body: p.breed.body, patch: p.breed.patch } : { kind: 'dog', id: 'nureong', body: '#b8864a', patch: '#e6d2a8' }; }
   function drawThumb(cv, c, worn) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
@@ -2377,6 +2377,7 @@
         C.PET_RARITIES.forEach(function (r) { if (r.id === b.rarity) rar = r; });
         var pal = got ? { b: b.body, p: b.patch || b.body, k: '#17180f', n: '#17180f' } : { b: '#4a4b40', p: '#4a4b40', k: '#4a4b40', n: '#4a4b40' };
         var art = pixSvg(b.kind === 'cat' ? CAT_PIX : DOG_PIX, pal), rname = rar ? rar.name : '';
+        if (got) { art = el('i', 'dex-pet'); art.style.background = petIcon(b) + ' center / contain no-repeat'; }      // 4.4.4: 만난 친구는 품종 그림(못 만난 친구는 그대로 그림자)
         if (!got) { card(art, '???', rname + ' 등급', '데려오기에서 만날 수 있어요.', true, 'r-' + b.rarity); return; }
         var lv = C.petLevel(state, b.id), with_ = state.pet && state.pet.breed === b.id;
         var bonus = Math.round((rar ? rar[b.kind] : 0) * (1 + C.PET_LEVEL_STEP * lv) * 100);
@@ -4203,6 +4204,13 @@
   }
 
   /** 일행 칸: 주인공 이름, 지금 데리고 다니는 친구, 함께 있는 친구들(누르면 바꾼다), 데려오기 단추와 값. */
+  /** 4.4.4 품종 그림(큰 그림 24×19칸)을 작은 이미지로 만들어 둔다(품종마다 한 번). */
+  var petIcons = {};
+  function petIcon(b) {
+    if (petIcons[b.id]) return petIcons[b.id];
+    var u = 'none'; try { var cv = document.createElement('canvas'); cv.width = 48; cv.height = 40; var g = cv.getContext('2d'); if (g && window.Scene && window.Scene.paintPetBig) { window.Scene.paintPetBig(g, 0, 1, 2, { kind: b.kind, id: b.id }); u = 'url("' + cv.toDataURL('image/png') + '")'; } } catch (e) { /* 그림이 없어도 된다 */ }
+    return (petIcons[b.id] = u);
+  }
   function renderPet() {
     var p = C.petInfo(state), cost = C.petPullCost(state), have = C.kennelCount(state);
     $('pet-empty').hidden = !!p; $('pet-card').hidden = !p;
@@ -4225,7 +4233,7 @@
     $('pet-input').placeholder = p.name;
     var face = $('pet-face');
     face.className = 'pet-face ' + p.rarity.id;
-    face.style.background = 'linear-gradient(135deg, ' + p.breed.body + ' 0 62%, ' + p.breed.patch + ' 62%)';      // 몸 색과 무늬 색
+    face.style.background = petIcon(p.breed) + ' center / contain no-repeat #2a2622';      // 4.4.4: 품종 그림(큰 그림)
     // 함께 있는 친구들: 목록이 바뀌었을 때만 다시 만든다(매 프레임 만들면 누르는 도중에 단추가 사라진다)
     var key = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; }).map(function (b) { return b.id + ':' + state.kennel[b.id]; }).join('|') + '>' + state.pet.breed;
     var box = $('kennel');
@@ -4237,7 +4245,7 @@
       if (!state.kennel[b.id]) return;
       var btn = el('button', b.rarity), dot = el('i');
       btn.type = 'button'; btn.id = 'kennel-' + b.id;
-      dot.style.background = 'linear-gradient(135deg, ' + b.body + ' 0 62%, ' + b.patch + ' 62%)';
+      dot.style.background = petIcon(b) + ' center / contain no-repeat #2a2622';
       btn.appendChild(dot); btn.appendChild(document.createTextNode(state.kennel[b.id]));
       btn.title = C.breedDesc(b);
       btn.setAttribute('aria-pressed', String(b.id === state.pet.breed));
@@ -4368,7 +4376,7 @@
       upgrades: { crowbar: state.upgrades.crowbar > 0, backpack: state.upgrades.cart > 0 }, gear: {},
       settle: state.settle || null,      // 7구역 정착지의 지은 건물(3.1.0)
       still: prefs.shake === 'off',
-      pet: (function () { var p = C.petInfo(state); return p ? { kind: p.kind, body: p.breed.body, patch: p.breed.patch } : null; })() };
+      pet: (function () { var p = C.petInfo(state); return p ? { kind: p.kind, id: p.breed.id, body: p.breed.body, patch: p.breed.patch } : null; })() };
   }
 
   /* ---------- 일어난 일 알리기 ---------- */

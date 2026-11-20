@@ -193,9 +193,9 @@ def run_case(browser, name, size, state, mode):
         # 0.8.10 도감과 패치노트
         tap('[data-rtab-set=dex]')
         if page.locator('#dex-tabs button').count() != 9: problems.append('도감 탭이 아홉이 아니다')
-        if page.locator('#dex .dex-card').count() != 12: problems.append('도감에 강아지 12칸이 없다')
+        if page.locator('#dex .dex-card').count() != 18: problems.append('도감에 강아지 18칸이 없다')
         page.locator('#dex-tabs button').nth(1).click(); page.wait_for_timeout(100)
-        if page.locator('#dex .dex-card').count() != 12: problems.append('도감에 고양이 12칸이 없다')
+        if page.locator('#dex .dex-card').count() != 18: problems.append('도감에 고양이 18칸이 없다')
         page.locator('#dex-tabs button').nth(2).click(); page.wait_for_timeout(100)
         if page.locator('#dex .dex-card').count() != 15 or page.locator('#dex .dex-card svg rect').count() < 200: problems.append('도감에 좀비 15칸이 없다')
         page.locator('#dex-tabs button').nth(3).click(); page.wait_for_timeout(100)

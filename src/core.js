@@ -122,31 +122,43 @@
   var PET_PULL_SHARE = 0.05;       // 다시 데려오기 값: 지금까지 얻은 항체 샘플 총량의 이 비율(판이 커져도 값이 헐해지지 않게)
   var PET_DUP_REFUND = 0.5;        // 이미 함께 있는 아이가 또 나왔을 때 돌려받는 비율
   var PET_BREEDS = [
-    { id: 'jindo',   kind: 'dog', rarity: 'common', name: '흰둥이', body: '#e9e4d6', patch: '#e9e4d6' },
-    { id: 'nureong', kind: 'dog', rarity: 'common', name: '누렁이', body: '#b9853f', patch: '#e9d9b0' },
-    { id: 'black',   kind: 'dog', rarity: 'fine',   name: '검둥이', body: '#2b2a28', patch: '#2b2a28' },
-    { id: 'spot',    kind: 'dog', rarity: 'fine',   name: '바둑이', body: '#e9e4d6', patch: '#2b2a28' },
-    { id: 'sapsal',  kind: 'dog', rarity: 'rare',   name: '삽살이', body: '#a9a39a', patch: '#f0b400' },
-    { id: 'wolf',    kind: 'dog', rarity: 'rare',   name: '늑대개', body: '#5d6470', patch: '#e6e5db' },
-    { id: 'cheese',  kind: 'cat', rarity: 'common', name: '치즈',   body: '#e0a04a', patch: '#f3e3c3' },
-    { id: 'tabby',   kind: 'cat', rarity: 'common', name: '고등어', body: '#7d7f84', patch: '#3c3e44' },
-    { id: 'tuxedo',  kind: 'cat', rarity: 'fine',   name: '턱시도', body: '#26262a', patch: '#f1efe8' },
-    { id: 'calico',  kind: 'cat', rarity: 'fine',   name: '삼색이', body: '#f1efe8', patch: '#d0782e' },
-    { id: 'siam',    kind: 'cat', rarity: 'rare',   name: '샴',     body: '#e8dcc4', patch: '#4a3628' },
-    { id: 'nero',    kind: 'cat', rarity: 'rare',   name: '네로',   body: '#17171a', patch: '#f0b400' },
-    // 0.9.1: 강아지 여섯, 고양이 여섯을 더해 모두 24종
-    { id: 'shiba',   kind: 'dog', rarity: 'common', name: '시바',   body: '#d9903d', patch: '#f3e3c3' },
-    { id: 'poodle',  kind: 'dog', rarity: 'common', name: '푸들',   body: '#c9a27a', patch: '#b08a62' },
-    { id: 'husky',   kind: 'dog', rarity: 'fine',   name: '허스키', body: '#8d95a3', patch: '#f1efe8' },
-    { id: 'corgi',   kind: 'dog', rarity: 'fine',   name: '코기',   body: '#e0a04a', patch: '#f1efe8' },
-    { id: 'pungsan', kind: 'dog', rarity: 'rare',   name: '풍산이', body: '#f4f1ea', patch: '#cfd6dd' },
-    { id: 'dalma',   kind: 'dog', rarity: 'rare',   name: '달마',   body: '#f1efe8', patch: '#17171a' },
-    { id: 'white',   kind: 'cat', rarity: 'common', name: '흰냥이', body: '#f1efe8', patch: '#e2ddd0' },
-    { id: 'gray',    kind: 'cat', rarity: 'common', name: '회색이', body: '#9a9da3', patch: '#c9ccd1' },
-    { id: 'bengal',  kind: 'cat', rarity: 'fine',   name: '벵갈',   body: '#c98a3c', patch: '#4a3628' },
-    { id: 'russian', kind: 'cat', rarity: 'fine',   name: '러블',   body: '#6f7f95', patch: '#8a98ab' },
-    { id: 'ragdoll', kind: 'cat', rarity: 'rare',   name: '랙돌',   body: '#f1efe8', patch: '#7a6a5c' },
-    { id: 'golden',  kind: 'cat', rarity: 'rare',   name: '금냥이', body: '#f0b400', patch: '#fff3c4' }
+    // 4.4.4: 강아지 18 · 고양이 18(등급마다 여섯). 그림은 scene.js 의 PET_SPEC(품종 id)로 그린다. body · patch 는 작은 표시(얼굴 칸 등)에 쓰는 대표 색이다
+    { id: 'jindo', kind: 'dog', rarity: 'common', name: '흰둥이', body: '#ece6d6', patch: '#ece6d6' },
+    { id: 'nureong', kind: 'dog', rarity: 'common', name: '누렁이', body: '#c08a44', patch: '#ead6a6' },
+    { id: 'shiba', kind: 'dog', rarity: 'common', name: '시바', body: '#d9903d', patch: '#f3e3c3' },
+    { id: 'poodle', kind: 'dog', rarity: 'common', name: '푸들', body: '#c9a27a', patch: '#b08a62' },
+    { id: 'beagle', kind: 'dog', rarity: 'common', name: '비글', body: '#f1ede2', patch: '#b8783c' },
+    { id: 'dachs', kind: 'dog', rarity: 'common', name: '닥스', body: '#8a4a24', patch: '#8a4a24' },
+    { id: 'black', kind: 'dog', rarity: 'fine', name: '검둥이', body: '#2e2c2a', patch: '#2e2c2a' },
+    { id: 'spot', kind: 'dog', rarity: 'fine', name: '바둑이', body: '#ece6d6', patch: '#2b2a28' },
+    { id: 'husky', kind: 'dog', rarity: 'fine', name: '허스키', body: '#8d95a3', patch: '#f1efe8' },
+    { id: 'corgi', kind: 'dog', rarity: 'fine', name: '코기', body: '#e0a04a', patch: '#f6efe2' },
+    { id: 'collie', kind: 'dog', rarity: 'fine', name: '보더콜리', body: '#252428', patch: '#f1efe8' },
+    { id: 'retriever', kind: 'dog', rarity: 'fine', name: '리트리버', body: '#e2b468', patch: '#e2b468' },
+    { id: 'sapsal', kind: 'dog', rarity: 'rare', name: '삽살이', body: '#a9a39a', patch: '#f0b400' },
+    { id: 'wolf', kind: 'dog', rarity: 'rare', name: '늑대개', body: '#5d6470', patch: '#e6e5db' },
+    { id: 'pungsan', kind: 'dog', rarity: 'rare', name: '풍산이', body: '#f4f1ea', patch: '#cfd6dd' },
+    { id: 'dalma', kind: 'dog', rarity: 'rare', name: '달마', body: '#f4f2ec', patch: '#17171a' },
+    { id: 'shepherd', kind: 'dog', rarity: 'rare', name: '셰퍼드', body: '#b8783c', patch: '#2a2420' },
+    { id: 'samoyed', kind: 'dog', rarity: 'rare', name: '사모예드', body: '#ffffff', patch: '#ffffff' },
+    { id: 'cheese', kind: 'cat', rarity: 'common', name: '치즈', body: '#e0a04a', patch: '#f3e3c3' },
+    { id: 'tabby', kind: 'cat', rarity: 'common', name: '고등어', body: '#8d8f94', patch: '#3c3e44' },
+    { id: 'white', kind: 'cat', rarity: 'common', name: '흰냥이', body: '#f4f2ec', patch: '#f4f2ec' },
+    { id: 'gray', kind: 'cat', rarity: 'common', name: '회색이', body: '#9a9da3', patch: '#9a9da3' },
+    { id: 'cow', kind: 'cat', rarity: 'common', name: '젖소냥', body: '#f4f2ec', patch: '#26262a' },
+    { id: 'chaos', kind: 'cat', rarity: 'common', name: '카오스', body: '#2e2a26', patch: '#b8783c' },
+    { id: 'tuxedo', kind: 'cat', rarity: 'fine', name: '턱시도', body: '#26262a', patch: '#f1efe8' },
+    { id: 'calico', kind: 'cat', rarity: 'fine', name: '삼색이', body: '#f1efe8', patch: '#d0782e' },
+    { id: 'bengal', kind: 'cat', rarity: 'fine', name: '벵갈', body: '#d09a50', patch: '#5a3a20' },
+    { id: 'russian', kind: 'cat', rarity: 'fine', name: '러블', body: '#7d8ca2', patch: '#7d8ca2' },
+    { id: 'scottish', kind: 'cat', rarity: 'fine', name: '스코티시', body: '#b8b0a4', patch: '#8a8478' },
+    { id: 'munchkin', kind: 'cat', rarity: 'fine', name: '먼치킨', body: '#e8c08a', patch: '#f6ead6' },
+    { id: 'siam', kind: 'cat', rarity: 'rare', name: '샴', body: '#ece0c8', patch: '#4a3628' },
+    { id: 'nero', kind: 'cat', rarity: 'rare', name: '네로', body: '#1a1a1e', patch: '#1a1a1e' },
+    { id: 'ragdoll', kind: 'cat', rarity: 'rare', name: '랙돌', body: '#f4f0e8', patch: '#7a6a5c' },
+    { id: 'golden', kind: 'cat', rarity: 'rare', name: '브리티시 숏헤어', body: '#e8b04a', patch: '#f8e2b0' },
+    { id: 'persian', kind: 'cat', rarity: 'rare', name: '페르시안', body: '#ece6dc', patch: '#ece6dc' },
+    { id: 'norwegian', kind: 'cat', rarity: 'rare', name: '노르웨이숲', body: '#8a7058', patch: '#efe4d0' }
   ];
   /*
    * 좀비 도감: 15종. 밤이 지날 때마다 그날 무리에 섞여 있던 것을 만난 것으로 적는다(zdex 에 만난 횟수).
@@ -716,6 +728,7 @@
     PET_BREEDS.forEach(function (b) { var n = clamp(safeCount(rl[b.id]), 0, PET_LEVEL_MAX); if (n > 0) s.petLv[b.id] = n; });
     var rk = raw.kennel && typeof raw.kennel === 'object' && !Array.isArray(raw.kennel) ? raw.kennel : {};
     PET_BREEDS.forEach(function (b) { if (Object.prototype.hasOwnProperty.call(rk, b.id)) s.kennel[b.id] = cleanName(rk[b.id], b.name); });
+    if (s.kennel.golden === '금냥이') s.kennel.golden = '브리티시 숏헤어';      // 4.4.4: 금냥이가 브리티시 숏헤어가 됐다(기본 이름 그대로였던 아이만 바꾼다)
     s.pet = null;
     if (raw.pet && typeof raw.pet === 'object') {
       var breed = findById(PET_BREEDS, raw.pet.breed);
