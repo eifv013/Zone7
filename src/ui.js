@@ -2995,8 +2995,15 @@
     var c = C.campOf(state), n = c.night, free = C.settleFree(state), has = C.survivorRate(state) > 0 || state.survivors > 0;
     /* 4.2.4 제목 줄: 낮에는 문 앞의 사람(지을 사람), 습격 중에는 아직 세우지 않은 사람(전체에서 센다). 전체 수는 기록 줄에 늘 보인다 */
     var head = $('camp-head'), all7 = Math.floor(state.survivors || 0); setText(head, n ? '세울 사람 ' + fmt(C.guardPool(state)) + '명' : '문 앞에 ' + fmt(free) + '명'); head.classList.toggle('bad', !!n && C.nightHold(state) < 1);
-    var ck = $('camp-clock'), left = C.RAID_EVERY - (c.clock || 0), showCk = !!n || C.settleCount(state) >= 1;
-    if (ck.hidden !== !showCk) ck.hidden = !showCk; if (showCk) setText(ck, n ? '습격 ' + clock(Math.max(0, n.t)) : ((c.nightLv || 0) > 0 ? c.nightLv + '단계 · ' : '') + '습격까지 ' + clock(Math.max(0, left))); ck.classList.toggle('raid', !!n);
+    /* 4.2.5: 습격까지 남은 시간과 단계는 제목 줄 왼쪽에 적는다(그림 오른쪽 위의 딱지가 윗줄 건물을 가렸다) */
+    var ck = $('camp-clock'), left = C.RAID_EVERY - (c.clock || 0), showCk = !!n || C.settleCount(state) >= 1, ttl = $('camp-title');
+    if (!ck.hidden) ck.hidden = true;
+    setText(ttl, !showCk ? '정착지' : n ? '습격 ' + clock(Math.max(0, n.t)) + ((c.nightLv || 0) > 0 ? ' · ' + c.nightLv + '단계' : '') : '정착지 · ' + ((c.nightLv || 0) > 0 ? c.nightLv + '단계 · ' : '') + '습격까지 ' + clock(Math.max(0, left))); ttl.classList.toggle('raid', !!n);
+    /* 자리마다 더 놓아야 하는 사람 수 */
+    var wrapN = $('camp-wrap');
+    C.SETTLE.forEach(function (d) { var id = 'need-' + d.id, lb = document.getElementById(id), p = campPlot(d), why = C.settleBlock(state, d.id), needN = C.settleNeed(state, d.id), leftN = needN - C.settleWork(state, d.id), show = !n && needN > 0 && why !== 'prev' && why !== 'locked';
+      if (!lb) { lb = el('span', 'plot-need', ''); lb.id = id; lb.style.left = ((p.x + CAMP_W / 2) / 184 * 100) + '%'; lb.style.top = ((p.y + CAMP_H - 1) / 128 * 100) + '%'; wrapN.appendChild(lb); }
+      if (lb.hidden !== !show) lb.hidden = !show; if (show) { setText(lb, fmt(leftN) + '명'); var cls = 'plot-need' + (C.settleBroken(state, d.id) ? ' broken' : free >= 1 ? ' can' : ''); if (lb.className !== cls) lb.className = cls; } });
     var gb = $('camp-guard'), tb = $('t7-tune'); if (gb.hidden !== !n) gb.hidden = !n; if (tb.hidden !== !!n) tb.hidden = !!n;
     if (n) ['북', '동', '남'].forEach(function (nm, k) { var b = $('camp-g' + k), h = C.sideHold(state, k), key = nm + Math.round(h * 100) + (k === n.side); if (b.getAttribute('data-k') !== key) { b.setAttribute('data-k', key); b.innerHTML = ''; b.appendChild(document.createTextNode(nm + '쪽')); b.appendChild(el('small', '', Math.round(h * 100) + '%')); } b.className = (k === n.side && h < 1 ? 'hot' : '') + (h >= 1 ? ' ok' : ''); });
     if (!n && C.settleCount(state) >= 1) sc0 = C.raidNeed(state);

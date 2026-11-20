@@ -834,6 +834,9 @@ canvas.plat.tappable { cursor: pointer; } canvas.plat.tappable:active { filter: 
 @keyframes t7-hit { 0% { box-shadow: 0 0 0 0 var(--safe); background: color-mix(in srgb, var(--safe) 45%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
 @keyframes t7-miss { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 @media (prefers-reduced-motion: reduce) { .t7-dial.hit, .t7-dial.miss { animation: none; } .t7-work i, .t7-band { transition: none; } }
+/* 4.2.5 자리마다 다음 단계까지 더 놓아야 하는 사람 수(지도 위의 작은 글). 문 앞의 사람으로 한 무리라도 보낼 수 있으면 밝게 */
+.plot-need { position: absolute; transform: translate(-50%, -100%); padding: 1px 4px; border-radius: 4px; background: rgba(12,14,20,.78); color: #a09f8e; font: 700 10px/1.2 var(--font-mono); white-space: nowrap; pointer-events: none; z-index: 1; }
+.plot-need.can { color: #ffd95a; } .plot-need.broken { color: #ff7a6a; } .plot-need[hidden] { display: none; } #camp-title.raid { color: var(--blood); font-weight: 700; }
 .stray-dot { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border: 0; border-radius: 50%; padding: 0; z-index: 3; cursor: pointer; font: 700 16px/26px var(--font-mono); color: #17180f;
   background: radial-gradient(circle, #f0b400 0 57%, transparent 58%), conic-gradient(#fff2c0 calc(var(--p, 1) * 360deg), rgba(12,14,20,.75) 0); animation: stray-in .25s ease-out 1, stray-bob .7s steps(2) infinite .25s; }
 .stray-dot.late { background: radial-gradient(circle, #ff5a4a 0 57%, transparent 58%), conic-gradient(#ffd0c8 calc(var(--p, 1) * 360deg), rgba(12,14,20,.75) 0); color: #fff; }
@@ -1399,7 +1402,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.2.4</div>
+  <div class="boot-ver">7구역 알파 4.2.5</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1712,7 +1715,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <!-- 7구역 운영(3.1.0): 생존자(맡긴 사람 · 맡길 수 있는 사람), 주파수 맞추기, 무전. 정착지와 혈청은 '개조' 화면(#settle)에 있다 -->
       <div class="trade tower" id="tower" hidden>
         <!-- 4.2.0 7구역 정착지 지도: 제목 줄 → 지도(자리를 누르면 사람을 놓는다 · 송신탑을 누르면 주파수를 맞춘다) → 주파수 줄 → 큰 단추 → 고른 자리 → 무전 → 기록 한 줄 -->
-        <div class="order-head plat-head"><span class="label">정착지</span><span class="num" id="camp-head"></span></div>
+        <div class="order-head plat-head"><span class="label" id="camp-title">정착지</span><span class="num" id="camp-head"></span></div>
         <div class="ward-wrap" id="camp-wrap"><canvas class="belt plat labcv bridgecv" id="campscene" width="184" height="128" role="button" tabindex="0" data-tap aria-label="정착지 지도. 자리를 누르면 사람을 놓는다"></canvas><span class="br-level" id="camp-clock" hidden></span></div>
         <div class="t7-dial slim" id="t7-dial" aria-hidden="true"><div class="t7-band" id="t7-band"></div><div class="t7-needle" id="t7-needle"></div><span class="t7-freq num" id="t7-freq"></span><span class="t7-gain num" id="t7-gain"></span></div>
         <button type="button" class="surge" id="t7-tune">맞춘다</button>
@@ -1870,7 +1873,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.2.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.2.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
