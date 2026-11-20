@@ -1798,8 +1798,8 @@
     var shopBtn = document.querySelector('[data-hub="shop"]'); shopBtn.disabled = false; setText(shopBtn, '상점');
     setText($('shop-count'), '뽑기권 ' + state.tickets + '장 · 조각 ' + state.shards + '개 · 간식 ' + fmt(state.treats) + '개');
     setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번\n이미 가진 것이 나오면 조각으로 바뀌어요');
-    $('gacha-pull').disabled = !(state.tickets >= 1);
-    setText($('gacha-pull'), '뽑기 · 뽑기권 1장');
+    $('gacha-pull').disabled = false;      // 4.4.1: 뽑기권이 없어도 기계는 열어 볼 수 있다(단추가 꺼진다)
+    setText($('gacha-pull'), '뽑기 기계');
     $('ticket-buy').disabled = !(state.treats >= C.TICKET_TREATS);
     setText($('ticket-buy'), '뽑기권 사기 · 간식 ' + C.TICKET_TREATS + '개');
     setText($('odds-toggle'), oddsOpen ? '확률 접기' : '확률 보기');
@@ -1926,6 +1926,198 @@
     if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); applyLaraArt(); renderShop(); } return; }
     lookPick = lookPick === c.id ? '' : c.id; sfx('tab'); renderShop();      // 아직 없는 외형: 입혀서 미리 보여 준다(다시 누르면 원래대로)
   }
+  /* 4.4.1 뽑기 기계 그림(2판): 구는 빛의 방향으로 네 단계 색 + 성긴 점(디더링)으로 둥글게, 기계는 빛 띠 · 리벳 · 크롬 테두리 */
+  var GW = 180, GH = 200, GK = '#16110f';
+  var G_RAMP = [['#6c7280', '#9aa1ae', '#c9ced8', '#eef1f6'], ['#1f4a86', '#2f6cc0', '#4f8fd8', '#9cc4f0'], ['#8a5a00', '#c08a00', '#f0b400', '#ffe08a']];
+  var G_IVORY = ['#8f897c', '#bdb8aa', '#e2ddcf', '#fbf9f2'], G_RAY = ['#e8e6dc', '#8cc0f0', '#ffd95a'];
+  var G_PILE = [[60, 78, 0], [73, 81, 1], [87, 83, 0], [101, 82, 0], [115, 78, 2], [124, 70, 0], [66, 68, 0], [80, 71, 0], [94, 72, 1], [108, 69, 0], [56, 58, 1], [72, 59, 0], [87, 61, 0], [101, 59, 0], [117, 58, 0], [80, 49, 1], [95, 49, 0], [108, 47, 0]];
+  var G_BAYER = [[0, 2], [3, 1]];
+  function gRand(i) { var x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  /** 구 하나: 위 반은 등급 색, 아래 반은 상아색. o.rot(반쪽을 돌린다) o.half(-1 위만 · 1 아래만) o.dx o.dy(반쪽을 민다) o.ao(어둡게 0~1) o.crack o.glow */
+  function gSphere(R, x, y, r, rar, o) {
+    o = o || {}; var ri = Math.ceil(r), ramp = G_RAMP[rar], ao = o.ao || 0, ca = Math.cos(o.rot || 0), sa = Math.sin(o.rot || 0), sz = r > 10 ? 2 : 1;
+    if (o.glow) for (var gy = -ri - 4; gy <= ri + 4; gy++) for (var gx = -ri - 4; gx <= ri + 4; gx++) { var dd = Math.sqrt(gx * gx + gy * gy); if (dd > r && dd < r + 4 && ((gx + gy) & 1)) R(x + gx, y + gy, 1, 1, 'rgba(255,217,90,' + (0.5 * o.glow * (1 - (dd - r) / 4)).toFixed(2) + ')'); }
+    for (var py = -ri; py <= ri; py++) for (var px2 = -ri; px2 <= ri; px2++) {
+      var d2 = px2 * px2 + py * py; if (d2 > r * r) continue;
+      if (o.half && (o.half < 0 ? py >= 0 : py < 0)) continue;
+      var nz = Math.sqrt(Math.max(0, 1 - d2 / (r * r))), nx = px2 / r, ny = py / r, li = Math.max(0, -0.45 * nx - 0.55 * ny + 0.7 * nz) * (1 - ao * 0.6), edge = d2 > (r - 1) * (r - 1);
+      var lv = li + (G_BAYER[(py + 64) & 1][(px2 + 64) & 1] - 1.5) * 0.06, k = lv > 0.92 ? 3 : lv > 0.62 ? 2 : lv > 0.32 ? 1 : 0;
+      var col = edge ? GK : py < 0 ? ramp[k] : G_IVORY[k];
+      if (!edge && Math.abs(py) <= (r > 10 ? 1 : 0)) col = py < 0 || r <= 10 ? '#3e3e46' : '#8a8a92';
+      if (!edge && li > 0.97) col = '#ffffff';
+      if (!edge && !o.half && nx > 0.55 && ny > 0.1 && o.rim) col = o.rim;
+      var qx = px2, qy = py; if (o.rot) { qx = Math.round(ca * px2 - sa * py); qy = Math.round(sa * px2 + ca * py); }
+      R(x + qx + (o.dx || 0), y + qy + (o.dy || 0), o.rot ? sz : 1, o.rot ? sz : 1, col);
+    }
+    if (o.crack) { var cc = rar ? G_RAY[rar] : '#6a6f78'; for (var c = 0; c < o.crack * 3; c++) { var sx = Math.round((gRand(c + rar * 11) * 2 - 1) * r * 0.85), len = Math.round(r * (0.18 + gRand(c + 5) * 0.25)), dir = c % 2 ? -1 : 1; for (var j = 0; j < len; j++) { R(x + sx + ((j >> 1) % 2 ? 1 : 0), y + dir * (j + 1), 1, 1, cc); if (j === len - 1) R(x + sx, y + dir * (j + 1), 2, 1, '#ffffff'); } } R(x - r + 2, y, r * 2 - 4, 1, cc); }
+  }
+  function gRoom(R) {
+    R(0, 0, GW, GH, '#16171b');
+    for (var by = 0; by < 172; by += 10) for (var bx = (by / 10 % 2) * 14 - 14; bx < GW; bx += 28) { R(bx + 1, by + 1, 26, 8, '#1c1d22'); R(bx + 1, by + 1, 26, 1, '#23242a'); if (gRand(bx * 3 + by) > 0.8) R(bx + 6 + Math.round(gRand(bx + by) * 14), by + 4, 3, 1, '#141519'); }
+    R(88, 0, 4, 6, '#2a2b30'); R(80, 6, 20, 4, GK); R(81, 6, 18, 3, '#3a3d45'); R(86, 10, 8, 2, '#fff2c0');
+    for (var ly = 12; ly < 172; ly++) { var lw = Math.round(6 + (ly - 12) * 0.36); for (var lx = -lw; lx <= lw; lx += 1) if (((lx + ly) & 1) === 0 || Math.abs(lx) < lw * 0.6) R(90 + lx, ly, 1, 1, 'rgba(255,236,190,' + (0.05 * (1 - (ly - 12) / 200) * (1 - Math.abs(lx) / lw * 0.5)).toFixed(3) + ')'); }
+    R(0, 172, GW, 28, '#26231f'); R(0, 172, GW, 1, '#4a443c'); for (var fx = 0; fx < GW; fx += 15) R(fx, 172, 1, 28, '#211e1b');
+    for (var ry = 0; ry < 10; ry++) R(52, 174 + ry, 76, 1, 'rgba(184,64,46,' + (0.18 - ry * 0.018).toFixed(3) + ')');      // 바닥에 비친 기계
+  }
+  function gRivet(R, x, y) { R(x, y, 2, 2, '#e4e7ec'); R(x + 1, y + 1, 1, 1, '#7c818b'); }
+  function gMachine(R, now, handleA, jig, dropFrac, dim) {
+    [[52, 168], [124, 168]].forEach(function (f) { R(f[0], f[1], 4, 5, GK); R(f[0] + 1, f[1], 2, 4, '#9aa0aa'); });
+    R(46, 160, 88, 9, GK); R(47, 161, 86, 7, '#2e2f36'); R(47, 161, 86, 1, '#565864'); R(47, 167, 86, 1, '#1c1d22');
+    R(50, 98, 80, 63, GK);
+    for (var x = 51; x < 129; x++) { var t = (x - 51) / 78, c = t < 0.06 ? '#e8705e' : t < 0.2 ? '#d25a48' : t < 0.82 ? '#b8402e' : t < 0.94 ? '#9a3224' : '#7e2619'; R(x, 99, 1, 61, c); }
+    for (var gx = 0; gx < 6; gx++) R(58 + gx, 100 + gx * 9, 1, 8, 'rgba(255,255,255,.12)');      // 빛 띠(비스듬히)
+    R(51, 99, 78, 1, '#f08878'); R(51, 158, 78, 2, '#6a1c12');
+    R(51, 104, 78, 3, '#d4d6dc'); R(51, 104, 78, 1, '#f6f7f9'); R(51, 106, 78, 1, '#8f939b');
+    [[53, 109], [125, 109], [53, 155], [125, 155]].forEach(function (q) { gRivet(R, q[0], q[1]); });
+    R(60, 112, 24, 20, GK); R(61, 113, 22, 18, '#b4b9c2'); for (var cy = 0; cy < 18; cy++) R(61, 113 + cy, 2, 1, '#e8ebf0'); R(61, 113, 22, 1, '#eef0f4'); R(61, 130, 22, 1, '#7c818b'); R(71, 116, 4, 11, GK); R(72, 117, 2, 9, '#2a2c32'); R(72, 117, 1, 9, '#5a5e66'); R(65, 128, 14, 1, '#f0b400');
+    var hx = 105, hy = 122, hr = 11;
+    for (var dy = -hr; dy <= hr; dy++) for (var dx = -hr; dx <= hr; dx++) { var d2 = dx * dx + dy * dy; if (d2 > hr * hr) continue; var e = d2 > (hr - 1) * (hr - 1), li = (-dx - dy) / (hr * 2) + 0.5; R(hx + dx, hy + dy, 1, 1, e ? GK : d2 > (hr - 3) * (hr - 3) ? (li > 0.5 ? '#f2f4f7' : '#8f949d') : (li > 0.7 ? '#e4e7ec' : li > 0.4 ? '#c3c7cf' : '#9aa0aa')); }
+    for (var s = -9; s <= 9; s++) { var px3 = hx + Math.round(Math.cos(handleA) * s), py3 = hy + Math.round(Math.sin(handleA) * s); R(px3 - 1, py3 - 1, 3, 3, GK); }
+    for (var s2 = -8; s2 <= 8; s2++) { var px4 = hx + Math.round(Math.cos(handleA) * s2), py4 = hy + Math.round(Math.sin(handleA) * s2); R(px4, py4, 1, 1, s2 < -2 ? '#f0705e' : '#c0392b'); }
+    R(hx - 2, hy - 2, 5, 5, GK); R(hx - 1, hy - 1, 3, 3, '#6a6f78'); R(hx - 1, hy - 1, 1, 1, '#c3c7cf');
+    R(58, 136, 32, 22, GK); R(60, 138, 28, 16, '#0b0b0e'); for (var sh = 0; sh < 5; sh++) R(60, 149 + sh, 28, 1, 'rgba(255,236,190,' + (0.02 * sh).toFixed(2) + ')');
+    var fl = dropFrac > 0 && dropFrac < 0.7 ? 3 : 7; R(60, 138, 28, fl, '#7a7f88'); R(60, 138, 28, 1, '#c3c7cf'); R(60, 138 + fl - 1, 28, 1, '#4a4e56');
+    R(55, 153, 38, 6, GK); R(56, 154, 36, 4, '#b4b9c2'); R(56, 154, 36, 1, '#eef0f4'); R(56, 157, 36, 1, '#7c818b');
+    R(98, 138, 28, 18, GK); R(99, 139, 26, 16, '#f2e8c8'); R(99, 139, 26, 1, '#fffaf0'); R(99, 154, 26, 1, '#c9bc96'); gSphere(R, 106, 146, 4, 1); gSphere(R, 117, 146, 4, 2); R(102, 151, 20, 1, '#d8c89a');
+    R(40, 87, 100, 13, GK); for (var cx2 = 41; cx2 < 139; cx2++) { var tt = (cx2 - 41) / 98; R(cx2, 88, 1, 11, tt < 0.15 ? '#f2f4f7' : tt < 0.6 ? '#d4d6dc' : tt < 0.85 ? '#b0b3ba' : '#8f939b'); } R(41, 88, 98, 1, '#ffffff'); R(41, 98, 98, 1, '#6a6d74'); R(41, 93, 98, 1, '#f0b400'); R(41, 94, 98, 1, '#a87c00');
+    var gcx = 90, gcy = 52, rx = 44, ry = 39;
+    for (var y = -ry - 1; y <= ry; y++) { if (gcy + y > 87) continue; var w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry)))); R(gcx - w - 2, gcy + y, w * 2 + 4, 1, GK); for (var ix = -w; ix < w; ix++) { var tt2 = (y + ry) / (ry * 2); R(gcx + ix, gcy + y, 1, 1, tt2 < 0.4 ? '#1e2932' : tt2 < 0.75 ? '#22303a' : '#273642'); } }
+    R(89, 56, 3, 31, '#3a4048'); R(89, 56, 1, 31, '#6a7078');
+    /* 캡슐은 유리 안에서만 보인다(유리 밖으로 삐져나온 점은 그리지 않는다). 손잡이를 돌리면 가운데를 축으로 맴돈다(jig = 맴도는 세기 0 ~ 1) */
+    var Rc = function (x0, y0, w0, h0, c0) { for (var yy = 0; yy < h0; yy++) for (var xx = 0; xx < w0; xx++) { var qx = x0 + xx - gcx, qy = y0 + yy - gcy; if ((qx * qx) / ((rx - 3) * (rx - 3)) + (qy * qy) / ((ry - 3) * (ry - 3)) < 1 && y0 + yy < 86) R(x0 + xx, y0 + yy, 1, 1, c0); } };
+    G_PILE.forEach(function (p, i) {
+      var x0 = p[0], y0 = p[1];
+      if (jig) { var ang = now / 260 * (0.7 + gRand(i) * 0.6) * jig, ox = x0 - 90, oy = (y0 - 62) * 1.2, ca = Math.cos(ang), sa = Math.sin(ang); x0 = 90 + ox * ca - oy * sa; y0 = 62 + (ox * sa + oy * ca) / 1.2; var ex = (x0 - gcx) / (rx - 9), ey = (y0 - gcy) / (ry - 9), e = Math.sqrt(ex * ex + ey * ey); if (e > 1) { x0 = gcx + (x0 - gcx) / e; y0 = gcy + (y0 - gcy) / e; } }
+      gSphere(Rc, Math.round(x0), Math.round(y0), 6.5, p[2], { ao: !jig && p[1] > 75 ? 0.5 : !jig && p[1] > 64 ? 0.25 : 0, glow: p[2] === 2 ? 0.5 + 0.5 * Math.sin(now / 300) : 0 });
+    });
+    for (var y2 = -ry; y2 <= ry; y2++) { if (gcy + y2 > 87) continue; var w2 = Math.round(rx * Math.sqrt(1 - (y2 * y2) / (ry * ry))); R(gcx - w2, gcy + y2, 2, 1, '#a8d0de'); R(gcx + w2 - 2, gcy + y2, 2, 1, '#4a7484'); if (y2 < -ry + 3) R(gcx - w2, gcy + y2, w2 * 2, 1, '#86b4c4'); }
+    for (var a = 0; a < 26; a++) { var ang = 2.35 + a * 0.042; R(gcx + Math.round(Math.cos(ang) * (rx - 7)), gcy + Math.round(Math.sin(ang) * (ry - 7)), a < 18 ? 2 : 1, 2, 'rgba(255,255,255,' + (0.75 - a * 0.025).toFixed(2) + ')'); }
+    for (var a2 = 0; a2 < 9; a2++) { var ang2 = 2.6 + a2 * 0.05; R(gcx + Math.round(Math.cos(ang2) * (rx - 13)), gcy + Math.round(Math.sin(ang2) * (ry - 13)), 1, 1, 'rgba(255,255,255,.35)'); }
+    R(gcx + 20, gcy - 26, 4, 2, 'rgba(255,255,255,.6)'); R(gcx + 25, gcy - 23, 2, 1, 'rgba(255,255,255,.4)');
+    for (var cy3 = 0; cy3 < 9; cy3++) { var cw = Math.round(29 * Math.sqrt(1 - Math.pow((8 - cy3) / 9, 2))); R(90 - cw - 1, 6 + cy3, cw * 2 + 2, 1, GK); R(90 - cw, 6 + cy3, cw * 2, 1, cy3 < 2 ? '#f08878' : cy3 < 5 ? '#d25a48' : '#b8402e'); R(90 - cw, 6 + cy3, Math.max(1, Math.round(cw * 0.4)), 1, cy3 < 5 ? '#f08878' : '#d25a48'); }
+    R(62, 14, 56, 3, GK); R(63, 14, 54, 2, '#8a2a20'); R(86, 1, 8, 6, GK); R(87, 2, 6, 4, '#f0b400'); R(87, 2, 3, 1, '#ffe08a');
+    if (dim) R(0, 0, GW, GH, 'rgba(8,8,12,' + dim.toFixed(2) + ')');
+  }
+  function gRays(R, x, y, rar, len, spin, alpha) { var n = rar === 2 ? 22 : rar === 1 ? 16 : 12, col = G_RAY[rar]; for (var i = 0; i < n; i++) { var aa = spin + i / n * Math.PI * 2, wid = i % 2 ? 1 : 2; for (var d = 12; d < len; d++) { if ((d + i * 3) % 7 > 4) continue; var f = alpha * (1 - d / len); R(x + Math.round(Math.cos(aa) * d), y + Math.round(Math.sin(aa) * d * 0.92), d < len * 0.5 ? wid : 1, 1, 'rgba(' + parseInt(col.substr(1, 2), 16) + ',' + parseInt(col.substr(3, 2), 16) + ',' + parseInt(col.substr(5, 2), 16) + ',' + f.toFixed(2) + ')'); } } }
+  var gHaloCtx = null, gHaloCache = {};      // 빛 무리는 점이 많아서(반지름 90이면 2만 개) 한 번 그린 것을 캔버스로 남겨 두고 붙인다
+  function gHalo(R, x, y, r, rar, a) {
+    if (gHaloCtx) { r = Math.round(r / 2) * 2; a = Math.round(a * 20) / 20; var hk = r + '_' + rar + '_' + a, hc = gHaloCache[hk];
+      if (!hc) { hc = document.createElement('canvas'); hc.width = hc.height = r * 2 + 1; var hg = hc.getContext('2d'), save = gHaloCtx; gHaloCtx = null; gHalo(function (x1, y1, w1, h1, c1) { hg.fillStyle = c1; hg.fillRect(x1, y1, w1, h1); }, r, r, r, rar, a); gHaloCtx = save; gHaloCache[hk] = hc; if (Object.keys(gHaloCache).length > 120) gHaloCache = {}; }
+      gHaloCtx.drawImage(hc, Math.round(x - r), Math.round(y - r)); return; } var col = G_RAY[rar], rr = parseInt(col.substr(1, 2), 16), gg = parseInt(col.substr(3, 2), 16), bb = parseInt(col.substr(5, 2), 16); for (var py = -r; py <= r; py++) for (var px = -r; px <= r; px++) { var d = Math.sqrt(px * px + py * py) / r; if (d > 1) continue; var v = (1 - d) * (1 - d) * a, th = G_BAYER[(py + 64) & 1][(px + 64) & 1] / 4; if (v > th * 0.5) R(x + px, y + py, 1, 1, 'rgba(' + rr + ',' + gg + ',' + bb + ',' + Math.min(0.6, v).toFixed(2) + ')'); } }
+  function gSpark(R, x, y, col, s) { s = s || 2; R(x, y - s, 1, s * 2 + 1, col); R(x - s, y, s * 2 + 1, 1, col); R(x - 1, y - 1, 3, 3, col); R(x, y, 1, 1, '#ffffff'); }
+  function gPedestal(R, x, y, rar) { for (var k = 0; k < 6; k++) { var w = 30 - k; R(x - w, y + k, w * 2, 1, k === 0 ? '#9aa0aa' : k < 3 ? '#5a5e66' : '#3a3d45'); } R(x - 28, y, 56, 1, G_RAY[rar]); }
+  /*
+   * 4.4.1 뽑기 기계의 흐름. 모드: idle(기계) → turn(손잡이 · 캡슐이 맴돈다) → zoom(1회: 캡슐이 가까이) → open(세 번 눌러 연다) → burst(터짐) → reveal(등장)
+   *                                         ↘ fly(10회: 캡슐이 판으로) → grid(하나씩 · 모두 열기) → 다 열면 summary
+   *   뽑기 자체(뽑기권 · 보장 · 조각)는 손잡이를 돌리는 순간 core 에서 끝난다. 연출은 그 결과를 보여 줄 뿐이라, 건너뛰거나 창을 닫아도 얻은 것은 같다.
+   */
+  var gst = { mode: 'idle', at: 0, items: [], taps: 0, tapAt: 0, raf: 0 }, gThumbs = {};
+  function gNow() { return Date.now(); }
+  function gCos(id) { return C.COSMETICS.filter(function (c) { return c.id === id; })[0]; }
+  /** 외형 하나를 그린 작은 캔버스(32×48). 라라에게 입혀 보이고, 깃발과 친구 옷은 그것대로. */
+  function gThumb(id) {
+    if (gThumbs[id]) return gThumbs[id];
+    var c = gCos(id), cv = document.createElement('canvas'); cv.width = 32; cv.height = 48; if (c) { try { drawThumb(cv, c, C.cosmeticLook(state)); } catch (e) { /* 그림이 없어도 된다 */ } }
+    return (gThumbs[id] = cv);
+  }
+  function gMsg(t) { setText($('gacha-msg'), t); }
+  function gActs(list) {
+    var box = $('gacha-acts'), key = list.map(function (a) { return a[0] + a[2]; }).join('|'); if (box.getAttribute('data-k') === key) return; box.setAttribute('data-k', key); box.textContent = '';
+    list.forEach(function (a) { var b = el('button', a[3] || '', a[0]); b.type = 'button'; b.disabled = !!a[2]; b.addEventListener('click', a[1]); box.appendChild(b); });
+  }
+  function gIdleActs() {
+    var t = state.tickets || 0;
+    gActs([['1회 · 뽑기권 1', function () { gStart(1); }, t < 1, 'y'], ['10회 · 뽑기권 10', function () { gStart(10); }, t < 10, '']]);
+    gMsg('뽑기권 ' + fmt(t) + '장 · 전설 보장까지 ' + C.gachaPityLeft(state) + '번');
+  }
+  function gOpenMachine() { gst = { mode: 'idle', at: gNow(), items: [], taps: 0, tapAt: 0, raf: 0 }; $('gacha-veil').hidden = false; gIdleActs(); gLoop(); }
+  function gClose() { $('gacha-veil').hidden = true; if (gst.raf) cancelAnimationFrame(gst.raf); gst.raf = 0; Store.save(); renderShop(); }
+  function gStart(n) {
+    var r = n === 1 ? C.pullGacha(state) : C.pullGachaMany(state, n); if (!r.ok) return;
+    var list = n === 1 ? [r] : r.list;
+    list.forEach(function (x) { log('뽑기: ' + C.RARITIES[x.rarity] + ' · ' + x.name + (x.dup ? ' (이미 있어서 조각 ' + x.shards + '개)' : '') + '.', x.rarity ? 'good' : ''); });
+    gst = { mode: 'turn', at: gNow(), n: n, items: list.map(function (x) { return { r: x, open: 0, openAt: 0 }; }), taps: 0, tapAt: 0, raf: gst.raf };
+    Store.save(); sfx('gturn'); gActs([['건너뛰기', gSkip, false, '']]); gMsg(n === 1 ? '손잡이를 돌려요' : '열 번 돌려요');
+  }
+  /** 건너뛰기: 1회는 바로 등장으로, 10회는 모두 연 판으로. */
+  function gSkip() {
+    if (gst.mode === 'turn' || gst.mode === 'zoom' || gst.mode === 'open' || gst.mode === 'burst') { if (gst.n === 1) { gst.items[0].open = 1; gReveal(); } else { gst.items.forEach(function (it) { it.open = 1; }); gGridDone(); } }
+    else if (gst.mode === 'fly' || gst.mode === 'grid') { gst.items.forEach(function (it) { it.open = 1; }); gGridDone(); }
+  }
+  function gReveal() {
+    var r = gst.items[0].r; gst.mode = 'reveal'; gst.at = gNow(); sfx('gopen' + r.rarity); if (r.rarity === 2) buzz([30, 40, 30]);
+    gMsg(C.RARITIES[r.rarity] + ' · ' + r.name + (r.dup ? ' · 이미 있어요 · 조각 +' + r.shards : ' · NEW') + (r.pity ? ' · 보장' : ''));
+    var can = C.ownsCosmetic(state, r.id);
+    gActs([['입어 보기', function () { if (C.wearCosmetic(state, r.id).ok) { sfx('tab'); applyLaraArt(); Store.save(); gMsg(r.name + ' 입었어요'); } }, !can, ''], ['다시 뽑기', function () { gStart(1); }, (state.tickets || 0) < 1, 'y'], ['닫기', gClose, false, '']]);
+  }
+  function gGridDone() {
+    gst.mode = 'grid'; var best = 0, news = 0, sh = 0; gst.items.forEach(function (it) { best = Math.max(best, it.r.rarity); if (!it.r.dup) news++; sh += it.r.shards || 0; });
+    gMsg('새 외형 ' + news + '개' + (sh ? ' · 조각 +' + sh : '') + (best === 2 ? ' · 전설!' : ''));
+    gActs([['10회 더', function () { gStart(10); }, (state.tickets || 0) < 10, 'y'], ['닫기', gClose, false, '']]);
+  }
+  function gCell(i) { return [22 + (i % 5) * 34, 64 + Math.floor(i / 5) * 70]; }
+  function gTap(x, y) {
+    var now = gNow();
+    if (gst.mode === 'idle') return;
+    if (gst.mode === 'turn' || gst.mode === 'zoom' || gst.mode === 'fly') { gst.at -= 5000; return; }      // 기다리는 장면은 눌러서 넘긴다
+    if (gst.mode === 'open') { gst.taps++; gst.tapAt = now; sfx(gst.taps >= 3 ? 'gcrack' : 'gtap'); buzz(8); if (gst.taps >= 3) { gst.mode = 'burst'; gst.at = now; sfx('gopen' + gst.items[0].r.rarity); } return; }
+    if (gst.mode === 'burst') { gst.items[0].open = 1; gReveal(); return; }
+    if (gst.mode === 'grid') { gst.items.forEach(function (it, i) { var c = gCell(i); if (!it.open && Math.abs(x - c[0]) < 16 && Math.abs(y - c[1]) < 28) { it.open = 1; it.openAt = now; sfx('gopen' + it.r.rarity); } }); if (gst.items.every(function (it) { return it.open; })) gGridDone(); }
+  }
+  function gOpenAll() { var now = gNow(), k = 0; gst.items.forEach(function (it) { if (!it.open) { it.open = 1; it.openAt = now + (k++) * 120; } }); sfx('gopen0'); setTimeout(gGridDone, k * 120 + 200); }
+  function gDraw() {
+    var cv = $('gacha-cv'); if (!cv) return; var g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    var R = function (x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
+    var now = gNow(), e = (now - gst.at) / 1000, m = gst.mode, it0 = gst.items[0];
+    gHaloCtx = g;
+    gRoom(R);
+    if (m === 'idle') { gMachine(R, now, -0.5, 0, 0, 0); return; }
+    if (m === 'turn') {
+      var T = gst.n === 1 ? 1.1 : 1.6, p = Math.min(1, e / T);
+      gMachine(R, now, -0.5 + p * Math.PI * 2 * (gst.n === 1 ? 1 : 2), Math.sin(p * Math.PI), p > 0.6 ? (p - 0.6) / 0.4 : 0, 0);
+      if (gst.n === 1 && p > 0.65) { var q = (p - 0.65) / 0.35; gSphere(R, 74, 140 + Math.round(q * 8) - Math.round(Math.abs(Math.sin(q * 6)) * 3 * (1 - q)), 6.5, it0.r.rarity); }
+      if (p >= 1) { if (gst.n === 1) { gst.mode = 'zoom'; gst.at = now; sfx('gdrop'); } else { gst.mode = 'fly'; gst.at = now; sfx('gdrop'); } }
+      return;
+    }
+    if (m === 'zoom') { var z = Math.min(1, e / 0.4), ez = 1 - Math.pow(1 - z, 3); gMachine(R, now, -0.5, 0, 1, 0.75 * ez); gSphere(R, 74 + (90 - 74) * ez, 148 + (96 - 148) * ez, 6.5 + (30 - 6.5) * ez, it0.r.rarity, { glow: it0.r.rarity === 2 ? ez : 0 }); if (z >= 1) { gst.mode = 'open'; gst.at = now; gMsg('캡슐을 눌러서 열어요'); gActs([['건너뛰기', gSkip, false, '']]); } return; }
+    if (m === 'open') {
+      gMachine(R, now, -0.5, 0, 1, 0.75); var w = Math.max(0, 1 - (now - gst.tapAt) / 300), sh = Math.round(Math.sin((now - gst.tapAt) / 30) * 4 * w), rar = it0.r.rarity;
+      if (gst.taps) gHalo(R, 90, 96, 40 + gst.taps * 8, rar, 0.18 * gst.taps);
+      gSphere(R, 90 + sh, 96 - Math.round(w * 3), 30, rar, { crack: gst.taps, glow: rar === 2 ? 1 : 0 });
+      for (var k2 = 0; k2 < 3; k2++) { R(76 + k2 * 10, 140, 6, 6, GK); R(77 + k2 * 10, 141, 4, 4, k2 < gst.taps ? G_RAY[rar] : '#3a3a40'); }      // 몇 번 남았는지
+      return;
+    }
+    if (m === 'burst') {
+      var b = Math.min(1, e / 0.75), rb = it0.r.rarity, eb = 1 - Math.pow(1 - b, 2);
+      gMachine(R, now, -0.5, 0, 1, 0.85); gHalo(R, 90, 96, 40 + Math.round(eb * 50), rb, 0.9 * (1 - b * 0.4)); gRays(R, 90, 96, rb, 40 + eb * 60, b * 1.2, 1 - b * 0.3);
+      for (var a = 0; a < 72; a++) { var an = a / 72 * Math.PI * 2, rr = 14 + eb * 60; if (a % 2) R(90 + Math.cos(an) * rr, 96 + Math.sin(an) * rr * 0.9, 1, 1, 'rgba(255,240,200,' + (0.9 * (1 - b)).toFixed(2) + ')'); }      // 퍼지는 빛의 고리
+      gSphere(R, 90, 96, 30, rb, { half: -1, rot: -0.9 * eb, dx: -Math.round(30 * eb), dy: -Math.round(34 * eb) }); gSphere(R, 90, 96, 30, rb, { half: 1, rot: 0.6 * eb, dx: Math.round(22 * eb), dy: Math.round(30 * eb) });
+      for (var i = 0; i < 46; i++) { var aa = gRand(i) * 6.28, d = (20 + gRand(i + 9) * 62) * eb, s = i % 5 ? 1 : 2; R(90 + Math.cos(aa) * d, 96 + Math.sin(aa) * d - b * 10, s, s, i % 4 ? G_RAY[rb] : '#ffffff'); }
+      if (b < 0.35) R(0, 0, GW, GH, 'rgba(255,248,225,' + (0.6 * (1 - b / 0.35)).toFixed(2) + ')');
+      if (b >= 1) { it0.open = 1; gReveal(); }
+      return;
+    }
+    if (m === 'reveal') {
+      var rv = it0.r.rarity, ev = Math.min(1, e / 0.5); R(0, 0, GW, GH, 'rgba(8,8,12,.7)'); gHalo(R, 90, 110, 60 + rv * 6, rv, 0.35 + rv * 0.1); if (rv) gRays(R, 90, 110, rv, 92, now / 2500, 0.45);
+      gPedestal(R, 90, 168, rv); var tc = gThumb(it0.r.id), k = 2, hh = Math.round(48 * k * (0.6 + 0.4 * ev)); g.drawImage(tc, 90 - 32 * k / 2, 168 - hh, 32 * k, hh);
+      for (var sp = 0; sp < (rv === 2 ? 7 : rv ? 4 : 2); sp++) { var tw = (now / 400 + sp * 0.37) % 1; if (tw < 0.6) gSpark(R, 20 + Math.round(gRand(sp) * 140), 18 + Math.round(gRand(sp + 4) * 120), G_RAY[rv], tw < 0.3 ? 2 : 1); }
+      return;
+    }
+    if (m === 'fly' || m === 'grid') {
+      var dimv = m === 'fly' ? Math.min(0.75, e) : 0.75; gMachine(R, now, -0.5, 0, 1, dimv);
+      gst.items.forEach(function (it, i) {
+        var c = gCell(i), r = it.r.rarity;
+        if (m === 'fly') { var f = Math.max(0, Math.min(1, (e - i * 0.08) / 0.45)), ef = 1 - Math.pow(1 - f, 3); if (f <= 0) return; gSphere(R, 74 + (c[0] - 74) * ef, 148 + (c[1] - 148) * ef - Math.sin(f * Math.PI) * 30, 6.5 + 5.5 * ef, r); return; }
+        if (!it.open || now < it.openAt) { gSphere(R, c[0], c[1] + Math.round(Math.sin(now / 400 + i) * 1), 12, r, { glow: r === 2 ? 0.6 + 0.4 * Math.sin(now / 250) : 0 }); return; }
+        var o = Math.min(1, (now - it.openAt) / 350);
+        R(c[0] - 15, c[1] - 28, 30, 56, GK); R(c[0] - 14, c[1] - 27, 28, 54, '#202127'); R(c[0] - 14, c[1] - 27, 28, 2, G_RAY[r]); if (r) gHalo(R, c[0], c[1], 14, r, 0.3);
+        g.drawImage(gThumb(it.r.id), c[0] - 16, c[1] - 22, 32, 48); if (it.r.dup) R(c[0] - 14, c[1] + 22, 28, 5, '#4a4a50'); else { R(c[0] + 8, c[1] - 24, 5, 5, GK); R(c[0] + 9, c[1] - 23, 3, 3, '#7fe07a'); }
+        if (o < 1) { R(c[0] - 15, c[1] - 28, 30, 56, 'rgba(255,248,225,' + (0.8 * (1 - o)).toFixed(2) + ')'); }
+      });
+      if (m === 'fly' && e > 0.08 * 9 + 0.5) { gst.mode = 'grid'; gst.at = now; gMsg('캡슐을 눌러서 열어요'); gActs([['모두 열기', gOpenAll, false, 'y'], ['건너뛰기', gSkip, false, '']]); }
+    }
+  }
+  function gLoop() { if ($('gacha-veil').hidden) { gst.raf = 0; return; } gDraw(); gst.raf = requestAnimationFrame(gLoop); }
   function doPull() {
     var r = C.pullGacha(state);
     if (!r.ok) return;
@@ -4506,7 +4698,9 @@
     $('danger-down').addEventListener('click', function () { if (C.setDangerNext(state, (state.dangerNext || 0) - 1).ok) { sfx('tab'); Store.save(); render(); } });
     $('danger-up').addEventListener('click', function () { if (C.setDangerNext(state, (state.dangerNext || 0) + 1).ok) { sfx('tab'); Store.save(); render(); } });
     Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (b) { b.addEventListener('click', function () { if (b.disabled) return; setHubTab(b.dataset.hub); if (b.dataset.hub === 'exped') renderStages(); }); });
-    $('gacha-pull').addEventListener('click', doPull);
+    $('gacha-pull').addEventListener('click', gOpenMachine);      // 4.4.1: 뽑기는 기계 창에서(1회 · 10회)
+    $('gacha-close').addEventListener('click', gClose);
+    $('gacha-cv').addEventListener('click', function (e) { var rc = $('gacha-cv').getBoundingClientRect(); gTap((e.clientX - rc.left) / rc.width * GW, (e.clientY - rc.top) / rc.height * GH); });
     $('ticket-buy').addEventListener('click', function () { if (C.buyTicket(state).ok) { sfx('buy'); Store.save(); renderShop(); } });
     $('odds-toggle').addEventListener('click', function () { oddsOpen = !oddsOpen; renderShop(); });
     $('stage-quit').addEventListener('click', function () {

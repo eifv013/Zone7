@@ -3308,3 +3308,10 @@ test('6구역 다리: 화력과 사기를 사고, 저장을 안전하게 읽는�
   for (const junk of [null, 5, 'x', { zs: 'x' }, { zs: [null, 1, { x: 9, hp: 1 }, { x: 0.5, hp: -1 }, { x: 0.5, hp: 1e9, big: 1 }, { x: 0.5, hp: 2, k: 'zzz' }], combo: 1e9, spawn: -3, wall: -9, down: 1e9, nade: 1e9, streak: 1e9, waveIn: -1 }]) { const raw = JSON.parse(JSON.stringify(s)); raw.bridge = junk; raw.firepower = junk; raw.morale = junk;
     const z = C.deserialize(JSON.stringify(raw), 0); assert.doesNotThrow(() => { C.stepBridge(z, 0.5, calm, []); C.shootBridge(z); C.throwNade(z); }); assert.ok(z.bridge.combo <= 10 && z.bridge.down <= C.BREACH_SECONDS && z.bridge.streak <= 99 && z.bridge.zs.every((q) => q.x > 0 && q.x <= 1.2 && q.hp > 0 && q.hp <= C.BRIDGE_BIG_HP * 9 && C.BRIDGE_KINDS[q.k]) && z.bridge.heat <= 1 && z.bridge.jam <= C.JAM_SECONDS); }
 });
+
+test('뽑기 기계 10회: 뽑기권 10장을 쓰고 열 개가 나온다. 모자라면 하나도 뽑지 않는다', () => {
+  const s = fresh(); s.tickets = 9; assert.equal(C.pullGachaMany(s, 10).reason, 'tickets'); assert.equal(s.tickets, 9);
+  s.tickets = 25; const r = C.pullGachaMany(s, 10, () => 0.99); assert.ok(r.ok); assert.equal(r.list.length, 10); assert.equal(s.tickets, 15); assert.ok(r.list.every((x) => x.ok && x.name));
+  assert.equal(s.gachaPulls, 10); for (const bad of [0, 11, NaN, 'x']) assert.equal(C.pullGachaMany(s, bad).ok, false);
+  const p = fresh(); p.tickets = 100; p.gachaPity = C.GACHA_PITY - 5; const pr = C.pullGachaMany(p, 10, () => 0.99); assert.ok(pr.list.some((x) => x.rarity === 2), '10회 안에서도 보장이 걸린다');
+});

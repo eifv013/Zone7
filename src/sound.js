@@ -47,6 +47,14 @@
     surge:      [{ f: 196, to: 392, d: 0.18, type: 'triangle', g: 0.05 }, { f: 392, to: 784, d: 0.22, at: 0.14, type: 'sine', g: 0.04 }],                // 전력이 차오르는 소리
     green:      [{ f: 880, d: 0.28, type: 'sine', g: 0.045 }, { f: 660, d: 0.34, at: 0.14, type: 'sine', g: 0.035 }],                                    // 역의 종소리
     answer:     [{ f: 659, d: 0.08, type: 'sine', g: 0.045 }, { f: 784, d: 0.16, at: 0.08, type: 'sine', g: 0.045 }],                                    // 무전 응답
+    // 4.4.1 뽑기 기계: 손잡이(드르륵) · 캡슐이 떨어짐(통) · 누름(딱) · 금이 감(찌직) · 열림(등급마다: 일반 짧게, 희귀 두 음, 전설 화음이 올라간다)
+    gturn:      [{ noise: true, cut: 400, d: 0.03, g: 0.06 }, { noise: true, cut: 400, d: 0.03, at: 0.11, g: 0.06 }, { noise: true, cut: 400, d: 0.03, at: 0.22, g: 0.06 }, { noise: true, cut: 400, d: 0.03, at: 0.33, g: 0.06 }, { noise: true, cut: 400, d: 0.03, at: 0.44, g: 0.06 }, { f: 160, to: 110, d: 0.5, type: 'triangle', g: 0.025 }],
+    gdrop:      [{ f: 300, to: 140, d: 0.12, type: 'sine', g: 0.06 }, { noise: true, cut: 380, d: 0.05, at: 0.1, g: 0.06 }, { f: 220, to: 180, d: 0.06, at: 0.2, type: 'sine', g: 0.035 }],
+    gtap:       [{ f: 880, to: 700, d: 0.05, type: 'triangle', g: 0.04 }, { noise: true, cut: 400, d: 0.02, g: 0.03 }],
+    gcrack:     [{ noise: true, cut: 400, d: 0.08, g: 0.06 }, { f: 784, to: 1175, d: 0.1, at: 0.03, type: 'sine', g: 0.03 }],
+    gopen0:     [{ noise: true, cut: 400, d: 0.06, g: 0.06 }, { f: 784, d: 0.12, at: 0.04, type: 'sine', g: 0.045 }],
+    gopen1:     [{ noise: true, cut: 400, d: 0.08, g: 0.06 }, { f: 659, d: 0.1, at: 0.04, type: 'sine', g: 0.045 }, { f: 988, d: 0.22, at: 0.12, type: 'sine', g: 0.045 }],
+    gopen2:     [{ noise: true, cut: 400, d: 0.12, g: 0.07 }, { f: 523, d: 0.5, at: 0.05, type: 'sine', g: 0.04 }, { f: 659, d: 0.5, at: 0.15, type: 'sine', g: 0.04 }, { f: 784, d: 0.5, at: 0.25, type: 'sine', g: 0.04 }, { f: 988, to: 1175, d: 0.6, at: 0.35, type: 'sine', g: 0.045 }],
     fortify:    [{ noise: true, cut: 300, d: 0.12, g: 0.07 }, { f: 147, d: 0.16, type: 'triangle', g: 0.06 }],                                           // 망치질
     goal:       [{ f: 523, d: 0.09, type: 'sine', g: 0.05 }, { f: 659, d: 0.09, at: 0.09, type: 'sine', g: 0.05 }, { f: 784, d: 0.09, at: 0.18, type: 'sine', g: 0.05 }, { f: 988, d: 0.3, at: 0.27, type: 'sine', g: 0.05 }],
     feed:       [{ f: 440, to: 660, d: 0.08, type: 'sine', g: 0.045 }, { f: 520, to: 780, d: 0.08, at: 0.09, type: 'sine', g: 0.045 }, { f: 660, to: 990, d: 0.13, at: 0.18, type: 'sine', g: 0.045 }],  // 냠냠
