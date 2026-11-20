@@ -809,6 +809,14 @@ canvas.plat.tappable { cursor: pointer; } canvas.plat.tappable:active { filter: 
 .pet-pick button:disabled small { color: var(--ink-soft); }
 .pet-odds { margin: 8px 0 0; }
 .pet-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.pet-eff { color: var(--ink); margin-top: 2px; }
+.pet-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.pet-slots button { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; background: transparent; color: var(--ink); border: 1px solid var(--ink); font: 500 12px/1.3 var(--font-body); text-align: left; cursor: pointer; min-width: 0; }
+.pet-slots button[aria-pressed="true"] { border: 2px solid var(--hazard); }
+.pet-slots button i { flex: none; width: 32px; height: 26px; image-rendering: pixelated; }
+.pet-slots button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pet-slots button small { display: block; color: var(--ink-soft); font-size: 11px; }
+.pet-own { margin-top: 6px; }
 .pet-face { flex: none; width: 52px; height: 44px; background-size: 47px 38px; background-position: center; background-repeat: no-repeat; border: 2px solid var(--ink); image-rendering: pixelated; }
 .pet-name { font: 700 22px/1.2 var(--font-body); }      /* 직접 지은 이름: 제목 글꼴에는 없는 글자가 있어 섞여 보였다. 본문 글꼴로 쓴다 */
 .pet-rename { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
@@ -1150,7 +1158,7 @@ canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
   .scavenge { padding: 12px 14px; font-size: 22px; }
   [data-view] { grid-row: 7; display: none; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px 12px; flex-direction: column; gap: 10px; }
   body[data-mview="base"] [data-view="base"], body[data-mview="manage"] [data-view="manage"],
-  body[data-mview="exped"] [data-view="exped"], body[data-mview="record"] [data-view="record"] { display: flex; }
+  body[data-mview="exped"] [data-view="exped"], body[data-mview="record"] [data-view="record"], body[data-mview="party"] [data-view="party"] { display: flex; }
   .foot { max-width: none; margin: 0; }
   .record-tabs { margin-bottom: 0; }
   .foot-block { margin: 0; }
@@ -1159,7 +1167,7 @@ canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
   .log, .journal { max-height: none; }
   .m-only { display: block; }
   .m-story { margin: 4px 0 0; font-size: 14px; line-height: 1.55; }
-  .mnav { grid-row: 8; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 2px solid var(--ink); background: var(--paper); }
+  .mnav { grid-row: 8; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 2px solid var(--ink); background: var(--paper); }
   /* 2.9.7: 폰에서는 상황 화면 아래의 '모험' 칸을 숨긴다. 아래 메뉴에 모험이 따로 있어서 같은 것이 두 번 나왔다(넓은 화면에는 아래 메뉴가 없으므로 그대로 둔다). */
   #hub-panel { display: none !important; }
   .mnav button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; background: transparent; border: 0; border-top: 3px solid transparent; padding: 7px 4px 8px; font: 600 12px/1 var(--font-body); color: var(--ink-soft); cursor: pointer; }
@@ -1425,7 +1433,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.4.5</div>
+  <div class="boot-ver">7구역 알파 4.4.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1788,28 +1796,32 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   </div>
 
   <div class="col" data-view="exped">
-    <!-- 4.4.0 특성 탭을 두 칸(특성 · 일행)으로 나눴다. 특전은 철수하면 사라지니 상황 탭의 철수 칸 아래로 옮겼다 -->
-    <div class="qty ex-seg" role="group" aria-label="특성 탭 고르기"><button type="button" data-ex-set="trait" aria-pressed="true">특성</button><button type="button" data-ex-set="pet" aria-pressed="false">일행</button></div>
-    <section class="panel" aria-labelledby="h-pet" data-ex="pet" hidden>
+    <!-- 4.4.6 일행은 아래 탭(일행)으로 따로 뺐다. 특성 탭에는 특성만 둔다. 특전은 상황 탭의 철수 칸 아래에 있다 -->
+    <section class="panel" aria-labelledby="h-traits" data-ex="trait">
+      <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label trait-pts">항체 샘플 <b class="num" id="trait-points">0</b></span></div>
+      <p class="hint">철수해도 남아요. 되돌리면 샘플을 모두 돌려받아요.</p>
+      <div class="rows" id="traits"></div>
+      <button type="button" class="recall trait-reset" id="trait-reset">특성 되돌리기</button>
+    </section>
+  </div>
+  <!-- 4.4.6 일행: 주인공 · 동물 친구(장착 칸 둘 · 보유 효과) -->
+  <div class="col" data-view="party">
+    <section class="panel" aria-labelledby="h-pet">
       <div class="panel-head"><h2 id="h-pet">일행</h2><span class="label" id="pet-kind"></span></div>
       <div class="pet-rename hero-row"><input type="text" id="hero-input" maxlength="8" autocomplete="off" spellcheck="false" aria-label="주인공의 새 이름"><button type="button" id="hero-rename">주인공 이름 바꾸기</button></div>
       <div class="set-row gender-row"><span class="label">성별 · 일지의 호칭이 바뀌어요</span>
         <div class="qty" role="group" aria-label="주인공의 성별"><button type="button" data-gender="none">설정 안 함</button><button type="button" data-gender="m">남</button><button type="button" data-gender="f">여</button></div></div>
       <p class="hint" id="pet-empty">강아지나 고양이를 데려와 보세요. 누가 올지는 만나 봐야 알아요.</p>
       <div id="pet-card" hidden>
-        <div class="pet-top"><i class="pet-face" id="pet-face"></i><div><div class="pet-name num" id="pet-name"></div><div class="label" id="pet-desc"></div></div></div>
+        <div class="pet-top"><i class="pet-face" id="pet-face"></i><div><div class="pet-name num" id="pet-name"></div><div class="label" id="pet-desc"></div><div class="label pet-eff" id="pet-eff"></div></div></div>
+        <div class="pet-slots" id="pet-slots" role="group" aria-label="장착한 친구"></div>
+        <p class="label pet-own" id="pet-own"></p>
         <div class="pet-rename"><input type="text" id="pet-input" maxlength="8" autocomplete="off" spellcheck="false" aria-label="친구의 새 이름"><button type="button" id="pet-rename">이름 바꾸기</button></div>
         <button type="button" class="pet-feed" id="pet-feed">간식 주기</button>
         <div class="kennel" id="kennel" role="group" aria-label="데리고 다닐 친구 고르기"></div>
       </div>
       <div class="pet-pick"><button type="button" id="adopt-dog"></button><button type="button" id="adopt-cat"></button></div>
       <p class="label pet-odds" id="pet-odds"></p>
-    </section>
-    <section class="panel" aria-labelledby="h-traits" data-ex="trait">
-      <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label trait-pts">항체 샘플 <b class="num" id="trait-points">0</b></span></div>
-      <p class="hint">철수해도 남아요. 되돌리면 샘플을 모두 돌려받아요.</p>
-      <div class="rows" id="traits"></div>
-      <button type="button" class="recall trait-reset" id="trait-reset">특성 되돌리기</button>
     </section>
   </div>
 </main>
@@ -1897,7 +1909,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.4.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.4.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2088,6 +2100,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <button type="button" data-mview-set="base" id="mnav-base" aria-pressed="true"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 0h5v1H2zM2 1h1v2H2zM6 1h1v2H6zM1 3h7v1H1zM4 4h1v5H4zM3 8h3v1H3z"/></svg><span>상황</span></button>
   <button type="button" data-mview-set="manage" id="mnav-manage" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h5v3H1zM6 2h2v1H6zM3 4h1v5H3z"/></svg><span>구역</span></button>
   <button type="button" data-mview-set="exped" id="mnav-exped" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 0h1v9H1zM2 1h5v1H2zM2 2h6v1H2zM2 3h5v1H2zM2 4h4v1H2z"/></svg><span>특성</span></button>
+  <button type="button" data-mview-set="party" id="mnav-party" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 2h2v2H1zM6 2h2v2H6zM3 0h1v2H3zM5 0h1v2H5zM2 4h5v1H2zM1 5h7v3H1zM3 8h3v1H3z"/></svg><span>일행</span></button>
   <button type="button" id="mnav-hub" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M4 0h1v2H4zM1 2h7v1H1zM2 3h5v4H2zM3 7h3v1H3zM4 8h1v1H4z"/></svg><span>모험</span></button>
   <button type="button" data-mview-set="record" aria-pressed="false"><svg class="ico" viewBox="0 0 9 9" aria-hidden="true" shape-rendering="crispEdges"><path d="M1 1h7v7H1zM2 2v5h2V2zM5 2v5h2V2z"/></svg><span>기록</span></button>
 </nav>

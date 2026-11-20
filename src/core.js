@@ -122,44 +122,114 @@
   var PET_PULL_SHARE = 0.05;       // 다시 데려오기 값: 지금까지 얻은 항체 샘플 총량의 이 비율(판이 커져도 값이 헐해지지 않게)
   var PET_DUP_REFUND = 0.5;        // 이미 함께 있는 아이가 또 나왔을 때 돌려받는 비율
   var PET_BREEDS = [
-    // 4.4.4: 강아지 18 · 고양이 18(등급마다 여섯). 그림은 scene.js 의 PET_SPEC(품종 id)로 그린다. body · patch 는 작은 표시(얼굴 칸 등)에 쓰는 대표 색이다
+    // 4.4.6: 강아지 24 · 고양이 24(등급마다 여덟). 4.4.4 의 36종에 12종을 더했다. 그림은 scene.js 의 PET_SPEC(품종 id)로 그린다. body · patch 는 작은 표시(얼굴 칸 등)에 쓰는 대표 색이다
     { id: 'jindo', kind: 'dog', rarity: 'common', name: '흰둥이', body: '#ece6d6', patch: '#ece6d6' },
     { id: 'nureong', kind: 'dog', rarity: 'common', name: '누렁이', body: '#c08a44', patch: '#ead6a6' },
     { id: 'shiba', kind: 'dog', rarity: 'common', name: '시바', body: '#d9903d', patch: '#f3e3c3' },
     { id: 'poodle', kind: 'dog', rarity: 'common', name: '푸들', body: '#c9a27a', patch: '#b08a62' },
     { id: 'beagle', kind: 'dog', rarity: 'common', name: '비글', body: '#f1ede2', patch: '#b8783c' },
     { id: 'dachs', kind: 'dog', rarity: 'common', name: '닥스', body: '#8a4a24', patch: '#8a4a24' },
+    { id: 'maltese', kind: 'dog', rarity: 'common', name: '말티즈', body: '#f6f4ee', patch: '#f6f4ee' },
+    { id: 'pug', kind: 'dog', rarity: 'common', name: '퍼그', body: '#d8b888', patch: '#2a2622' },
     { id: 'black', kind: 'dog', rarity: 'fine', name: '검둥이', body: '#2e2c2a', patch: '#2e2c2a' },
     { id: 'spot', kind: 'dog', rarity: 'fine', name: '바둑이', body: '#ece6d6', patch: '#2b2a28' },
     { id: 'husky', kind: 'dog', rarity: 'fine', name: '허스키', body: '#8d95a3', patch: '#f1efe8' },
     { id: 'corgi', kind: 'dog', rarity: 'fine', name: '코기', body: '#e0a04a', patch: '#f6efe2' },
     { id: 'collie', kind: 'dog', rarity: 'fine', name: '보더콜리', body: '#252428', patch: '#f1efe8' },
     { id: 'retriever', kind: 'dog', rarity: 'fine', name: '리트리버', body: '#e2b468', patch: '#e2b468' },
+    { id: 'schnauzer', kind: 'dog', rarity: 'fine', name: '슈나우저', body: '#8c9096', patch: '#d8dadc' },
+    { id: 'doberman', kind: 'dog', rarity: 'fine', name: '도베르만', body: '#2a2422', patch: '#b8783c' },
     { id: 'sapsal', kind: 'dog', rarity: 'rare', name: '삽살이', body: '#a9a39a', patch: '#f0b400' },
     { id: 'wolf', kind: 'dog', rarity: 'rare', name: '늑대개', body: '#5d6470', patch: '#e6e5db' },
     { id: 'pungsan', kind: 'dog', rarity: 'rare', name: '풍산이', body: '#f4f1ea', patch: '#cfd6dd' },
     { id: 'dalma', kind: 'dog', rarity: 'rare', name: '달마', body: '#f4f2ec', patch: '#17171a' },
     { id: 'shepherd', kind: 'dog', rarity: 'rare', name: '셰퍼드', body: '#b8783c', patch: '#2a2420' },
     { id: 'samoyed', kind: 'dog', rarity: 'rare', name: '사모예드', body: '#ffffff', patch: '#ffffff' },
+    { id: 'akita', kind: 'dog', rarity: 'rare', name: '아키타', body: '#d88a48', patch: '#f6efe2' },
+    { id: 'bernese', kind: 'dog', rarity: 'rare', name: '버니즈', body: '#24222a', patch: '#f1efe8' },
     { id: 'cheese', kind: 'cat', rarity: 'common', name: '치즈', body: '#e0a04a', patch: '#f3e3c3' },
     { id: 'tabby', kind: 'cat', rarity: 'common', name: '고등어', body: '#8d8f94', patch: '#3c3e44' },
     { id: 'white', kind: 'cat', rarity: 'common', name: '흰냥이', body: '#f4f2ec', patch: '#f4f2ec' },
     { id: 'gray', kind: 'cat', rarity: 'common', name: '회색이', body: '#9a9da3', patch: '#9a9da3' },
     { id: 'cow', kind: 'cat', rarity: 'common', name: '젖소냥', body: '#f4f2ec', patch: '#26262a' },
     { id: 'chaos', kind: 'cat', rarity: 'common', name: '카오스', body: '#2e2a26', patch: '#b8783c' },
+    { id: 'socks', kind: 'cat', rarity: 'common', name: '양말이', body: '#6a6c72', patch: '#f1efe8' },
+    { id: 'cream', kind: 'cat', rarity: 'common', name: '크림이', body: '#f0dcb4', patch: '#f8ecd4' },
     { id: 'tuxedo', kind: 'cat', rarity: 'fine', name: '턱시도', body: '#26262a', patch: '#f1efe8' },
     { id: 'calico', kind: 'cat', rarity: 'fine', name: '삼색이', body: '#f1efe8', patch: '#d0782e' },
     { id: 'bengal', kind: 'cat', rarity: 'fine', name: '벵갈', body: '#d09a50', patch: '#5a3a20' },
     { id: 'russian', kind: 'cat', rarity: 'fine', name: '러블', body: '#7d8ca2', patch: '#7d8ca2' },
     { id: 'scottish', kind: 'cat', rarity: 'fine', name: '스코티시', body: '#b8b0a4', patch: '#8a8478' },
     { id: 'munchkin', kind: 'cat', rarity: 'fine', name: '먼치킨', body: '#e8c08a', patch: '#f6ead6' },
+    { id: 'abyssinian', kind: 'cat', rarity: 'fine', name: '아비시니안', body: '#b8763c', patch: '#8a5028' },
+    { id: 'sphynx', kind: 'cat', rarity: 'fine', name: '스핑크스', body: '#e8c0b0', patch: '#e8c0b0' },
     { id: 'siam', kind: 'cat', rarity: 'rare', name: '샴', body: '#ece0c8', patch: '#4a3628' },
     { id: 'nero', kind: 'cat', rarity: 'rare', name: '네로', body: '#1a1a1e', patch: '#1a1a1e' },
     { id: 'ragdoll', kind: 'cat', rarity: 'rare', name: '랙돌', body: '#f4f0e8', patch: '#7a6a5c' },
     { id: 'golden', kind: 'cat', rarity: 'rare', name: '브리티시 숏헤어', body: '#e8b04a', patch: '#f8e2b0' },
     { id: 'persian', kind: 'cat', rarity: 'rare', name: '페르시안', body: '#ece6dc', patch: '#ece6dc' },
-    { id: 'norwegian', kind: 'cat', rarity: 'rare', name: '노르웨이숲', body: '#8a7058', patch: '#efe4d0' }
+    { id: 'norwegian', kind: 'cat', rarity: 'rare', name: '노르웨이숲', body: '#8a7058', patch: '#efe4d0' },
+    { id: 'maine', kind: 'cat', rarity: 'rare', name: '메인쿤', body: '#6a5038', patch: '#c8a888' },
+    { id: 'turkish', kind: 'cat', rarity: 'rare', name: '터키시 앙고라', body: '#f8f6f0', patch: '#f8f6f0' }
   ];
+  /*
+   * 4.4.6 친구의 효과는 셋이다.
+   *   장착 효과: 강아지 칸 하나 · 고양이 칸 하나(party). 장착한 아이는 종류 효과(강아지 방어력 · 고양이 전체 생산, 등급 × 레벨)와 특기를 준다.
+   *   특기(PET_SKILLS): 품종마다 하나. 이미 있는 배수 항목(mods)에만 얹는다(새 규칙을 만들지 않아 가볍다). mult 는 곱, add 는 더하기.
+   *   보유 효과: 만난 아이마다 종류 효과를 조금씩(PET_OWN: 기본 0.5% · 고급 1% · 희귀 2%, 레벨마다 +10%) 더한다. 장착하지 않아도 붙는다.
+   *   왜 보유 효과를 작게 했나: 48종을 다 모으면 종류마다 28%(모두 최대 레벨이면 56%)라서, 장착한 한 아이(최대 105%)보다 앞서지 않게 했다.
+   */
+  var PET_OWN = { common: 0.005, fine: 0.01, rare: 0.02 }, PET_OWN_STEP = 0.1;
+  var PET_SKILLS = {
+    jindo: { key: 'loot', mult: 1.15, text: '밤 전리품 +15%' },
+    nureong: { key: 'click', mult: 1.2, text: '수색 배수 +20%' },
+    shiba: { key: 'offline', add: 0.03, text: '자리 비움 효율 +3%p' },
+    poodle: { key: 'z2', mult: 1.15, text: '2구역 생산 +15%' },
+    beagle: { key: 'lab', mult: 1.1, text: '혈청 값 +10%' },
+    dachs: { key: 'z4', mult: 1.15, text: '4구역 화물 값 +15%' },
+    black: { key: 'defcost', mult: 0.95, text: '방어 시설 값 -5%' },
+    spot: { key: 'hordespeed', mult: 0.92, text: '무리가 다가오는 걸음 -8%' },
+    husky: { key: 'cool', mult: 1.2, text: '총열이 20% 빨리 식는다' },
+    corgi: { key: 'z1cost', mult: 0.95, text: '1구역 시설 값 -5%' },
+    collie: { key: 'z6', mult: 1.2, text: '6구역 생산 +20%' },
+    retriever: { key: 'strayfast', mult: 1.2, text: '울타리 밖 생존자가 20% 더 자주 나타난다' },
+    sapsal: { key: 'defense', mult: 1.15, text: '방어력 +15% 더' },
+    wolf: { key: 'held', mult: 1.3, text: '무리 습격을 막으면 받는 것 +30%' },
+    pungsan: { key: 'loss', mult: 0.85, text: '부서진 건물을 고치는 생존자 -15%' },
+    dalma: { key: 'nade', add: 1, text: '수류탄이 1마리 빨리 찬다' },
+    shepherd: { key: 'nightpay', mult: 1.3, text: '습격을 막으면 오는 생존자 +30%' },
+    samoyed: { key: 'antibody', mult: 1.05, text: '철수 항체 샘플 +5%' },
+    cheese: { key: 'z1', mult: 1.2, text: '1구역 생산 +20%' },
+    tabby: { key: 'cost', mult: 0.98, text: '모든 값 -2%' },
+    white: { key: 'offline', add: 0.03, text: '자리 비움 효율 +3%p' },
+    gray: { key: 'z3', mult: 1.15, text: '3구역 완제품 값 +15%' },
+    cow: { key: 'z2', mult: 1.15, text: '2구역 생산 +15%' },
+    chaos: { key: 'loot', mult: 1.15, text: '밤 전리품 +15%' },
+    tuxedo: { key: 'z7', mult: 1.2, text: '7구역 생산 +20%' },
+    calico: { key: 'reroll', add: 1, text: '특전 다시 뽑기 +1번' },
+    bengal: { key: 'click', mult: 1.2, text: '수색 배수 +20%' },
+    russian: { key: 'labcost', mult: 0.95, text: '연구 과제 점수 -5%' },
+    scottish: { key: 'z4', mult: 1.15, text: '4구역 화물 값 +15%' },
+    munchkin: { key: 'straytime', mult: 1.25, text: '울타리 밖 생존자가 25% 더 오래 기다린다' },
+    siam: { key: 'antibody', mult: 1.05, text: '철수 항체 샘플 +5%' },
+    nero: { key: 'staffcost', mult: 0.9, text: '연구원 값 -10%' },
+    ragdoll: { key: 'offline', add: 0.05, text: '자리 비움 효율 +5%p' },
+    golden: { key: 'prod', mult: 1.1, text: '전체 생산 +10% 더' },
+    persian: { key: 'cap', mult: 1.2, text: '창고 +20%' },
+    norwegian: { key: 'lab', mult: 1.2, text: '혈청 값 +20%' },
+    maltese: { key: 'ordergap', mult: 0.92, text: '단골 주문이 오는 간격 -8%' },
+    pug: { key: 'mergebonus', mult: 1.3, text: '손으로 합칠 때의 덤 +30%' },
+    schnauzer: { key: 'wallfix', mult: 1.25, text: '방벽을 25% 더 빨리 고친다' },
+    doberman: { key: 'lvcost', mult: 0.95, text: '건물을 올리는 데 드는 생존자 -5%' },
+    akita: { key: 'contractgap', mult: 0.85, text: '납품 의뢰가 오는 간격 -15%' },
+    bernese: { key: 'muster', mult: 0.95, text: '7구역 습격에 서야 할 경비 -5%' },
+    socks: { key: 'z3cost', mult: 0.95, text: '3구역 시설 값 -5%' },
+    cream: { key: 'salvagegap', mult: 0.92, text: '표류 화물이 나오는 간격 -8%' },
+    abyssinian: { key: 'traincost', mult: 0.95, text: '4구역 시설 값 -5%' },
+    sphynx: { key: 'lucky', add: 0.05, text: '들어오는 상자가 한 단계 더 높을 확률 +5%p' },
+    maine: { key: 'click', mult: 1.3, text: '수색 배수 +30%' },
+    turkish: { key: 'loot', mult: 1.3, text: '밤 전리품 +30%' }
+  };
   /*
    * 좀비 도감: 15종. 밤이 지날 때마다 그날 무리에 섞여 있던 것을 만난 것으로 적는다(zdex 에 만난 횟수).
    *   rarity : common 흔함, uncommon 드묾, rare 희귀, epic 아주 희귀
@@ -623,6 +693,7 @@
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
       treats: 0,             // 간식: 친구를 키우는 재화(철수해도 남는다)
       petLv: {},             // 친구마다의 레벨 { 품종: 레벨 }
+      party: { dog: null, cat: null },   // 4.4.6 장착한 친구(강아지 칸 · 고양이 칸의 품종 id). pet 은 그 가운데 라라 곁을 걷고 간식을 받는 아이
       kennel: {},            // 함께 있는 친구들 { 품종: 이름 }. 한 번 데려온 아이는 계속 남고, 누구를 데리고 다닐지 고른다
       heroName: HERO_DEFAULT,
       heroGender: 'none',    // 주인공의 성별: 'none'(설정 안 함) | 'm' | 'f'. 일지의 호칭이 달라진다    // 주인공의 이름
@@ -737,6 +808,11 @@
         s.pet = { kind: breed.kind, breed: breed.id, name: s.kennel[breed.id] };
       }
     }
+    // 4.4.6 장착 칸: 함께 있는 아이이고 종류가 맞을 때만 받는다. 예전 저장은 데리고 다니던 아이가 그 종류 칸에 들어간다
+    s.party = { dog: null, cat: null };
+    var rp = raw.party && typeof raw.party === 'object' && !Array.isArray(raw.party) ? raw.party : {};
+    ['dog', 'cat'].forEach(function (k) { var b = findById(PET_BREEDS, rp[k]); if (b && b.kind === k && s.kennel[b.id]) s.party[k] = b.id; });
+    if (s.pet) s.party[s.pet.kind] = s.pet.breed;      // 데리고 다니는 아이는 늘 자기 칸에 장착돼 있다
     s.surgeLeft = clamp(safeNum(raw.surgeLeft, 0), 0, SURGE_SECONDS);
     // 3.5.0: 품목 · 숙련 · 고장 · 트럭은 없앴다. 칸만 남겨 둔다(옛 저장을 읽어도 탈이 없게)
     s.recipe = 'bolt'; s.mastery = {}; s.retool = 0; s.tuneLeft = 0; s.jamIn = 90; s.truckIn = 100; s.jam = null; s.truck = null; s.stockSec = 0;
@@ -998,7 +1074,7 @@
     m.antibody *= 1 + DANGER_ANTIBODY * dangerOf(state);      // 위험 단계: 철수 항체가 는다
     if (state.stageMarks) m.loot *= Math.pow(BOSS_BADGE_LOOT, badgeCount(state));      // 원정 지역 휘장
     if (state.medals) CHALLENGES.forEach(function (d) { if (state.medals[d.id] > 0 && d.perk) { if (d.perk.add) m[d.perk.key] += d.perk.add; else m[d.perk.key] *= d.perk.mult; } });
-    var pe = petEffect(state); if (pe) m[pe.key] *= 1 + pe.bonus;      // 동물 친구
+    applyPets(state, m);      // 동물 친구(4.4.6: 보유 효과 + 장착한 강아지 · 고양이의 효과와 특기)
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
     // 7구역 정착지의 건물(3.1.0)
@@ -2590,7 +2666,7 @@
     var breed = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(safeNum(rng(), 0) * pool.length)))];
     var dup = !!state.kennel[breed.id], refund = dup ? Math.floor(cost * PET_DUP_REFUND) : 0;
     state.antibodies -= cost - refund;
-    if (!dup) { state.kennel[breed.id] = breed.name; state.pet = { kind: kind, breed: breed.id, name: breed.name }; }
+    if (!dup) { state.kennel[breed.id] = breed.name; state.pet = { kind: kind, breed: breed.id, name: breed.name }; partyOf(state)[kind] = breed.id; }      // 새 아이는 바로 그 종류 칸에 장착한다
     return { ok: true, breed: breed, rarity: rarity, dup: dup, cost: cost, refund: refund };
   }
   /** 함께 있는 친구 가운데 누구를 데리고 다닐지 고른다. */
@@ -2598,6 +2674,7 @@
     var breed = findById(PET_BREEDS, breedId);
     if (!breed || !state.kennel[breedId]) return fail('unknown');
     state.pet = { kind: breed.kind, breed: breed.id, name: state.kennel[breedId] };
+    partyOf(state)[breed.kind] = breed.id;      // 4.4.6 고른 아이는 자기 종류 칸에 장착된다(다른 종류 칸은 그대로)
     return { ok: true, breed: breed };
   }
   function renamePet(state, name) {
@@ -2631,14 +2708,41 @@
     state.petLv[state.pet.breed] = petLevel(state, state.pet.breed) + 1;
     return { ok: true, level: state.petLv[state.pet.breed], cost: cost };
   }
-  /** 지금 데리고 다니는 친구의 효과 { key: 배수 항목, bonus: 올려 주는 비율 }. 없으면 null. */
-  function petEffect(state) {
-    if (!state.pet) return null;
-    var breed = findById(PET_BREEDS, state.pet.breed), kind = PET_KINDS[state.pet.kind];
-    if (!breed || !kind) return null;
+  /** 장착 칸 { dog, cat }. 예전 상태(party 가 없음)도 받는다. */
+  function partyOf(state) {
+    if (!state.party || typeof state.party !== 'object') state.party = { dog: null, cat: null };
+    return state.party;
+  }
+  /** 장착한 아이의 종류 효과 { key, bonus }. breedId 가 장착돼 있지 않거나 없으면 null. */
+  function equipEffect(state, breedId) {
+    var breed = findById(PET_BREEDS, breedId), kind = breed && PET_KINDS[breed.kind];
+    if (!kind || !state.kennel || !state.kennel[breedId]) return null;
     var rarity = findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0];
     return { key: kind.key, bonus: rarity[breed.kind] * petLevelMult(state, breed.id) };
   }
+  /** 데리고 다니는 친구의 종류 효과 { key, bonus }. 없으면 null. */
+  function petEffect(state) { return state.pet ? equipEffect(state, state.pet.breed) : null; }
+  /** 보유 효과: 만난 아이 모두가 종류마다 조금씩 올려 주는 비율 { dog: 방어력, cat: 전체 생산 }. */
+  function petOwnBonus(state) {
+    var o = { dog: 0, cat: 0 };
+    PET_BREEDS.forEach(function (b) { if (state.kennel && state.kennel[b.id]) o[b.kind] += (PET_OWN[b.rarity] || 0) * (1 + PET_OWN_STEP * petLevel(state, b.id)); });
+    return o;
+  }
+  /** 친구들이 주는 배수를 m(mods)에 얹는다: 보유 효과, 장착한 두 아이의 종류 효과와 특기. */
+  function applyPets(state, m) {
+    if (!state.kennel) return;
+    var own = petOwnBonus(state);
+    m[PET_KINDS.dog.key] *= 1 + own.dog; m[PET_KINDS.cat.key] *= 1 + own.cat;
+    var party = partyOf(state);
+    ['dog', 'cat'].forEach(function (k) {
+      var id = party[k], e = id && equipEffect(state, id), sk = id && PET_SKILLS[id];
+      if (!e) return;
+      m[e.key] *= 1 + e.bonus;
+      if (sk && sk.add) m[sk.key] += sk.add; else if (sk && sk.mult) m[sk.key] *= sk.mult;
+    });
+  }
+  /** 품종의 특기 글. 없으면 빈 글. */
+  function petSkillText(breedId) { var sk = PET_SKILLS[breedId]; return sk ? sk.text : ''; }
   function breedDesc(breed) {
     var kind = PET_KINDS[breed.kind], rarity = findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0];
     return kind.what + ' · ' + kind.label + ' +' + Math.round(rarity[breed.kind] * 100) + '%';
@@ -2653,7 +2757,7 @@
     if (!state.pet) return null;
     var breed = findById(PET_BREEDS, state.pet.breed), kind = PET_KINDS[state.pet.kind];
     if (!breed || !kind) return null;
-    return { kind: state.pet.kind, kindName: kind.name, breed: breed, rarity: findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0], name: state.pet.name, desc: breedDesc(breed) };
+    return { kind: state.pet.kind, kindName: kind.name, breed: breed, rarity: findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0], name: state.pet.name, desc: breedDesc(breed), skill: petSkillText(breed.id) };
   }
 
   /* ---------- 구역 강화 ---------- */
@@ -3385,7 +3489,7 @@
   }
   /** 오늘 밤을 막는 데 가장 싼 보강 { cost, picks: [{ id, qty }], enough }. 이미 막을 수 있으면 cost 0. */
   function defensePlan(state) {
-    var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, research: state.research, pet: state.pet, zone: state.zone, posts: state.posts };   // defensePower 가 읽는 것만 담는다(연구 과제 '방어 교범' 포함)
+    var tmp = { supplies: Infinity, defenses: {}, upgrades: state.upgrades, perks: state.perks, traits: state.traits, research: state.research, pet: state.pet, party: state.party, kennel: state.kennel, petLv: state.petLv, zone: state.zone, posts: state.posts };   // defensePower 가 읽는 것만 담는다(연구 과제 '방어 교범' 포함)
     DEFENSES.forEach(function (d) { tmp.defenses[d.id] = state.defenses[d.id]; });
     /*
      * 1.2.3: 배수(mods)는 방어 수단을 더해도 바뀌지 않으므로 고리 밖에서 한 번만 셈한다.
@@ -3699,6 +3803,15 @@
     { id: 'pet-hat',     slot: 'pet',  name: '고깔모자',    rarity: 1, look: 'hat' },
     { id: 'pet-cape',    slot: 'pet',  name: '망토',        rarity: 2, look: 'cape' },
     { id: 'pet-crown',   slot: 'pet',  name: '왕관',        rarity: 2, look: 'crown' },
+    // 4.4.6: 친구 그림이 바뀌어 옷 자리를 다시 잡고, 여덟 가지를 더했다
+    { id: 'pet-bandana', slot: 'pet',  name: '노란 반다나', rarity: 0, look: 'bandana' },
+    { id: 'pet-bowtie',  slot: 'pet',  name: '나비넥타이',  rarity: 0, look: 'bowtie' },
+    { id: 'pet-flower',  slot: 'pet',  name: '꽃 핀',       rarity: 1, look: 'flower' },
+    { id: 'pet-goggles', slot: 'pet',  name: '고글',        rarity: 1, look: 'goggles' },
+    { id: 'pet-sweater', slot: 'pet',  name: '줄무늬 스웨터', rarity: 1, look: 'sweater' },
+    { id: 'pet-pack',    slot: 'pet',  name: '작은 배낭',   rarity: 1, look: 'pack' },
+    { id: 'pet-halo',    slot: 'pet',  name: '천사 고리',   rarity: 2, look: 'halo' },
+    { id: 'pet-wings',   slot: 'pet',  name: '작은 날개',   rarity: 2, look: 'wings' },
     // 깃발은 뽑기에서 뺐다(2.0.0: 화면에서 작아서 뽑아도 기쁘지 않았다). 도전·원정의 확정 보상으로 준다(FLAG_REWARDS). 조각으로도 얻을 수 있다
     { id: 'flag-yellow', slot: 'flag', name: '노란 깃발',   rarity: 0, base: true, look: '#f0b400' },
     { id: 'flag-red',    slot: 'flag', name: '빨간 깃발',   rarity: 0, reward: true, look: '#c0392b' },
@@ -4042,7 +4155,7 @@
     next.antibodyTotal = state.antibodyTotal + gained;
     TRAITS.forEach(function (t) { next.traits[t.id] = state.traits[t.id]; });
     next.retreats = state.retreats + 1;
-    next.pet = state.pet; next.kennel = state.kennel; next.treats = state.treats; next.petLv = state.petLv; next.heroName = state.heroName; next.heroGender = state.heroGender;      // 동물 친구와 이름은 함께 간다
+    next.pet = state.pet; next.party = state.party; next.kennel = state.kennel; next.treats = state.treats; next.petLv = state.petLv; next.heroName = state.heroName; next.heroGender = state.heroGender;      // 동물 친구와 이름은 함께 간다
     next.bestZone = Math.max(state.bestZone, state.zone);
     next.story = state.story;
     checkAchievements(state, null);      // 철수하는 순간까지 채운 것은 달성으로 쳐 준다
@@ -4662,7 +4775,7 @@
     ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
     PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND,
-    cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, breedDesc: breedDesc, petInfo: petInfo,
+    cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, petOwnBonus: petOwnBonus, petSkillText: petSkillText, partyOf: partyOf, PET_SKILLS: PET_SKILLS, PET_OWN: PET_OWN, PET_OWN_STEP: PET_OWN_STEP, breedDesc: breedDesc, petInfo: petInfo,
     MOM_CHAPTER: MOM_CHAPTER, MOM_PAGES: MOM_PAGES, momRead: momRead, afterEnding: afterEnding,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE, peakPrice: peakPrice,

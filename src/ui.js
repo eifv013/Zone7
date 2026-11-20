@@ -1891,7 +1891,7 @@
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (c.slot === 'flag') { ctx.fillStyle = '#cfcebf'; ctx.fillRect(6, 6, 2, 30); if (window.Scene && window.Scene.drawFlag) window.Scene.drawFlag(ctx, c.look, 8, 6, 3, 0, 0); return; }
-    if (c.slot === 'pet') { if (window.Scene && window.Scene.paintPet) window.Scene.paintPet(ctx, 4, 16, 2, false, petLook(), c.look, 0); return; }      // 친구 옷: 데리고 있는 친구(없으면 누렁이)에게 입혀 보인다
+    if (c.slot === 'pet') { if (window.Scene && window.Scene.paintPet) window.Scene.paintPet(ctx, Math.floor((cv.width - 30) / 2), cv.height - 26, 2, false, petLook(), c.look, 0); return; }      // 친구 옷: 데리고 있는 친구(없으면 누렁이)에게 입혀 보인다
     var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
     if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
     if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 0.65, look.fx === 'glow' ? 1 : 0);
@@ -2305,8 +2305,6 @@
    * 도감: 동물 친구(만난 아이만 모습이 보인다), 좀비, 방어 수단. 기록 화면의 '도감' 탭에서 본다.
    *   그림은 도트를 SVG 로 옮긴다(pixSvg). 좀비는 도트 화면의 그림(Scene.zombieFrames)을 그대로 쓴다.
    */
-  var DOG_PIX = ['..........pp..', '.........bbbb.', '.........bkbbn', 'b........bbbb.', 'bb.bbbbbbbbb..', '.bbbbppbbbbb..', '..bbbbppbbbb..', '..bbbbbbbbbb..', '..bb.b..bb.b..', '..bb.b..bb.b..'];
-  var CAT_PIX = ['.........b..b.', '.........bbbb.', 'b........bkbk.', 'b........bbnb.', 'b..bbbbbbbbb..', 'bb.bppbbbbbb..', '.bbbbppbbbbb..', '..bbbbbbbbbb..', '..b.b...b.b...', '..b.b...b.b...'];
   var ZOMBIE_PAL = { g: '#7da35a', x: '#17180f', c: '#5a5f6a', d: '#3a3f4a', h: '#3a2a22' };
   var ZOMBIE_DEX = [
     { id: 'walker', name: '배회자', text: '가장 흔해요. 느리지만 끝없이 와요.' },
@@ -2349,7 +2347,7 @@
   var REG_PIX = ['..hhh...', '.hhhhh..', '.hsssh..', '..sss...', '.ccccc..', 'scccccs.', '.ccccc..', '.ccccc..', '.dd.dd..', '.dd.dd..'];      // 단골의 모습(머리 h, 살 s, 옷 c, 바지 d)
   function renderDex() {
     if (dexTab === 'pet') dexTab = 'dog';
-    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + JSON.stringify(state.records) + '|' + JSON.stringify(state.passers) + '|' + (state.pet ? state.pet.breed : '') + '|' + state.zone;
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + JSON.stringify(state.records) + '|' + JSON.stringify(state.passers) + '|' + (state.pet ? state.pet.breed : '') + '|' + JSON.stringify(state.party) + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
@@ -2375,13 +2373,12 @@
       C.PET_BREEDS.filter(function (b) { return b.kind === dexTab; }).sort(function (x, y) { return order[x.rarity] - order[y.rarity]; }).forEach(function (b) {
         var got = !!state.kennel[b.id], kind = C.PET_KINDS[b.kind], rar = null;
         C.PET_RARITIES.forEach(function (r) { if (r.id === b.rarity) rar = r; });
-        var pal = got ? { b: b.body, p: b.patch || b.body, k: '#17180f', n: '#17180f' } : { b: '#4a4b40', p: '#4a4b40', k: '#4a4b40', n: '#4a4b40' };
-        var art = pixSvg(b.kind === 'cat' ? CAT_PIX : DOG_PIX, pal), rname = rar ? rar.name : '';
-        if (got) { art = el('i', 'dex-pet'); art.style.background = petIcon(b) + ' center / contain no-repeat'; }      // 4.4.4: 만난 친구는 품종 그림(못 만난 친구는 그대로 그림자)
+        var art = el('i', 'dex-pet'), rname = rar ? rar.name : '';
+        art.style.background = (got ? petIcon(b) : petShadow(b.kind)) + ' center / contain no-repeat';      // 4.4.6: 만난 친구는 품종 그림, 못 만난 친구는 종류마다 같은 그림자(품종이 드러나지 않는다)
         if (!got) { card(art, '???', rname + ' 등급', '데려오기에서 만날 수 있어요.', true, 'r-' + b.rarity); return; }
-        var lv = C.petLevel(state, b.id), with_ = state.pet && state.pet.breed === b.id;
+        var lv = C.petLevel(state, b.id), with_ = C.partyOf(state)[b.kind] === b.id;
         var bonus = Math.round((rar ? rar[b.kind] : 0) * (1 + C.PET_LEVEL_STEP * lv) * 100);
-        card(art, state.kennel[b.id] + (with_ ? ' ★' : ''), rname + ' · ' + b.name + ' · Lv ' + lv + ' / ' + C.PET_LEVEL_MAX, kind.label + ' +' + bonus + '%', false, 'r-' + b.rarity);
+        card(art, state.kennel[b.id] + (with_ ? ' ★' : ''), rname + ' · ' + b.name + ' · Lv ' + lv + ' / ' + C.PET_LEVEL_MAX, '장착 ' + kind.label + ' +' + bonus + '% · 특기 ' + C.petSkillText(b.id), false, 'r-' + b.rarity);
       });
     } else if (dexTab === 'zombie') {
       C.ZOMBIE_KINDS.forEach(function (z) {
@@ -3574,7 +3571,8 @@
     var canFeed = isFinite(feedCost) && feedCost <= state.treats;
     var canTrait = state.antibodies > 0 && C.TRAITS.some(function (t) { return C.traitCost(state, t.id) <= state.antibodies; });
     var nz = C.nextZone(state), canOpen = !!nz && nz.ready && nz.enough && !(nz.wait > 0) && !(nz.soon && state.gate);
-    $('mnav-exped').classList.toggle('dot', canFeed || canTrait);
+    $('mnav-exped').classList.toggle('dot', canTrait);
+    $('mnav-party').classList.toggle('dot', canFeed);      // 4.4.6 일행이 따로 탭이 됐다
     var canFill = fillReady(state.zone);      // 지금 있는 구역의 것만(2.8.0: 지나온 구역은 부르지 않는다)      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     $('mnav-manage').classList.toggle('dot', canOpen || canFill);
     $('mnav-base').classList.toggle('dot', C.strikeReady(state) || C.counterReady(state));      // 상황: 선제 공격이나 반격을 쓸 수 있다
@@ -4211,6 +4209,34 @@
     var u = 'none'; try { var cv = document.createElement('canvas'); cv.width = 47; cv.height = 38; var g = cv.getContext('2d'); if (g && window.Scene && window.Scene.paintPetBig) { window.Scene.paintPetBig(g, 1, 1, 3, { kind: b.kind, id: b.id }); u = 'url("' + cv.toDataURL('image/png') + '")'; } } catch (e) { /* 그림이 없어도 된다 */ }
     return (petIcons[b.id] = u);
   }
+  /** 4.4.6 장착 칸 둘(강아지 · 고양이). 누르면 그 아이가 라라 곁을 걷고 간식을 받는다. 빈 칸은 '비어 있어요'. */
+  function renderPetSlots() {
+    var box = $('pet-slots'), party = C.partyOf(state);
+    var key = party.dog + '|' + party.cat + '|' + (state.pet ? state.pet.breed : '') + '|' + (party.dog ? state.kennel[party.dog] : '') + '|' + (party.cat ? state.kennel[party.cat] : '');
+    if (box.getAttribute('data-key') === key) return;
+    box.setAttribute('data-key', key);
+    while (box.firstChild) box.removeChild(box.firstChild);
+    ['dog', 'cat'].forEach(function (kind) {
+      var id = party[kind], b = null, btn = el('button'), icon = el('i'), txt = el('span');
+      C.PET_BREEDS.forEach(function (x) { if (x.id === id) b = x; });
+      btn.type = 'button'; btn.id = 'slot-' + kind;
+      icon.style.background = (b ? petIcon(b) : petShadow(kind)) + ' center / contain no-repeat #2a2622';
+      txt.appendChild(el('small', '', C.PET_KINDS[kind].name + ' 칸'));
+      txt.appendChild(document.createTextNode(b ? state.kennel[b.id] : '비어 있어요'));
+      btn.appendChild(icon); btn.appendChild(txt);
+      btn.setAttribute('aria-pressed', String(!!b && !!state.pet && state.pet.breed === b.id));
+      btn.disabled = !b;
+      if (b) btn.addEventListener('click', function () { if (C.choosePet(state, b.id).ok) { sfx('click'); Store.save(); render(); } });
+      box.appendChild(btn);
+    });
+  }
+  /** 못 만난 친구의 그림자(종류마다 하나. 품종이 드러나지 않는다). */
+  var petShadows = {};
+  function petShadow(kind) {
+    if (petShadows[kind]) return petShadows[kind];
+    var u = 'none'; try { var cv = document.createElement('canvas'); cv.width = 47; cv.height = 38; var g = cv.getContext('2d'); if (g && window.Scene && window.Scene.paintPetBig) { window.Scene.paintPetBig(g, 1, 1, 3, { kind: kind, shadow: true }); u = 'url("' + cv.toDataURL('image/png') + '")'; } } catch (e) { /* 그림이 없어도 된다 */ }
+    return (petShadows[kind] = u);
+  }
   function renderPet() {
     var p = C.petInfo(state), cost = C.petPullCost(state), have = C.kennelCount(state);
     $('pet-empty').hidden = !!p; $('pet-card').hidden = !p;
@@ -4227,7 +4253,10 @@
     if (!p) return;
     setText($('pet-name'), p.name);
     var plv = C.petLevel(state, p.breed.id), feed = C.petFeedCost(state);
-    setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · Lv ' + plv + ' / ' + C.PET_LEVEL_MAX + ' · ' + C.petEffectText(state));
+    setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · Lv ' + plv + ' / ' + C.PET_LEVEL_MAX);
+    setText($('pet-eff'), '장착 · ' + C.petEffectText(state) + (p.skill ? ' · 특기 ' + p.skill : ''));      // 4.4.6 장착 효과와 특기
+    var own = C.petOwnBonus(state), pct = function (v) { return (Math.round(v * 1000) / 10) + '%'; };
+    setText($('pet-own'), '보유 효과 · ' + C.PET_KINDS.dog.label + ' +' + pct(own.dog) + ' · ' + C.PET_KINDS.cat.label + ' +' + pct(own.cat) + ' · 만난 친구마다 쌓여요');
     setText($('pet-feed'), isFinite(feed) ? '간식 주기 · 간식 ' + fmt(feed) : '다 컸어요(최대 레벨)');
     $('pet-feed').disabled = !(feed <= state.treats);
     $('pet-input').placeholder = p.name;
@@ -4235,7 +4264,9 @@
     face.className = 'pet-face ' + p.rarity.id;
     face.style.background = petIcon(p.breed) + ' center / contain no-repeat #2a2622';      // 4.4.4: 품종 그림(큰 그림)
     // 함께 있는 친구들: 목록이 바뀌었을 때만 다시 만든다(매 프레임 만들면 누르는 도중에 단추가 사라진다)
-    var key = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; }).map(function (b) { return b.id + ':' + state.kennel[b.id]; }).join('|') + '>' + state.pet.breed;
+    renderPetSlots();
+    var party = C.partyOf(state);
+    var key = C.PET_BREEDS.filter(function (b) { return state.kennel[b.id]; }).map(function (b) { return b.id + ':' + state.kennel[b.id]; }).join('|') + '>' + state.pet.breed + '>' + party.dog + '>' + party.cat;
     var box = $('kennel');
     if (box.getAttribute('data-key') === key) return;
     box.setAttribute('data-key', key);
@@ -4247,8 +4278,8 @@
       btn.type = 'button'; btn.id = 'kennel-' + b.id;
       dot.style.background = petIcon(b) + ' center / contain no-repeat #2a2622';
       btn.appendChild(dot); btn.appendChild(document.createTextNode(state.kennel[b.id]));
-      btn.title = C.breedDesc(b);
-      btn.setAttribute('aria-pressed', String(b.id === state.pet.breed));
+      btn.title = C.breedDesc(b) + ' · 특기 ' + C.petSkillText(b.id);
+      btn.setAttribute('aria-pressed', String(party[b.kind] === b.id));      // 4.4.6 장착한 아이(강아지 하나 · 고양이 하나)가 눌려 있다
       btn.addEventListener('click', function () { if (C.choosePet(state, b.id).ok) { sfx('click'); Store.save(); render(); } });
       box.appendChild(btn);
     });
@@ -4376,7 +4407,8 @@
       upgrades: { crowbar: state.upgrades.crowbar > 0, backpack: state.upgrades.cart > 0 }, gear: {},
       settle: state.settle || null,      // 7구역 정착지의 지은 건물(3.1.0)
       still: prefs.shake === 'off',
-      pet: (function () { var p = C.petInfo(state); return p ? { kind: p.kind, id: p.breed.id, body: p.breed.body, patch: p.breed.patch } : null; })() };
+      pet: (function () { var p = C.petInfo(state); return p ? { kind: p.kind, id: p.breed.id, body: p.breed.body, patch: p.breed.patch } : null; })(),
+      pet2: (function () { var p = C.petInfo(state), o = p && C.partyOf(state)[p.kind === 'dog' ? 'cat' : 'dog']; return o ? { kind: p.kind === 'dog' ? 'cat' : 'dog', id: o } : null; })() };      // 4.4.6 함께 장착한 다른 종류의 친구(라라 앞을 걷는다)
   }
 
   /* ---------- 일어난 일 알리기 ---------- */

@@ -160,7 +160,7 @@ def run_case(browser, name, size, state, mode):
         if not tap('#row-wire'): problems.append('첫 철조망을 살 수 없다')
         tap('[data-tab=z1]'); tap('[data-tab=z2]'); tap('[data-tab=z0]')
         # 동물 친구: 고양이를 맞이하고 이름을 바꾼다
-        tap('[data-mview-set=exped]'); tap('[data-ex-set=pet]')      # 4.4.0: 일행은 특성 탭의 두 번째 칸
+        tap('[data-mview-set=party]')      # 4.4.6: 일행은 아래 탭
         if not tap('#adopt-cat'): problems.append('고양이를 맞이할 수 없다')
         if not page.locator('#pet-card').is_visible() or '친구 1 /' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))
         if '항체 샘플' not in text('adopt-dog'): problems.append('다시 데려오기 값이 보이지 않는다: ' + text('adopt-dog'))
@@ -193,9 +193,9 @@ def run_case(browser, name, size, state, mode):
         # 0.8.10 도감과 패치노트
         tap('[data-rtab-set=dex]')
         if page.locator('#dex-tabs button').count() != 9: problems.append('도감 탭이 아홉이 아니다')
-        if page.locator('#dex .dex-card').count() != 18: problems.append('도감에 강아지 18칸이 없다')
+        if page.locator('#dex .dex-card').count() != 24: problems.append('도감에 강아지 24칸이 없다')
         page.locator('#dex-tabs button').nth(1).click(); page.wait_for_timeout(100)
-        if page.locator('#dex .dex-card').count() != 18: problems.append('도감에 고양이 18칸이 없다')
+        if page.locator('#dex .dex-card').count() != 24: problems.append('도감에 고양이 24칸이 없다')
         page.locator('#dex-tabs button').nth(2).click(); page.wait_for_timeout(100)
         if page.locator('#dex .dex-card').count() != 15 or page.locator('#dex .dex-card svg rect').count() < 200: problems.append('도감에 좀비 15칸이 없다')
         page.locator('#dex-tabs button').nth(3).click(); page.wait_for_timeout(100)
@@ -211,7 +211,7 @@ def run_case(browser, name, size, state, mode):
         page.locator('#notes .note-head').nth(2).click(); page.wait_for_timeout(100)
         if page.locator('#notes .note.open').count() != 2: problems.append('패치노트 줄을 눌러도 펼쳐지지 않는다')
         # 0.8.8 성별: 일행 칸에서 '여'를 고르면 일지의 호칭이 바뀐다(기관사 → 기관사 언니는 4구역 일지라 여기서는 단추만 본다)
-        tap('[data-mview-set=exped]')
+        tap('[data-mview-set=party]')
         tap('[data-gender=f]')
         if page.get_attribute('[data-gender=f]', 'aria-pressed') != 'true': problems.append('성별 단추가 눌린 표시가 안 된다')
         tap('[data-gender=none]')
@@ -593,14 +593,14 @@ def run_case(browser, name, size, state, mode):
         if page.locator('[data-tab=z3]').is_visible(): problems.append('아직 먼 4구역 탭이 보인다')
         tap('[data-tab=wall]'); tap('#row-wire')
         # 특성: 하나 찍고, 되돌리고, 다시 찍는다
-        tap('[data-mview-set=exped]'); tap('[data-ex-set=trait]')
+        tap('[data-mview-set=exped]')
         if not tap('#row-immune'): problems.append('특성을 찍을 수 없다')
         if tap('#trait-reset'): tap('#confirm-yes')
         if 'Lv 0 /' not in page.inner_text('#row-immune'): problems.append('특성을 되돌렸는데 레벨이 남았다: ' + page.inner_text('#row-immune'))      # 4.4.0: '사용 n' 글은 뺐다
         if not page.locator('#perks').count(): problems.append('특전 목록이 없다')
-        tap('[data-ex-set=pet]')
+        tap('[data-mview-set=party]')
         if not page.locator('#pet-empty, #pet-card').first.is_visible() and not page.locator('#adopt-dog').is_visible(): problems.append('일행 칸이 안 열린다')
-        tap('[data-ex-set=trait]')
+        tap('[data-mview-set=exped]')
         tap('#row-immune'); tap('#row-bulwark')
         tap('[data-mview-set=record]')
         for t in ['radio', 'stats', 'notes', 'help', 'save', 'journal']: tap('[data-rtab-set=%s]' % t)

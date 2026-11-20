@@ -613,7 +613,7 @@
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
   }
   /*
-   * 동물 친구(4.4.5): 강아지 18 · 고양이 18. 작은 도트 하나(15×12칸)로 걷는 장면과 창(일행 · 도감)을 함께 그린다.
+   * 동물 친구(4.4.6): 강아지 24 · 고양이 24. 작은 도트 하나(15×12칸)로 걷는 장면과 창(일행 · 도감)을 함께 그린다.
    *   왜: 큰 그림(24×19칸)은 필요 없다고 하셨다. 레퍼런스(앉은 옆모습 도트 고양이 · 강아지)처럼
    *   머리는 왼쪽 앞, 몸은 오른쪽으로 앉고, 꼬리는 오른쪽에서 말려 올라간다. 눈은 1칸 점, 테두리는 없다(라라와 같이).
    *   품종마다 귀 · 꼬리 · 털 · 무늬 · 몸집이 다르다(PET_SPEC). 창에서는 같은 그림을 칸 크기(k)만 키워 쓴다.
@@ -656,7 +656,19 @@
     ragdoll: {'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#f4f0e8', 'patch': '#7a6a5c', 'pat': 'point', 'eye': '#5aa8f0', 'kind': 'cat'},
     golden: {'chubby': true, 'ear': 'pt', 'tail': 'long', 'body': '#e8b04a', 'patch': '#f8e2b0', 'pat': 'belly tabby', 'eye': '#5ab070', 'kind': 'cat'},
     persian: {'ear': 'fold', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#ece6dc', 'patch': '#ece6dc', 'eye': '#e09040', 'kind': 'cat'},
-    norwegian: {'size': 'l', 'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#8a7058', 'patch': '#efe4d0', 'pat': 'belly tabby', 'eye': '#9ad04a', 'kind': 'cat'}
+    norwegian: {'size': 'l', 'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#8a7058', 'patch': '#efe4d0', 'pat': 'belly tabby', 'eye': '#9ad04a', 'kind': 'cat'},
+    maltese: {'size': 's', 'ear': 'flop', 'tail': 'curl', 'snout': 'mid', 'fur': 'fluff', 'body': '#f6f4ee', 'patch': '#f6f4ee', 'kind': 'dog'},
+    pug: {'size': 's', 'ear': 'fold', 'tail': 'curl', 'snout': 'mid', 'body': '#d8b888', 'patch': '#3a3430', 'pat': 'muzzle', 'kind': 'dog'},
+    schnauzer: {'size': 'm', 'ear': 'fold', 'tail': 'stub', 'snout': 'long', 'fur': 'fluff', 'body': '#8c9096', 'patch': '#d8dadc', 'pat': 'belly', 'kind': 'dog'},
+    doberman: {'size': 'l', 'ear': 'pt', 'tail': 'stub', 'snout': 'long', 'body': '#2a2422', 'patch': '#b8783c', 'pat': 'socks muzzle', 'kind': 'dog'},
+    akita: {'size': 'l', 'ear': 'pt', 'tail': 'curl', 'snout': 'mid', 'fur': 'fluff', 'body': '#d88a48', 'patch': '#f6efe2', 'pat': 'belly', 'kind': 'dog'},
+    bernese: {'size': 'l', 'ear': 'flop', 'tail': 'bush', 'snout': 'mid', 'fur': 'fluff', 'body': '#24222a', 'patch': '#f1efe8', 'pat': 'chest socks', 'kind': 'dog'},
+    socks: {'ear': 'pt', 'tail': 'long', 'body': '#6a6c72', 'patch': '#f1efe8', 'pat': 'socks chest', 'kind': 'cat'},
+    cream: {'ear': 'pt', 'tail': 'long', 'body': '#f0dcb4', 'patch': '#e0c090', 'pat': 'tabby', 'kind': 'cat'},
+    abyssinian: {'ear': 'pt', 'tail': 'long', 'body': '#b8763c', 'patch': '#8a5028', 'pat': 'tabby', 'eye': '#7ad070', 'kind': 'cat'},
+    sphynx: {'ear': 'pt', 'tail': 'long', 'body': '#e8c0b0', 'patch': '#e8c0b0', 'eye': '#7ad070', 'kind': 'cat'},
+    maine: {'size': 'l', 'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#6a5038', 'patch': '#c8a888', 'pat': 'belly tabby', 'eye': '#e0c040', 'kind': 'cat'},
+    turkish: {'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#f8f6f0', 'patch': '#f8f6f0', 'eye': '#6ab0e8', 'kind': 'cat'}
   };
   function petLum(h){var n=parseInt(h.slice(1),16);return (((n>>16)&255)*0.3+((n>>8)&255)*0.5+(n&255)*0.2)/255;}
 
@@ -676,6 +688,7 @@
     else if(c==='e')col=dark?(sp.eye||'#f0d060'):(sp.eye&&petLum(body)>0.85?sp.eye:'#241c1a');
     else if(c==='n')col=sp.kind==='cat'?'#f08898':'#241c1a';
     else { var b=c==='q'?(patch2&&((x*3+y*5)%7<3)?patch2:patch):body; col=c==='d'?petDark(body,0.7):b; if(!filled(x,y+1)||(G[y+1]&&G[y+1][x]==='.'))col=petDark(b,0.84); }
+    if(sp.shadow)col='#4a4b40';      // 못 만난 친구(도감): 품종이 드러나지 않게 한 빛깔 그림자
     g.fillStyle=col;g.fillRect(x0+x*k,y0+y*k,k,k);
    }
   }
@@ -744,13 +757,14 @@
    if(pt.indexOf('point')>=0)P(function(x,y,c){return y<=2||(y>=4&&y<=5&&x>=3&&x<=5)||c==='P'||c==='T';});
    if(pt.indexOf('calico')>=0)P(function(x,y,c){return c!=='P'&&((x>>1)+(y>>1))%3===0&&!(y>=4&&y<=5&&x>=3&&x<=5);});
    if(pt.indexOf('tail')>=0)P(function(x,y,c){return c==='T';});
+   if(pt.indexOf('muzzle')>=0)for(var yz=0;yz<H;yz++)for(var xz=0;xz<W;xz++)if(G[yz][xz]==='Z')G[yz][xz]='q';      // 퍼그 · 도베르만: 주둥이가 무늬 색
    if(sp.wag){var top=-1,tx=-1;for(var y0=0;y0<H&&top<0;y0++)for(var x0=9;x0<W;x0++)if(G[y0][x0]==='T'||(G[y0][x0]==='q'&&x0>=12)){top=y0;tx=x0;break;}if(top>1&&G[top-1][tx]==='.')G[top-1][tx]=G[top][tx];}
    for(var y=0;y<H;y++)for(var x=0;x<W;x++){var c=G[y][x];G[y][x]=c==='O'||c==='P'||c==='T'?'o':c==='Z'?'z':c==='D'?'d':c==='N'?'n':c==='M'?'t2':c==='E'?'e':c==='I'?'i':c;}
    return G;
   }
 
-  // 옷은 이 칸 그림의 머리 위(고양이 3줄 · 강아지 2줄)와 목(6줄) · 등(7~9줄)에 얹는다.
-  var PET_BOX = { dog: { top: 1 }, cat: { top: 2 } };
+  // 옷을 얹는 자리: top 머리 위 줄(귀 사이), neck 목 줄, back 등의 첫 줄(등은 back~back+2줄, 7~11칸), eye 눈 줄
+  var PET_BOX = { dog: { top: 1, neck: 7, back: 8, eye: 4 }, cat: { top: 2, neck: 6, back: 7, eye: 4 } };
   function petKind(kind) { return kind === 'cat' ? 'cat' : 'dog'; }
   function petSpec(pet) { pet = pet || {}; var sp = PET_SPEC[pet.id]; if (!sp) { var kind = petKind(pet.kind); for (var k in PET_SPEC) if (PET_SPEC[k].kind === kind) { sp = PET_SPEC[k]; break; } } var o = {}; for (var q in sp) o[q] = sp[q]; return o; }
   /** 칸 그림(글자 배열의 줄). wag 1 이면 꼬리 끝이 한 칸 오른다. */
@@ -768,19 +782,28 @@
     if (flip && ctx.save) { ctx.save(); ctx.translate(x * 2 + W * scale, 0); ctx.scale(-1, 1); }
     petPaint2(g, x, y, scale, sp);
     function px(col, cx, cy, w, h) { g.fillStyle = col; g.fillRect(Math.round(x + cx * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
-    // 옷(머리 위 top 줄 · 목 6줄 · 등 7~9줄)
-    if (outfit === 'scarf') { px('#c0392b', 2, 6, 5, 1); px('#c0392b', 6, 7, 1, 2); px('#8f2a20', 6, 8, 1, 1); }
-    if (outfit === 'bell') { px('#30343c', 2, 6, 5, 1); px('#ffd95a', 4, 7, 1, 1); }
-    if (outfit === 'ribbon') { px('#ff7fb0', 3, top, 1, 1); px('#f1f0e6', 4, top, 1, 1); px('#ff7fb0', 5, top, 1, 1); }
-    if (outfit === 'coat') { px('#f0b400', 6, 7, 5, 2); px('#b88a00', 6, 9, 5, 1); px('#f1f0e6', 8, 8, 1, 1); }
-    if (outfit === 'hat') { px('#3f7fb5', 3, top, 3, 1); px('#3f7fb5', 4, top - 1, 1, 1); px('#f1f0e6', 4, top - 2, 1, 1); }
-    if (outfit === 'cape') { px('#8a5fc0', 7, 7, 4, 2); px('#6a45a0', 8, 9, 3, 1); px('#8a5fc0', 11, 7 + wag, 1, 2); px('#ffd95a', 6, 7, 1, 1); }
-    if (outfit === 'crown') { px('#ffd95a', 3, top, 3, 1); px('#ffd95a', 3, top - 1, 1, 1); px('#ffd95a', 5, top - 1, 1, 1); px('#e0392b', 4, top, 1, 1); if (Math.floor(t * 2) % 2) px('#ffffff', 4, top - 2, 1, 1); }
+    // 옷(4.4.6: 15×12칸 그림에 맞춰 자리를 다시 잡았다. 머리 위 B.top · 목 B.neck · 등 B.back · 눈 B.eye)
+    var B = PET_BOX[kind], tp = B.top, nk = B.neck, bk = B.back;
+    if (outfit === 'scarf') { px('#c0392b', 2, nk, 5, 1); px('#c0392b', 6, nk + 1, 1, 2); px('#8f2a20', 6, nk + 2, 1, 1); }
+    if (outfit === 'bell') { px('#30343c', 2, nk, 5, 1); px('#ffd95a', 4, nk + 1, 1, 1); }
+    if (outfit === 'bandana') { px('#f0b400', 2, nk, 5, 1); px('#f0b400', 3, nk + 1, 3, 1); px('#b88a00', 4, nk + 2, 1, 1); px('#fff4c0', 3, nk, 1, 1); }
+    if (outfit === 'bowtie') { px('#3f7fb5', 3, nk, 1, 1); px('#3f7fb5', 5, nk, 1, 1); px('#27507a', 4, nk, 1, 1); px('#3f7fb5', 3, nk + 1, 1, 1); px('#3f7fb5', 5, nk + 1, 1, 1); }
+    if (outfit === 'ribbon') { px('#ff7fb0', 3, tp, 1, 1); px('#f1f0e6', 4, tp, 1, 1); px('#ff7fb0', 5, tp, 1, 1); }
+    if (outfit === 'flower') { px('#ffffff', 6, tp - 1, 1, 1); px('#ffffff', 5, tp, 1, 1); px('#ffffff', 7, tp, 1, 1); px('#ffffff', 6, tp + 1, 1, 1); px('#ffd95a', 6, tp, 1, 1); }
+    if (outfit === 'goggles') { px('#5a4a3a', 1, B.eye, 7, 1); px('#7ad0f0', 3, B.eye, 1, 1); px('#7ad0f0', 5, B.eye, 1, 1); px('#c8f0ff', 3, B.eye - 1 + 1, 1, 1); }
+    if (outfit === 'coat') { px('#f0b400', 6, bk, 5, 2); px('#b88a00', 6, bk + 2, 5, 1); px('#f1f0e6', 8, bk + 1, 1, 1); }
+    if (outfit === 'sweater') { for (var sy = 0; sy < 3; sy++) px(sy % 2 ? '#f1efe8' : '#c0392b', 3, bk + sy, 8, 1); }
+    if (outfit === 'pack') { px('#5d6b4a', 8, bk - 1, 3, 2); px('#3f4a33', 8, bk + 1, 3, 1); px('#c8a050', 9, bk - 1, 1, 1); }
+    if (outfit === 'hat') { px('#3f7fb5', 3, tp, 3, 1); px('#3f7fb5', 4, tp - 1, 1, 1); px('#f1f0e6', 4, tp - 2, 1, 1); }
+    if (outfit === 'cape') { px('#8a5fc0', 7, bk, 4, 2); px('#6a45a0', 8, bk + 2, 3, 1); px('#8a5fc0', 11, bk + wag, 1, 2); px('#ffd95a', 6, bk, 1, 1); }
+    if (outfit === 'crown') { px('#ffd95a', 3, tp, 3, 1); px('#ffd95a', 3, tp - 1, 1, 1); px('#ffd95a', 5, tp - 1, 1, 1); px('#e0392b', 4, tp, 1, 1); if (Math.floor(t * 2) % 2) px('#ffffff', 4, tp - 2, 1, 1); }
+    if (outfit === 'halo') { var hy = tp - 2 - (Math.floor(t * 2) % 2); px('#ffe680', 3, hy, 3, 1); px('#fff8c8', 4, hy, 1, 1); }
+    if (outfit === 'wings') { var wy = bk - 2 + wag; px('#ffffff', 8, wy, 3, 1); px('#ffffff', 9, wy - 1, 3, 1); px('#d8e4f0', 8, wy + 1, 2, 1); }
     if (flip && ctx.restore) ctx.restore();
     return true;
   }
   /** 창에 쓰는 그림: 같은 칸 그림을 k 배로 키운다. */
-  function paintPetBig(ctx, x, y, k, pet) { if (!ctx) return false; var sp = petSpec(pet); sp.kind = petKind(sp.kind); petPaint2(ctx, x, y, k || 1, sp); return true; }
+  function paintPetBig(ctx, x, y, k, pet) { if (!ctx) return false; var sp = petSpec(pet); sp.kind = petKind(sp.kind); if (pet && pet.shadow) { sp = petSpec({ kind: sp.kind }); sp.kind = petKind(sp.kind); sp.shadow = true; } petPaint2(ctx, x, y, k || 1, sp); return true; }
 
   /** 옷장의 그림: 그 자리에 서 있는 라라를 그린다(scene 밖에서 쓴다). */
   function drawHero(ctx, x, y, scale, look, step, t, dark) {
@@ -1457,6 +1480,8 @@
       var f = h.face > 0 ? 1 : -1, moving = h.state === 'out' || h.state === 'back', hop = moving ? Math.floor(t * 8) % 2 : 0;
       var pw = petRows(pet.kind, 0)[0].length;
       paintPet(ctx, f > 0 ? Math.round(h.x) - 10 - pw : Math.round(h.x) + 10, GROUND - PET_H - hop, 1, f > 0, pet, (view.look && view.look.pet) || 'none', t);
+      // 4.4.6 함께 장착한 다른 친구는 라라 앞에서 걷는다(옷은 데리고 다니는 아이만 입는다). 깡충은 반 박자 어긋나게
+      if (view.pet2) { var hop2 = moving ? 1 - hop : 0; paintPet(ctx, f > 0 ? Math.round(h.x) + 12 : Math.round(h.x) - 12 - pw, GROUND - PET_H - hop2, 1, f > 0, view.pet2, 'none', t + 0.3); }
     }
     if (u.drone) {
       var qx = Math.round(h.x) + Math.round(Math.sin(t * 1.3) * 6) - 2, qy = GROUND - 24 + Math.round(Math.sin(t * 2.1) * 2);

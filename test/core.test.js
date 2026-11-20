@@ -1127,26 +1127,59 @@ test('동물 친구: 이미 함께 있는 아이가 또 나오면 값의 일부�
   assert.equal(C.kennelCount(s), 1);
 });
 
-test('동물 친구: 강아지는 방어력을, 고양이는 생산을 등급만큼 올리고, 데리고 다닐 아이를 고른다', () => {
+test('동물 친구(4.4.6): 장착 칸 둘(강아지 · 고양이), 종류 효과 · 특기 · 보유 효과', () => {
   const n = fresh(); n.buildings.scouts = 10; n.defenses.wire = 10;
   const mk = (kind, roll) => { const s = fresh(); s.buildings.scouts = 10; s.defenses.wire = 10; C.adoptPet(s, kind, () => roll); return s; };
   const d = mk('dog', 0), dr = mk('dog', 0.99), c = mk('cat', 0), cr = mk('cat', 0.99);
-  assert.equal(C.defensePower(d), Math.floor(C.defensePower(n) * 1.1));
-  assert.equal(C.defensePower(dr), Math.floor(C.defensePower(n) * 1.35));
-  near(C.productionPerSec(c), C.productionPerSec(n) * 1.05);
-  near(C.productionPerSec(cr), C.productionPerSec(n) * 1.2);
-  near(C.productionPerSec(d), C.productionPerSec(n)); assert.equal(C.defensePower(c), C.defensePower(n));
+  assert.equal(d.pet.breed, 'jindo'); assert.equal(dr.pet.breed, 'bernese'); assert.equal(c.pet.breed, 'cheese'); assert.equal(cr.pet.breed, 'turkish');
+  const def = (s) => C.defensePower(s), near1 = (a, b) => assert.ok(Math.abs(a - b) <= 1, a + ' ≈ ' + b);
+  near1(def(d), def(n) * 1.005 * 1.1);                  // 보유 0.5% × 장착 10%
+  near1(def(dr), def(n) * 1.02 * 1.35);                 // 보유 2% × 장착 35%
+  near(C.productionPerSec(c), C.productionPerSec(n) * 1.005 * 1.05 * 1.2);    // 치즈의 특기: 1구역 생산 +20%
+  near(C.productionPerSec(cr), C.productionPerSec(n) * 1.02 * 1.2);           // 터키시 앙고라의 특기는 밤 전리품이라 생산에는 없다
+  near(C.mods(cr).loot, C.mods(n).loot * 1.3);
+  near(C.mods(d).loot, C.mods(n).loot * 1.15);      // 흰둥이의 특기
+  near(C.productionPerSec(d), C.productionPerSec(n)); assert.equal(def(c), def(n));
   assert.ok(C.defensePlan(dr).cost <= C.defensePlan(n).cost, '보강 계획에도 반영된다');
   assert.equal(C.petInfo(n), null); assert.equal(C.petEffect(n), null);
   assert.ok(C.petInfo(dr).desc.includes('방어력 +35%')); assert.equal(C.petInfo(dr).rarity.name, '희귀');
-  // 둘을 데리고 있어도 효과는 데리고 다니는 아이 것만
+  assert.equal(C.petInfo(c).skill, '1구역 생산 +20%');
+  // 강아지와 고양이를 함께 장착한다: 둘 다 효과가 있다
   d.antibodies = 99; C.adoptPet(d, 'cat', () => 0.99);
-  near(C.productionPerSec(d), C.productionPerSec(n) * 1.2); assert.equal(C.defensePower(d), C.defensePower(n));
-  const first = Object.keys(d.kennel)[0];
-  assert.ok(C.choosePet(d, first).ok);
-  assert.equal(C.defensePower(d), Math.floor(C.defensePower(n) * 1.1));
+  assert.deepEqual(d.party, { dog: 'jindo', cat: 'turkish' });
+  near1(def(d), def(n) * (1.005 + 0) * 1.1);
+  near(C.productionPerSec(d), C.productionPerSec(n) * 1.02 * 1.2);
+  // 강아지를 다시 고르면 데리고 다니는 아이만 바뀌고 고양이 칸은 그대로
+  assert.ok(C.choosePet(d, 'jindo').ok); assert.equal(d.pet.breed, 'jindo'); assert.equal(d.party.cat, 'turkish');
   assert.equal(C.choosePet(d, 'siam').reason, 'unknown', '아직 없는 아이는 고를 수 없다');
   assert.equal(C.choosePet(d, 'ghost').reason, 'unknown');
+  // 같은 종류는 한 칸: 강아지를 하나 더 데려오면 강아지 칸만 바뀐다
+  d.antibodies = 1e9; C.adoptPet(d, 'dog', () => 0.99);
+  assert.equal(d.party.dog, 'bernese'); assert.equal(d.party.cat, 'turkish');
+  near1(def(d), def(n) * (1.005 + 0.02) * 1.35);       // 흰둥이는 장착에서 빠져도 보유 효과는 남는다
+  // 보유 효과는 레벨마다 10% 커진다
+  d.petLv.jindo = 10; near(C.petOwnBonus(d).dog, 0.005 * 2 + 0.02);
+  // 36종 모두 특기가 있고, 있는 배수 항목에만 얹는다
+  const m0 = C.mods(fresh());
+  C.PET_BREEDS.forEach(b => { const k = C.PET_SKILLS[b.id]; assert.ok(k && k.text, b.id); assert.ok(k.key in m0, b.id + ' ' + k.key); assert.ok((k.mult > 0) !== !!k.add, b.id); });
+});
+
+test('동물 친구(4.4.6): 장착 칸 저장 · 불러오기 · 철수', () => {
+  const s = inMarket(); s.antibodies = 1e9;
+  C.adoptPet(s, 'dog', () => 0); C.adoptPet(s, 'cat', () => 0.99);
+  const r = C.deserialize(C.serialize(s), 0);
+  assert.deepEqual(r.party, { dog: 'jindo', cat: 'turkish' });
+  // 예전 저장(장착 칸 없음): 데리고 다니던 아이가 그 칸에 들어간다
+  const old = JSON.parse(JSON.stringify(s)); delete old.party;
+  assert.deepEqual(C.deserialize(JSON.stringify(old), 0).party, { dog: null, cat: 'turkish' });
+  // 엉터리: 없는 아이 · 종류가 틀린 아이는 받지 않는다
+  const bad = JSON.parse(JSON.stringify(s)); bad.party = { dog: 'turkish', cat: 'siam' }; bad.pet = null;
+  assert.deepEqual(C.deserialize(JSON.stringify(bad), 0).party, { dog: null, cat: null });
+  const bad2 = JSON.parse(JSON.stringify(s)); bad2.party = 'x';
+  assert.equal(C.deserialize(JSON.stringify(bad2), 0).party.cat, 'turkish');
+  // 철수해도 장착은 남는다
+  s.antibodiesGain = 0; const next = C.retreat ? C.retreat(s) : null;
+  if (next && next.state) assert.deepEqual(next.state.party, { dog: 'jindo', cat: 'turkish' });
 });
 
 test('이름: 친구와 주인공의 이름을 바꾼다', () => {
@@ -1395,14 +1428,14 @@ test('업적: 조건을 채우면 달성되어 알림이 오고, 하나마다 �
 });
 
 /* ---------- 알파 0.9.1: 동물 친구 24종, 좀비 도감 15종 ---------- */
-test('동물 친구는 강아지 18종, 고양이 18종이고 등급마다 여섯씩 있다(4.4.4)', () => {
+test('동물 친구는 강아지 24종, 고양이 24종이고 등급마다 여덟씩 있다(4.4.6)', () => {
   for (const kind of ['dog', 'cat']) {
     const list = C.PET_BREEDS.filter(b => b.kind === kind);
-    assert.equal(list.length, 18, kind);
-    for (const r of C.PET_RARITIES) assert.equal(list.filter(b => b.rarity === r.id).length, 6, kind + ' ' + r.id);
+    assert.equal(list.length, 24, kind);
+    for (const r of C.PET_RARITIES) assert.equal(list.filter(b => b.rarity === r.id).length, 8, kind + ' ' + r.id);
   }
-  assert.equal(new Set(C.PET_BREEDS.map(b => b.id)).size, 36);
-  assert.equal(new Set(C.PET_BREEDS.map(b => b.name)).size, 36);
+  assert.equal(new Set(C.PET_BREEDS.map(b => b.id)).size, 48);
+  assert.equal(new Set(C.PET_BREEDS.map(b => b.name)).size, 48);
 });
 
 test('좀비 도감: 15종. 밤이 지나면 만난 것이 적히고, 처음 만난 것은 사건에 실린다. 구역을 열어야 나오는 것이 있다', () => {
@@ -2479,7 +2512,7 @@ test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
 
 test('2.0.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발은 없다. 깃발은 도전과 원정의 확정 보상이다', () => {
   const table = C.gachaTable();
-  assert.equal(table.length, 31); assert.ok(!table.some(t => t.slot === 'flag'));
+  assert.equal(table.length, 39); assert.ok(!table.some(t => t.slot === 'flag'));
   ['hood', 'pat', 'bag', 'fx', 'pet'].forEach(slot => assert.ok(table.some(t => t.slot === slot), slot));
   C.COS_SLOTS.forEach(slot => assert.equal(C.COSMETICS.filter(c => c.slot === slot && c.base).length, 1, slot + ': 기본은 하나'));
   const S = require('../src/scene.js');
@@ -2511,8 +2544,8 @@ test('2.0.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기의
 
 test('2.0.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 15×12칸', () => {
   const S = require('../src/scene.js');
-  assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 7);
-  // 4.4.4: 작은 그림은 12×10칸(앞모습). 품종마다 그림이 있고, 모르는 품종은 그 종류의 첫 그림으로 그린다
+  assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 15);      // 4.4.6: 여덟 가지를 더했다
+  // 4.4.6: 그림은 15×12칸(앉은 옆모습) 하나. 품종마다 그림이 있고, 모르는 품종은 그 종류의 첫 그림으로 그린다
   ['dog', 'cat', 'zzz'].forEach(k => [0, 1].forEach(w => { const r = S.petRows(k, w); assert.equal(r.length, S.PET_H); r.forEach(row => assert.equal(row.length, S.PET_W)); assert.ok(r.some(row => row.includes('e')), '눈'); }));
   C.PET_BREEDS.forEach(b => { assert.ok(S.PET_SPEC[b.id], '그림이 없다: ' + b.id); assert.equal(S.PET_SPEC[b.id].kind, b.kind, b.id); });
   assert.notDeepEqual(S.petRows('dog', 0, 'shiba'), S.petRows('dog', 0, 'beagle'), '품종마다 다르다');
