@@ -868,7 +868,7 @@
     if (!ctx) return false;
     scale = scale || 1; pet = pet || {}; t = t || 0;
     var kind = petKind(pet.kind), sp = petSpec(pet), top = PET_BOX[kind].top, W = PET_W, wag = Math.floor(t * 4) % 2;
-    sp.kind = kind; sp.wag = !!wag; sp.walk = !!pet.walk; sp.step = pet.step ? 1 : 0;
+    sp.kind = kind; sp.wag = !!wag; sp.walk = !!pet.walk; sp.step = pet.step ? 1 : 0; sp.shadow = !!pet.shadow;      // 4.5.3 친구 만들기의 그림자
     var g = ctx;
     if (flip && ctx.save) { ctx.save(); ctx.translate(x * 2 + W * scale, 0); ctx.scale(-1, 1); }
     petPaint2(g, x, y, scale, sp);

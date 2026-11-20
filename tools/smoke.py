@@ -162,6 +162,15 @@ def run_case(browser, name, size, state, mode):
         # 동물 친구: 고양이를 맞이하고 이름을 바꾼다
         tap('[data-mview-set=party]')      # 4.4.6: 일행은 아래 탭
         if not tap('#adopt-cat'): problems.append('고양이를 맞이할 수 없다')
+        # 4.5.3 친구 만들기 연출: 간식을 던져 결과까지 보고 닫는다(눈빛 · 걸음 · 하트)
+        if not page.locator('#bf-veil').is_visible(): problems.append('친구 만들기 창이 뜨지 않았다')
+        for _ in range(6):
+            if '좋아요' in text('bf-act'): break
+            tap('#bf-act'); page.wait_for_timeout(700)
+        page.wait_for_timeout(700)
+        if '친구가 됐어요' not in text('bf-msg'): problems.append('친구 만들기가 끝나지 않았다: ' + text('bf-msg'))
+        tap('#bf-act'); page.wait_for_timeout(200)
+        if page.locator('#bf-veil').is_visible(): problems.append('친구 만들기 창이 닫히지 않았다')
         if not page.locator('#pet-card').is_visible() or '친구 1 /' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))
         if '항체 샘플' not in text('adopt-dog'): problems.append('다시 데려오기 값이 보이지 않는다: ' + text('adopt-dog'))
         page.fill('#hero-input', '김씨'); page.click('#hero-rename'); page.wait_for_timeout(150)

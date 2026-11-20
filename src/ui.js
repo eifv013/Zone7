@@ -4236,6 +4236,89 @@
     var u = 'none'; try { var cv = document.createElement('canvas'); cv.width = 47; cv.height = 38; var g = cv.getContext('2d'); if (g && window.Scene && window.Scene.paintPetBig) { window.Scene.paintPetBig(g, 1, 1, 3, { kind: kind, shadow: true }); u = 'url("' + cv.toDataURL('image/png') + '")'; } } catch (e) { /* 그림이 없어도 된다 */ }
     return (petShadows[kind] = u);
   }
+  /*
+   * 4.5.3 친구 만들기 연출. 데려오기를 누르면 결과(adoptPet)는 이미 정해지고 저장된다. 이 창은 그것을 보여 주기만 한다.
+   *   1) 오른쪽 수풀 뒤에 그림자가 숨어 있고, 눈만 반짝인다. 눈빛이 등급이다: 기본 흰빛 · 고급 파란빛 · 희귀 금빛.
+   *   2) 누를 때마다 라라가 간식(강아지 뼈다귀 · 고양이 생선)을 던지고, 아이가 한 걸음씩 다가온다. 기본 3번 · 고급 4번 · 희귀 5번.
+   *   3) 마지막 간식을 먹으면 그림자가 걷히고 하트가 터진다. 이름 · 등급 · 장착 효과와 특기를 보여 준다.
+   *   간식은 보여 주는 것일 뿐 줄어들지 않는다(재화인 간식과 헷갈리지 않게 단추는 '간식 던지기'). 건너뛰기는 바로 3)으로 간다.
+   */
+  var BF_EYE = { common: '#ffffff', fine: '#8fc3ff', rare: '#ffd95a' }, BF_NEED = { common: 3, fine: 4, rare: 5 };
+  var bf = null;
+  function bfNow() { return (window.performance && performance.now ? performance.now() : Date.now()) / 1000; }
+  function bfOpen(r) {
+    var need = BF_NEED[r.rarity.id] || 3;
+    bf = { r: r, need: need, fed: 0, x: 132, tx: 132, walkUntil: 0, treat: null, revealAt: 0, hearts: [], t0: bfNow(), raf: 0 };
+    $('bf-veil').hidden = false;
+    setText($('bf-msg'), '누군가 숨어서 보고 있어요');
+    setText($('bf-sub'), '눈빛을 잘 보세요');
+    setText($('bf-act'), '간식 던지기 · 0 / ' + need);
+    $('bf-skip').hidden = false;
+    bfLoop();
+  }
+  function bfClose() { if (bf && bf.raf) cancelAnimationFrame(bf.raf); bf = null; $('bf-veil').hidden = true; render(); }
+  function bfReveal() {
+    if (!bf || bf.revealAt) return;
+    var r = bf.r, kind = C.PET_KINDS[r.breed.kind], sk = C.petSkillText(r.breed.id);
+    bf.revealAt = bfNow(); bf.x = bf.tx = 58; bf.treat = null;
+    for (var i = 0; i < 9; i++) bf.hearts.push({ x: 66 + (i % 3) * 4 - 4, y: 40, vx: (i - 4) * 5, vy: -18 - (i % 3) * 6 });
+    sfx('gopen' + ({ common: 0, fine: 1, rare: 2 }[r.rarity.id] || 0));
+    if (r.rarity.id === 'rare') buzz([30, 40, 30]);
+    setText($('bf-msg'), r.dup ? r.breed.name + (C.hasBatchim(r.breed.name) ? '은' : '는') + ' 이미 친구예요' : r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 친구가 됐어요!');
+    setText($('bf-sub'), r.rarity.name + ' · ' + kind.name + '\n' + (r.dup ? '항체 샘플 ' + fmt(r.refund) + ' 돌려받았어요' : '장착 ' + C.breedDesc(r.breed).split(' · ').pop() + (sk ? ' · 특기 ' + sk : '')));
+    setText($('bf-act'), '좋아요');
+    $('bf-skip').hidden = true;
+  }
+  function bfTap() {
+    if (!bf) return;
+    if (bf.revealAt) { if (bfNow() - bf.revealAt > 0.4) bfClose(); return; }
+    if (bf.treat) return;      // 던진 간식이 아직 날아가는 중
+    bf.fed++; bf.treat = { at: bfNow(), from: 30, to: bf.x - 4 };
+    sfx('gtap'); buzz(8);
+    setText($('bf-act'), '간식 던지기 · ' + bf.fed + ' / ' + bf.need);
+    setText($('bf-msg'), bf.fed === 1 ? '킁킁… 냄새를 맡았어요' : bf.fed < bf.need ? '조금 더 다가왔어요' : '거의 다 왔어요');
+  }
+  function bfDraw() {
+    var cv = $('bf-cv'), g = cv && cv.getContext ? cv.getContext('2d') : null; if (!g || !bf) return;
+    var S = window.Scene, now = bfNow(), t = now - bf.t0, W = cv.width, H = cv.height, G = 60, r = bf.r;
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = '#3a4250'; g.fillRect(0, 0, W, H);                       // 저녁 하늘
+    g.fillStyle = '#4a5260'; g.fillRect(0, 34, W, 26);                      // 먼 벽
+    g.fillStyle = '#5a5e52'; g.fillRect(0, G, W, H - G);                    // 땅
+    g.fillStyle = '#6b6f60'; g.fillRect(0, G, W, 1);
+    // 간식이 날아간다(포물선). 닿으면 아이가 한 걸음 다가온다
+    if (bf.treat) {
+      var k = Math.min(1, (now - bf.treat.at) / 0.45), tx = bf.treat.from + (bf.treat.to - bf.treat.from) * k, ty = G - 14 - Math.sin(k * Math.PI) * 18;
+      if (r.breed.kind === 'dog') { g.fillStyle = '#f1efe6'; g.fillRect(tx - 2, ty, 5, 1); g.fillRect(tx - 3, ty - 1, 1, 3); g.fillRect(tx + 3, ty - 1, 1, 3); }
+      else { g.fillStyle = '#8fc3ff'; g.fillRect(tx - 2, ty - 1, 4, 3); g.fillRect(tx + 2, ty - 2, 1, 1); g.fillRect(tx + 2, ty + 2, 1, 1); g.fillStyle = '#17180f'; g.fillRect(tx - 1, ty, 1, 1); }
+      if (k >= 1) {
+        var step = (132 - 58) / bf.need;
+        bf.treat = null; bf.tx = Math.max(58, bf.x - step); bf.walkUntil = now + 0.5;
+        if (bf.fed >= bf.need) setTimeout(bfReveal, 550);
+      }
+    }
+    if (bf.x > bf.tx) bf.x = Math.max(bf.tx, bf.x - 60 * (1 / 60));
+    var walking = now < bf.walkUntil && bf.x > bf.tx + 0.5, pet = { kind: r.breed.kind, id: r.breed.id, shadow: !bf.revealAt, walk: walking, step: Math.floor(t * 8) % 2 };
+    if (S && S.paintLara) S.paintLara(g, 8, G - 36, 2, false, C.cosmeticLook(state), 'stand', 0);
+    if (S && S.paintPet) S.paintPet(g, Math.round(bf.x), G - 22, 2, false, pet, 'none', t);
+    // 수풀(처음에는 아이를 반쯤 가린다)
+    g.fillStyle = '#3f5a3a'; g.fillRect(126, G - 12, 34, 12); g.fillRect(130, G - 16, 26, 4); g.fillStyle = '#4f6f48'; g.fillRect(132, G - 14, 6, 2); g.fillRect(146, G - 10, 8, 2);
+    // 그림자일 때는 눈만 반짝인다(등급의 빛)
+    if (!bf.revealAt) {
+      var blink = (t % 2.4) < 0.12, ey = walking ? 3 : 4, eyeCol = BF_EYE[r.rarity.id] || '#ffffff';
+      if (!blink) { g.fillStyle = eyeCol; g.fillRect(Math.round(bf.x) + 3 * 2, G - 22 + ey * 2, 2, 2); g.fillRect(Math.round(bf.x) + 5 * 2, G - 22 + ey * 2, 2, 2); }
+      if (r.rarity.id !== 'common' && Math.floor(t * 3) % 3 === 0) { g.fillStyle = eyeCol; g.fillRect(Math.round(bf.x) + 10, G - 22 + ey * 2 - 3, 1, 1); }
+    } else {
+      // 하트가 터진다
+      var dt = now - bf.revealAt;
+      bf.hearts.forEach(function (h) {
+        var hx = Math.round(h.x + h.vx * dt), hy = Math.round(h.y + h.vy * dt + 20 * dt * dt);
+        if (dt > 1.6) return;
+        g.fillStyle = '#ff6f9f'; g.fillRect(hx, hy, 1, 1); g.fillRect(hx + 2, hy, 1, 1); g.fillRect(hx, hy + 1, 3, 1); g.fillRect(hx + 1, hy + 2, 1, 1);
+      });
+    }
+  }
+  function bfLoop() { if (!bf) return; try { bfDraw(); } catch (e) { /* 그림이 없어도 결과는 이미 저장됐다 */ } bf.raf = requestAnimationFrame(bfLoop); }
   function renderPet() {
     var p = C.petInfo(state), cost = C.petPullCost(state), have = C.kennelCount(state);
     $('pet-empty').hidden = !!p; $('pet-card').hidden = !p;
@@ -4761,6 +4844,11 @@
     });
     $('hub-open').addEventListener('click', openHub);
     $('scene-hub').addEventListener('click', function () { sfx('click'); openHub(); });
+    // 4.5.3 친구 만들기 창: 그림이나 단추를 누르면 간식을 던진다. 건너뛰기는 바로 결과로
+    $('bf-cv').addEventListener('click', bfTap);
+    $('bf-act').addEventListener('click', bfTap);
+    $('bf-skip').addEventListener('click', function () { sfx('click'); bfReveal(); });
+    $('bf-cv').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bfTap(); } });
     $('away-ok').addEventListener('click', function () { $('away').hidden = true; sfx('buy'); });
     ['goal-go', 'm-goal-go'].forEach(function (id) { $(id).addEventListener('click', function () { if (guideNow && guideNow.view) goTo(guideNow.view); }); });
     $('signal').addEventListener('click', function () {
@@ -4816,14 +4904,10 @@
       b.addEventListener('click', function () {
         var r = C.adoptPet(state, kind);
         if (!r.ok) return;
-        if (r.dup) { toast(r.rarity.name + ' · ' + r.breed.name + ' · 이미 함께 있어요'); sfx('buy'); }
-        else {
-          log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
-          toast((r.rarity.id === 'rare' ? '희귀! ' : '') + r.rarity.name + ' · ' + r.breed.name + ' · 새 친구예요');
-          sfx(r.rarity.id === 'common' ? 'buy' : 'defended');
-        }
+        if (!r.dup) log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
         $('pet-input').value = '';
         Store.save(); render();
+        bfOpen(r);      // 4.5.3 결과는 이미 정해져 저장됐다. 연출은 보여 주기만 한다(닫거나 건너뛰어도 잃는 것이 없다)
       });
     });
     var renamer = function (inputId, change, done) {

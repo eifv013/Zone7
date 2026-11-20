@@ -721,6 +721,7 @@ html, body, button, .row, .panel { touch-action: pan-x pan-y; }
 .perk-r { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; border-left: 3px solid var(--hazard); background: color-mix(in srgb, var(--ink) 8%, transparent); border-radius: 6px; }
 .perk-r.zero { border-left-color: color-mix(in srgb, var(--ink) 30%, transparent); opacity: .55; } .perk-r b { font-size: 15px; } .perk-r .lv { font: 12px var(--font-mono); opacity: .75; margin-left: 6px; }
 .perk-r .ef { grid-column: 1 / 3; font-size: 12px; } .perk-r .ef i { font-style: normal; color: var(--safe); } .perk-r .mx { font: 12px var(--font-mono); color: var(--safe); align-self: center; }
+#bf-cv { width: 100%; aspect-ratio: 160 / 72; image-rendering: pixelated; display: block; border-radius: 8px; cursor: pointer; background: #2a2d33; } .bf-card { max-width: 420px; gap: 8px; justify-content: flex-start; } .story-card.bf-card p { margin: 0; min-height: 0; } .story-card.bf-card p::after { content: none; } .bf-msg { text-align: center; font: 700 16px/1.5 var(--font-body); margin: 8px 0 0; min-height: 1.5em; } .bf-sub { text-align: center; min-height: 1.4em; white-space: pre-line; } .story-card #bf-act { align-self: stretch; }
 #gacha-cv { width: 100%; aspect-ratio: 180 / 200; image-rendering: pixelated; display: block; border-radius: 8px; cursor: pointer; } .gacha-card { max-width: 420px; } .gacha-msg { text-align: center; min-height: 1.4em; margin: 8px 0; }
 .gacha-acts { display: flex; gap: 8px; } .gacha-odds-t { margin-top: 10px; } .gacha-odds { margin-top: 8px; padding: 8px 10px; border: 1px solid #6d6d60; font-size: 12px; line-height: 1.6; color: #b9b8ab; max-height: 40vh; overflow-y: auto; } .gacha-odds[hidden] { display: none; } .gacha-odds .gi { display: flex; justify-content: space-between; } .gacha-odds .gi.own { opacity: .55; } .gacha-odds .gi b { font-weight: 400; color: #e8e6dc; } .gacha-acts button { flex: 1; padding: 10px 4px; font-weight: 700; font-size: 13px; white-space: nowrap; } .gacha-acts button.y { background: var(--hazard); color: #141412; border-color: var(--hazard); }
 .trait-maxed { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 4px; } .trait-maxed:empty { display: none; } .trait-maxed span { font-size: 12px; border: 1px solid var(--safe); color: var(--safe); border-radius: 20px; padding: 3px 9px; } #camp-elder-row { margin: 0 0 8px; } #camp-elder-row[hidden] { display: none; }
@@ -1448,7 +1449,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.5.2</div>
+  <div class="boot-ver">7구역 알파 4.5.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1941,7 +1942,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.5.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.5.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2041,6 +2042,16 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="zmap-head"><div class="label" id="perks-title">이번 회차의 특전</div><button type="button" class="feedback-close" id="perks-close">닫기</button></div>
     <p class="hint">구역 목표를 달성할 때마다 하나씩 골라요. 철수하면 사라져요.</p>
     <div class="perks-list" id="perks"></div>
+  </div>
+</div>
+<!-- 4.5.3 친구 만들기: 숨어 있던 아이에게 간식을 던져 주면 한 걸음씩 다가온다. 눈빛이 등급(기본 흰빛 · 고급 파란빛 · 희귀 금빛)을 알려 준다 -->
+<div class="story-veil" id="bf-veil" role="dialog" aria-modal="true" aria-labelledby="bf-title" hidden>
+  <div class="story-card feedback-card bf-card">
+    <div class="zmap-head"><div class="label" id="bf-title">친구 만들기</div><button type="button" class="feedback-close" id="bf-skip">건너뛰기</button></div>
+    <canvas id="bf-cv" width="160" height="72" role="button" tabindex="0" aria-label="간식을 던져 준다"></canvas>
+    <p class="bf-msg" id="bf-msg" aria-live="polite"></p>
+    <p class="label bf-sub" id="bf-sub"></p>
+    <button type="button" id="bf-act">간식 던지기</button>
   </div>
 </div>
 <div class="story-veil" id="gacha-veil" role="dialog" aria-modal="true" aria-labelledby="gacha-title" hidden>
