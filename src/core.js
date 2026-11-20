@@ -477,6 +477,11 @@
     { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '혈청을 알아서 만든다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
     { id: 'nurse',   zone: 4, name: '간호사',   desc: '가장 급한 사람에게 알아서 한 대 놓는다(멈추기만 한다)', key: 'nurse',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
     { id: 'autoguard', zone: 5, name: '초소장',     desc: '맨 앞의 것을 알아서 쏘고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
+    { id: 'palisade', zone: 6, name: '통나무 울타리', desc: '울타리가 25% 더디게 깎인다',     key: 'fence',    per: 0.25, baseCost: 3e31, growth: 6, max: 6 },
+    { id: 'muster',  zone: 6, name: '훈련',      desc: '습격에 세워야 하는 사람 −8%',    key: 'muster',    per: -0.08, baseCost: 4e31, growth: 5, max: 8 },
+    { id: 'medkit',  zone: 6, name: '구급낭',    desc: '지키다 잃는 사람 −15%',          key: 'loss',     per: -0.15, baseCost: 3e31, growth: 5, max: 6 },
+    { id: 'beacon',  zone: 6, name: '봉화',      desc: '습격을 막으면 오는 사람 +50%',   key: 'nightpay', per: 0.5,  baseCost: 5e31, growth: 4, max: 10 },
+    { id: 'wagon',   zone: 6, name: '수레',      desc: '한 번에 보내는 무리 +25%',       key: 'wagon',     per: 0.25, baseCost: 2e31, growth: 5, max: 8 },
     { id: 'elder',   zone: 6, name: '이장',      desc: '깃발을 꽂아 둔 자리로 알아서 사람을 보낸다. 밤에는 울타리를 절반까지 채운다', key: 'elder', per: 1, baseCost: 8e31, growth: 1, max: 1 },
     { id: 'autotower', zone: 6, name: '송신 기사',  desc: '주파수를 알아서 맞추고, 무전에 알아서 응답한다(절반)', key: 'autotower', per: 1, baseCost: 5e31, growth: 1, max: 1 }
   ];
@@ -593,7 +598,7 @@
       // 구조 신호
       signalIn: SIGNAL_FIRST, signalLeft: 0, signalsAnswered: 0, buff: null,
       // 특전(이번 판)
-      settle: {}, settleLv: {}, camp: { work: {}, broken: {}, flag: null, clock: 0, night: null, nightLv: 0, day: 1, hand: 999, elder: 0 }, nightsHeld: 0, campBreaches: 0, nightLvBest: 0, sendsRun: 0, build: null, tune: { t: 0, band: 0.6, cool: 0 }, tuneHits: 0,      // 7구역 정착지와 주파수(3.1.0)
+      settle: {}, settleLv: {}, camp: { work: {}, broken: {}, flag: null, clock: 0, night: null, nightLv: 0, day: 1, hand: 999, elder: 0 }, nightsHeld: 0, campBreaches: 0, nightLvBest: 0, sendsRun: 0, guardsLost: 0, build: null, tune: { t: 0, band: 0.6, cool: 0 }, tuneHits: 0,      // 7구역 정착지와 주파수(3.1.0)
       zev: { rail: null, guard: null, tower: null }, zevIn: { rail: 60, guard: 60, tower: 60 }, railBoost: 0, guardBoost: 0, zevRun: 0, focusLeft: 0, focusCool: 0, push: { guard: { left: 0, cool: 0 }, tower: { left: 0, cool: 0 } },      // 4·6·7구역 사건과 5구역 밤샘 연구
       autoOff: {},      // 구역 index → true 면 그 구역의 주문·사건 자동을 꺼 둔 것(철수해도 남는다)
       goalExt: {},      // 목표 id → 채운 연장 단계 수(이번 회차)
@@ -877,7 +882,7 @@
     var rb = raw.build && typeof raw.build === 'object' ? findById(SETTLE, raw.build.id) : null;
     if (rb && s.zone >= 6 && !s.settle[rb.id]) { s.settle[rb.id] = true; s.settleLv[rb.id] = 1; }
     s.camp.flag = findById(SETTLE, rc7.flag) ? rc7.flag : null; s.camp.clock = clamp(safeNum(rc7.clock, 0), 0, RAID_EVERY); s.camp.nightLv = clamp(safeCount(rc7.nightLv), 0, NIGHT_LV_MAX); s.camp.day = clamp(safeCount(rc7.day) || 1, 1, 1e9);
-    s.nightsHeld = clamp(safeCount(raw.nightsHeld), 0, 1e12); s.campBreaches = clamp(safeCount(raw.campBreaches), 0, 1e12); s.nightLvBest = clamp(safeCount(raw.nightLvBest), 0, NIGHT_LV_MAX); s.sendsRun = clamp(safeCount(raw.sendsRun), 0, 1e12);
+    s.nightsHeld = clamp(safeCount(raw.nightsHeld), 0, 1e12); s.campBreaches = clamp(safeCount(raw.campBreaches), 0, 1e12); s.nightLvBest = clamp(safeCount(raw.nightLvBest), 0, NIGHT_LV_MAX); s.guardsLost = clamp(safeNum(raw.guardsLost, 0), 0, 1e15); s.sendsRun = clamp(safeCount(raw.sendsRun), 0, 1e12);
     PUSHES.forEach(function (d) { var q = rp[d.id] && typeof rp[d.id] === 'object' ? rp[d.id] : {}, openZ = s.zone >= d.zone; s.push[d.id] = { left: openZ ? clamp(safeNum(q.left, 0), 0, PUSH_SECONDS) : 0, cool: openZ ? clamp(safeNum(q.cool, 0), 0, PUSH_COOL) : 0 }; });
     s.edge = clamp(safeNum(raw.edge, 0), 0, 1); s.nightEase = raw.nightEase === NIGHT_EASE ? NIGHT_EASE : 1; s.counterAt = clamp(safeCount(raw.counterAt), 0, 99);
     s.defStreak = clamp(safeCount(raw.defStreak), 0, 1e6); s.perkOwed = clamp(safeCount(raw.perkOwed), 0, PERK_OWED_MAX); s.bossPerks = clamp(safeCount(raw.bossPerks), 0, BOSS_PERKS_MAX); s.perkFrom = raw.perkFrom === 'boss' ? 'boss' : 'goal';
@@ -952,7 +957,7 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { elder: 0, cool: 1, wall: 0, wallfix: 1, nade: 0, held: 1, prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var m = { fence: 1, muster: 1, loss: 1, nightpay: 1, wagon: 1, elder: 0, cool: 1, wall: 0, wallfix: 1, nade: 0, held: 1, prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
     var ADD = { elder: 1, wall: 1, nade: 1, peak: 1, sterile: 1, horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, nurse: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
@@ -978,7 +983,7 @@
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
     // 7구역 정착지의 건물(3.1.0)
-    if (state.settle) SETTLE.forEach(function (d) { if (d.key && d.mult && state.settle[d.id] && !(state.camp && state.camp.broken && state.camp.broken[d.id])) m[d.key] *= Math.pow(d.mult, 1 + LV_POW * (settleLv(state, d.id) - 1)); });      // 4.2.0: 단계만큼 더(부서진 동안에는 없다)
+    if (state.settle) SETTLE.forEach(function (d) { if (d.key && d.mult && state.settle[d.id] && !(state.camp && state.camp.broken && state.camp.broken[d.id])) m[d.key] *= Math.pow(d.mult, levelPow(settleLv(state, d.id))); });      // 4.2.0: 단계만큼 더(부서진 동안에는 없다)
     m.labcost = Math.max(0.3, m.labcost); m.staffcost = Math.max(0.2, m.staffcost);
     m.cost = Math.max(0.2, m.cost);
     m.defcost = Math.max(0.2, m.defcost);
@@ -1039,7 +1044,8 @@
   ];
   var SETTLE_SCALE = 100;      // 건물 값 전체에 곱하는 수(밸런스를 맞출 때 이것 하나만 만진다)
   SETTLE.forEach(function (d) { d.cost = Math.round(d.cost * SETTLE_SCALE); });
-  var TUNE_PERIOD = 3.2, TUNE_BAND = 0.14, TUNE_GAIN_SECONDS = 20, TUNE_COOL = 15, TUNE_MISS_COOL = 5, TUNE_MIN = 5, TUNE_AUTO = 0.5;
+  var TUNE_PERIOD = 3.2, TUNE_BAND = 0.14, TUNE_GAIN_SECONDS = 8, TUNE_COOL = 6,      /* 4.2.1: 15초 쉬고 20초 치 → 6초 쉬고 8초 치(초당 받는 것은 같다. 쉬는 동안 손이 놀았다) */
+  TUNE_KEEP = 0, TUNE_MISS_COOL = 5, TUNE_MIN = 5, TUNE_AUTO = 0.5;
   /*
    * 공사(3.1.0): 건물은 맡기는 즉시 서지 않는다. 줄(row)에 따라 SETTLE_BUILD 초가 걸리고, 한 번에 한 채만 짓는다.
    *   사람 수만으로 막으면 강한 사람은 20분, 약한 사람은 16시간이 걸렸다(재 보니 그랬다). 공사 시간은 누구에게나 같다.
@@ -1060,8 +1066,12 @@
    * 자동: 이장(elder)은 ELDER_SECONDS 초마다 깃발을 꽂아 둔 자리(마지막으로 누른 자리)로 한 무리를 보낸다. 밤에는 울타리를 절반(ELDER_HOLD)까지만 채운다.
    * 자리를 비운 동안(굵은 걸음)에는 밤이 오지 않는다. 이장이 있으면 그동안에도 사람을 보낸다. 가만히 둠 < 이장 < 손.
    */
-  var LV_MAX7 = 3, LV_COST = [1, 3, 9], LV_POW = 0.25, SEND_PARTS = 12, REPAIR_FRAC = 0.3;
-  var RAID_EVERY = 70, RAID_SECONDS = 25, CAMP_HAND = 45, NIGHT_NEED = 15, NIGHT_GROW = 1.15, NIGHT_LV_MAX = 30, NIGHT_DROP = 2, NIGHT_PAY = 40, GUARD_PARTS = 8, FENCE_RATE = 1.6, ELDER_SECONDS = 3, ELDER_HOLD = 0.5;
+  /* 4.2.1 단계의 끝을 없앴다(LV_MAX7 = 99). 왜: 사람이 많이 모인 저장에서는 아홉 채가 금세 3단계가 되고, 그 뒤로는 놓을 곳도 살 것도 없었다.
+     값은 단계마다 LV_GROW 배(1 · 3 · 9 · 27 …)라 사람이 아무리 많아도 놓을 곳이 남는다. 효과는 갈수록 덜 는다(지수 = 1 + LV_POW × log2(단계)): 벌이가 한없이 불지 않게.
+     그림은 3단계까지 달라지고, 그 뒤로는 건물 위의 숫자가 오른다 */
+  var LV_MAX7 = 99, LV_GROW = 3, LV_COST = [1, 3, 9], LV_POW = 0.3, SEND_PARTS = 12, REPAIR_FRAC = 0.3, TOWER_HOLD_MAX = 0.6, GUARD_LOSS = 0.5;
+  var RAID_EVERY = 50, RAID_SECONDS = 25, CAMP_HAND = 45, NIGHT_NEED = 15, NIGHT_GROW = 1.15, NIGHT_LV_MAX = 200, NIGHT_DROP = 2, NIGHT_PAY = 40, GUARD_PARTS = 8, FENCE_RATE = 1.6, ELDER_SECONDS = 2, ELDER_HOLD = 0.7;
+  var NIGHT_HOARD = 0.3;
   var TOWER_HOLD = { guard7: 0.15, watch: 0.1 }, TUNE_BUILD = 0, SETTLE_BUILD = [0, 0, 0];      // 옛 공사 시간은 없앴다(이름만 남겨 둔다)
   function settleTime() { return 0; }
   function newCamp() { return { work: {}, broken: {}, flag: null, clock: 0, night: null, nightLv: 0, day: 1, hand: 999, elder: 0 }; }
@@ -1069,7 +1079,8 @@
   function settleHas(state, id) { return !!(state.settle && state.settle[id]); }
   function settleLv(state, id) { return settleHas(state, id) ? clamp(Math.floor(safeNum(state.settleLv && state.settleLv[id], 1)) || 1, 1, LV_MAX7) : 0; }
   function settleBroken(state, id) { return !!(state.camp && state.camp.broken && state.camp.broken[id]); }
-  function levelCost(def, lv) { return def.cost * LV_COST[clamp(lv, 1, LV_MAX7) - 1]; }
+  function levelCost(def, lv) { return Math.min(1e15, def.cost * Math.pow(LV_GROW, clamp(lv, 1, LV_MAX7) - 1)); }
+  function levelPow(lv) { return lv >= 1 ? 1 + LV_POW * Math.log(lv) / Math.LN2 : 0; }
   /** 이 자리에 더 놓아야 하는 사람 수: 부서졌으면 고치는 데, 아니면 다음 단계에. 다 자랐으면 0. */
   function settleNeed(state, id) {
     var def = findById(SETTLE, id); if (!def) return 0;
@@ -1080,7 +1091,7 @@
   function settleWork(state, id) { var c = state.camp; return c && c.work && c.work[id] > 0 ? c.work[id] : 0; }
   function settleUsed(state) {
     var n = 0, c = state.camp;
-    SETTLE.forEach(function (d) { var lv = settleLv(state, d.id); for (var k = 1; k <= lv; k++) n += levelCost(d, k); n += settleWork(state, d.id); });
+    SETTLE.forEach(function (d) { var lv = settleLv(state, d.id); if (lv > 0) n += Math.min(1e15, d.cost * (Math.pow(LV_GROW, lv) - 1) / (LV_GROW - 1)); n += settleWork(state, d.id); });      // 1 + 3 + 9 + … 의 합
     if (c && c.night && c.night.guards > 0) n += c.night.guards;
     return n;
   }
@@ -1102,7 +1113,7 @@
     var why = settleBlock(state, id);
     if (why) return fail(why);
     var def = findById(SETTLE, id), c = campOf(state), need = settleNeed(state, id), have = settleWork(state, id);
-    var sent = Math.min(settleFree(state), need - have, Math.max(1, Math.ceil(need / SEND_PARTS)));
+    var sent = Math.min(settleFree(state), need - have, Math.max(1, Math.ceil(need / SEND_PARTS * mods(state).wagon)));
     c.work[id] = have + sent; if (!auto) { c.flag = id; c.hand = 0; state.sendsRun = (state.sendsRun || 0) + 1; }
     var out = { ok: true, id: id, name: def.name, sent: sent, have: have + sent, need: need, done: false, lv: settleLv(state, id), repaired: false };
     if (c.work[id] >= need) {
@@ -1114,23 +1125,42 @@
     return out;
   }
   /** 밤에 울타리가 버티는 정도(0 ~ 1): 세운 사람 ÷ 필요한 사람 + 경비대 · 망루의 몫. 1 이면 깎이지 않는다. */
-  function nightHold(state) {
-    var c = state.camp, n = c && c.night; if (!n) return 1;
-    var h = Math.min(1, (n.guards || 0) / Math.max(1, n.need));
-    Object.keys(TOWER_HOLD).forEach(function (id) { if (!settleBroken(state, id)) h += TOWER_HOLD[id] * settleLv(state, id); });
-    return Math.min(1, h);
-  }
-  /** 밤에 문 앞의 사람을 울타리로 한 무리 보낸다(아침에 돌아온다). */
-  function sendGuard(state, auto) {
+  /*
+   * 4.2.1 습격을 세 쪽으로 나눴다. 왜: 단추를 몇 번 누르면 끝나서 심심했다(해 보신 말씀).
+   *   무리는 북 · 동 · 남 세 쪽에 나뉘어 붙고(night.w: 몫, 합 1), RAID_SHIFT 초마다 몰리는 쪽이 바뀐다. 쪽마다 울타리가 따로 깎인다(night.fences).
+   *   그쪽에 세워야 하는 수 = need × w. 지도에서 그쪽 울타리를 누르면 한 무리를 세운다. 문 앞에 사람이 없으면 가장 남는 쪽에서 옮겨 온다.
+   *   그래서 습격 내내 몰리는 쪽을 따라 사람을 옮겨야 한다. 어느 한쪽이라도 다 깎이면 뚫린다.
+   *   night.guards 는 세 쪽의 합, night.fence 는 가장 많이 깎인 쪽(화면과 옛 코드가 쓴다).
+   */
+  var RAID_SHIFT = 6, RAID_SIDES = 3;
+  function towerHold(state) { var tw = 0; Object.keys(TOWER_HOLD).forEach(function (id) { if (!settleBroken(state, id)) tw += TOWER_HOLD[id] * levelPow(settleLv(state, id)); }); return Math.min(TOWER_HOLD_MAX, tw); }      // 경비대와 망루만으로는 다 못 막는다
+  function sideNeed(n, i) { return Math.max(1, Math.ceil(n.need * n.w[i])); }
+  /** i 쪽 울타리가 버티는 정도(0 ~ 1). */
+  function sideHold(state, i) { var n = state.camp && state.camp.night; if (!n) return 1; return Math.min(1, (n.g[i] || 0) / sideNeed(n, i) + towerHold(state)); }
+  /** 습격 전체가 버티는 정도: 무리가 붙은 쪽 가운데 가장 약한 쪽. */
+  function nightHold(state) { var n = state.camp && state.camp.night; if (!n) return 1; var h = 1; for (var i = 0; i < RAID_SIDES; i++) if (n.w[i] > 0.02) h = Math.min(h, sideHold(state, i)); return h; }
+  function raidWeights(roll, prev) { var big = Math.floor(roll() * RAID_SIDES) % RAID_SIDES; if (big === prev) big = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES; var mid = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES, w = [0.1, 0.1, 0.1]; w[big] = 0.6; w[mid] = 0.3; return { w: w, side: big }; }
+  function newRaid(state, roll) { var r = raidWeights(roll, -1); return { t: RAID_SECONDS, need: raidNeed(state), w: r.w, side: r.side, g: [0, 0, 0], fences: [1, 1, 1], fence: 1, guards: 0, shift: RAID_SHIFT }; }
+  /** 습격 중에 side(0 북 · 1 동 · 2 남, 안 주면 가장 약한 쪽) 울타리로 한 무리를 세운다. 문 앞에 사람이 없으면 가장 남는 쪽에서 옮긴다. */
+  function sendGuard(state, side, auto) {
     if (!zoneOpen(state, 6)) return fail('locked');
     var c = campOf(state), n = c.night;
     if (!n) return fail('day');
-    if (n.guards >= n.need) return fail('full');
-    var free = settleFree(state); if (!(free >= 1)) return fail('people');
-    var sent = Math.min(free, n.need - n.guards, Math.max(1, Math.ceil(n.need / GUARD_PARTS)));
-    n.guards += sent; if (!auto) { c.hand = 0; state.sendsRun = (state.sendsRun || 0) + 1; }
-    return { ok: true, sent: sent, guards: n.guards, need: n.need, hold: nightHold(state) };
+    if (!(side >= 0 && side < RAID_SIDES)) { side = 0; for (var k = 1; k < RAID_SIDES; k++) if (sideHold(state, k) < sideHold(state, side)) side = k; }
+    side = Math.floor(side);
+    var want = sideNeed(n, side) - n.g[side]; if (!(want > 0)) return fail('full');
+    var chunk = Math.max(1, Math.ceil(n.need / GUARD_PARTS * mods(state).wagon)), free = settleFree(state), sent = 0, moved = -1;
+    if (free >= 1) sent = Math.min(free, want, chunk);
+    else { var best = -1, sur = 0; for (var j = 0; j < RAID_SIDES; j++) { if (j === side) continue; var s2 = n.g[j] - sideNeed(n, j); if (n.g[j] > 0 && (best < 0 || s2 > sur)) { best = j; sur = s2; } } if (best < 0) return fail('people'); sent = Math.min(n.g[best], want, chunk); n.g[best] -= sent; moved = best; }
+    n.g[side] += sent; n.guards = n.g[0] + n.g[1] + n.g[2]; if (!auto) { c.hand = 0; state.sendsRun = (state.sendsRun || 0) + 1; }
+    return { ok: true, side: side, sent: sent, moved: moved, guards: n.guards, need: n.need, hold: nightHold(state) };
   }
+  /** 다음 습격에 세워야 하는 사람 수. 모이는 속도의 NIGHT_NEED 초 치 × 단계 × 훈련. 문 앞에 쌓아 둔 사람의 NIGHT_HOARD 보다 작지는 않다(쌓아만 두면 영영 안전하던 것을 막는다). */
+  function raidNeed(state) {
+    var c = state.camp, lv = c && c.nightLv > 0 ? c.nightLv : 0, byRate = survivorRate(state) * NIGHT_NEED * Math.pow(NIGHT_GROW, lv), byHoard = settleFree(state) * NIGHT_HOARD * Math.min(3, 1 + 0.1 * lv);
+    return Math.max(5, Math.ceil(Math.max(byRate, byHoard) * mods(state).muster));
+  }
+  function campSeen(state) { if (zoneOpen(state, 6)) campOf(state).hand = 0; }      // 화면이 7구역 운영을 보고 있다: 그동안은 해가 간다(보고 있지 않으면 습격은 오지 않는다)
   function elderOn(state) { return mods(state).elder > 0 && !(state.autoOff && state.autoOff[6]); }
   /** 이장이 보낼 자리: 깃발을 꽂아 둔 자리, 놓을 수 없으면 놓을 수 있는 자리 가운데 가장 덜 드는 곳. */
   function elderTarget(state) {
@@ -1149,25 +1179,31 @@
     }
     c.hand = Math.min(999, c.hand + dt);
     if (elder) {
-      c.elder = (c.elder || 0) + dt / ELDER_SECONDS;
+      c.elder = (c.elder || 0) + dt / ELDER_SECONDS * (c.night ? 4 : 1);      // 습격 중에는 서두른다(몰린 쪽은 몇 초면 깎인다)
       while (c.elder >= 1) { c.elder -= 1;
-        if (c.night && nightHold(state) < ELDER_HOLD) { if (!sendGuard(state, true).ok) break; }
-        else { var t2 = elderTarget(state); if (!t2 || !buildSettle(state, t2, true, events).ok) { c.elder = Math.min(c.elder, 1); break; } } }
+        if (c.night && nightHold(state) < ELDER_HOLD) { if (!sendGuard(state, -1, true).ok) break; }
+        else { var t2 = !c.night && settleFree(state) <= raidNeed(state) ? null : elderTarget(state); if (!t2 || !buildSettle(state, t2, true, events).ok) { c.elder = Math.min(c.elder, 1); break; } } }      // 이장은 다음 습격에 세울 만큼은 남겨 둔다
     }
     var n = c.night;
     if (n) {
-      n.t -= dt; n.fence -= (1 - nightHold(state)) * FENCE_RATE / RAID_SECONDS * dt;
+      n.t -= dt;
+      for (var si = 0; si < RAID_SIDES; si++) n.fences[si] -= (1 - sideHold(state, si)) * n.w[si] * RAID_SIDES * FENCE_RATE / RAID_SECONDS * dt / mods(state).fence;
+      n.fence = Math.min(n.fences[0], n.fences[1], n.fences[2]);
+      n.shift -= dt; if (n.shift <= 0 && n.t > 2) { n.shift = RAID_SHIFT; var rw = raidWeights(roll, n.side); n.w = rw.w; n.side = rw.side; if (events) events.push({ type: 'camp-shift', side: n.side }); }
       if (n.fence <= 0) {      // 뚫렸다: 서 있는 건물 한 채가 부서진다(고칠 때까지 효과가 없다)
         var alive = SETTLE.filter(function (d) { return settleHas(state, d.id) && !c.broken[d.id]; }), v = alive.length ? alive[Math.floor(roll() * alive.length) % alive.length] : null;
         if (v) c.broken[v.id] = true;
+        var lostB = Math.floor(n.guards * GUARD_LOSS * mods(state).loss); state.survivors = Math.max(0, (state.survivors || 0) - lostB); state.guardsLost = (state.guardsLost || 0) + lostB;
         c.nightLv = Math.max(0, (c.nightLv || 0) - NIGHT_DROP); state.campBreaches = (state.campBreaches || 0) + 1;
-        if (events) events.push({ type: 'camp-breach', id: v ? v.id : '', name: v ? v.name : '', side: n.side });
+        if (events) events.push({ type: 'camp-breach', id: v ? v.id : '', name: v ? v.name : '', side: n.side, lost: lostB });
         c.night = null; c.clock = 0; c.day = (c.day || 1) + 1;
       } else if (n.t <= 0) {      // 밤을 넘겼다
-        var gain = Math.max(TUNE_MIN, survivorRate(state) * NIGHT_PAY) * (1 + 0.1 * (c.nightLv || 0)) * Math.max(0.2, n.fence);
+        /* 지키다 잃는 사람: 울타리가 깎인 만큼(다 버텼으면 아무도 잃지 않는다). 받는 사람: 모이는 속도의 NIGHT_PAY 초 치 × 단계 × 남은 울타리, 세운 사람의 절반보다 적지는 않다 */
+        var lostH = Math.floor(n.guards * GUARD_LOSS * (1 - Math.max(0, n.fence)) * mods(state).loss); state.survivors = Math.max(0, (state.survivors || 0) - lostH); state.guardsLost = (state.guardsLost || 0) + lostH;
+        var gain = Math.max(TUNE_MIN, survivorRate(state) * NIGHT_PAY * (1 + 0.1 * (c.nightLv || 0)), n.need * 0.5) * Math.max(0.2, n.fence) * mods(state).nightpay;
         state.survivors = Math.min(1e15, (state.survivors || 0) + gain); c.nightLv = Math.min(NIGHT_LV_MAX, (c.nightLv || 0) + 1); state.nightsHeld = (state.nightsHeld || 0) + 1;
         if (c.nightLv > (state.nightLvBest || 0)) state.nightLvBest = c.nightLv;
-        if (events) events.push({ type: 'camp-held', gain: gain, lv: c.nightLv, fence: n.fence });
+        if (events) events.push({ type: 'camp-held', gain: gain, lv: c.nightLv, fence: n.fence, lost: lostH });
         c.night = null; c.clock = 0; c.day = (c.day || 1) + 1;
       }
     } else if (c.hand < CAMP_HAND && settleCount(state) >= 1 && TEST.night !== 0) {
@@ -1175,8 +1211,8 @@
       if (c.clock >= RAID_EVERY) {
         /* 세워야 하는 사람: 모이는 속도의 NIGHT_NEED 초 치 × 단계. 왜 모인 사람 전체가 아닌가: 사람은 거의 다 건물에 놓여 있어서, 전체의 몇 %로 잡으면 문 앞의 사람으로는 영영 못 막았다.
            모이는 속도에 맞추면 누구든 '얼마 동안 짓지 않고 모아 두면' 막을 수 있고, 단계가 오르면 그 동안이 길어진다 */
-        var need = Math.max(5, Math.ceil(survivorRate(state) * NIGHT_NEED * Math.pow(NIGHT_GROW, c.nightLv || 0)));
-        c.night = { t: RAID_SECONDS, need: need, guards: 0, fence: 1, side: Math.floor(roll() * 3) % 3 };
+        var need = raidNeed(state);
+        c.night = newRaid(state, roll);
         if (events) events.push({ type: 'camp-night', need: need, side: c.night.side, lv: c.nightLv || 0 });
       }
     }
@@ -1190,7 +1226,7 @@
     if (stage === SERUM_COSTS.length) { var rest = SETTLE.filter(function (x) { return !settleHas(state, x.id); })[0]; if (rest) return rest; }
     return null;
   }
-  function tuneBand(state) { var b = TUNE_BAND; SETTLE.forEach(function (d) { if (d.band && settleHas(state, d.id) && !settleBroken(state, d.id)) b += d.band * (1 + 0.5 * (settleLv(state, d.id) - 1)); }); return b; }
+  function tuneBand(state) { var b = TUNE_BAND; SETTLE.forEach(function (d) { if (d.band && settleHas(state, d.id) && !settleBroken(state, d.id)) b += d.band * levelPow(settleLv(state, d.id)); }); return Math.min(0.5, b); }
   /** 바늘의 자리(0 ~ 1): 끝에서 끝으로 오간다. */
   function tunePos(state) { var x = (((state.tune && state.tune.t) || 0) / TUNE_PERIOD) % 2; return x <= 1 ? x : 2 - x; }
   function tuneGain(state) { return Math.max(TUNE_MIN, survivorRate(state) * TUNE_GAIN_SECONDS); }
@@ -4552,7 +4588,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
+    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, sideHold: sideHold, sideNeed: sideNeed, towerHold: towerHold, newRaid: newRaid, RAID_SHIFT: RAID_SHIFT, campSeen: campSeen, raidNeed: raidNeed, levelPow: levelPow, LV_GROW: LV_GROW, TOWER_HOLD_MAX: TOWER_HOLD_MAX, GUARD_LOSS: GUARD_LOSS, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
     SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
     tuneBand: tuneBand, tunePos: tunePos, tuneGain: tuneGain, tuneHit: tuneHit, tuneNow: tuneNow, TUNE_PERIOD: TUNE_PERIOD, TUNE_COOL: TUNE_COOL, TUNE_MISS_COOL: TUNE_MISS_COOL, TUNE_GAIN_SECONDS: TUNE_GAIN_SECONDS, TUNE_AUTO: TUNE_AUTO,
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,

@@ -834,8 +834,8 @@ canvas.plat.tappable { cursor: pointer; } canvas.plat.tappable:active { filter: 
 @keyframes t7-hit { 0% { box-shadow: 0 0 0 0 var(--safe); background: color-mix(in srgb, var(--safe) 45%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
 @keyframes t7-miss { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 @media (prefers-reduced-motion: reduce) { .t7-dial.hit, .t7-dial.miss { animation: none; } .t7-work i, .t7-band { transition: none; } }
-.t7-dial.slim { height: 22px; margin: 0 0 6px; } .t7-dial.slim .t7-freq { top: 4px; font-size: 11px; } .t7-gain { position: absolute; right: 8px; top: 4px; font-size: 11px; color: var(--ink-soft); }
-#tower #t7-tune { margin: 0 0 8px; } #tower #t7-tune[hidden] { display: none; } .camp-guard:not(:disabled) { background: var(--blood) !important; color: #fff !important; } .camp-guard[hidden], .camp-card[hidden] { display: none; }
+.t7-dial.slim { height: 26px; margin: 0 0 6px; } .t7-dial.slim .t7-freq { top: 5px; font-size: 11px; line-height: 1; } .t7-gain { position: absolute; right: 8px; top: 5px; font-size: 11px; line-height: 1; color: var(--ink-soft); }
+#tower #t7-tune { margin: 0 0 8px; } #tower #t7-tune[hidden] { display: none; } .camp-guard { margin: 0 0 8px; } .camp-guard button { padding: 8px 2px; font-size: 13px; } .camp-guard button.hot { border-color: var(--blood); background: color-mix(in srgb, var(--blood) 22%, var(--paper)); animation: plat-full .5s steps(2) infinite; } #camp-guard button small { color: var(--blood); font-family: var(--font-mono); } #camp-guard button.ok small { color: var(--safe); } .camp-guard[hidden], .camp-card[hidden] { display: none; }
 .camp-card { margin: 0 0 6px; padding: 8px 12px; } .camp-card .autobar { margin-top: 6px; } #camp-head.bad { color: var(--blood); animation: plat-full .4s steps(2) infinite; }
 #camp-wrap .ward-pop { color: #e8e6dc; font-size: 12px; } #camp-wrap .ward-pop.done { color: #ffd95a; font-size: 16px; } #camp-wrap .ward-pop.bad { color: #ff7a6a; font-size: 16px; } #camp-clock.raid { border-color: #ff7a6a; color: #ffb0a4; }
 .settle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 6px; }
@@ -1394,7 +1394,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.2.0</div>
+  <div class="boot-ver">7구역 알파 4.2.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1711,7 +1711,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="ward-wrap" id="camp-wrap"><canvas class="belt plat labcv bridgecv" id="campscene" width="184" height="128" role="button" tabindex="0" data-tap aria-label="정착지 지도. 자리를 누르면 사람을 놓는다"></canvas><span class="br-level" id="camp-clock" hidden></span></div>
         <div class="t7-dial slim" id="t7-dial" aria-hidden="true"><div class="t7-band" id="t7-band"></div><div class="t7-needle" id="t7-needle"></div><span class="t7-freq num" id="t7-freq"></span><span class="t7-gain num" id="t7-gain"></span></div>
         <button type="button" class="surge" id="t7-tune">맞춘다</button>
-        <button type="button" class="fortify sell plat-go camp-guard" id="camp-guard" hidden><span>울타리로 보내기</span><span class="num" id="camp-guard-n"></span></button>
+        <!-- 4.2.1 습격 중: 세 쪽 울타리 단추(지도의 울타리를 눌러도 된다). 몰린 쪽이 붉다 -->
+        <div class="pick-two camp-guard" id="camp-guard" hidden><button type="button" id="camp-g0"></button><button type="button" id="camp-g1"></button><button type="button" id="camp-g2"></button></div>
         <div class="order camp-card" id="camp-card" hidden><div class="order-head"><span class="label" id="camp-name"></span><span class="num" id="camp-need"></span></div><div class="autobar" id="camp-bar" aria-hidden="true"></div></div>
         <div class="order zev" id="zev-tower" hidden>
           <div class="order-head"><span class="label">무전</span><span class="num" id="zev-tower-left"></span></div>
@@ -1864,7 +1865,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.2.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.2.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

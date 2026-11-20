@@ -2822,7 +2822,7 @@
    *   바탕(campBackdrop)은 한 번만 그리고, 건물 · 사람 · 불빛은 매번 그린다.
    */
   var CAMP_PX = [57, 96, 135], CAMP_PY = [13, 49, 85], CAMP_W = 38, CAMP_H = 28, CAMP_COL = ['#7fb85a', '#6aaede', '#e98a3c'];
-  var campBack = null, campWalk = [], campFlash = null, campPopFn = null, campSel = '';
+  var sc0 = 0, campBack = null, campWalk = [], campFlash = null, campPopFn = null, campSel = '';
   function campPlot(d) { return { x: CAMP_PX[d.col], y: CAMP_PY[d.row] }; }
   function campBackdrop() {
     if (campBack) return campBack;
@@ -2847,6 +2847,7 @@
     return (campBack = cv);
   }
   /* 건물 그림: CAMP_ART[id](g, x, y, lv, L). 38×28 자리 안에 그린다. L(x, y, w, h)는 창(밤에 불이 켜진다). 단계가 오르면 덧붙는다 */
+  var CAMP_DIGIT = [['###', '#.#', '#.#', '#.#', '###'], ['.#.', '##.', '.#.', '.#.', '###'], ['###', '..#', '###', '#..', '###'], ['###', '..#', '###', '..#', '###'], ['#.#', '#.#', '###', '..#', '..#'], ['###', '#..', '###', '..#', '###'], ['###', '#..', '###', '#.#', '###'], ['###', '..#', '..#', '..#', '..#'], ['###', '#.#', '###', '#.#', '###'], ['###', '#.#', '###', '..#', '###']];
   var CAMP_ART = (function () {
     var K = '#10140e';
     function R(g, x, y, w, h, c) { px(g, x, y, w, h, c); }
@@ -2925,8 +2926,9 @@
     // 아홉 자리
     C.SETTLE.forEach(function (d) {
       var p = campPlot(d), lv = C.settleLv(state, d.id), why = C.settleBlock(state, d.id), work = C.settleWork(state, d.id), need = C.settleNeed(state, d.id), broken = C.settleBroken(state, d.id), col = CAMP_COL[d.col];
-      if (lv > 0) { R(p.x, p.y, CAMP_W, CAMP_H, '#4c4638'); R(p.x, p.y, CAMP_W, 1, '#5e5848'); R(p.x, p.y + CAMP_H - 1, CAMP_W, 1, '#373226'); CAMP_ART[d.id](g, p.x, p.y, lv, L);
-        for (var k = 0; k < 3; k++) { R(p.x + 12 + k * 5, p.y - 3, 4, 2, K); R(p.x + 13 + k * 5, p.y - 3, 2, 1, k < lv ? col : '#3a4636'); }
+      if (lv > 0) { R(p.x, p.y, CAMP_W, CAMP_H, '#4c4638'); R(p.x, p.y, CAMP_W, 1, '#5e5848'); R(p.x, p.y + CAMP_H - 1, CAMP_W, 1, '#373226'); CAMP_ART[d.id](g, p.x, p.y, Math.min(3, lv), L);
+        if (lv <= 3) { for (var k = 0; k < 3; k++) { R(p.x + 12 + k * 5, p.y - 3, 4, 2, K); R(p.x + 13 + k * 5, p.y - 3, 2, 1, k < lv ? col : '#3a4636'); } }
+        else { var ds = String(lv), dw = ds.length * 4 + 3; R(p.x + 19 - (dw >> 1) - 1, p.y - 5, dw + 1, 7, K); for (var di0 = 0; di0 < ds.length; di0++) spr(g, p.x + 19 - (dw >> 1) + 1 + di0 * 4, p.y - 4, CAMP_DIGIT[+ds.charAt(di0)], { '#': col }); }
         if (broken) { g.fillStyle = 'rgba(20,10,6,.5)'; g.fillRect(p.x, p.y, CAMP_W, CAMP_H); for (var f = 0; f < 3; f++) { var fx = p.x + 8 + f * 10, fl = Math.floor(now / 120 + f) % 2; R(fx, p.y + 12 - fl, 3, 4 + fl, '#f08a3a'); R(fx + 1, p.y + 10 - fl, 1, 3, '#ffd95a'); lights.push([fx - 2, p.y + 8, 7, 9, 'rgba(240,138,58,.3)']); var sa = ((now + f * 700) % 2400) / 2400; R(fx + 1 + Math.round(sa * 3), Math.round(p.y + 8 - sa * 10), 2, 1, 'rgba(60,56,64,' + (0.8 - sa * 0.7).toFixed(2) + ')'); } }
       } else {
         var lock = why === 'prev' || why === 'locked', dc = lock ? '#3e4a38' : '#9aaa8a';
@@ -2944,7 +2946,7 @@
     function man(x, y, i, carry, gun) { x = Math.round(x); y = Math.round(y); R(x, y + 6, 3, 1, 'rgba(0,0,0,.3)'); R(x, y, 3, 2, '#e6c9a0'); R(x, y, 3, 1, i % 3 ? '#3a3028' : i % 2 ? '#6b4a3a' : '#17180f'); R(x, y + 2, 3, 2, gun ? '#4a6a3a' : SH[i % SH.length]); R(x, y + 4, 1, 2, '#2a2e36'); R(x + 2, y + 4, 1, 2, '#2a2e36'); if (carry) { R(x - 2, y + 1, 2, 2, K); R(x - 2, y + 1, 2, 1, '#c9a868'); } if (gun) R(x + 3, y + 2, 3, 1, '#17180f'); }
     function zed(x, y, i) { x = Math.round(x); y = Math.round(y); R(x, y + 6, 3, 1, 'rgba(0,0,0,.3)'); R(x, y, 3, 2, i % 2 ? '#7fb85a' : '#6aa85a'); R(x + (i % 2 ? 0 : 2), y, 1, 1, '#17180f'); R(x, y + 2, 3, 2, ['#6b4a3a', '#3f5f7a', '#55585f'][i % 3]); R(x - 1, y + 2, 1, 1, '#7fb85a'); R(x, y + 4, 1, 2, '#3a3a36'); R(x + 2, y + 4, 1, 2, '#3a3a36'); }
     // 지은 건물 곁에서 일하는 사람들(단계만큼)
-    C.SETTLE.forEach(function (d, di) { var lv = C.settleLv(state, d.id); if (!lv || C.settleBroken(state, d.id)) return; var p = campPlot(d); for (var k = 0; k < lv; k++) { var wob = Math.round(Math.sin(now / 900 + di * 2 + k * 3) * 3); man(p.x + 6 + k * 11 + wob, p.y + CAMP_H + 1, di + k); } });
+    C.SETTLE.forEach(function (d, di) { var lv = C.settleLv(state, d.id); if (!lv || C.settleBroken(state, d.id)) return; var p = campPlot(d); for (var k = 0; k < Math.min(3, lv); k++) { var wob = Math.round(Math.sin(now / 900 + di * 2 + k * 3) * 3); man(p.x + 6 + k * 11 + wob, p.y + CAMP_H + 1, di + k); } });
     // 문 앞의 사람들: 많을수록 많이 서 있다
     var free = C.settleFree(state), crowd = free <= 0 ? 0 : Math.min(13, 1 + Math.floor(Math.log(free + 1) / Math.LN10 * 2.4));
     [[0, 0], [4, 1], [8, 0], [12, 1], [2, 7], [6, 8], [10, 7], [14, 8], [16, 2], [0, 14], [5, 14], [9, 15], [13, 14]].slice(0, crowd).forEach(function (q, i) { man(7 + q[0], 71 + q[1] + ((Math.floor(now / 600) + i) % 5 === 0 ? -1 : 0), i); });
@@ -2953,18 +2955,25 @@
     campWalk.forEach(function (w, wi) { var tt = (now - w.at) / w.ms, pts = w.path, seg = Math.min(pts.length - 2, Math.floor(tt * (pts.length - 1))), lt = tt * (pts.length - 1) - seg, a = pts[seg], b = pts[seg + 1]; if (tt < 0) return; man(a[0] + (b[0] - a[0]) * lt, a[1] + (b[1] - a[1]) * lt + (Math.floor(now / 110 + wi) % 2), wi + 3, !w.gun, w.gun); });
     // 습격: 그쪽 울타리 밖의 무리, 안쪽에 선 사람들, 깎인 울타리
     if (n) {
-      var hold = C.nightHold(state), side = n.side, zN = Math.min(26, 8 + (c.nightLv || 0) * 2), gN = Math.round(Math.min(1, n.guards / Math.max(1, n.need)) * 14);
-      for (var zi = 0; zi < zN; zi++) { var u = (zi * 37 % 100) / 100, jig = Math.floor(now / 200 + zi) % 2; if (side === 1) zed(178 + (zi % 2) * 3 - jig, 12 + u * 100, zi); else zed(10 + u * 160, side === 0 ? 0 + (zi % 2) * 1 - 0 + jig - 1 : 122 + (zi % 2) - jig, zi); }
-      for (var gi = 0; gi < gN; gi++) { var gu = (gi + 0.5) / 14; if (side === 1) man(168 - (gi % 2) * 4, 12 + gu * 100, gi, 0, 1); else man(10 + gu * 160, side === 0 ? 12 + (gi % 2) * 3 : 108 - (gi % 2) * 3, gi, 0, 1); }
-      var dmg = 1 - Math.max(0, n.fence); for (var di2 = 0; di2 < Math.round(dmg * 12); di2++) { var du = (di2 * 53 % 100) / 100; if (side === 1) { R(174, 12 + du * 100, 3, 4, '#3a2a1a'); R(175, 13 + du * 100, 1, 2, '#f08a3a'); } else { R(10 + du * 160, side === 0 ? 6 : 117, 4, 5, '#3a2a1a'); R(11 + du * 160, side === 0 ? 8 : 119, 2, 1, '#f08a3a'); } }
-      if (gN > 0 && Math.floor(now / 90) % 3 === 0) { var tu = ((now / 90 | 0) * 29 % 100) / 100; if (side === 1) R(170, 12 + tu * 100, 5, 1, '#ffd95a'); else R(10 + tu * 160, side === 0 ? 9 : 115, 1, 4, '#ffd95a'); }
+      var zAll = Math.min(40, 14 + (c.nightLv || 0) * 2);
+      for (var sd = 0; sd < 3; sd++) {
+        var zN = Math.round(zAll * n.w[sd]), gN = Math.round(Math.min(1, n.g[sd] / C.sideNeed(n, sd)) * 12), dmg = 1 - Math.max(0, n.fences[sd]);
+        for (var zi = 0; zi < zN; zi++) { var uu = ((zi * 37 + sd * 11) % 100) / 100, jig = Math.floor(now / 200 + zi) % 2; if (sd === 1) zed(177 + (zi % 3) * 2 - jig, 10 + uu * 104, zi); else zed(8 + uu * 164, sd === 0 ? (zi % 2) - jig : 121 + (zi % 2) + jig, zi); }
+        for (var gi = 0; gi < gN; gi++) { var gu = (gi + 0.5) / 12; if (sd === 1) man(168 - (gi % 2) * 4, 12 + gu * 100, gi, 0, 1); else man(10 + gu * 160, sd === 0 ? 12 + (gi % 2) * 3 : 108 - (gi % 2) * 3, gi, 0, 1); }
+        for (var di2 = 0; di2 < Math.round(dmg * 12); di2++) { var du = ((di2 * 53 + sd * 7) % 100) / 100; if (sd === 1) { R(174, 12 + du * 100, 3, 4, '#3a2a1a'); R(175, 13 + du * 100, 1, 2, '#f08a3a'); } else { R(10 + du * 160, sd === 0 ? 6 : 117, 4, 5, '#3a2a1a'); R(11 + du * 160, sd === 0 ? 8 : 119, 2, 1, '#f08a3a'); } }
+        if (gN > 0 && zN > 0 && Math.floor(now / 90 + sd) % 3 === 0) { var tu = (((now / 90 | 0) * 29 + sd * 31) % 100) / 100; if (sd === 1) R(170, 12 + tu * 100, 5, 1, '#ffd95a'); else R(10 + tu * 160, sd === 0 ? 9 : 115, 1, 4, '#ffd95a'); }
+      }
     }
     // 습격 중에는 어둡게 덮고 불빛만 다시 밝힌다
     if (n) { g.fillStyle = 'rgba(8,12,34,.5)'; g.fillRect(0, 0, 184, 128); }
     lights.forEach(function (l) { var glow = String(l[4]).indexOf('rgba') === 0; if (glow) { R(l[0], l[1], l[2], l[3], l[4]); return; } if (n) { R(l[0], l[1], l[2], l[3], l[4]); g.fillStyle = 'rgba(255,233,160,.16)'; g.fillRect(l[0] - 2, l[1] - 1, l[2] + 4, l[3] + 4); } });
     if (n) {
-      var sideBand = n.side === 1 ? [160, 0, 24, 128] : n.side === 0 ? [0, 0, 184, 20] : [0, 108, 184, 20]; g.fillStyle = 'rgba(216,69,58,' + (Math.floor(now / 300) % 2 ? '.2' : '.12') + ')'; g.fillRect(sideBand[0], sideBand[1], sideBand[2], sideBand[3]);
-      var bx = n.side === 1 ? 150 : 76, by = n.side === 0 ? 22 : n.side === 2 ? 102 : 60; R(bx - 1, by - 1, 34, 6, K); R(bx, by, Math.round(32 * Math.max(0, n.fence)), 4, n.fence > 0.5 ? '#7fb85a' : n.fence > 0.25 ? '#e98a3c' : '#ff5a4a');
+      for (var sb = 0; sb < 3; sb++) {      // 쪽마다: 몰린 쪽은 붉게 깜빡이고, 남은 울타리가 줄로 보인다
+        var band = sb === 1 ? [162, 0, 22, 128] : sb === 0 ? [0, 0, 184, 18] : [0, 110, 184, 18], hot = sb === n.side, weak = C.sideHold(state, sb) < 1 && n.w[sb] > 0.02;
+        if (weak) { g.fillStyle = 'rgba(216,69,58,' + (hot ? (Math.floor(now / 250) % 2 ? '.3' : '.16') : '.08') + ')'; g.fillRect(band[0], band[1], band[2], band[3]); }
+        var bx = sb === 1 ? 148 : 78, by = sb === 0 ? 20 : sb === 2 ? 104 : 62, f = Math.max(0, n.fences[sb]); R(bx - 1, by - 1, 30, 5, K); R(bx, by, Math.round(28 * f), 3, f > 0.5 ? '#7fb85a' : f > 0.25 ? '#e98a3c' : '#ff5a4a');
+        if (hot && Math.floor(now / 300) % 2) { var ax = sb === 1 ? 156 : 90, ay = sb === 0 ? 26 : sb === 2 ? 96 : 54; if (sb === 1) { R(ax, ay, 6, 1, '#ff5a4a'); R(ax + 4, ay - 1, 1, 3, '#ff5a4a'); R(ax + 3, ay - 2, 1, 5, '#ff5a4a'); } else { R(ax, ay, 1, 6, '#ff5a4a'); R(ax - 1, ay + (sb === 0 ? 0 : 4), 3, 1, '#ff5a4a'); R(ax - 2, ay + (sb === 0 ? 1 : 3), 5, 1, '#ff5a4a'); } }
+      }
     }
     if (campFlash && now - campFlash.at < 400) { var fa = 1 - (now - campFlash.at) / 400; g.fillStyle = (campFlash.kind === 'done' ? 'rgba(240,180,0,' : campFlash.kind === 'held' ? 'rgba(127,184,90,' : 'rgba(216,69,58,') + (0.4 * fa).toFixed(2) + ')'; if (campFlash.rect) g.fillRect(campFlash.rect[0], campFlash.rect[1], campFlash.rect[2], campFlash.rect[3]); else g.fillRect(0, 0, 184, 128); }
     for (var v = 0; v < 6; v++) { g.fillStyle = 'rgba(6,10,6,' + (0.2 - v * 0.03).toFixed(3) + ')'; g.fillRect(v, 0, 1, 128); g.fillRect(183 - v, 0, 1, 128); }
@@ -2974,18 +2983,20 @@
   function campPath(d) { var p = campPlot(d), ry = d.row === 0 ? 43 : 79; return [[8, 79], [48, 79], [50, ry + (d.row === 0 ? 0 : 0)], [p.x + 12, ry], [p.x + 14, p.y + (d.row === 2 ? 4 : CAMP_H - 6)]]; }
   function campSendWalkers(path, n, gun) { var now = Date.now(); for (var k = 0; k < n; k++) campWalk.push({ at: now + k * 130, ms: 1300, path: path, gun: !!gun }); if (campWalk.length > 40) campWalk = campWalk.slice(-40); }
   function renderCamp() {
+    C.campSeen(state);      // 4.2.1: 이 화면을 보고 있는 동안은 해가 간다(전에는 자리를 눌러야만 갔는데, 다 지으면 누를 자리가 없어 습격이 영영 안 왔다)
     var c = C.campOf(state), n = c.night, free = C.settleFree(state), has = C.survivorRate(state) > 0 || state.survivors > 0;
     var head = $('camp-head'); setText(head, n ? '울타리 ' + Math.round(Math.max(0, n.fence) * 100) + '%' : '문 앞에 ' + fmt(free) + '명'); head.classList.toggle('bad', !!n && C.nightHold(state) < 1);
-    var ck = $('camp-clock'), left = C.RAID_EVERY - (c.clock || 0), showCk = !!n || (C.settleCount(state) >= 1 && c.hand < C.CAMP_HAND);
+    var ck = $('camp-clock'), left = C.RAID_EVERY - (c.clock || 0), showCk = !!n || C.settleCount(state) >= 1;
     if (ck.hidden !== !showCk) ck.hidden = !showCk; if (showCk) setText(ck, n ? '습격 ' + clock(Math.max(0, n.t)) : ((c.nightLv || 0) > 0 ? c.nightLv + '단계 · ' : '') + '습격까지 ' + clock(Math.max(0, left))); ck.classList.toggle('raid', !!n);
     var gb = $('camp-guard'), tb = $('t7-tune'); if (gb.hidden !== !n) gb.hidden = !n; if (tb.hidden !== !!n) tb.hidden = !!n;
-    if (n) { setText($('camp-guard-n'), fmt(n.guards) + ' / ' + fmt(n.need) + '명'); gb.disabled = n.guards >= n.need || !(free >= 1); }
+    if (n) ['북', '동', '남'].forEach(function (nm, k) { var b = $('camp-g' + k), h = C.sideHold(state, k), key = nm + Math.round(h * 100) + (k === n.side); if (b.getAttribute('data-k') !== key) { b.setAttribute('data-k', key); b.innerHTML = ''; b.appendChild(document.createTextNode(nm + '쪽')); b.appendChild(el('small', '', Math.round(h * 100) + '%')); } b.className = (k === n.side && h < 1 ? 'hot' : '') + (h >= 1 ? ' ok' : ''); });
+    if (!n && C.settleCount(state) >= 1) sc0 = C.raidNeed(state);
     var sel = c.flag ? C.SETTLE.filter(function (d) { return d.id === c.flag; })[0] : null, card = $('camp-card'); if (card.hidden !== !sel) card.hidden = !sel;
     if (sel) { var lv = C.settleLv(state, sel.id), need = C.settleNeed(state, sel.id), work = C.settleWork(state, sel.id), brk = C.settleBroken(state, sel.id);
-      setText($('camp-name'), sel.name + (lv > 0 ? ' ' + lv + '단계' : '') + ' · ' + (brk ? '부서졌어요' : sel.desc)); setText($('camp-need'), need > 0 ? fmt(work) + ' / ' + fmt(need) + '명' : '다 자랐어요'); fill($('camp-bar'), need > 0 ? work / need : 1); }
+      setText($('camp-name'), sel.name + (lv > 0 ? ' ' + lv + '단계' : '') + ' · ' + (brk ? '부서졌어요' : sel.desc)); setText($('camp-need'), need > 0 ? fmt(work) + ' / ' + fmt(need) + '명' : '다 자랐어요'); $('campscene').setAttribute('data-sel-lv', lv); fill($('camp-bar'), need > 0 ? work / need : 1); }
     drawCamp();
-    var sc = $('campscene'); sc.classList.toggle('tappable', has); sc.setAttribute('data-free', free); sc.setAttribute('data-levels', C.settleLevels(state)); sc.setAttribute('data-raid', n ? n.side : ''); sc.setAttribute('data-guards', n ? n.guards : 0); sc.setAttribute('data-flag', c.flag || '');
-    setText($('camp-note'), !has ? '안테나를 세우면 사람이 모여요' : n ? (C.nightHold(state) >= 1 ? '울타리가 버티고 있어요' : '사람을 세우지 않으면 울타리가 깎여요') : (state.sendsRun || 0) < 3 ? '지도의 자리를 누르면 문 앞의 사람이 가서 지어요' : C.settleCount(state) < 2 ? '송신탑을 눌러도 주파수를 맞춰요' : (state.nightsHeld || 0) + (state.campBreaches || 0) < 1 ? '손을 쓰고 있으면 습격이 와요. 울타리에 사람을 세워 막아요' : '모든 구역의 생산 ×' + C.towerMult(state).toFixed(2));
+    var sc = $('campscene'); sc.classList.toggle('tappable', has); sc.setAttribute('data-free', free); sc.setAttribute('data-levels', C.settleLevels(state)); sc.setAttribute('data-raid', n ? n.side : ''); sc.setAttribute('data-guards', n ? n.guards : 0); sc.setAttribute('data-need', sc0); sc.setAttribute('data-flag', c.flag || '');
+    setText($('camp-note'), !has ? '안테나를 세우면 사람이 모여요' : n ? (C.nightHold(state) >= 1 ? '울타리가 버티고 있어요' : '무리가 몰리는 쪽에 사람을 세워요. 몰리는 쪽이 바뀌어요') : (state.sendsRun || 0) < 3 ? '지도의 자리를 누르면 문 앞의 사람이 가서 지어요' : C.settleCount(state) < 2 ? '송신탑을 눌러도 주파수를 맞춰요' : (state.nightsHeld || 0) + (state.campBreaches || 0) < 1 ? '손을 쓰고 있으면 습격이 와요. 울타리에 사람을 세워 막아요' : '다음 습격에 ' + fmt(sc0) + '명을 세워야 해요');
   }
   function wireCamp() {
     function campPop(xd, yd, text, cls) {
@@ -2995,17 +3006,18 @@
       s.addEventListener('animationend', function () { s.remove(); }); wrap.appendChild(s);
     }
     campPopFn = campPop;
-    function guard() {
-      var r = C.sendGuard(state); if (!r.ok) return;
-      var n = C.campOf(state).night, tx = n.side === 1 ? 166 : 40 + Math.random() * 100, tyy = n.side === 0 ? 14 : n.side === 2 ? 106 : 30 + Math.random() * 60;
-      campSendWalkers([[8, 79], [48, 79], [50, n.side === 0 ? 43 : 79], [tx, tyy]], 3, true); campPop(tx, tyy - 8, '+' + fmt(r.sent), ''); sfx('fortify'); buzz(10); render();
+    function guard(side) {
+      var r = C.sendGuard(state, side); if (!r.ok) { if (r.reason === 'people') campPop(92, 60, '세울 사람이 없어요', 'bad'); return; }
+      var sd = r.side, tx = sd === 1 ? 166 : 40 + Math.random() * 100, tyy = sd === 0 ? 14 : sd === 2 ? 106 : 30 + Math.random() * 60;
+      var from = r.moved >= 0 ? (r.moved === 1 ? [166, 60] : [90, r.moved === 0 ? 14 : 106]) : null;
+      campSendWalkers(from ? [from, [tx, tyy]] : [[8, 79], [48, 79], [50, sd === 0 ? 43 : 79], [tx, tyy]], 3, true); campPop(tx, tyy - 8, (r.moved >= 0 ? '옮김 ' : '+') + fmt(r.sent), ''); sfx('fortify'); buzz(10); render();
     }
-    $('camp-guard').addEventListener('click', guard);
+    [0, 1, 2].forEach(function (k) { $('camp-g' + k).addEventListener('click', function () { guard(k); }); });
     $('campscene').addEventListener('click', function (e) {
       var cv = $('campscene'), rc = cv.getBoundingClientRect(), key = !(e.clientX > 0) && !(e.clientY > 0), c = C.campOf(state);
       var x = (e.clientX - rc.left) / rc.width * 184, y = (e.clientY - rc.top) / rc.height * 128;
-      if (key) { if (c.night) guard(); else if (c.flag) place(c.flag); return; }
-      if (c.night && ((c.night.side === 1 && x > 158) || (c.night.side === 0 && y < 12) || (c.night.side === 2 && y > 116))) { guard(); return; }
+      if (key) { if (c.night) guard(-1); else if (c.flag) place(c.flag); return; }
+      if (c.night) { if (y < 12) { guard(0); return; } if (y > 115) { guard(2); return; } if (x > 171) { guard(1); return; } }
       if (x < 46 && y < 66) { $('t7-tune').click(); return; }      // 송신탑: 주파수를 맞춘다
       var hit = null; C.SETTLE.forEach(function (d) { var p = campPlot(d); if (x >= p.x - 1 && x <= p.x + CAMP_W + 1 && y >= p.y - 4 && y <= p.y + CAMP_H + 4) hit = d; });
       if (hit) place(hit.id);
@@ -4002,12 +4014,15 @@
           if (ev.auto) campDone(C.SETTLE.filter(function (q) { return q.id === ev.id; })[0], ev.lv, ev.repaired, true);
           break;
         case 'camp-night':
-          campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([40, 40, 40]); if (campPopFn) campPopFn(92, 56, ['북쪽', '동쪽', '남쪽'][ev.side] + ' 울타리에 습격', 'bad'); }
-          log(['북쪽', '동쪽', '남쪽'][ev.side] + ' 울타리에 무리가 붙었다.', 'bad');
+          campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([40, 40, 40]); if (campPopFn) campPopFn(92, 56, '습격 · ' + ['북쪽', '동쪽', '남쪽'][ev.side] + '으로 몰린다', 'bad'); }
+          log('울타리에 무리가 붙었다.', 'bad');
+          break;
+        case 'camp-shift':
+          if (tab === 'z6' && pane === 'play') { sfx('tab'); buzz(15); if (campPopFn) campPopFn(92, 56, ['북쪽', '동쪽', '남쪽'][ev.side] + '으로 몰린다', 'bad'); }
           break;
         case 'camp-held':
           campFlash = { at: Date.now(), kind: 'held' }; if (tab === 'z6' && pane === 'play') { sfx('goal'); buzz(30); if (campPopFn) campPopFn(92, 56, '습격을 막았다 +' + fmt(Math.floor(ev.gain)) + '명', 'done'); }
-          log('습격을 막았다. 사람이 ' + fmt(Math.floor(ev.gain)) + '명 더 왔다.', 'good');
+          log('습격을 막았다. 사람이 ' + fmt(Math.floor(ev.gain)) + '명 더 왔다.' + (ev.lost > 0 ? ' 지키다 ' + fmt(ev.lost) + '명을 잃었다.' : ''), 'good');
           break;
         case 'camp-breach':
           campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([80, 40, 140]); if (campPopFn) campPopFn(92, 56, ev.name ? '뚫렸다 · ' + ev.name + ' 부서짐' : '뚫렸다', 'bad'); }
