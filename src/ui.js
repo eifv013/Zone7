@@ -3457,11 +3457,11 @@
       if (showCh) {
         var doneN = 0; ch.lines.forEach(function (l) { if (l.have >= l.need) doneN++; });
         setText($('chart-name'), ch.done ? '회진을 마쳤어요' : (ch.hard ? '빡빡한 차트 · ' : '회진 차트 · ') + ((state.chartNo || 0) + 1) + '호');
-        setText($('chart-count'), ch.done ? '다음 차트 고르기' : '혈청 값 +' + Math.round((ch.hard ? C.CHART_HARD : C.CHART_EASY) * 100) + '%');
+        setText($('chart-count'), ch.done ? '다음 차트 고르기' : C.chartFull(state) ? '물자 한 뭉치' : '혈청 값 +' + Math.round((ch.hard ? C.CHART_HARD : C.CHART_EASY) * 100) + '%');      // 4.1.1: 상한(+200%)에 닿으면 물자로 받는다
         chEl.classList.toggle('hard', !!ch.hard && !ch.done);
         var lines = $('chart-lines'); if (lines.hidden !== !!ch.done) lines.hidden = !!ch.done; if ($('chart-next').hidden !== !ch.done) $('chart-next').hidden = !ch.done;
         if (!ch.done) ch.lines.forEach(function (l, k) { var row = lines.children[k], ok = l.have >= l.need; if (row.classList.contains('ok') !== ok) row.classList.toggle('ok', ok); setText(row.children[1], C.CHART_TEXT[l.k]); setText(row.children[2], l.have + ' / ' + l.need); });
-        else if ($('chart-easy').getAttribute('data-k') !== '1') { [['chart-easy', '가벼운 차트', '혈청 값 +' + Math.round(C.CHART_EASY * 100) + '%'], ['chart-hard', '빡빡한 차트', '놓치면 처음부터 · +' + Math.round(C.CHART_HARD * 100) + '%']].forEach(function (q) { var b = $(q[0]); b.setAttribute('data-k', '1'); b.innerHTML = ''; b.appendChild(document.createTextNode(q[1])); b.appendChild(el('small', '', q[2])); }); }
+        else if ($('chart-easy').getAttribute('data-k') !== (C.chartFull(state) ? 'f' : '1')) { var cf = C.chartFull(state); [['chart-easy', '가벼운 차트', cf ? '물자 한 뭉치' : '혈청 값 +' + Math.round(C.CHART_EASY * 100) + '%'], ['chart-hard', '빡빡한 차트', cf ? '한 명이라도 변하면 다시 채워요 · 물자 세 뭉치' : '한 명이라도 변하면 다시 채워요 · +' + Math.round(C.CHART_HARD * 100) + '%']].forEach(function (q) { var b = $(q[0]); b.setAttribute('data-k', cf ? 'f' : '1'); b.innerHTML = ''; b.appendChild(document.createTextNode(q[1])); b.appendChild(el('small', '', q[2])); }); }
       }
       $('labscene').setAttribute('data-er', ward.er ? ward.er.dose : ''); $('labscene').setAttribute('data-boost', ward.boost ? 1 : 0); $('lab').setAttribute('data-chart', ward.chart.lines.map(function (l) { return l.have + '/' + l.need; }).join(',') + (ward.chart.done ? ',done' : ''));
       setText($('lab-rate'), !(state.staff > 0) ? '연구원을 뽑으면 사람들이 와요' : !hasAide && !hasNurse ? '개조에서 연구 조교와 간호사를 사요' : !swOn ? '연구 조교와 간호사가 쉬고 있어요'

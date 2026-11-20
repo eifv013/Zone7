@@ -3100,6 +3100,10 @@ test('5구역 급한 환자: 손을 쓰고 있을 때만 오고, 여섯 대를 �
   assert.equal(C.pickBoon(s, 'nope').reason, 'nopick'); const id = r.pick[0], rate0 = C.labRate(s), cap0 = C.serumCap(s), turn0 = C.turnSeconds(s);
   assert.ok(C.pickBoon(s, id).ok); assert.equal(C.boonOf(s, id), 1); assert.equal(w.pick, null); assert.equal(C.pickBoon(s, id).reason, 'nopick', '한 번만');
   assert.ok(C.labRate(s) > rate0 || C.serumCap(s) > cap0 || C.turnSeconds(s) > turn0 || id === 'quick', '고른 것이 듣는다');
+  /* 4.1.1 끝없이 불어나지 않는다: 고르는 것마다 상한이 있고, 다 찬 것은 내밀지 않는다. 다 차면 물자로 받는다 */
+  const cap = onWard(4), cw = C.wardOf(cap); for (let i = 0; i < 60; i++) { cw.er = { t: 9, dose: 5, look: 1 }; cw.stock = 1; cw.pick = null; const rr = C.injectEr(cap, lcg(i + 1)); if (cw.pick) { assert.ok(cw.pick.every((id) => id === 'cash' || C.boonOf(cap, id) < C.BOON_BY[id].max)); C.pickBoon(cap, cw.pick[0]); } else assert.ok(rr.gain > 0); }
+  C.BOONS.forEach((d) => { if (d.id !== 'cash') assert.equal(C.boonOf(cap, d.id), d.max, d.id); }); assert.equal(cw.pick, null, '다 차면 고를 것 없이 물자로');
+  const cs = onWard(4); C.wardOf(cs).pick = ['cash', 'rich']; const s0 = cs.supplies; assert.ok(C.pickBoon(cs, 'cash').gain > 0); near(cs.supplies - s0, C.doseValue(cs) * C.CASH_DOSES);
   for (const d of C.BOONS) { const z = onWard(4); z.boons[d.id] = 2; assert.ok(isFinite(C.labRate(z)) && C.serumCap(z) >= C.SERUM_CAP && C.turnSeconds(z) >= C.TURN_SECONDS); }
 });
 
@@ -3134,6 +3138,8 @@ test('5구역 회진 차트: 세 줄을 채우면 혈청 값이 오르고 다음
   w.seats[2] = { m: 0.99, dose: 0, r: 1, look: 1, since: 0 }; const ev = []; C.stepWard(s, 0.5, calm, ev); assert.ok(ev.find((e) => e.type === 'ward-turned').reset); assert.equal(h.lines[0].have, 0);
   h.lines.forEach((l) => { l.have = l.need; }); h.lines[2].have = h.lines[2].need - 1; w.stun = 0; w.boost = 1; w.seats[0] = { m: 0, dose: 5, r: 1, look: 1, since: 0 }; assert.equal(h.lines[2].k, 'cure');
   assert.ok(C.boostSeat(s, 0).chart); near(C.labRate(s), rate0 * (1 + C.CHART_EASY + C.CHART_HARD));
+  const f = onWard(4), r0 = C.labRate(f); for (let i = 0; i < 40; i++) { const fw = C.wardOf(f); fw.chart.lines.forEach((l) => { l.have = l.need; }); fw.chart.lines[0].have--; const k = fw.chart.lines[0].k; fw.stock = 1; fw.seats[0] = { m: 0, dose: 0, r: 1, look: 1, since: 0 }; if (k === 'stop') C.injectSeat(f, 0, true); else C.injectSeat(f, 0); assert.ok(fw.chart.done, k); C.nextChart(f, true); }
+  near(C.labRate(f), r0 * (1 + C.CHART_MAX), '차트로 오르는 혈청 값에는 상한이 있다'); assert.ok(C.chartFull(f)); const sup = f.supplies; { const fw = C.wardOf(f); fw.chart.lines.forEach((l) => { l.have = l.need; }); fw.chart.lines[2].have--; fw.boost = 1; fw.seats[0] = { m: 0, dose: 5, r: 1, look: 1, since: 0 }; C.boostSeat(f, 0); assert.ok(fw.chart.done && f.supplies - sup > C.doseValue(f) * 20, '상한 뒤에는 물자로 받는다'); }
   const e = onWard(4); C.nextChart(e, false); e.ward.chart.lines[0].have = 1; e.ward.seats[0].m = 0.99; C.stepWard(e, 0.5, calm, []); assert.equal(e.ward.chart.lines[0].have, 1, '가벼운 차트는 누가 변해도 그대로');
   for (let no = 0; no < 40; no++) { const z = onWard(4); z.chartNo = no; for (const hard of [false, true]) { z.ward.chart = null; C.wardOf(z); z.ward.chart.done = true; C.nextChart(z, hard); z.ward.chart.lines.forEach((l) => assert.ok(l.need >= 1 && l.need <= 60)); } }
 });
