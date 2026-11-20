@@ -291,12 +291,13 @@ def run_case(browser, name, size, state, mode):
         if page.locator('#mboard button i').count() < 1: problems.append('합쳤는데 덤(+물자) 표시가 없다')
         close_story()
         # 줄 셋: 도장 라인은 값이 바로 오르고, 단조기는 판의 상자가 모두 오르고, 투입구는 간격이 줄어든다
-        load0 = text('line-load')
+        rate3 = lambda: page.get_attribute('#line', 'data-rate') or ''
+        load0 = rate3()
         if not tap('#row-paint'): problems.append('도장 라인을 살 수 없다')
-        if text('line-load') == load0: problems.append('도장 라인을 샀는데 판이 버는 양이 그대로다: ' + load0)
-        best0 = text('line-mile'); load0 = text('line-load')
+        if rate3() == load0: problems.append('도장 라인을 샀는데 판이 버는 양이 그대로다: ' + load0)
+        best0 = text('line-mile'); load0 = rate3()
         if not tap('#row-forge'): problems.append('단조기를 살 수 없다')
-        if text('line-mile') == best0 or text('line-load') == load0: problems.append('단조기를 샀는데 판이 그대로다: ' + best0 + ' / ' + load0)
+        if text('line-mile') == best0 or rate3() == load0: problems.append('단조기를 샀는데 판이 그대로다: ' + best0 + ' / ' + load0)
         if '볼트' not in text('row-forge') : problems.append('단조기 줄에 들어오는 상자가 안 적혀 있다: ' + text('row-forge'))
         feed0 = text('row-feed')
         if not tap('#row-feed'): problems.append('투입구를 살 수 없다')
@@ -307,7 +308,7 @@ def run_case(browser, name, size, state, mode):
         for old in ['#row-lube', '#row-belt', '#row-spare', '#row-sorter']:
             if page.locator(old).count(): problems.append('옛 줄이나 개조가 남아 있다: ' + old)
         if not fits(): problems.append('한 화면에 들어오지 않는다(3구역)')
-        if text('line-load').strip().endswith('초당 0'): problems.append('판에 상자가 있는데 버는 양이 0이다: ' + text('line-load'))
+        if rate3() == '0': problems.append('판에 상자가 있는데 버는 양이 0이다: ' + rate3())
         tap('[data-tab=z3]')
         if '아직 열지 않은' not in text('soon'): problems.append('잠긴 4구역 탭에 안내가 없다: ' + text('soon'))
         if page.locator('[data-tab=z4]').is_visible(): problems.append('아직 먼 5구역 탭이 보인다')

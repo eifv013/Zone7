@@ -3142,6 +3142,7 @@
       renderBoard();
       setText(ld, '초당 ' + fmt(C.lineRate(state)));
       ld.className = 'num steady';
+      $('line').setAttribute('data-rate', fmt(C.lineRate(state)));      // 화면 테스트가 읽는다
       var pairs = C.mergeable(state).length;
       var fullB = C.boardFull(state);
       /* 3.8.4: 글을 덜어 냈다. 횟수('손으로 N번 합침')는 목표에 이미 나오고, 자동 합치기의 박자는 글이 아니라 막대로 보여 준다.
@@ -3265,7 +3266,10 @@
       /* 4.0.3 5구역 여섯 대. 차림은 1구역과 같다: 머리줄(왼쪽 숫자 · 오른쪽 자동 안내) → 막대 → 누르는 그림 → 카드(연구 성과) → 기록 한 줄 */
       var ward = C.wardOf(state), nT = ward.seats.length, swOn = !(state.autoOff && state.autoOff[4]);
       var hasAide = (state.upgrades.autolab || 0) > 0, hasNurse = (state.upgrades.nurse || 0) > 0;
-      setText($('lab-points'), '초당 ' + fmt(C.labRate(state)));
+      /* 4.0.7 제목 줄(4구역과 같은 꼴: 왼쪽 이름 · 오른쪽 한마디). 오른쪽에는 지금 병실의 형편을 적는다: 위험한 사람이 있으면 그 수(붉게), 없으면 기다리는 사람 수 */
+      var nWait = 0, nBad = 0, nCure = 0; ward.seats.forEach(function (p) { if (p.dose === 0) { nWait++; if (p.m > 0.7) nBad++; } else if (p.dose >= 2) nCure++; });
+      var lp = $('lab-points'); setText(lp, !(state.staff > 0) ? '' : nBad ? '위험 ' + nBad + '명' : nCure ? '되돌리는 중 ' + nCure + '명' : nWait ? '기다림 ' + nWait + '명' : '모두 멈춤');
+      lp.classList.toggle('bad', nBad > 0);
       /* 4.0.6 무슨 일이 일어났는지 글로 보이게 한다.
          ① 그림 아래 한 줄: 자리마다의 상태(기다림 · 위험 · 멈춤 · 몇 대째 · 빈 자리). ② 집계 한 줄: 이번 회차에 멈춘 · 되돌린 · 변한 사람 수(자동에 맡긴 동안의 것도 여기 쌓인다) */
       var strip = $('ward-strip'), cells = strip.children, colsT = C.SEAT_MAX + 1;
