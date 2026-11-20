@@ -1436,11 +1436,11 @@
     $('labscene').addEventListener('click', function (e) {
       var cv = $('labscene'), rc = cv.getBoundingClientRect(), n = C.seatCount(state), now = Date.now();
       var x = (e.clientX - rc.left) / rc.width * 184, key = !(e.clientX > 0) && !(e.clientY > 0);
-      var slot = key ? wardPick() : Math.max(0, Math.min(n - 1, Math.floor(x / (184 / n))));
+      if (!key && x < W_LEFT) { $('serum-btn').click(); return; }      // 그림 속 냉장 상자를 눌러도 혈청이 만들어진다(큰 단추와 같다)
+      var slot = key ? wardPick() : Math.max(0, Math.min(n - 1, Math.floor((x - W_LEFT) / ((184 - W_LEFT) / n))));
       var r = C.injectSeat(state, slot);
       if (!r.ok) { if (r.reason === 'nostock') { var sb = $('serum-btn'); sb.classList.remove('nope'); void sb.offsetWidth; sb.classList.add('nope'); setTimeout(function () { sb.classList.remove('nope'); }, 350); } return; }      // 혈청이 없다: 단추가 붉게 흔들린다
       wardFx[slot] = { at: now, kind: r.cure ? 'cure' : r.stop ? 'stop' : 'dose' };
-      if (r.record) { log('사람을 되돌리다 ' + r.record.name + (C.hasBatchim(r.record.name) ? '을' : '를') + ' 찾았다.' + (r.record.first ? ' 도감에 적었다.' : ''), 'good'); if (r.record.first) toast('5구역 새 서류 · ' + r.record.name); }      // 병원 서류(처음 찾은 것만 알린다)
       if (r.gain > 0) popNumber('+' + fmt(r.gain));
       sfx(r.cure ? 'signal' : r.stop ? 'buy' : 'click'); buzz(r.cure ? 30 : 10); Store.save(); render();
     });
@@ -2335,25 +2335,61 @@
   var W_BODY = ['..hhhhhh..', '.hhhhhhhh.', '.hssssssh.', '.sesssses.', '.ssssssss.', '..ssmmss..', '...ssss...', '.cccccccc.', 'cccccccccc', 'acccccccca', 'acccccccca', 'acccccccca', '.pppppppp.', '.ppp..ppp.', '.ppp..ppp.', '.ppp..ppp.', '.kkk..kkk.'];
   /** 자판으로 누를 때: 가장 급한 사람(한 대도 못 맞은 사람 가운데 줄이 가장 찬 사람), 없으면 가장 많이 맞은 사람. */
   function wardPick() { var w = C.wardOf(state), best = 0, score = -1; w.seats.forEach(function (p, i) { var sc = !(p.dose >= 0) ? -1 : p.dose === 0 ? 10 + p.m : p.dose; if (sc > score) { score = sc; best = i; } }); return best; }
+  var W_LEFT = 28;      // 그림 왼쪽의 냉장 상자 자리(도트). 그 오른쪽을 의자들이 나눠 쓴다
   function wardBackdrop() {
     if (wardBack) return wardBack;
-    var cv = document.createElement('canvas'); cv.width = 184; cv.height = 96; var g = cv.getContext('2d');
+    var cv = document.createElement('canvas'); cv.width = 184; cv.height = 96; var g = cv.getContext('2d'), K = '#0e1618';
     var R = function (x, y, w, h, c) { px(g, x, y, w, h, c); };
-    R(0, 0, 184, 96, '#1c2a2e'); for (var y = 0; y < 76; y += 8) for (var x = 0; x < 184; x += 8) { R(x, y, 7, 7, '#24383e'); R(x, y, 1, 1, '#2e4a52'); }      // 타일 벽
-    [18, 112].forEach(function (lx) { R(lx, 1, 54, 2, '#d8f0f0'); R(lx, 3, 54, 1, '#8ab0b4'); g.fillStyle = 'rgba(200,240,240,.07)'; g.fillRect(lx - 10, 4, 74, 62); });      // 천장등
+    R(0, 0, 184, 96, '#1c2a2e'); for (var y = 0; y < 76; y += 8) for (var x = 0; x < 184; x += 8) { R(x, y, 7, 7, (x * 3 + y) % 40 === 0 ? '#22363c' : '#24383e'); R(x, y, 1, 1, '#2e4a52'); }      // 타일 벽(군데군데 바랜 타일)
+    [[60, 22], [132, 30], [100, 52], [44, 60], [160, 58]].forEach(function (q) { R(q[0], q[1], 2, 1, '#1a2a2e'); R(q[0] + 1, q[1] + 1, 3, 1, '#1a2a2e'); });      // 금 간 자리
+    [34, 118].forEach(function (lx) { R(lx, 1, 50, 2, '#d8f0f0'); R(lx, 3, 50, 1, '#8ab0b4'); R(lx - 1, 1, 1, 3, '#55585f'); R(lx + 50, 1, 1, 3, '#55585f'); for (var k = 0; k < 60; k++) { var w0 = 50 + k * 0.6; g.fillStyle = 'rgba(200,240,240,' + Math.max(0, 0.085 - k * 0.0014).toFixed(4) + ')'; g.fillRect(Math.round(lx + 25 - w0 / 2), 4 + k, Math.round(w0), 1); } });      // 천장등과 빛
     R(0, 7, 184, 1, '#8a8f98'); for (var rx = 4; rx < 184; rx += 8) R(rx, 8, 1, 1, '#8a8f98');      // 커튼 레일
     R(0, 38, 184, 2, '#3a5a62'); R(0, 40, 184, 1, '#16242a');      // 벽 허리띠
     R(0, 73, 184, 3, '#2a3a40'); R(0, 73, 184, 1, '#3a5a62');      // 걸레받이
     R(0, 76, 184, 20, '#3e4e54'); R(0, 76, 184, 1, '#5a6e76'); for (var fx = -8; fx < 184; fx += 16) R(fx, 82, 1, 14, '#34444a'); R(0, 88, 184, 1, '#34444a');      // 바닥
-    for (var gx = 6; gx < 184; gx += 22) { R(gx, 79, 9, 1, 'rgba(216,240,240,.10)'); R(gx + 4, 92, 12, 1, 'rgba(216,240,240,.06)'); }      // 바닥 광택
+    for (var gx = 6; gx < 184; gx += 22) { R(gx, 79, 9, 1, 'rgba(216,240,240,.10)'); R(gx + 4, 92, 12, 1, 'rgba(216,240,240,.06)'); }
+    [34, 118].forEach(function (lx) { g.fillStyle = 'rgba(216,240,240,.05)'; g.fillRect(lx - 4, 77, 58, 18); });      // 바닥에 비친 등
+    // 왼쪽: 시계와 혈청 냉장 상자
+    R(8, 12, 11, 11, K); R(9, 13, 9, 9, '#e8e6dc'); R(13, 14, 1, 1, '#8a8a82'); R(13, 20, 1, 1, '#8a8a82'); R(10, 17, 1, 1, '#8a8a82'); R(16, 17, 1, 1, '#8a8a82');
+    R(2, 34, 24, 44, K); R(3, 35, 22, 42, '#c9d8e0'); R(3, 35, 22, 2, '#e8f6ff'); R(3, 75, 22, 2, '#8aa0aa'); R(23, 37, 2, 38, '#a8bcc6'); R(5, 39, 17, 30, '#16262a'); R(5, 39, 17, 1, '#0a1214');
+    R(10, 31, 8, 4, '#8a8f98'); R(10, 31, 8, 1, '#b4b8c0'); R(7, 71, 6, 3, '#e8e6dc'); R(9, 71, 2, 3, '#d8453a'); R(8, 72, 4, 1, '#d8453a'); R(19, 72, 2, 2, '#7fb85a'); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(1, 78, 26, 2);
+    // 가장자리를 어둡게(눈이 가운데로 모이게)
+    for (var v = 0; v < 10; v++) { g.fillStyle = 'rgba(8,12,16,' + (0.22 - v * 0.022).toFixed(3) + ')'; g.fillRect(v, 0, 1, 96); g.fillRect(183 - v, 0, 1, 96); }
     return (wardBack = cv);
   }
-  function wardFaceSprite() {      // 달려드는 얼굴(크게 늘려 그린다)
+  /*
+   * 달려드는 얼굴(4.0.6): 48×56 도트로 새로 그렸다. 전에는 14도트 얼굴을 열 배로 늘린 것이라 네모난 초록 덩어리였다.
+   *   헝클어진 머리, 꺼진 눈두덩과 노란 눈(붉은 눈동자), 찢어진 뺨, 벌린 입과 고르지 않은 이, 턱으로 흐르는 피, 어깨까지.
+   */
+  function wardFaceSprite() {
     if (wardFace) return wardFace;
-    var cv = document.createElement('canvas'); cv.width = 14; cv.height = 14;
-    spr(cv.getContext('2d'), 0, 0, ['..hhhhhhhhhh..', '.hhhhhhhhhhhh.', '.hssssssssssh.', '.sssssssssss.s', '.sseesssseess.', '.sseYsssseYss.', '.ssssssssssss.', '.sssssnnsssss.', '.ssmmmmmmmmss.', '.ssmwmwwmwmss.', '.ssmrrrrrrmss.', '.ssmwmwwmwmss.', '..ssmmmmmmss..', '...ssssssss...'],
-      { h: '#2a2e26', s: '#7fb85a', e: '#17180f', Y: '#ffd95a', n: '#5a8a3e', m: '#3a1414', w: '#e8e6dc', r: '#8a2a20' });
+    var cv = document.createElement('canvas'); cv.width = 48; cv.height = 56; var g = cv.getContext('2d');
+    var R = function (x, y, w, h, c) { px(g, x, y, w, h, c); }, G = '#7fb85a', GD = '#5a8a3e', GL = '#9ad070', K = '#10140e';
+    R(6, 46, 36, 10, '#3a3f48'); R(6, 46, 36, 2, '#4a505a'); R(18, 42, 12, 6, GD); R(20, 42, 8, 5, G);      // 어깨와 목
+    R(10, 8, 28, 34, G); R(8, 12, 32, 26, G); R(12, 40, 24, 4, G); R(14, 43, 20, 2, GD);      // 머리통
+    R(34, 12, 6, 26, GD); R(32, 36, 6, 6, GD); R(10, 10, 4, 22, GL); R(9, 14, 2, 14, GL);      // 그늘과 빛
+    R(5, 20, 4, 8, GD); R(39, 20, 4, 8, GD); R(6, 22, 2, 4, '#3a6a2a');      // 귀
+    R(8, 2, 32, 9, K); R(6, 6, 6, 10, K); R(36, 6, 6, 12, K); [[10, 11, 3], [16, 11, 2], [22, 10, 4], [30, 11, 3], [13, 13, 1], [27, 13, 1], [34, 12, 2]].forEach(function (h) { R(h[0], h[1], h[2], 3, K); }); R(12, 3, 8, 1, '#2a3024'); R(24, 4, 6, 1, '#2a3024');      // 머리카락
+    R(11, 17, 11, 2, '#3a6a2a'); R(26, 17, 11, 2, '#3a6a2a'); R(12, 16, 8, 1, K); R(28, 16, 8, 1, K);      // 눈썹뼈
+    [[12, 19], [27, 19]].forEach(function (e) { R(e[0], e[1], 9, 7, '#1c2a1a'); R(e[0] + 1, e[1] + 1, 7, 5, '#ffd95a'); R(e[0] + 1, e[1] + 1, 7, 1, '#fff2c0'); R(e[0] + 3, e[1] + 2, 3, 3, '#d8453a'); R(e[0] + 4, e[1] + 3, 1, 1, K); R(e[0] + 1, e[1] + 5, 2, 1, '#d8453a'); R(e[0] + 6, e[1] + 2, 2, 1, '#d8453a'); });      // 눈
+    R(12, 26, 9, 1, '#3a6a2a'); R(27, 26, 9, 1, '#3a6a2a'); R(22, 24, 4, 5, GD); R(22, 28, 1, 1, K); R(25, 28, 1, 1, K);      // 눈 밑, 코
+    R(9, 28, 6, 2, '#8a2a20'); R(10, 30, 4, 1, '#d8453a'); R(11, 27, 2, 1, '#8a2a20'); R(8, 30, 2, 3, '#8a2a20');      // 찢어진 뺨
+    R(14, 31, 20, 11, '#2a0a0a'); R(13, 32, 1, 8, '#3a6a2a'); R(34, 32, 1, 8, '#3a6a2a'); R(16, 37, 16, 4, '#8a2a20'); R(18, 38, 12, 2, '#b8402e');      // 입 속과 혀
+    [[15, 3], [18, 4], [21, 3], [24, 4], [27, 3], [30, 4]].forEach(function (t) { R(t[0], 31, 2, t[1], '#e8e6dc'); R(t[0], 31, 2, 1, '#c9c7ba'); });      // 윗니
+    [[16, 2], [20, 3], [23, 2], [26, 3], [30, 2]].forEach(function (t) { R(t[0], 42 - t[1], 2, t[1], '#e8e6dc'); });      // 아랫니
+    R(15, 42, 2, 6, '#b8402e'); R(16, 48, 1, 3, '#b8402e'); R(31, 42, 2, 4, '#b8402e'); R(32, 46, 1, 4, '#8a2a20'); R(22, 43, 3, 2, '#8a2a20');      // 턱으로 흐르는 피
+    R(30, 22, 1, 3, '#3a6a2a'); R(17, 12, 3, 1, '#3a6a2a'); R(36, 30, 2, 1, '#3a6a2a');      // 살갗의 얼룩
     return (wardFace = cv);
+  }
+  var wardHand = null;
+  function wardHandSprite() {      // 유리를 치는 손(16×20)
+    if (wardHand) return wardHand;
+    var cv = document.createElement('canvas'); cv.width = 16; cv.height = 20; var g = cv.getContext('2d');
+    var R = function (x, y, w, h, c) { px(g, x, y, w, h, c); }, G = '#7fb85a', GD = '#5a8a3e';
+    R(3, 8, 10, 9, G); R(11, 9, 2, 8, GD); R(5, 17, 6, 3, GD);
+    [[2, 2, 7], [5, 0, 9], [8, 1, 8], [11, 3, 6]].forEach(function (f) { R(f[0], f[1], 2, f[2], G); R(f[0] + 1, f[1], 1, f[2], GD); R(f[0], f[1], 2, 1, '#10140e'); });
+    R(0, 9, 3, 2, G); R(0, 8, 2, 1, '#10140e'); R(5, 11, 4, 1, GD); R(4, 14, 5, 1, GD); R(6, 10, 2, 1, '#8a2a20');
+    return (wardHand = cv);
   }
   /* 사람 그림(4.0.5): 14×24 도트로 새로 그렸다. 4.0.4 는 10×17 그림을 두 배로 늘린 것이라 뭉툭했다. 머리 빛, 눈 흰자, 옷깃, 옷 그늘, 무릎 위의 손까지 그린다 */
   var W_MAN = ['....hhhhhh....', '...hHHhhhhh...', '..hhhhhhhhhh..', '..hhsssssshh..', '..hssssssssh..', '..swesssswes..', '..ssssssssss..', '..dssssssssd..', '...ssmmmmss...', '....dssssd....',
@@ -2361,13 +2397,22 @@
   var W_SHADE = { '#6b4a3a': '#4a3428', '#3f5f7a': '#2c4458', '#8a8a52': '#62623a', '#d8644e': '#a84030', '#55585f': '#3a3c42', '#7a5a8a': '#563e62' };
   function drawWard() {
     var cv = $('labscene'); if (!cv) return;
-    var g = cv.getContext('2d'), now = Date.now(), w = C.wardOf(state), n = w.seats.length, sp = 184 / n, on = state.staff > 0, K = '#0e1618';
+    var g = cv.getContext('2d'), now = Date.now(), w = C.wardOf(state), n = w.seats.length, sp = (184 - W_LEFT) / n, on = state.staff > 0, K = '#0e1618';
     var R = function (x, y, ww, hh, c) { px(g, x, y, ww, hh, c); };
     g.imageSmoothingEnabled = false; g.drawImage(wardBackdrop(), 0, 0);
+    // 냉장 상자 속 혈청(남은 대수만큼 주사기가 꽂혀 있다)
+    var cap = C.serumCap(state), per = cap > 7 ? 2 : 1;
+    for (var k0 = 0; k0 < cap; k0++) { var kc = k0 % per, kr = Math.floor(k0 / per), sy = 41 + kr * 4, sxx = per > 1 ? 6 + kc * 8 : 6, sw = per > 1 ? 7 : 15; if (sy > 66) break;
+      if (k0 < w.stock) { R(sxx, sy, sw - 2, 2, '#e8f6ff'); R(sxx + 1, sy, sw - 5, 2, '#f0b400'); R(sxx + sw - 2, sy, 2, 1, '#b4b8c0'); } else R(sxx, sy + 1, sw, 1, '#22343a'); }
+    if (w.stock >= cap && Math.floor(now / 500) % 2) R(19, 72, 2, 2, '#b8f08a');
+    // 연구 조교(상자 앞): 샀을 때만 서 있다. 혈청이 한 대 생길 때마다 손을 든다
+    if ((state.upgrades.autolab || 0) > 0) { var aup = w.make > 0.85 ? 1 : 0;
+      spr(g, 17, 60, ['..hhhh..', '.hhhhhh.', '.hsssss.', '.sesses.', '.ssssss.', '..ssss..', '.wwwwww.', 'wwwwwwww', 'wwwwwwww', 'awwwwwwa', 'awwwwwwa', '.wwwwww.', '.wwwwww.', '.pp..pp.', '.pp..pp.', '.pp..pp.', '.kk..kk.'], { h: '#4a3428', s: '#e6c9a0', e: K, w: '#e8e6dc', a: '#e6c9a0', p: '#3f5f7a', k: '#2a2e36' });
+      if (aup) { R(16, 66, 1, 3, '#e6c9a0'); R(14, 65, 3, 1, '#e8f6ff'); } g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(16, 77, 10, 1); }
     // 칸막이 커튼(자리 사이): 레일에서 내려와 묶여 있다
-    for (var c0 = 0; c0 <= n; c0++) { var kx = Math.min(181, Math.max(0, Math.round(sp * c0) - 1)); R(kx, 9, 3, 30, '#4a8892'); R(kx + 1, 9, 1, 30, '#5a9aa4'); R(kx, 39, 3, 2, '#3a6a72'); R(kx, 41, 3, 20, '#4a8892'); R(kx + 2, 41, 1, 20, '#3a6a72'); R(kx + 1, 61, 1, 6, '#4a8892'); }
+    for (var c0 = 0; c0 <= n; c0++) { var kx = Math.min(181, Math.max(0, Math.round(W_LEFT + sp * c0) - 1)); R(kx, 9, 3, 30, '#4a8892'); R(kx + 1, 9, 1, 30, '#5a9aa4'); R(kx, 39, 3, 2, '#3a6a72'); R(kx, 41, 3, 20, '#4a8892'); R(kx + 2, 41, 1, 20, '#3a6a72'); R(kx + 1, 61, 1, 6, '#4a8892'); }
     for (var i = 0; i < n; i++) {
-      var p = w.seats[i], cx = Math.round(sp * i + sp / 2), x = cx - 7, fx = wardFx[i], has = on && p.dose >= 0;
+      var p = w.seats[i], cx = Math.round(W_LEFT + sp * i + sp / 2), x = cx - 7, fx = wardFx[i], has = on && p.dose >= 0;
       // 계기판(벽): 변하는 줄 + 맞은 대수 여섯 칸
       R(cx - 13, 16, 26, 17, K); R(cx - 12, 17, 24, 15, '#14242a'); R(cx - 12, 17, 24, 1, '#2e4a52'); R(cx - 12, 31, 24, 1, '#0a1214'); R(cx - 1, 33, 2, 4, '#2f474e'); R(cx + 9, 18, 2, 1, has ? '#7fb85a' : '#24383e');
       // 수액대: 맞은 대수만큼 주머니가 찬다
@@ -2383,6 +2428,9 @@
       var m = Math.min(1, p.m), stopped = p.dose > 0, hot = !stopped && m > 0.7, tone = W_SKIN[Math.min(4, Math.floor(m * 5))], dark = W_SKIN[Math.min(4, Math.floor(m * 5) + 1)], jit = hot ? Math.floor(now / 70) % 2 : 0, shirt = W_SHIRT[p.look % 6];
       spr(g, x + jit, 50, W_MAN, { h: W_HAIR[p.look % 5], H: 'rgba(255,255,255,.22)', s: tone, d: dark, w: hot ? '#f0b400' : '#e8e6dc', e: K, m: hot ? '#3a1414' : '#8a4a3a', c: shirt, C: W_SHADE[shirt] || shirt, l: '#e8e6dc', a: tone, p: '#2a2e36', P: '#1c2028', k: '#17180f' });
       R(x + jit, 64, 1, 2, '#d8453a'); R(x + 1 + jit, 63, 1, 1, '#8a2a20');      // 물린 자국(팔)
+      if (!hot && (Math.floor(now / 100) + p.look * 7) % 34 === 0) { R(x + 3 + jit, 55, 2, 1, tone); R(x + 9 + jit, 55, 2, 1, tone); }      // 눈 깜빡임
+      if (!hot && Math.floor((now + p.look * 300) / 900) % 2) R(x + 2, 60, 10, 1, 'rgba(255,255,255,.07)');      // 숨
+      if (fx && fx.nurse && now - fx.at < 600) spr(g, x - 9, 57, ['.wwwwww.', '.wwrrww.', '.hsssss.', '.sesses.', '.ssssss.', '..ssss..', '.tttttt.', 'tttttttt', 'tttttttt', 'atttttts', 'attttttt', '.tttttt.', '.tttttt.', '.pp..pp.', '.pp..pp.', '.pp..pp.', '.kk..kk.'], { w: '#e8e6dc', r: '#d8453a', h: '#6b4a3a', s: '#e6c9a0', e: K, t: '#9ad0e8', a: '#e6c9a0', p: '#e8e6dc', k: '#8a8f98' });      // 간호사가 다가와 놓는다
       if (m > 0.4 && !stopped) { R(x + 3 + jit, 56, 2, 1, '#5a8a3e'); R(x + 10 + jit, 57, 1, 1, '#5a8a3e'); if (m > 0.7) { R(x + 6 + jit, 54, 2, 1, '#3a6a2a'); R(x + 13 + jit, 65, 1, 1, '#5a8a3e'); } }      // 번지는 얼룩
       // 변하는 줄(22칸): 찰수록 노랑 → 주황 → 빨강. 멈추면 파랑
       var fillW = Math.max(1, Math.round(22 * m)), colM = stopped ? '#6aaede' : m > 0.7 ? (Math.floor(now / 140) % 2 ? '#ff5a4a' : '#d8453a') : m > 0.4 ? '#e98a3c' : '#e0c04a';
@@ -2391,12 +2439,24 @@
       if (hot) R(cx + 9, 18, 2, 1, Math.floor(now / 140) % 2 ? '#ff5a4a' : '#5a1a14');      // 급하다는 등
       if (fx && now - fx.at < 240) { R(x - 9, 64, 9, 2, '#e8f6ff'); R(x - 8, 64, 5, 2, '#f0b400'); R(x, 64, 2, 1, '#b4b8c0'); R(x - 10, 63, 1, 4, '#8a8f98'); if (fx.kind === 'stop') { g.fillStyle = 'rgba(106,174,222,.30)'; g.fillRect(cx - 14, 14, 28, 68); } }      // 주사 놓는 순간
     }
-    // 변한 사람이 달려든다(벌칙): 얼굴이 화면 앞으로 커지며 다가온다
+    /* 변한 사람이 달려든다(벌칙, 4.0.6 에 다시 그림).
+       ① 자리에서 일어선다(0~0.2) ② 화면 앞으로 달려온다(0.2~0.5, 잔상) ③ 유리에 부딪혀 얼굴이 가득 찬다: 두 손이 유리를 치고 금이 간다(0.5~0.9) ④ 붉게 번지며 사라진다 */
     if (wardLunge && now - wardLunge.at < C.TURN_STUN * 1000) {
-      var t = (now - wardLunge.at) / (C.TURN_STUN * 1000), e2 = Math.min(1, t * 1.6), size = Math.round(14 + e2 * e2 * 150), sx0 = sp * wardLunge.seat + sp / 2, cx = sx0 + (92 - sx0) * e2, cy = 60 + (48 - 60) * e2;
-      g.fillStyle = 'rgba(120,10,10,' + (0.25 + 0.3 * e2).toFixed(2) + ')'; g.fillRect(0, 0, 184, 96);
-      g.drawImage(wardFaceSprite(), Math.round(cx - size / 2 + (Math.floor(now / 50) % 3 - 1) * 2), Math.round(cy - size / 2), size, size);
-    }
+      var t = (now - wardLunge.at) / (C.TURN_STUN * 1000), sx0 = W_LEFT + sp * wardLunge.seat + sp / 2, face = wardFaceSprite();
+      var e2 = t < 0.1 ? 0 : Math.min(1, (t - 0.1) / 0.35), ease = e2 * e2, sc = 0.5 + ease * 1.85, cx2 = sx0 + (92 - sx0) * ease, cy2 = 58 + (50 - 58) * ease, shake = t > 0.5 && t < 0.9 ? (Math.floor(now / 45) % 3 - 1) * 2 : 0;
+      g.fillStyle = 'rgba(40,6,6,' + (0.15 + 0.5 * ease).toFixed(2) + ')'; g.fillRect(0, 0, 184, 96);
+      if (e2 > 0 && e2 < 1) for (var gh = 1; gh <= 2; gh++) { var es = Math.max(0, e2 - gh * 0.12), s2 = 0.5 + es * es * 1.85; g.globalAlpha = 0.25; g.drawImage(face, Math.round(sx0 + (92 - sx0) * es * es - 24 * s2), Math.round(58 - 8 * es * es - 28 * s2), Math.round(48 * s2), Math.round(56 * s2)); g.globalAlpha = 1; }      // 잔상
+      g.drawImage(face, Math.round(cx2 - 24 * sc + shake), Math.round(cy2 - 28 * sc), Math.round(48 * sc), Math.round(56 * sc));
+      if (t > 0.5) {
+        var hs = 2.2, hy = t < 0.58 ? 96 - (t - 0.5) / 0.08 * 50 : 46 + (Math.floor(now / 60) % 2), hand = wardHandSprite();
+        g.drawImage(hand, Math.round(6 - shake), Math.round(hy), Math.round(16 * hs), Math.round(20 * hs));
+        g.save(); g.translate(184, 0); g.scale(-1, 1); g.drawImage(hand, Math.round(6 + shake), Math.round(hy + 4), Math.round(16 * hs), Math.round(20 * hs)); g.restore();
+        g.fillStyle = 'rgba(232,246,255,.75)';      // 유리에 간 금
+        [[22, 60, 1, -1, 16], [24, 62, -1, -1, 10], [20, 64, -1, 1, 12], [160, 66, 1, -1, 14], [162, 64, -1, -1, 12], [158, 68, 1, 1, 10], [92, 8, 1, 1, 8], [90, 8, -1, 1, 6]].forEach(function (c) { var len = Math.min(c[4], Math.round((t - 0.5) * 60)); for (var q = 0; q < len; q++) g.fillRect(c[0] + c[2] * q, c[1] + c[3] * Math.round(q * 0.7), 1, 1); });
+      }
+      if (t > 0.9) { g.fillStyle = 'rgba(120,10,10,' + ((t - 0.9) * 6).toFixed(2) + ')'; g.fillRect(0, 0, 184, 96); }
+      cv.classList.toggle('ward-shake', t > 0.5 && t < 0.9);
+    } else if (cv.classList.contains('ward-shake')) cv.classList.remove('ward-shake');
   }
 /*
    * 3.3.1 합치기 판의 도트 그림. 칸 하나는 32×27 도트: 어두운 바닥 + 품목 그림(14×14).
@@ -3205,7 +3265,23 @@
       /* 4.0.3 5구역 여섯 대. 차림은 1구역과 같다: 머리줄(왼쪽 숫자 · 오른쪽 자동 안내) → 막대 → 누르는 그림 → 카드(연구 성과) → 기록 한 줄 */
       var ward = C.wardOf(state), nT = ward.seats.length, swOn = !(state.autoOff && state.autoOff[4]);
       var hasAide = (state.upgrades.autolab || 0) > 0, hasNurse = (state.upgrades.nurse || 0) > 0;
-      setText($('lab-points'), '되돌린 사람 ' + fmt(state.curesRun || 0));
+      setText($('lab-points'), '초당 ' + fmt(C.labRate(state)));
+      /* 4.0.6 무슨 일이 일어났는지 글로 보이게 한다.
+         ① 그림 아래 한 줄: 자리마다의 상태(기다림 · 위험 · 멈춤 · 몇 대째 · 빈 자리). ② 집계 한 줄: 이번 회차에 멈춘 · 되돌린 · 변한 사람 수(자동에 맡긴 동안의 것도 여기 쌓인다) */
+      var strip = $('ward-strip'), cells = strip.children, colsT = C.SEAT_MAX + 1;
+      strip.style.gridTemplateColumns = W_LEFT + 'fr ' + ward.seats.map(function () { return ((184 - W_LEFT) / nT).toFixed(2) + 'fr'; }).join(' ');
+      for (var sc = 0; sc < colsT; sc++) {
+        var cel = cells[sc], ps = sc === 0 ? null : ward.seats[sc - 1], show = sc === 0 || sc <= nT, txt = '', cls = '';
+        if (cel.hidden !== !show) cel.hidden = !show;
+        if (!show) continue;
+        if (sc === 0) { txt = '혈청 ' + ward.stock; cls = ward.stock > 0 ? 'has' : 'none'; }
+        else if (!(state.staff > 0) || !(ps.dose >= 0)) { txt = '빈 자리'; cls = 'none'; }
+        else if (ps.dose === 0) { txt = ps.m > 0.7 ? '위험' : '기다림'; cls = ps.m > 0.7 ? 'bad' : ''; }
+        else if (ps.dose === 1) { txt = '멈춤'; cls = 'stop'; }
+        else { txt = ps.dose + ' / ' + C.WARD_DOSES; cls = 'stop'; }
+        setText(cel, txt); if (cel.className !== cls) cel.className = cls;
+      }
+      setText($('tally-stop'), '멈춘 사람 ' + fmt(state.stopsRun || 0)); setText($('tally-cure'), '되돌린 사람 ' + fmt(state.curesRun || 0)); setText($('tally-turn'), '변한 사람 ' + fmt(state.turnedRun || 0));
       setText($('lab-rate'), !(state.staff > 0) ? '연구원을 뽑으면 사람들이 와요' : !hasAide && !hasNurse ? '개조에서 연구 조교와 간호사를 사요' : !swOn ? '연구 조교와 간호사가 쉬고 있어요'
         : hasAide && hasNurse ? '연구 조교 · 간호사' : hasAide ? '연구 조교 · ' + secs(C.serumSeconds(state)) + '마다 한 대' : '간호사 · 급한 사람부터');
       var sFull = ward.stock >= C.serumCap(state);
@@ -3219,7 +3295,7 @@
       setText($('lab-note'), !(state.staff > 0) ? '' : (state.dosesRun || 0) < 3 ? '단추로 혈청을 만들고, 사람을 눌러 놓아요'
         : (state.curesRun || 0) < 3 ? '한 대면 변하는 것이 멈추고, 여섯 대를 채우면 되돌아와요' : '');
       $('lab-note').classList.remove('boosted');
-      setText($('lab-record'), '서류 ' + C.recordCount(state) + ' / ' + C.RECORDS.length + ' · 혈청 값 +' + Math.round((C.recordMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.RECORD_BONUS_MAX * 100) + '%)');
+      setText($('lab-record'), '');      // 4.0.6: 서류 줄은 두지 않는다
       $('lab').setAttribute('data-doses', state.dosesRun || 0); $('lab').setAttribute('data-cures', state.curesRun || 0); $('lab').setAttribute('data-taps', state.serumTaps || 0); $('lab').setAttribute('data-turned', state.turnedRun || 0); $('lab').setAttribute('data-forks', state.projectsDone || 0);      // 화면 테스트가 읽는다
       // 줄: 시험관 · 시약 등급
       var rkc = C.rackCost(state), rgc = C.reagentCost(state), rgl = state.reagent || 0;
@@ -3524,11 +3600,11 @@
           else log(ev.name + (ev.type === 'order-filled' ? '에게 흥정꾼이 상품을 팔았다.' : ev.type === 'contract-filled' ? '에 알아서 납품했다.' : (C.hasBatchim(ev.name) ? '을' : '를') + ' 알아서 거뒀다.') + ' 물자 ' + fmt(ev.gain) + ' 확보.', 'good');
           break;
         case 'ward-turned':      // 5구역: 변한 사람이 달려든다
-          wardLunge = { at: Date.now(), seat: ev.at };
+          wardLunge = { at: Date.now(), seat: ev.at, look: ev.look || 0 };
           if (tab === 'z4' && pane === 'play') { sfx('rush'); buzz([60, 40, 120]); }
           break;
         case 'ward-nurse':
-          wardFx[ev.at] = { at: Date.now(), kind: 'stop' };
+          wardFx[ev.at] = { at: Date.now(), kind: 'stop', nurse: true };
           break;
         case 'box-merge':      // 3.8.4: 자동 합치기가 합친 칸도 손으로 합쳤을 때처럼 튀어 보인다(전에는 아무 표시 없이 숫자만 바뀌었다)
           if (ev.auto) boardFx[ev.at] = { pop: true, gain: 0, delay: Math.min(ev.delay || 0, 12) * 60 };

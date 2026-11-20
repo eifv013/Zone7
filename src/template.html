@@ -849,7 +849,15 @@ canvas.plat.tappable { cursor: pointer; } canvas.plat.tappable:active { filter: 
 .settle-serum { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--edge, var(--ink-soft)); }
 .serum-steps { display: flex; gap: 5px; margin: 6px 0 8px; } .serum-steps i { flex: 1; height: 8px; border-radius: 4px; background: var(--soft, rgba(127,127,127,.2)); } .serum-steps i.on { background: var(--safe); }
 /* 3.9.5 실험대 그림 */
-canvas.labcv { background: #1c2a2e; margin-bottom: 8px; }
+canvas.labcv { background: #1c2a2e; margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+/* 4.0.6 자리마다의 상태 글과 집계 */
+.ward-strip { display: grid; gap: 0; margin: 0 0 8px; border: 2px solid var(--ink); border-top: 0; border-radius: 0 0 8px 8px; background: #16242a; overflow: hidden; }
+.ward-strip span { font: 600 11px/1 var(--font-body); color: #a8bcc6; text-align: center; padding: 6px 0; white-space: nowrap; overflow: hidden; border-left: 1px solid #24383e; }
+.ward-strip span:first-child { border-left: 0; } .ward-strip span[hidden] { display: none; }
+.ward-strip .bad { color: #fff; background: #b8402e; } .ward-strip .stop { color: #9ad0e8; } .ward-strip .none { color: #55707a; } .ward-strip .has { color: #f0b400; }
+.ward-tally { display: flex; gap: 6px; margin: 4px 0 6px; } .ward-tally span { flex: 1; text-align: center; font: 600 12px/1 var(--font-body); padding: 7px 2px; border-radius: 8px; border: 1px solid var(--edge); white-space: nowrap; }
+.ward-tally .stop { color: #6aaede; } .ward-tally .cure { color: var(--hazard); } .ward-tally .turn { color: #d8644e; }
+canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
 #serum-btn { margin-bottom: 4px; } #serum-btn.nope { animation: jam-shake .3s steps(2) 1; background: var(--blood); color: #fff; } #lab-bar { margin: 0 0 8px; }
 #fork[hidden] { display: none; } #fork { margin-top: 6px; } #fork.ready { border-color: var(--hazard); } #fork .lab-offers { margin: 8px 0 0; grid-template-columns: 1fr 1fr; }
 .lab-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
@@ -1353,7 +1361,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.0.5</div>
+  <div class="boot-ver">7구역 알파 4.0.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1616,9 +1624,11 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <!-- 3.9.2 5구역 혈청 달이기: 머리줄 → 시험관(누르면 거둔다) → 갈림길 카드 → 기록 -->
         <div class="search-head"><span class="num" id="lab-points"></span><span class="label" id="lab-rate"></span></div>
         <canvas class="belt plat labcv" id="labscene" width="184" height="96" role="button" tabindex="0" data-tap aria-label="병실. 사람을 누르면 혈청 한 대를 놓는다"></canvas>
+        <div class="ward-strip" id="ward-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
         <!-- 4.0.4: 혈청 만들기는 큰 단추로(그림 속 상자는 누르기에 작았다). 단추 아래 막대가 다음 한 대까지 찬다 -->
         <button type="button" class="fortify sell plat-go" id="serum-btn"><span id="serum-name">혈청 만들기</span><span class="num" id="serum-count"></span></button>
         <div class="autobar" id="lab-bar" aria-hidden="true"></div>
+        <div class="ward-tally"><span class="stop" id="tally-stop"></span><span class="cure" id="tally-cure"></span><span class="turn" id="tally-turn"></span></div>
         <div class="label" id="lab-note"></div>
         <div class="label" id="lab-record"></div>
       </div>
@@ -1802,7 +1812,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.0.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.0.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

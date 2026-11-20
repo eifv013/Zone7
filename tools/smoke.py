@@ -366,7 +366,8 @@ def run_case(browser, name, size, state, mode):
         tap('[data-mview-set=manage]'); tap('[data-tab=z4]')
         if not page.locator('#lab').is_visible(): problems.append('5구역 탭에 병실이 없다')
         if page.locator('#fork').is_visible() or page.locator('.lab-offer:visible').count(): problems.append('없앤 연구 성과 카드가 보인다')
-        if '서류' not in text('lab-record') or '혈청 값' not in text('lab-record'): problems.append('병원 서류 줄이 없다: ' + text('lab-record'))
+        if '빈 자리' not in text('ward-strip'): problems.append('자리마다의 상태 글이 없다: ' + text('ward-strip'))
+        if '멈춘 사람' not in text('tally-stop') or '변한 사람' not in text('tally-turn'): problems.append('집계 줄이 없다')
         if '연구원을 뽑으면' not in text('lab-rate'): problems.append('연구원이 없을 때의 안내가 없다: ' + text('lab-rate'))
         for old in ['#lab-reroll', '#lab-focus', '#row-scope', '#lab-done', '#tubes']:
             if page.locator(old).count(): problems.append('옛 단추나 개조가 남아 있다: ' + old)
@@ -377,14 +378,14 @@ def run_case(browser, name, size, state, mode):
         if not fits(): problems.append('한 화면에 들어오지 않는다(5구역)')
         seats = lambda: (page.get_attribute('#labscene', 'data-seats') or '').split(',')
         def ward_xy(i):      # i < 0 이면 냉장 상자, 아니면 i번째 의자의 화면 자리
-            n = len(seats()); bx = page.locator('#labscene').bounding_box(); fx = 184 / n * (i + 0.5)
+            n = len(seats()); bx = page.locator('#labscene').bounding_box(); fx = 28 + 156 / n * (i + 0.5)
             return bx['x'] + bx['width'] * fx / 184, bx['y'] + bx['height'] * 0.62
         page.wait_for_timeout(3200)
         if len(seats()) != 4 or not any(v == '0' for v in seats()): problems.append('연구원을 뽑았는데 사람이 오지 않는다: %s' % seats())
         if not page.evaluate("(() => { const c = document.getElementById('labscene'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size >= 14; })()"): problems.append('병실 그림이 비어 있다')
         lb = page.locator('#labscene').bounding_box()
         if lb['height'] < 130 or lb['width'] < 250: problems.append('병실 그림이 너무 작다: %s' % lb)
-        if lb['width'] / len(seats()) < 48: problems.append('한 사람의 누르는 자리가 좁다: %d' % (lb['width'] / len(seats())))
+        if lb['width'] * 156 / 184 / len(seats()) < 46: problems.append('한 사람의 누르는 자리가 좁다: %d' % (lb['width'] / len(seats())))
         sbx = page.locator('#serum-btn').bounding_box()
         if not sbx or sbx['height'] < 44 or sbx['width'] < 250: problems.append('혈청 만들기 단추가 작다: %s' % sbx)
         # 손가락으로 혈청 만들기 단추를 빠르게 열 번: 열 번 다 먹히고 혈청이 한 대 생긴다

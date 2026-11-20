@@ -857,7 +857,7 @@ test('연구: 보급 요청은 효과가 남지 않고 물자를 바로 준다',
 test('연구 성과는 없앴다(4.0.5): 자리를 비워도, 혈청을 놓아도 점수가 쌓이지 않는다', () => {
   const s = inLab(); s.staff = 10; s.defenses.rail = 1e9; s.upgrades.autolab = 1; s.upgrades.nurse = 1;
   assert.equal(C.applyOffline(s, 1000).points, 0); assert.equal(s.points, 0);
-  C.wardOf(s).stock = 3; C.wardOf(s).seats[0] = { m: 0, dose: 0, r: 1, look: 1, stay: 0 }; C.injectSeat(s, 0); assert.equal(s.points, 0);
+  C.wardOf(s).stock = 3; C.wardOf(s).seats[0] = { m: 0, dose: 0, r: 1, look: 1, since: 0 }; C.injectSeat(s, 0); assert.equal(s.points, 0);
   // 옛 저장에 쌓여 있던 점수와 내밀던 과제는 버린다. 이미 고른 효과는 이번 회차 동안 남는다
   const old = JSON.parse(C.serialize(s)); delete old.labV4; old.points = 6.9e7; old.offers = ['serum', 'drop']; old.research = { serum: 3 }; old.projectsDone = 3;
   const m = C.deserialize(JSON.stringify(old), 0); assert.equal(m.points, 0); assert.deepEqual(m.offers, []); assert.equal(m.research.serum, 3);
@@ -3008,7 +3008,7 @@ test('4구역: 열기 전에는 열차도 줄도 없다. 기관차를 사면 값
 });
 
 /* ---------- 4.0.3 5구역 여섯 대(구역 전체) ---------- */
-function onWard(n) { const s = inLab(); s.staff = 10; s.racks = (n || 4) - 4; s.defenses.rail = 1e9; s.signalIn = 1e9; const w = C.wardOf(s); w.seats = w.seats.map(() => ({ m: 0, dose: 0, r: 1, look: 1, stay: 0 })); w.stock = 0; w.make = 0; return s; }
+function onWard(n) { const s = inLab(); s.staff = 10; s.racks = (n || 4) - 4; s.defenses.rail = 1e9; s.signalIn = 1e9; const w = C.wardOf(s); w.seats = w.seats.map(() => ({ m: 0, dose: 0, r: 1, look: 1, since: 0 })); w.stock = 0; w.make = 0; w.arrive = 0; return s; }
 
 test('5구역 병실: 한 대면 멈추고 한 대의 값을, 여섯 대째에 되돌아와 열두 대의 값을 받는다', () => {
   const s = onWard(4), w = C.wardOf(s), v = C.doseValue(s);
@@ -3018,11 +3018,15 @@ test('5구역 병실: 한 대면 멈추고 한 대의 값을, 여섯 대째에 �
   const a = C.injectSeat(s, 0); assert.ok(a.ok && a.stop && !a.cure); near(a.gain, v); near(s.supplies - sup, v); assert.equal(s.stopsRun, 1); assert.equal(w.stock, 5);
   for (let i = 2; i <= 5; i++) { const r = C.injectSeat(s, 0); assert.equal(r.dose, i); assert.equal(r.gain, 0, '사이의 대는 받는 것이 없다'); }
   w.stock = 1; const c = C.injectSeat(s, 0); assert.ok(c.cure); near(c.gain, v * (C.WARD_CURE - 1)); near(s.supplies - sup, v * C.WARD_CURE, '모두 합쳐 열두 대의 값'); assert.equal(s.curesRun, 1); assert.equal(s.dosesRun, 6);
-  assert.ok(w.seats[0].wait > 0, '되돌아온 사람은 자리를 비운다');
+  assert.ok(!(w.seats[0].dose >= 0), '되돌아온 사람은 자리를 비운다');
   assert.equal(C.injectSeat(s, 0).reason, 'empty');
-  // 멈춘 사람은 줄이 더 차지 않는다. 한 대만 맞은 사람은 곧 자리를 비우고, 새 사람이 온다
-  const t = onWard(4); C.wardOf(t).stock = 1; C.injectSeat(t, 1); C.stepWard(t, 3, calm, []); assert.equal(t.ward.seats[1].m, 0); assert.ok(t.ward.seats[0].m > 0.1);
-  C.stepWard(t, C.WARD_STAY_ONE, calm, []); assert.ok(t.ward.seats[1].wait > 0 || t.ward.seats[1].dose === 0, '자리를 비웠다');
+  // 멈춘 사람은 줄이 더 차지 않고, 시간이 지나도 저절로 떠나지 않는다(4.0.6)
+  const t = onWard(4); C.wardOf(t).stock = 3; C.injectSeat(t, 1); C.stepWard(t, 3, calm, []); assert.equal(t.ward.seats[1].m, 0); assert.ok(t.ward.seats[0].m > 0.1); assert.equal(t.ward.seats[1].dose, 1, '그대로 앉아 있다');
+  // 새 사람이 왔는데 빈 의자가 없으면, 한 대만 맞고 가장 오래 앉아 있던 사람이 자리를 내 준다. 되돌리는 중인 사람(두 대 이상)은 내 주지 않는다
+  C.injectSeat(t, 2); C.injectSeat(t, 2); t.ward.seats[0].m = 0.1; t.ward.seats[3].m = 0.1; t.ward.arrive = 0.99; const ev2 = []; C.stepWard(t, 0.25, calm, ev2);
+  assert.ok(ev2.some((e) => e.type === 'ward-out' && e.at === 1)); assert.equal(t.ward.seats[1].dose, 0, '새 사람이 앉았다'); assert.equal(t.ward.seats[2].dose, 2);
+  const full = onWard(4); full.ward.arrive = 0.99; C.stepWard(full, 0.5, calm, []); assert.equal(full.ward.arrive, 1, '내 줄 자리가 없으면 문 앞에서 기다린다');
+  const emp = onWard(4); emp.ward.seats[2] = { wait: 0 }; emp.ward.arrive = 0.99; C.stepWard(emp, 0.25, calm, []); assert.equal(emp.ward.seats[2].dose, 0, '빈 의자가 있으면 거기 앉는다');
   // 안 되는 경우
   assert.equal(C.injectSeat(inStation(), 0).reason, 'locked'); assert.equal(C.injectSeat(inLab(), 0).reason, 'stopped');
   for (const junk of [-1, 99, NaN, 'x', undefined]) { const z = onWard(4); C.wardOf(z).stock = 3; assert.equal(C.injectSeat(z, junk).reason, 'empty'); }
@@ -3069,11 +3073,10 @@ test('5구역 줄 · 연구 성과 · 저장 · 옛 저장 옮기기 · 자리 �
   assert.ok(C.buyRack(s).ok); assert.equal(C.seatCount(s), 5); assert.equal(C.wardOf(s).seats.length, 5); near(C.labRate(s), r0 * 5 / 4); near(C.researchRate(s), p0 * 5 / 4);
   const r1 = C.labRate(s); assert.ok(C.buyReagent(s).ok); near(C.labRate(s), r1 * C.REAGENT_STEP);
   for (let i = 0; i < 20; i++) C.buyRack(s); assert.equal(C.seatCount(s), C.SEAT_MAX); assert.equal(C.rackCost(s), Infinity);
-  // 손으로 되돌리면 가끔 병원 서류를 찾는다(간호사가 놓은 것은 아니다). 서류는 혈청 값을 올린다
-  const f = onWard(4), fw = C.wardOf(f); fw.stock = 6; fw.seats[0].dose = 5; const l0 = C.labRate(f); const cr = C.injectSeat(f, 0, false, () => 0.1); assert.ok(cr.cure && cr.record && cr.record.first); assert.equal(f.recordsRun, 1); near(C.labRate(f) / l0, 1 + C.RECORD_BONUS);
-  fw.seats[1].dose = 5; assert.equal(C.injectSeat(f, 1, false, () => 0.9).record, null, '주사위가 높으면 못 찾는다'); assert.equal(f.dosesAll, 2);
+  // 4.0.6: 되돌려도 서류는 찾지 않는다
+  const f = onWard(4), fw = C.wardOf(f); fw.stock = 6; fw.seats[0].dose = 5; const cr = C.injectSeat(f, 0, false, () => 0.1); assert.ok(cr.cure); assert.equal(cr.record, undefined); assert.equal(f.recordsRun, 0); assert.equal(f.dosesAll, 1);
   // 저장
-  const v = onWard(6); v.reagent = 2; v.ward.stock = 3; v.ward.make = 0.4; v.ward.seats[1] = { m: 0.5, dose: 3, r: 1.1, look: 7, stay: 4 }; v.ward.seats[2] = { wait: 1.5 }; v.curesRun = 4; v.stopsRun = 9; v.turnedRun = 1;
+  const v = onWard(6); v.reagent = 2; v.ward.stock = 3; v.ward.make = 0.4; v.ward.seats[1] = { m: 0.5, dose: 3, r: 1.1, look: 7, since: 4 }; v.ward.seats[2] = { wait: 0 }; v.curesRun = 4; v.stopsRun = 9; v.turnedRun = 1;
   const back = C.deserialize(C.serialize(v), 0); assert.deepEqual(back.ward.seats, v.ward.seats); assert.equal(back.ward.stock, 3); assert.equal(back.curesRun, 4); assert.equal(back.racks, 2);
   const raw = JSON.parse(C.serialize(v)); raw.ward = { seats: [{ m: 'x', dose: 99, r: 9 }, null, 7], stock: -4, make: 9 }; raw.racks = 1e9;
   const fixed = C.deserialize(JSON.stringify(raw), 0); assert.equal(fixed.racks, C.SEAT_MAX - C.SEAT_BASE); assert.equal(fixed.ward.stock, 0); assert.equal(fixed.ward.seats[0].dose, C.WARD_DOSES - 1); assert.equal(C.wardOf(fixed).seats.length, C.SEAT_MAX);

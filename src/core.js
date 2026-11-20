@@ -578,7 +578,7 @@
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
-      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0 }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, dosesAll: 0, serumTaps: 0, labV: 3, labV4: 1,
+      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8 }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, dosesAll: 0, serumTaps: 0, labV: 3, labV4: 1,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
@@ -724,11 +724,11 @@
     s.labEarned = clamp(safeNum(raw.labEarned, 0), 0, 1e300);
     s.curesRun = clamp(safeCount(raw.curesRun), 0, 1e12); s.stopsRun = clamp(safeCount(raw.stopsRun), 0, 1e12); s.turnedRun = clamp(safeCount(raw.turnedRun), 0, 1e12); s.dosesRun = clamp(safeCount(raw.dosesRun), 0, 1e12); s.serumTaps = clamp(safeCount(raw.serumTaps), 0, 1e12);
     var rw = raw.ward && typeof raw.ward === 'object' ? raw.ward : {};
-    s.ward = { seats: [], stock: clamp(safeCount(rw.stock), 0, 40), make: clamp(safeNum(rw.make, 0), 0, 1), nurse: clamp(safeNum(rw.nurse, 0), 0, 1), stun: 0 };
+    s.ward = { seats: [], stock: clamp(safeCount(rw.stock), 0, 40), make: clamp(safeNum(rw.make, 0), 0, 1), nurse: clamp(safeNum(rw.nurse, 0), 0, 1), stun: 0, arrive: clamp(safeNum(rw.arrive, 0), 0, 1) };
     (Array.isArray(rw.seats) ? rw.seats : []).slice(0, SEAT_MAX).forEach(function (p) {
       p = p && typeof p === 'object' ? p : {};
-      if (typeof p.dose === 'number' && p.dose >= 0) s.ward.seats.push({ m: clamp(safeNum(p.m, 0), 0, 0.999), dose: clamp(safeCount(p.dose), 0, WARD_DOSES - 1), r: clamp(safeNum(p.r, 1), 0.5, 1.5), look: clamp(safeCount(p.look), 0, 999), stay: clamp(safeNum(p.stay, 0), 0, 60) });
-      else s.ward.seats.push({ wait: clamp(safeNum(p.wait, WARD_ARRIVE), 0, 30) });
+      if (typeof p.dose === 'number' && p.dose >= 0) s.ward.seats.push({ m: clamp(safeNum(p.m, 0), 0, 0.999), dose: clamp(safeCount(p.dose), 0, WARD_DOSES - 1), r: clamp(safeNum(p.r, 1), 0.5, 1.5), look: clamp(safeCount(p.look), 0, 999), since: clamp(safeNum(p.since, 0), 0, 1e6) });
+      else s.ward.seats.push({ wait: 0 });
     });
     /* 옛 저장 옮기기.
        labV 2 미만(3.9.0 이전): 없앤 개조 '현미경'에 쓴 물자만큼 시약 등급을 사 준 것으로 한다.
@@ -2010,23 +2010,23 @@
    * 손:   ① 냉장 상자를 누르면 혈청이 빨리 만들어진다(한 번에 SERUM_TAP 대만큼). ② 사람을 누르면 혈청 한 대를 놓는다.
    *       첫 한 대: 변하는 줄이 멈추고 한 대의 값을 받는다. 여섯 대째: 사람으로 돌아오고 WARD_CURE 대의 값을 받는다(한 대씩 여섯에게 나눠 주는 것의 두 배).
    *       혈청은 늘 모자라다. 급한 사람들을 한 대씩 멈춰 둘지, 한 사람에게 몰아서 되돌릴지를 고른다. 몰아 주는 동안 다른 사람이 변할 수 있다.
-   *       변하는 줄이 다 찰 때까지 한 대도 못 맞은 사람은 변해서 나간다(받는 것 없음). 멈춘 사람은 WARD_STAY 초 뒤에 자리를 비운다(맞을 때마다 다시 센다).
+   *       변하는 줄이 다 찰 때까지 한 대도 못 맞은 사람은 변해서 나간다(받는 것 없음). 멈춘 사람은 새 사람이 와서 자리가 모자랄 때 자리를 내 준다(4.0.6).
    * 자동: 둘이다. 연구 조교(autolab)는 혈청을 만든다(serumSeconds 초에 한 대). 간호사(nurse)는 한 대도 못 맞은 가장 급한 사람에게 한 대를 놓는다.
    *       간호사는 멈추기만 한다. 되돌리는 것은 손뿐이다. 둘 다 있으면 초당 수입 그대로(1배), 손으로 되돌리면 그 두 배까지.
    * 값:   한 대의 값 = 약품 초당(labRate) × SERUM_SECONDS. 연구 점수도 같은 식(researchRate).
    * 줄:   연구원(값) · 의자(자리 수, 값도 그만큼) · 시약 등급(2배씩). 개조: 냉장 상자(쌓아 두는 수) · 진정제(변하는 줄이 느리게) · 연구 조교 · 간호사.
    */
-  var SEAT_BASE = 4, SEAT_MAX = 6, SERUM_SECONDS = 4, SERUM_CAP = 6, SERUM_CAP_STEP = 2, SERUM_TAP = 0.12, TURN_SECONDS = 16, TURN_BREAK = 2, TURN_STUN = 1.2, WARD_DOSES = 6, WARD_CURE = 12, WARD_STAY = 12, WARD_STAY_ONE = 5, WARD_ARRIVE = 2, NURSE_SECONDS = 2, NURSE_FROM = 0.7, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
+  var SEAT_BASE = 4, SEAT_MAX = 6, SERUM_SECONDS = 4, SERUM_CAP = 6, SERUM_CAP_STEP = 2, SERUM_TAP = 0.12, TURN_SECONDS = 16, TURN_BREAK = 2, TURN_STUN = 1.2, WARD_DOSES = 6, WARD_CURE = 12, WARD_STAY = 12, WARD_STAY_ONE = 5, WARD_ARRIVE = 4.5, WARD_FILL = 1.2, NURSE_SECONDS = 2, NURSE_FROM = 0.7, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
   var RACK_COST = 2e23, RACK_GROWTH = 30, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
   function seatCount(state) { return clamp(SEAT_BASE + Math.floor(safeNum(state.racks, 0)), SEAT_BASE, SEAT_MAX); }
   function serumCap(state) { return SERUM_CAP + SERUM_CAP_STEP * mods(state).peak; }
   function turnSeconds(state) { return TURN_SECONDS * (1 + mods(state).sterile); }
   function serumSeconds(state) { return SERUM_SECONDS * assistFactor(state); }
   function nurseOn(state) { return (state.upgrades.nurse || 0) > 0 && autoEvents(state, 4); }
-  function newWard() { return { seats: [], stock: 0, make: 0, nurse: 0, stun: 0 }; }
+  function newWard() { return { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8 }; }
   function wardOf(state) {
     var w = state.ward; if (!w || typeof w !== 'object' || !Array.isArray(w.seats)) w = state.ward = newWard();
-    var n = seatCount(state); while (w.seats.length < n) w.seats.push({ wait: WARD_ARRIVE * (0.3 + 0.35 * w.seats.length) }); if (w.seats.length > n) w.seats.length = n;
+    var n = seatCount(state); while (w.seats.length < n) w.seats.push({ wait: 0 }); if (w.seats.length > n) w.seats.length = n;      // { wait } 는 빈 의자
     return w;
   }
   function doseValue(state) { return labRate(state) * SERUM_SECONDS; }
@@ -2050,7 +2050,7 @@
   /*
    * 4.0.5 '연구 성과'(점수를 모아 둘 가운데 하나를 고르던 것)를 없앴다.
    *   왜: 이 구역의 할 일은 이제 병실이다. 연구 성과는 값이 차기를 기다리는 것 말고는 할 일이 없었고, 고를수록 '전체 생산 1.3배' 같은 효과가 끝없이 쌓였다.
-   *   대신 다른 구역과 같은 꼴로 맞춘다(3구역 거래처 · 4구역 화물처럼): 사람을 손으로 되돌릴 때 가끔 병원 서류를 한 장 찾고, 이번 회차에 찾은 한 장마다 혈청 값이 1%씩 오른다(최대 50%).
+   *   4.0.6: 대신 넣으려던 '서류 찾기'도 넣지 않는다. 이 구역에는 병실 하나만 있다. 예전에 찾은 서류는 도감에 남고, 이번 회차에 찾은 만큼의 값 오름도 철수할 때까지 남는다.
    *   runProject 등 옛 함수는 남겨 두었지만(이번 회차에 이미 고른 효과는 철수할 때까지 남는다) 점수가 더는 쌓이지 않아 새로 고를 수는 없다.
    */
   function injectSeat(state, i, auto, rng) {
@@ -2061,7 +2061,7 @@
     if (w.stun > 0 && !auto) return fail('stun');
     if (!p || !(p.dose >= 0)) return fail('empty');
     if (!(w.stock >= 1)) return fail('nostock');
-    w.stock--; p.dose++; p.stay = p.dose === 1 ? WARD_STAY_ONE : WARD_STAY;      // 한 대만 맞은 사람은 금방 자리를 비우고, 되돌리는 중인 사람은 더 기다려 준다
+    w.stock--; p.dose++; p.since = 0;
     var mult = p.dose === 1 ? 1 : p.dose >= WARD_DOSES ? WARD_CURE - 1 : 0, gain = doseValue(state) * mult, points = 0;
     if (gain > 0) { earn(state, gain); state.labEarned = (state.labEarned || 0) + gain; }
     state.points += points;
@@ -2069,7 +2069,7 @@
     state.dosesAll = (state.dosesAll || 0) + 1;
     if (!auto) state.dosesRun = (state.dosesRun || 0) + 1;
     if (out.stop) state.stopsRun = (state.stopsRun || 0) + 1;
-    if (out.cure) { state.curesRun = (state.curesRun || 0) + 1; w.seats[i] = { wait: WARD_ARRIVE }; if (!auto) out.record = findRecord(state, rng); }      // 손으로 되돌리면 가끔 병원 서류를 찾는다
+    if (out.cure) { state.curesRun = (state.curesRun || 0) + 1; w.seats[i] = { wait: 0 }; }      // 4.0.6: 서류 찾기는 넣지 않는다(4.0.5 에 잠깐 있었다)
     return out;
   }
   function stepWard(state, dt, rng, events) {
@@ -2078,23 +2078,35 @@
     var w = wardOf(state), auto = autoEvents(state, 4), aide = auto && (state.upgrades.autolab || 0) > 0, nurse = nurseOn(state), roll = typeof rng === 'function' ? rng : Math.random;
     if (dt > 5) {      // 굵은 걸음(자리 비움 등): 하나하나 세지 않는다. 조교와 간호사가 다 있어야 돌아간다
       if (aide && nurse) { var flat = labRate(state) * dt; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; }
-      w.seats = []; w.make = 0; w.nurse = 0; wardOf(state); return;
+      w.seats = []; w.make = 0; w.nurse = 0; w.arrive = 0; wardOf(state); return;
     }
     var steps = Math.max(1, Math.ceil(dt / 0.25)), h = dt / steps, turn = turnSeconds(state), cap = serumCap(state);
     if (w.stun > 0) w.stun = Math.max(0, w.stun - dt);
     for (var k = 0; k < steps; k++) {
       if (aide && w.stock < cap) { w.make += h / serumSeconds(state); while (w.make >= 1 && w.stock < cap) { w.make -= 1; w.stock++; } }
       if (w.stock >= cap) w.make = Math.min(w.make, 0.999);
+      /* 4.0.6 오고 가는 것을 바꿨다. 전에는 멈춘 사람이 몇 초 뒤에 저절로 자리를 떴다(되돌리던 사람까지도). 시간이 됐다고 사라지는 것이 어색했다.
+         이제 사람은 WARD_ARRIVE 초에 한 명씩 문으로 들어온다. 빈 의자가 있으면 앉고, 없으면 '한 대만 맞고 가장 오래 앉아 있던 사람'이 자리를 내 준다.
+         두 대 이상 맞은 사람(되돌리는 중)과 아직 못 맞은 사람은 자리를 내 주지 않는다. 내 줄 자리가 없으면 문 앞에서 기다린다 */
+      var anyEmpty = false; for (var e0 = 0; e0 < w.seats.length; e0++) if (!(w.seats[e0].dose >= 0)) { anyEmpty = true; break; }
+      w.arrive = (w.arrive || 0) + h / (anyEmpty ? WARD_FILL : WARD_ARRIVE);      // 빈 의자가 있으면 기다리던 사람이 금방 들어와 앉는다
+      if (w.arrive >= 1) {
+        var seat = -1, old = -1;
+        for (var q0 = 0; q0 < w.seats.length; q0++) { var sq = w.seats[q0]; if (!(sq.dose >= 0)) { if (seat < 0) seat = q0; } else if (sq.dose === 1 && (old < 0 || sq.since > w.seats[old].since)) old = q0; }
+        if (seat < 0 && old >= 0) { seat = old; if (events) events.push({ type: 'ward-out', at: old }); }
+        if (seat >= 0) { w.arrive -= 1; w.seats[seat] = { m: 0, dose: 0, r: 0.75 + roll() * 0.5, look: Math.floor(roll() * 1000), since: 0 }; if (events) events.push({ type: 'ward-in', at: seat }); }
+        else w.arrive = 1;
+      }
       for (var i = 0; i < w.seats.length; i++) {
         var p = w.seats[i];
-        if (!(p.dose >= 0)) { p.wait -= h; if (p.wait <= 0) { w.seats[i] = { m: 0, dose: 0, r: 0.75 + roll() * 0.5, look: Math.floor(roll() * 1000), stay: 0 }; if (events) events.push({ type: 'ward-in', at: i }); } continue; }
+        if (!(p.dose >= 0)) continue;
+        p.since = (p.since || 0) + h;
         if (p.dose === 0) { p.m += h / turn * p.r; if (p.m >= 1) {
           /* 변했다(벌칙): 변한 사람이 달려들어 냉장 상자의 혈청을 TURN_BREAK 대 깨뜨리고, TURN_STUN 초 동안 아무것도 누를 수 없다(화면 가득 달려든다).
              굵은 걸음이 아닐 때만 일어나니, 자리를 비운 동안에는 벌칙이 없다 */
-          var broke = Math.min(w.stock, TURN_BREAK); w.stock -= broke; w.stun = TURN_STUN; w.seats[i] = { wait: WARD_ARRIVE + TURN_STUN }; state.turnedRun = (state.turnedRun || 0) + 1;
+          var broke = Math.min(w.stock, TURN_BREAK); w.stock -= broke; w.stun = TURN_STUN; w.seats[i] = { wait: 0 }; state.turnedRun = (state.turnedRun || 0) + 1;
           if (events) events.push({ type: 'ward-turned', at: i, broke: broke, look: p.look });
         } }
-        else { p.stay -= h; if (p.stay <= 0) { w.seats[i] = { wait: WARD_ARRIVE }; if (events) events.push({ type: 'ward-out', at: i }); } }
       }
       if (nurse) {
         w.nurse += h / (NURSE_SECONDS * assistFactor(state));
@@ -2489,7 +2501,7 @@
       { id: 'z4b2', text: '표류 화물 2번 끌어오기', need: 2, value: function (s) { return s.salvagesRun; } },
       { id: 'z4c2', text: '4구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 3); } } ],
     [ { id: 'z5a2', text: '5구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 4); } },
-      { id: 'z5b2', text: '병원 서류 3장 찾기', need: 3, value: function (s) { return s.recordsRun; } },
+      { id: 'z5b2', text: '사람 60명 멈추기', need: 60, value: function (s) { return s.stopsRun || 0; } },
       { id: 'z5c2', text: '의자 6개', need: 6, value: function (s) { return seatCount(s); } } ],
     [ { id: 'z6a2', text: '방어 수단 합계 200개', need: 200, value: function (s) { return defenseCount(s); } },
       { id: 'z6b2', text: '검문대 7단계', need: 7, value: function (s) { return s.upgrades.booth || 0; } },
