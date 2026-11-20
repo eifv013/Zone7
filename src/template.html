@@ -843,7 +843,12 @@ canvas.plat.tappable { cursor: pointer; } canvas.plat.tappable:active { filter: 
 @keyframes stray-in { from { transform: scale(2.2); opacity: 0; } to { transform: scale(1); opacity: 1; } } @keyframes stray-bob { 50% { transform: translateY(-2px); } }
 @media (prefers-reduced-motion: reduce) { .stray-dot { animation: none; } }
 .t7-dial.slim { height: 26px; margin: 0 0 6px; } .t7-dial.slim .t7-freq { top: 5px; font-size: 11px; line-height: 1; } .t7-gain { position: absolute; right: 8px; top: 5px; font-size: 11px; line-height: 1; color: var(--ink-soft); }
-#tower #t7-tune { display: none !important; } .row.flagged { border-color: var(--hazard) !important; box-shadow: inset 4px 0 0 var(--hazard); } .camp-strip { grid-template-columns: 1fr 1fr; margin-bottom: 8px; } .camp-strip span { font-size: 12px; padding: 7px 0; } #camp-head { color: var(--ink) !important; } .t7-dial.slim { cursor: pointer; } #camp-note[hidden] { display: none; } .camp-guard { margin: 0 0 8px; } .camp-guard button { padding: 8px 2px; font-size: 13px; } .camp-guard button.hot { border-color: var(--blood); background: color-mix(in srgb, var(--blood) 22%, var(--paper)); animation: plat-full .5s steps(2) infinite; } #camp-guard button small { color: var(--blood); font-family: var(--font-mono); } #camp-guard button.ok small { color: var(--safe); } .camp-guard[hidden], .camp-card[hidden] { display: none; }
+#tower #t7-tune { display: none !important; } .camp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: -2px 0 10px; } .camp-grid[hidden] { display: none; }
+.camp-grid button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px 7px; border: 2px solid var(--ink); border-radius: 10px; background: var(--paper); color: var(--ink); cursor: pointer; font: 700 13px/1.2 var(--font-body); min-width: 0; }
+.camp-grid button i { position: absolute; left: 6px; top: 4px; font: 700 10px/1 var(--font-mono); font-style: normal; color: var(--ink-soft); } .camp-grid button .lv { font: 700 12px/1 var(--font-mono); color: var(--safe); } .camp-grid button small { font: 600 11px/1 var(--font-mono); color: var(--hazard); white-space: nowrap; }
+.camp-grid button.flagged { border-color: var(--hazard); box-shadow: inset 0 -3px 0 var(--hazard); } .camp-grid button.broken .lv { color: var(--blood); } .camp-grid button.hid { opacity: .45; } .camp-grid button:disabled:not(.hid) small { color: var(--ink-soft); }
+#row-settle7.open { border-color: var(--hazard) !important; }
+.row.flagged { border-color: var(--hazard) !important; box-shadow: inset 4px 0 0 var(--hazard); } .camp-strip { grid-template-columns: 1fr 1fr; margin-bottom: 8px; } .camp-strip span { font-size: 12px; padding: 7px 0; } #camp-head { color: var(--ink) !important; } .t7-dial.slim { cursor: pointer; } #camp-note[hidden] { display: none; } .camp-guard { margin: 0 0 8px; } .camp-guard button { padding: 8px 2px; font-size: 13px; } .camp-guard button.hot { border-color: var(--blood); background: color-mix(in srgb, var(--blood) 22%, var(--paper)); animation: plat-full .5s steps(2) infinite; } #camp-guard button small { color: var(--blood); font-family: var(--font-mono); } #camp-guard button.ok small { color: var(--safe); } .camp-guard[hidden], .camp-card[hidden] { display: none; }
 .camp-card { margin: 0 0 6px; padding: 8px 12px; } .camp-card .autobar { margin-top: 6px; } #camp-head.bad { color: var(--blood); animation: plat-full .4s steps(2) infinite; }
 #camp-wrap .ward-pop { color: #e8e6dc; font-size: 12px; } #camp-wrap .ward-pop.done { color: #ffd95a; font-size: 16px; } #camp-wrap .ward-pop.bad { color: #ff7a6a; font-size: 16px; } #camp-clock.raid { border-color: #ff7a6a; color: #ffb0a4; }
 .settle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 6px; }
@@ -1402,7 +1407,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.3.5</div>
+  <div class="boot-ver">7구역 알파 4.3.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1873,7 +1878,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.3.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.3.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

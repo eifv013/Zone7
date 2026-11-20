@@ -1516,9 +1516,12 @@
     // 4.3.2 7구역 줄: 안테나 · 수레 · 방벽 · 무기고
     /* 4.3.5 정착지 건물도 운영 줄에 둔다(구매 줄과 같은 꼴). 그림의 자리를 눌러도, 이 줄을 눌러도 같다: 문 앞의 생존자가 한 무리 간다. 줄에서 단계가 보인다.
        열린 건물(앞 건물이 선 줄)만 보인다. 순서는 살림 · 혈청 · 방어 줄, 위에서 아래로 */
-    rows.settle7 = {}; C.SETTLE.slice().sort(function (a, b) { return a.col - b.col || a.row - b.row; }).forEach(function (d) { rows.settle7[d.id] = buildRow({ id: 'st-' + d.id, name: d.name, desc: d.desc }, function () { if (campPlaceFn) campPlaceFn(d.id); }); });
+    /* 4.3.6 건물 줄 아홉을 '정착지' 한 줄로 묶었다(줄이 열셋이 되어 길었다). 누르면 그 밑에 아홉 칸이 펼쳐진다: 첫 줄 1 · 2 · 3, 둘째 줄 4 · 5 · 6, 셋째 줄 7 · 8 · 9(그림의 세 단과 같은 자리) */
+    rows.settle7 = buildRow({ id: 'settle7', name: '정착지', desc: '누르면 건물 아홉 채가 펼쳐져요' }, function () { campGridOpen = !campGridOpen; sfx('tab'); render(); });
+    rows.settleGrid = el('div', 'camp-grid'); rows.settleGrid.id = 'camp-grid'; rows.settleGrid.hidden = true; rows.settleTiles = {};
+    C.SETTLE.slice().sort(function (a, b) { return a.row - b.row || a.col - b.col; }).forEach(function (d, k) { var b = el('button', ''), nm = el('b', '', ''), lv = el('span', 'lv', ''), nd = el('small', '', ''); b.type = 'button'; b.id = 'st-' + d.id; b.appendChild(el('i', '', String(k + 1))); b.appendChild(nm); b.appendChild(lv); b.appendChild(nd); b.addEventListener('click', function () { if (campPlaceFn) campPlaceFn(d.id); }); rows.settleGrid.appendChild(b); rows.settleTiles[d.id] = { btn: b, name: nm, lv: lv, need: nd }; });
     rows.camp = {}; C.CAMP_ROWS.forEach(function (d) { rows.camp[d.id] = buildRow({ id: d.id, name: d.name, desc: d.desc }, function () { buy(C.buyCampRow(state, d.id), 'route'); }); $('rows-z6').appendChild(rows.camp[d.id].btn); });
-    C.SETTLE.slice().sort(function (a, b) { return a.col - b.col || a.row - b.row; }).forEach(function (d) { $('rows-z6').appendChild(rows.settle7[d.id].btn); });
+    $('rows-z6').appendChild(rows.settle7.btn); $('rows-z6').appendChild(rows.settleGrid);
     $('serum').addEventListener('click', function () {
       var r = C.buySerum(state);
       if (!r.ok) return;
@@ -2830,7 +2833,7 @@
    */
   var CAMP_PX = [50, 94, 138], CAMP_FL = [58, 88, 118], CAMP_W = 38, CAMP_H = 30, CAMP_COL = ['#7fb85a', '#6aaede', '#e98a3c'], CAMP_SIDE = ['서쪽 문', '동쪽 벽', '남쪽 비탈'];
   var CAMP_DIGIT = [['###', '#.#', '#.#', '#.#', '###'], ['.#.', '##.', '.#.', '.#.', '###'], ['###', '..#', '###', '#..', '###'], ['###', '..#', '###', '..#', '###'], ['#.#', '#.#', '###', '..#', '..#'], ['###', '#..', '###', '..#', '###'], ['###', '#..', '###', '#.#', '###'], ['###', '..#', '..#', '..#', '..#'], ['###', '#.#', '###', '#.#', '###'], ['###', '#.#', '###', '..#', '###']];
-  var campPlaceFn = null, campRescueFn = null, sc0 = 0, campBacks = {}, campWalk = [], campFlash = null, campPopFn = null, campNightAt = 0, campWasNight = false, campTmp = null, campNC = {};
+  var campGridOpen = false, campPlaceFn = null, campRescueFn = null, sc0 = 0, campBacks = {}, campWalk = [], campFlash = null, campPopFn = null, campNightAt = 0, campWasNight = false, campTmp = null, campNC = {};
   function campPlot(d) { return { x: CAMP_PX[d.col], by: CAMP_FL[d.row] }; }
   /** 달빛 아래의 색: 채도를 빼고 푸르게 가라앉힌다. '#rrggbb' 만 바꾼다(반투명 색은 그대로). */
   function campNight(c) { if (c.charAt(0) !== '#' || c.length !== 7) return c; if (campNC[c]) return campNC[c]; var r = parseInt(c.substr(1, 2), 16), gg = parseInt(c.substr(3, 2), 16), b = parseInt(c.substr(5, 2), 16), l = r * 0.3 + gg * 0.5 + b * 0.2; return (campNC[c] = 'rgb(' + Math.round((r * 0.45 + l * 0.55) * 0.34 + 6) + ',' + Math.round((gg * 0.45 + l * 0.55) * 0.4 + 10) + ',' + Math.round((b * 0.45 + l * 0.55) * 0.62 + 26) + ')'); }
@@ -3716,10 +3719,12 @@
       var sRate = C.survivorRate(state);
       renderCamp();
       var free7 = C.settleFree(state), flag7 = C.campOf(state).flag;
-      C.SETTLE.forEach(function (d) { var r8 = rows.settle7[d.id], why8 = C.settleBlock(state, d.id), shown = why8 !== 'prev' && why8 !== 'locked', lv8 = C.settleLv(state, d.id), need8 = C.settleNeed(state, d.id), left8 = need8 - C.settleWork(state, d.id), brk8 = C.settleBroken(state, d.id);
-        if (r8.btn.hidden !== !shown) r8.btn.hidden = !shown; if (!shown) return;
-        setText(r8.count, 'Lv ' + lv8); setText(r8.info, brk8 ? '부서졌어요 · 고치기' : lv8 > 0 ? lv8 + '단계 → ' + (lv8 + 1) + '단계' : '짓기');
-        setText(r8.cost, fmt(left8) + '명'); r8.btn.disabled = !(free7 >= 1) || !(need8 > 0); afford(r8.cost, free7 >= 1 ? 0 : Infinity); r8.btn.classList.toggle('flagged', flag7 === d.id); });
+      /* 정착지 한 줄: 건물 수와 단계의 합. 펼치면 아홉 칸(아직 열리지 않은 칸은 ???) */
+      var lvSum = C.settleLevels(state); setText(rows.settle7.count, C.settleCount(state) + ' / ' + C.SETTLE.length); setText(rows.settle7.info, '단계 합 ' + lvSum + ' · 일할 생존자 ' + fmt(free7) + '명'); setText(rows.settle7.cost, campGridOpen ? '접기' : '펼치기'); rows.settle7.btn.disabled = false; rows.settle7.btn.classList.toggle('open', campGridOpen);
+      if (rows.settleGrid.hidden !== !campGridOpen) rows.settleGrid.hidden = !campGridOpen;
+      if (campGridOpen) C.SETTLE.forEach(function (d) { var t8 = rows.settleTiles[d.id], why8 = C.settleBlock(state, d.id), hid = why8 === 'prev' || why8 === 'locked', lv8 = C.settleLv(state, d.id), need8 = C.settleNeed(state, d.id), left8 = need8 - C.settleWork(state, d.id), brk8 = C.settleBroken(state, d.id);
+        setText(t8.name, hid ? HID : d.name); setText(t8.lv, hid ? '' : brk8 ? '부서짐' : 'Lv ' + lv8); setText(t8.need, hid ? HID : fmt(left8) + '명');
+        t8.btn.disabled = hid || !(free7 >= 1) || !(need8 > 0); var cls8 = (flag7 === d.id ? 'flagged ' : '') + (brk8 ? 'broken ' : '') + (hid ? 'hid' : ''); if (t8.btn.className !== cls8) t8.btn.className = cls8; });
       C.CAMP_ROWS.forEach(function (d) { var r7 = rows.camp[d.id], lv7 = C.campRow(state, d.id), c7 = C.campRowCost(state, d.id), pct = function (v) { return Math.round(v * 100) + '%'; };
         var now7 = d.id === 'cart' ? '무리 +' + pct(C.CART_STEP * lv7) : d.id === 'wall7' ? '더디게 +' + pct(C.WALL7_STEP * lv7) : '세울 수 −' + pct(1 - Math.pow(1 - C.ARMS_STEP, lv7)), nx7 = d.id === 'cart' ? '+' + pct(C.CART_STEP * (lv7 + 1)) : d.id === 'wall7' ? '+' + pct(C.WALL7_STEP * (lv7 + 1)) : '−' + pct(1 - Math.pow(1 - C.ARMS_STEP, lv7 + 1));
         setText(r7.count, 'Lv ' + lv7 + ' / ' + d.max); setText(r7.info, now7 + (isFinite(c7) ? ' → ' + nx7 : '')); setText(r7.cost, isFinite(c7) ? '×1 ' + fmt(c7) : '최대'); r7.btn.disabled = !(c7 <= state.supplies); afford(r7.cost, c7); r7.btn.classList.toggle('row-max', !isFinite(c7)); });
