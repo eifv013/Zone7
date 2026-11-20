@@ -444,8 +444,8 @@
     { id: 'fence',   zone: 3, name: '철조망',    desc: '무리가 다가오는 걸음 -8%', key: 'hordespeed', per: -0.08, baseCost: 2e18, growth: 4, max: 5 },
     { id: 'horn',    zone: 3, name: '경적',      desc: '열차마다 경적을 한 번 더 울릴 수 있다(돌진을 막는다)', key: 'horn', per: 1, baseCost: 8e18, growth: 300, max: 2 },
     { id: 'coupler', zone: 3, name: '튼튼한 연결기', desc: '무리에 닿아도 뒤쪽 3분의 1만 떼인다', key: 'keepmore', per: 1, baseCost: 5e20, growth: 1, max: 1 },
-    { id: 'cooler',  zone: 4, name: '냉각기',    desc: '절정이 1초 더 오래간다',   key: 'peak',    per: 1,    baseCost: 3e23, growth: 30, max: 3 },
-    { id: 'sterile', zone: 4, name: '살균기',    desc: '타 버린 관에서 15%p 더 건진다', key: 'sterile', per: 0.15, baseCost: 2e23, growth: 20, max: 3 },
+    { id: 'cooler',  zone: 4, name: '냉장 상자',  desc: '혈청을 2대 더 쌓아 둘 수 있다',   key: 'peak',    per: 1,    baseCost: 3e23, growth: 30, max: 3 },
+    { id: 'sterile', zone: 4, name: '진정제',    desc: '변하는 줄이 15% 느리게 찬다', key: 'sterile', per: 0.15, baseCost: 2e23, growth: 20, max: 3 },
     { id: 'notes',   zone: 4, name: '연구 노트', desc: '연구 성과에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
     { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 1.5e27, growth: 2.4, max: 40 },
     { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 5e27, growth: 6,   max: 4 },
@@ -469,7 +469,8 @@
     { id: 'autoline', zone: 2, name: '조립공', desc: '상자가 차면 가장 많이 쌓인 것을 합치고, 다 모인 의뢰를 넘긴다', key: 'autoline', per: 1, baseCost: 2e12, growth: 40, max: 5 },
     { id: 'autosig', zone: 3, name: '역무원',  desc: '꽉 차거나 무리가 가까워지면 알아서 보낸다', key: 'autosig', per: 1, baseCost: 1.5e20, growth: 1, max: 1 },
     // 5·6·7구역의 자동(1.5.1): 단추는 알아서 눌러 주고, 사건은 알아서 받되 절반만 받는다(손으로 하는 쪽이 더 번다)
-    { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '시험관이 타기 전에 알아서 거둔다 · 손으로 절정에 거두는 것보다 적게 받는다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
+    { id: 'autolab',   zone: 4, name: '연구 조교',  desc: '혈청을 알아서 만든다', key: 'autolab',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
+    { id: 'nurse',   zone: 4, name: '간호사',   desc: '가장 급한 사람에게 알아서 한 대 놓는다(멈추기만 한다)', key: 'nurse',   per: 1, baseCost: 5e24, growth: 1, max: 1 },
     { id: 'autoguard', zone: 5, name: '초소장',     desc: '순찰을 알아서 돌고, 행렬을 알아서 통과시킨다(절반)', key: 'autoguard', per: 1, baseCost: 5e28, growth: 1, max: 1 },
     { id: 'autotower', zone: 6, name: '송신 기사',  desc: '주파수를 알아서 맞추고, 무전에 알아서 응답한다(절반)', key: 'autotower', per: 1, baseCost: 5e31, growth: 1, max: 1 }
   ];
@@ -533,7 +534,7 @@
       { id: 'z4c', text: '화물로 번 물자 누적 10해', need: 1e21, value: function (s) { return s.railEarned; } } ],
     [ { id: 'z5a', text: '연구원 28명', need: 28, value: function (s) { return s.staff; } },
       { id: 'z5b', text: '연구 성과 10번 고르기', need: 10, value: function (s) { return s.projectsDone; } },
-      { id: 'z5c', text: '절정에서 20번 거두기', need: 20, value: function (s) { return s.peaksRun || 0; } } ],
+      { id: 'z5c', text: '사람 20명 되돌리기', need: 20, value: function (s) { return s.curesRun || 0; } } ],
     [ { id: 'z6a', text: '초소 28곳', need: 28, value: function (s) { return s.posts; } },
       { id: 'z6b', text: '6구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 5); } },
       { id: 'z6c', text: '통행 물자 누적 5,000자', need: 5e27, value: function (s) { return s.guardEarned; } } ],
@@ -577,7 +578,7 @@
       trains: 0, routes: {}, routeClock: {}, routeLoad: {}, railEarned: 0, expressRuns: 0, railFlow: true, railV: 2, plat: { t: 0, bank: 0, pos: 1, horn: 0, rush: 0, warn: 0, hand: 0 }, pullsRun: 0, hornsRun: 0, trainsSent: 0, longRuns: 0, hordeHits: 0,
       greenCool: 0,                    // 청신호를 다시 켤 수 있을 때까지 남은 시간
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
-      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, tubes: [], labEarned: 0, peaksRun: 0, burntRun: 0, harvestsRun: 0, fansRun: 0, boilsRun: 0, chainBest: 0, labChain: { n: 0, left: 0 }, labV: 2,
+      staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0 }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, serumTaps: 0, labV: 3,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
       ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
@@ -719,19 +720,28 @@
     s.sweepClock = clamp(safeNum(raw.sweepClock, 0), 0, SWEEP_AUTO_SECONDS);
     s.staff = Math.min(s.staff, COUNT_MAX);
     // 3.9.0 시험관
-    s.racks = clamp(safeCount(raw.racks), 0, TUBE_MAX - TUBE_BASE); s.reagent = clamp(safeCount(raw.reagent), 0, REAGENT_MAX);
-    s.tubes = []; (Array.isArray(raw.tubes) ? raw.tubes : []).slice(0, TUBE_MAX).forEach(function (t) { t = t && typeof t === 'object' ? t : {}; s.tubes.push({ t: clamp(safeNum(t.t, 0), 0, 600), age: clamp(safeNum(t.age, 0), 0, 600), r: clamp(safeNum(t.r, 1), 0.5, 1.5), heat: clamp(safeNum(t.heat, 0), 0, 9) }); });
-    s.boilsRun = clamp(safeCount(raw.boilsRun), 0, 1e12); s.chainBest = clamp(safeCount(raw.chainBest), 0, 99); var rlc = raw.labChain && typeof raw.labChain === 'object' ? raw.labChain : {}; s.labChain = { n: clamp(safeCount(rlc.n), 0, 99), left: clamp(safeNum(rlc.left, 0), 0, 60) };
-    s.labEarned = clamp(safeNum(raw.labEarned, 0), 0, 1e300); s.peaksRun = clamp(safeCount(raw.peaksRun), 0, 1e12); s.burntRun = clamp(safeCount(raw.burntRun), 0, 1e12); s.harvestsRun = clamp(safeCount(raw.harvestsRun), 0, 1e12); s.fansRun = clamp(safeCount(raw.fansRun), 0, 1e12);
-    /* 옛 저장(labV 2 미만): 없앤 개조 '현미경'에 쓴 물자만큼 시약 등급과 시험관을 사 준 것으로 한다(시약 먼저, 그보다 훨씬 싼 동안은 시험관도). 내민 과제는 둘로 줄인다 */
-    if (raw.labV !== 2 && s.zone >= 4) {
+    s.racks = clamp(safeCount(raw.racks), 0, SEAT_MAX - SEAT_BASE); s.reagent = clamp(safeCount(raw.reagent), 0, REAGENT_MAX);
+    s.labEarned = clamp(safeNum(raw.labEarned, 0), 0, 1e300);
+    s.curesRun = clamp(safeCount(raw.curesRun), 0, 1e12); s.stopsRun = clamp(safeCount(raw.stopsRun), 0, 1e12); s.turnedRun = clamp(safeCount(raw.turnedRun), 0, 1e12); s.dosesRun = clamp(safeCount(raw.dosesRun), 0, 1e12); s.serumTaps = clamp(safeCount(raw.serumTaps), 0, 1e12);
+    var rw = raw.ward && typeof raw.ward === 'object' ? raw.ward : {};
+    s.ward = { seats: [], stock: clamp(safeCount(rw.stock), 0, 40), make: clamp(safeNum(rw.make, 0), 0, 1), nurse: clamp(safeNum(rw.nurse, 0), 0, 1), stun: 0 };
+    (Array.isArray(rw.seats) ? rw.seats : []).slice(0, SEAT_MAX).forEach(function (p) {
+      p = p && typeof p === 'object' ? p : {};
+      if (typeof p.dose === 'number' && p.dose >= 0) s.ward.seats.push({ m: clamp(safeNum(p.m, 0), 0, 0.999), dose: clamp(safeCount(p.dose), 0, WARD_DOSES - 1), r: clamp(safeNum(p.r, 1), 0.5, 1.5), look: clamp(safeCount(p.look), 0, 999), stay: clamp(safeNum(p.stay, 0), 0, 60) });
+      else s.ward.seats.push({ wait: clamp(safeNum(p.wait, WARD_ARRIVE), 0, 30) });
+    });
+    /* 옛 저장 옮기기.
+       labV 2 미만(3.9.0 이전): 없앤 개조 '현미경'에 쓴 물자만큼 시약 등급을 사 준 것으로 한다.
+       labV 3 미만(4.0.2 이전, 시험관 시절): 시험관 수(racks, 최대 8)는 의자 수(최대 4)로 줄이고 남는 것은 시약 등급으로 돌린다.
+         자동이 둘로 나뉘었으니, 연구 조교가 있던 저장에는 간호사도 준다(자동으로 돌던 구역이 멈추지 않게). */
+    if (raw.labV !== 2 && raw.labV !== 3 && s.zone >= 4) {
       var rup5 = raw.upgrades && typeof raw.upgrades === 'object' ? raw.upgrades : {}, n5 = clamp(safeCount(rup5.scope), 0, 40), bud5 = n5 > 0 ? seriesCost(1e23, 2.4, 0, n5) : 0;
-      for (var g5 = 0; g5 < 40; g5++) {
-        var rc5 = s.racks < TUBE_MAX - TUBE_BASE ? RACK_COST * Math.pow(RACK_GROWTH, s.racks) : Infinity, gc5 = s.reagent < REAGENT_MAX ? REAGENT_COST * Math.pow(REAGENT_GROWTH, s.reagent) : Infinity;
-        if (rc5 <= bud5 && rc5 < gc5 / 3) { s.racks++; bud5 -= rc5; } else if (gc5 <= bud5) { s.reagent++; bud5 -= gc5; } else if (rc5 <= bud5) { s.racks++; bud5 -= rc5; } else break;
-      }
+      for (var g5 = 0; g5 < 40 && s.reagent < REAGENT_MAX; g5++) { var gc5 = REAGENT_COST * Math.pow(REAGENT_GROWTH, s.reagent); if (gc5 <= bud5) { s.reagent++; bud5 -= gc5; } else break; }
     }
-    s.labV = 2;
+    if (raw.labV !== 3) {
+      var extra5 = clamp(safeCount(raw.racks), 0, 8) - (SEAT_MAX - SEAT_BASE); if (extra5 > 0) s.reagent = Math.min(REAGENT_MAX, s.reagent + Math.ceil(extra5 / 2));
+    }
+    s.labV = 3;
     s.posts = clamp(safeCount(raw.posts), 0, COUNT_MAX); s.guardEarned = Math.max(0, safeNum(raw.guardEarned, 0)); s.safeNights = clamp(safeCount(raw.safeNights), 0, 1e9);
     if (s.zone < 5) { s.posts = 0; }
     s.antennas = s.zone >= 6 ? clamp(safeCount(raw.antennas), 0, COUNT_MAX) : 0; s.survivors = s.zone >= 6 ? clamp(safeNum(raw.survivors, 0), 0, 1e15) : 0;
@@ -812,6 +822,7 @@
     s.longRuns = clamp(safeCount(raw.longRuns), 0, 1e12); s.hordeHits = clamp(safeCount(raw.hordeHits), 0, 1e12);
     s.trainsSent = clamp(safeCount(raw.trainsSent), 0, 1e12);
     s.upgrades = counts(UPGRADES, raw.upgrades, function (u) { return u.max; });
+    if (raw.labV !== 3 && (s.upgrades.autolab || 0) > 0) s.upgrades.nurse = 1;      // 4.0.3: 자동이 둘로 나뉘었다. 연구 조교가 있던 저장에는 간호사도 준다
     s.perks = counts(PERKS, raw.perks, 999);
     s.traits = counts(TRAITS, raw.traits, function (t) { return t.max; });
     s.siegeNights = clamp(safeCount(raw.siegeNights), 0, 99);
@@ -908,8 +919,8 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
-    var ADD = { peak: 1, sterile: 1, horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
+    var m = { prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, autosig: 0, rumor: 0 };
+    var ADD = { peak: 1, sterile: 1, horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, nurse: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
         var lv = levels[d.id] || 0;
@@ -1650,7 +1661,7 @@
    */
   function autoShare(state, zone) { return state.zone > zone ? 1 : Math.min(1, AUTO_SHARE + mods(state).autoshare); }
   var AUTO_SHARE = 0.5;
-  function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && mods(state)[AUTO_KEYS[zone]] > 0; }
+  function autoOn(state, zone) { return zone >= 0 && zone < AUTO_KEYS.length && (mods(state)[AUTO_KEYS[zone]] > 0 || (zone === 4 && (state.upgrades.nurse || 0) > 0)); }      // 4.0.3: 5구역은 자동이 둘(연구 조교 · 간호사). 하나만 있어도 켜진 것으로 본다
   /**
    * 그 구역의 주문·의뢰·사건을 자동에 맡겼는가(1.5.3). 자동 개조가 있어도 구역마다 끌 수 있다(state.autoOff[구역 index]).
    * 손으로 하면 더 받는 것들이라, 지금 붙어서 하는 구역은 끄고 싶을 수 있다. 전력 투입·청신호·순찰조처럼 늘 도는 자동은 이 스위치와 상관없다.
@@ -1989,103 +2000,101 @@
     return { id: who.id, name: who.name, first: first };
   }
   /*
-   * ---------- 3.9.0 5구역을 새로 만들었다: 혈청 달이기 ----------
-   * 왜: 전에는 연구원을 사 두면 점수가 저절로 쌓이고, 쌓이면 과제 셋 중 하나를 골랐다. 그 사이에 손이 할 일이 '밤샘 연구' 단추 하나뿐이었다.
-   *   기준은 "간단하다 · 누르는 재미 · 보는 재미 · 선택의 긴장감", 그리고 "모든 구역에서 손이 쉬지 않는다".
-   * 판:   실험대에 시험관이 tubeCount 개 놓여 있고, 불 위에서 혈청이 달여진다. 시험관마다 익는 빠르기가 달라서 제각각 익는다.
-   *       색이 단계마다 변한다: 1 붉음 → 2 주홍 → 3 주황 → 4 노랑 → 5 금빛(절정). 절정은 peakSeconds 동안이고, 넘기면 타 버린다.
-   * 손(3.9.7 에 바뀜: 덜 익은 관은 누르면 불을 올리고, 절정 · 탄 관만 거둔다. 아래는 처음 설계):   시험관을 누르면 불을 끄고 거둔다. 그 관이 달여진 시간만큼의 약품(물자)과 연구 점수를 받는데, 단계가 높을수록 곱이 크다(TUBE_MULTS).
-   *       절정에 거두면 2배, 3단계에서 거두면 1배(화면의 '초당'과 같다), 타 버린 관은 닦으면서 조금만 건진다(TUBE_BURNT).
-   *       여러 관이 따로 익어가니 계속 볼 것이 있고, "지금 딸까, 절정까지 기다릴까"를 관마다 고른다.
-   * 갈림길: 연구 점수가 차면 과제 둘 가운데 하나를 고른다(전에는 셋이었고 다시 뽑기가 있었다). 고르면 다음 갈림길이 열린다.
-   * 줄:   연구원(값) · 시험관(개수, 실험대에 바로 놓인다) · 시약 등급(레벨마다 2배).
-   * 개조: 냉각기(절정이 오래간다) · 살균(타도 더 건진다) · 연구 노트 · 기숙사 · 문서고 열쇠 · 연구 조교(자동).
-   * 자동(3.9.4): 연구 조교는 절정이 거의 끝날 때(TUBE_AUTO_LATE) 타기 직전에 거둔다. 서툴러서 TUBE_AUTO_MULT 배만 받는다(손으로 절정에 거두면 2배).
-   *   3.9.2 에서는 3단계에서 거뒀는데, 그러면 시험관이 금빛이 되기 전에 다 비워져서 조교를 사고 나면 손이 할 일이 없었다. 가만히 둠 < 조교 < 손.
+   * ---------- 4.0.3 5구역을 다시 만들었다: 여섯 대 ----------
+   * 왜: 시험관을 눌러 거두는 5구역(3.9.2~4.0.2)은 결과가 뻔했다. 금빛이 되면 누르면 끝이라 고를 것이 없었다.
+   *     이야기의 규칙을 그대로 놀이로 옮긴다: "혈청 한 대는 변하는 것을 멈추기만 하고, 여섯 대를 맞아야 사람으로 되돌아온다."
+   * 그림: 병실에 의자가 seatCount 개 있고, 물린 사람이 와서 앉는다. 사람마다 '변하는 줄'이 차오른다(turnSeconds 초, 사람마다 조금씩 다르다).
+   * 손:   ① 냉장 상자를 누르면 혈청이 빨리 만들어진다(한 번에 SERUM_TAP 대만큼). ② 사람을 누르면 혈청 한 대를 놓는다.
+   *       첫 한 대: 변하는 줄이 멈추고 한 대의 값을 받는다. 여섯 대째: 사람으로 돌아오고 WARD_CURE 대의 값을 받는다(한 대씩 여섯에게 나눠 주는 것의 두 배).
+   *       혈청은 늘 모자라다. 급한 사람들을 한 대씩 멈춰 둘지, 한 사람에게 몰아서 되돌릴지를 고른다. 몰아 주는 동안 다른 사람이 변할 수 있다.
+   *       변하는 줄이 다 찰 때까지 한 대도 못 맞은 사람은 변해서 나간다(받는 것 없음). 멈춘 사람은 WARD_STAY 초 뒤에 자리를 비운다(맞을 때마다 다시 센다).
+   * 자동: 둘이다. 연구 조교(autolab)는 혈청을 만든다(serumSeconds 초에 한 대). 간호사(nurse)는 한 대도 못 맞은 가장 급한 사람에게 한 대를 놓는다.
+   *       간호사는 멈추기만 한다. 되돌리는 것은 손뿐이다. 둘 다 있으면 초당 수입 그대로(1배), 손으로 되돌리면 그 두 배까지.
+   * 값:   한 대의 값 = 약품 초당(labRate) × SERUM_SECONDS. 연구 점수도 같은 식(researchRate).
+   * 줄:   연구원(값) · 의자(자리 수, 값도 그만큼) · 시약 등급(2배씩). 개조: 냉장 상자(쌓아 두는 수) · 진정제(변하는 줄이 느리게) · 연구 조교 · 간호사.
    */
-  var TUBE_BASE = 4, TUBE_MAX = 12, TUBE_STAGE_SECONDS = 4, TUBE_PEAK_SECONDS = 4, TUBE_BURNT_SECONDS = 10, TUBE_MULTS = [0, 0.4, 0.7, 1, 1.4, 2], TUBE_BURNT = 0.25, TUBE_AUTO_STAGE = 3, TUBE_AUTO_MULT = 1.25, TUBE_AUTO_LATE = 0.75, TUBE_FAN = 0.8, TUBE_RICH = 1, TUBE_HEAT_MAX = 4, TUBE_COOL_SECONDS = 1.5, CHAIN_SECONDS = 3, CHAIN_STEP = 0.1, CHAIN_MAX = 10, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
-  var RACK_COST = 2e23, RACK_GROWTH = 6, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
-  function tubeCount(state) { return clamp(TUBE_BASE + Math.floor(safeNum(state.racks, 0)), TUBE_BASE, TUBE_MAX); }
-  function peakSeconds(state) { return TUBE_PEAK_SECONDS + mods(state).peak; }
-  function tubesOf(state) {
-    if (!Array.isArray(state.tubes)) state.tubes = [];
-    var n = tubeCount(state);
-    while (state.tubes.length < n) state.tubes.push({ t: 0, age: 0, r: 0.8 + (state.tubes.length * 7 % 5) * 0.1, heat: 0 });      // 처음 놓일 때는 관마다 빠르기를 조금씩 다르게
-    if (state.tubes.length > n) state.tubes.length = n;
-    return state.tubes;
+  var SEAT_BASE = 4, SEAT_MAX = 8, SERUM_SECONDS = 4, SERUM_CAP = 6, SERUM_CAP_STEP = 2, SERUM_TAP = 0.12, TURN_SECONDS = 20, TURN_BREAK = 2, TURN_STUN = 1.2, WARD_DOSES = 6, WARD_CURE = 12, WARD_STAY = 12, WARD_STAY_ONE = 5, WARD_ARRIVE = 2, NURSE_SECONDS = 2, NURSE_FROM = 0.5, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
+  var RACK_COST = 2e23, RACK_GROWTH = 30, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
+  function seatCount(state) { return clamp(SEAT_BASE + Math.floor(safeNum(state.racks, 0)), SEAT_BASE, SEAT_MAX); }
+  function serumCap(state) { return SERUM_CAP + SERUM_CAP_STEP * mods(state).peak; }
+  function turnSeconds(state) { return TURN_SECONDS * (1 + mods(state).sterile); }
+  function serumSeconds(state) { return SERUM_SECONDS * assistFactor(state); }
+  function nurseOn(state) { return (state.upgrades.nurse || 0) > 0 && autoEvents(state, 4); }
+  function newWard() { return { seats: [], stock: 0, make: 0, nurse: 0, stun: 0 }; }
+  function wardOf(state) {
+    var w = state.ward; if (!w || typeof w !== 'object' || !Array.isArray(w.seats)) w = state.ward = newWard();
+    var n = seatCount(state); while (w.seats.length < n) w.seats.push({ wait: WARD_ARRIVE * (0.3 + 0.35 * w.seats.length) }); if (w.seats.length > n) w.seats.length = n;
+    return w;
   }
-  /** 관 하나의 단계: 1~4 익는 중, 5 절정, 6 탔다. */
-  function tubeStage(state, tube) {
-    var t = tube && tube.t >= 0 ? tube.t : 0, grow = TUBE_STAGE_SECONDS * 4;
-    if (t < grow) return 1 + Math.floor(t / TUBE_STAGE_SECONDS);
-    return t < grow + peakSeconds(state) ? 5 : 6;
-  }
-  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab * recordMult(state) * tubeCount(state) / TUBE_BASE : 0; }
-  function rackCost(state) { return zoneOpen(state, 4) && tubeCount(state) < TUBE_MAX ? Math.ceil(RACK_COST * Math.pow(RACK_GROWTH, state.racks || 0) * mods(state).cost * mods(state).staffcost) : Infinity; }
-  function buyRack(state) { if (!zoneOpen(state, 4)) return fail('locked'); return pay(state, rackCost(state), function () { state.racks = (state.racks || 0) + 1; tubesOf(state); }); }
+  function doseValue(state) { return labRate(state) * SERUM_SECONDS; }
+  function researchRate(state) { return zoneOpen(state, 4) ? state.staff * milestoneMult(state.staff) * mods(state).lab * recordMult(state) * seatCount(state) / SEAT_BASE : 0; }
+  function rackCost(state) { return zoneOpen(state, 4) && seatCount(state) < SEAT_MAX ? Math.ceil(RACK_COST * Math.pow(RACK_GROWTH, state.racks || 0) * mods(state).cost * mods(state).staffcost) : Infinity; }
+  function buyRack(state) { if (!zoneOpen(state, 4)) return fail('locked'); return pay(state, rackCost(state), function () { state.racks = (state.racks || 0) + 1; wardOf(state); }); }
   function reagentCost(state) { return zoneOpen(state, 4) && (state.reagent || 0) < REAGENT_MAX ? Math.ceil(REAGENT_COST * Math.pow(REAGENT_GROWTH, state.reagent || 0) * mods(state).cost * mods(state).staffcost) : Infinity; }
   function buyReagent(state) { if (!zoneOpen(state, 4)) return fail('locked'); return pay(state, reagentCost(state), function () { state.reagent = (state.reagent || 0) + 1; }); }
-  /** 관 하나를 지금 거두면 받는 것 { stage, mult, gain 물자, points 연구 점수 }. */
-  function tubeYield(state, i) {
-    var tubes = tubesOf(state), tube = tubes[i];
-    if (!tube) return { stage: 0, mult: 0, gain: 0, points: 0 };
-    /* 3.9.8 누르기만 하던 것에 고를 것을 셋 넣었다.
-       ① 농축: 절정은 오래 둘수록 진해진다(2배에서 시작해 타기 직전에 2 + TUBE_RICH 배). 지금 거둘지, 조금 더 둘지.
-       ② 과열: 한 관의 불을 연달아 올리면 열이 쌓이고(TUBE_COOL_SECONDS 초에 하나씩 식는다), TUBE_HEAT_MAX 를 넘기면 끓어 넘쳐 타 버린다. 한 관만 두드릴 수 없다.
-       ③ 연속: CHAIN_SECONDS 초 안에 절정을 잇달아 거두면 하나마다 CHAIN_STEP 씩 더 받는다. 불을 올려 여러 관의 때를 맞출 까닭이 생긴다 */
-    var st = tubeStage(state, tube), rich = st === 5 ? TUBE_RICH * clamp((tube.t - TUBE_STAGE_SECONDS * 4) / peakSeconds(state), 0, 1) : 0, mult = st === 6 ? TUBE_BURNT + mods(state).sterile : TUBE_MULTS[st] + rich, n = tubes.length;
-    return { stage: st, mult: mult, gain: labRate(state) / n * tube.age * mult, points: researchRate(state) / n * tube.age * mult };
+  /** 냉장 상자를 두드린다: 혈청이 SERUM_TAP 대만큼 더 만들어진다. 가득 차 있으면 소용없다. */
+  function tapSerum(state) {
+    if (!zoneOpen(state, 4)) return fail('locked');
+    if (!(state.staff > 0)) return fail('stopped');
+    var w = wardOf(state);
+    if (w.stun > 0) return fail('stun');
+    if (w.stock >= serumCap(state)) return fail('full');
+    w.make += SERUM_TAP; state.serumTaps = (state.serumTaps || 0) + 1;
+    var made = 0; while (w.make >= 1 && w.stock < serumCap(state)) { w.make -= 1; w.stock++; made++; }
+    return { ok: true, made: made, stock: w.stock };
   }
-  function resetTube(tube, rng) { tube.t = 0; tube.age = 0; tube.r = 0.75 + (typeof rng === 'function' ? rng() : Math.random()) * 0.5; }
-  function harvestTube(state, i, rng, auto) {
+  /** i번째 의자의 사람에게 한 대 놓는다. auto: 간호사가 놓았다(횟수에 안 든다). */
+  function injectSeat(state, i, auto) {
     if (!zoneOpen(state, 4)) return fail('locked');
     if (!(state.staff > 0)) return fail('stopped');
     i = Math.floor(safeNum(i, -1));
-    var tubes = tubesOf(state), tube = tubes[i];
-    if (!tube) return fail('empty');
-    /* 3.9.7 불 올리기: 아직 덜 익은 관(1~4단계)을 손으로 누르면 거두지 않고 불을 올린다(TUBE_FAN 초만큼 더 달여진다).
-       전에는 덜 익은 관을 눌러도 거둬졌는데, 덜 익었을 때 거둘 까닭이 없으니 절정을 기다리는 동안 손이 놀았다. 이제는 기다리는 대신 불을 올린다 */
-    if (!auto && tubeStage(state, tube) <= 4) {
-      var grow0 = TUBE_STAGE_SECONDS * 4, add = Math.min(TUBE_FAN, grow0 - tube.t);
-      tube.heat = (tube.heat || 0) + 1; state.fansRun = (state.fansRun || 0) + 1;
-      if (tube.heat > TUBE_HEAT_MAX) { tube.t = grow0 + peakSeconds(state); tube.heat = 0; state.boilsRun = (state.boilsRun || 0) + 1; return { ok: true, at: i, fan: true, boil: true, stage: 6, peak: false, burnt: true, gain: 0, points: 0 }; }      // 끓어 넘쳤다
-      tube.t += add; tube.age += add;
-      return { ok: true, at: i, fan: true, heat: tube.heat, stage: tubeStage(state, tube), peak: false, burnt: false, gain: 0, points: 0 };
-    }
-    var y = tubeYield(state, i);
-    if (auto === 'aide') { var am = TUBE_AUTO_MULT / (y.mult || 1); y = { stage: y.stage, mult: TUBE_AUTO_MULT, gain: y.gain * am, points: y.points * am }; }      // 조교가 거둔 것: 단계와 상관없이 조교의 몫
-    var chain = 0;
-    if (!auto && y.stage === 5) {      // 연속 절정
-      var lc = state.labChain || (state.labChain = { n: 0, left: 0 }); lc.n = lc.left > 0 ? Math.min(CHAIN_MAX, lc.n + 1) : 0; lc.left = CHAIN_SECONDS; chain = lc.n;
-      var cm = 1 + CHAIN_STEP * chain; y = { stage: y.stage, mult: y.mult * cm, gain: y.gain * cm, points: y.points * cm }; if (chain > (state.chainBest || 0)) state.chainBest = chain;
-    }
-    if (y.gain > 0) { earn(state, y.gain); state.labEarned = (state.labEarned || 0) + y.gain; }
-    state.points += y.points;
-    if (y.stage === 5 && !auto) state.peaksRun = (state.peaksRun || 0) + 1;      // 절정 횟수(목표)는 손으로 잡은 것만 센다
-    if (y.stage === 6 && auto !== 'aide') state.burntRun = (state.burntRun || 0) + 1;
-    if (!auto) state.harvestsRun = (state.harvestsRun || 0) + 1;
-    resetTube(tube, rng); tube.heat = 0;
-    return { ok: true, at: i, chain: chain, mult: y.mult, stage: y.stage, peak: y.stage === 5, burnt: y.stage === 6, gain: y.gain, points: y.points, auto: !!auto };
+    var w = wardOf(state), p = w.seats[i];
+    if (w.stun > 0 && !auto) return fail('stun');
+    if (!p || !(p.dose >= 0)) return fail('empty');
+    if (!(w.stock >= 1)) return fail('nostock');
+    w.stock--; p.dose++; p.stay = p.dose === 1 ? WARD_STAY_ONE : WARD_STAY;      // 한 대만 맞은 사람은 금방 자리를 비우고, 되돌리는 중인 사람은 더 기다려 준다
+    var mult = p.dose === 1 ? 1 : p.dose >= WARD_DOSES ? WARD_CURE - 1 : 0, gain = doseValue(state) * mult, points = researchRate(state) * SERUM_SECONDS * mult;
+    if (gain > 0) { earn(state, gain); state.labEarned = (state.labEarned || 0) + gain; }
+    state.points += points;
+    var out = { ok: true, at: i, dose: p.dose, stop: p.dose === 1, cure: p.dose >= WARD_DOSES, gain: gain, points: points, auto: !!auto };
+    if (!auto) state.dosesRun = (state.dosesRun || 0) + 1;
+    if (out.stop) state.stopsRun = (state.stopsRun || 0) + 1;
+    if (out.cure) { state.curesRun = (state.curesRun || 0) + 1; w.seats[i] = { wait: WARD_ARRIVE }; }
+    return out;
   }
-  /** 시험관의 시간을 흘린다. 절정에 닿으면 더 달여지지 않는다(받을 것이 더 늘지 않는다). 탄 관은 TUBE_BURNT_SECONDS 뒤에 저절로 비워진다. */
-  function stepTubes(state, dt, rng, events) {
+  function stepWard(state, dt, rng, events) {
     if (!zoneOpen(state, 4) || !(state.staff > 0)) return;
     dt = safeNum(dt, 0); if (!(dt > 0)) return;
-    var tubes = tubesOf(state), auto = autoEvents(state, 4), grow = TUBE_STAGE_SECONDS * 4, peak = peakSeconds(state), steps = Math.min(600, Math.ceil(dt)), h = Math.min(dt, steps) / steps, rest = dt - h * steps;
-    if (state.labChain && state.labChain.left > 0) state.labChain.left = Math.max(0, state.labChain.left - dt);
+    var w = wardOf(state), auto = autoEvents(state, 4), aide = auto && (state.upgrades.autolab || 0) > 0, nurse = nurseOn(state), roll = typeof rng === 'function' ? rng : Math.random;
+    if (dt > 5) {      // 굵은 걸음(자리 비움 등): 하나하나 세지 않는다. 조교와 간호사가 다 있어야 돌아간다
+      if (aide && nurse) { var flat = labRate(state) * dt; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; state.points += researchRate(state) * dt; }
+      w.seats = []; w.make = 0; w.nurse = 0; wardOf(state); return;
+    }
+    var steps = Math.max(1, Math.ceil(dt / 0.25)), h = dt / steps, turn = turnSeconds(state), cap = serumCap(state);
+    if (w.stun > 0) w.stun = Math.max(0, w.stun - dt);
     for (var k = 0; k < steps; k++) {
-      for (var i = 0; i < tubes.length; i++) {
-        var tube = tubes[i], was = tubeStage(state, tube);
-        if (tube.heat > 0) tube.heat = Math.max(0, tube.heat - h / TUBE_COOL_SECONDS);
-        if (tube.t < grow) tube.age += Math.min(h, (grow - tube.t) / tube.r);      // 절정에 닿는 걸음까지만 달여진 시간으로 친다
-        tube.t += h * tube.r;
-        var st = tubeStage(state, tube);
-        if (st === 5 && was < 5 && events && k === steps - 1) events.push({ type: 'tube-peak', at: i });
-        if (auto && tube.t >= grow + peak * TUBE_AUTO_LATE) { var r = harvestTube(state, i, rng, 'aide'); if (events && k >= steps - 2) { r.type = 'tube-auto'; events.push(r); } }
-        else if (st === 6 && tube.t >= grow + peak + TUBE_BURNT_SECONDS) { var b = harvestTube(state, i, rng, true); if (events && k >= steps - 2) { b.type = 'tube-burnt'; events.push(b); } }
+      if (aide && w.stock < cap) { w.make += h / serumSeconds(state); while (w.make >= 1 && w.stock < cap) { w.make -= 1; w.stock++; } }
+      if (w.stock >= cap) w.make = Math.min(w.make, 0.999);
+      for (var i = 0; i < w.seats.length; i++) {
+        var p = w.seats[i];
+        if (!(p.dose >= 0)) { p.wait -= h; if (p.wait <= 0) { w.seats[i] = { m: 0, dose: 0, r: 0.75 + roll() * 0.5, look: Math.floor(roll() * 1000), stay: 0 }; if (events) events.push({ type: 'ward-in', at: i }); } continue; }
+        if (p.dose === 0) { p.m += h / turn * p.r; if (p.m >= 1) {
+          /* 변했다(벌칙): 변한 사람이 달려들어 냉장 상자의 혈청을 TURN_BREAK 대 깨뜨리고, TURN_STUN 초 동안 아무것도 누를 수 없다(화면 가득 달려든다).
+             굵은 걸음이 아닐 때만 일어나니, 자리를 비운 동안에는 벌칙이 없다 */
+          var broke = Math.min(w.stock, TURN_BREAK); w.stock -= broke; w.stun = TURN_STUN; w.seats[i] = { wait: WARD_ARRIVE + TURN_STUN }; state.turnedRun = (state.turnedRun || 0) + 1;
+          if (events) events.push({ type: 'ward-turned', at: i, broke: broke, look: p.look });
+        } }
+        else { p.stay -= h; if (p.stay <= 0) { w.seats[i] = { wait: WARD_ARRIVE }; if (events) events.push({ type: 'ward-out', at: i }); } }
+      }
+      if (nurse) {
+        w.nurse += h / (NURSE_SECONDS * assistFactor(state));
+        if (w.nurse >= 1) {
+          var pick = -1; w.seats.forEach(function (q, qi) { if (q.dose === 0 && q.m >= NURSE_FROM && (pick < 0 || q.m > w.seats[pick].m)) pick = qi; });      // 줄이 절반 넘게 찬 사람만(그 전에는 혈청을 손에 남겨 둔다)
+          if (pick >= 0 && w.stock >= 1) { w.nurse -= 1; var r = injectSeat(state, pick, true); if (events) { r.type = 'ward-nurse'; events.push(r); } }
+          else w.nurse = 1;
+        }
       }
     }
-    if (rest > 0) { var flat = labRate(state) * rest; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; state.points += researchRate(state) * rest; }
   }
   /** 지금 과제 하나를 끝내는 데 드는 점수. 어느 과제를 고르든 같다. */
   function projectCost(state) { return Math.ceil(PROJECT_BASE * Math.pow(PROJECT_GROWTH, state.projectsDone) * mods(state).labcost); }
@@ -2366,7 +2375,7 @@
    */
   function labRate(state) {
     if (!zoneOpen(state, 4) || !(state.staff > 0)) return 0;
-    return state.staff * milestoneMult(state.staff) * LAB_VALUE * LAB_SCALE * mods(state).lab * globalMult(state) * tubeCount(state) / TUBE_BASE * Math.pow(REAGENT_STEP, state.reagent || 0);
+    return state.staff * milestoneMult(state.staff) * LAB_VALUE * LAB_SCALE * mods(state).lab * globalMult(state) * seatCount(state) / SEAT_BASE * Math.pow(REAGENT_STEP, state.reagent || 0);
   }
   function productionPerSec(state) { return searchRate(state) + tradeRate(state) + lineRate(state) + railRate(state) + labRate(state) + guardRate(state); }
   /** 직접 수색의 실제 배수: 수색 배수가 두 배가 될 때마다 1씩 는다(누르기가 방치를 압도하지 않게). */
@@ -2466,7 +2475,7 @@
       { id: 'z4c2', text: '4구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 3); } } ],
     [ { id: 'z5a2', text: '5구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 4); } },
       { id: 'z5b2', text: '병원 서류 3장 찾기', need: 3, value: function (s) { return s.recordsRun; } },
-      { id: 'z5c2', text: '시험관 8개', need: 8, value: function (s) { return tubeCount(s); } } ],
+      { id: 'z5c2', text: '의자 6개', need: 6, value: function (s) { return seatCount(s); } } ],
     [ { id: 'z6a2', text: '방어 수단 합계 200개', need: 200, value: function (s) { return defenseCount(s); } },
       { id: 'z6b2', text: '검문대 7단계', need: 7, value: function (s) { return s.upgrades.booth || 0; } },
       null ],
@@ -3885,7 +3894,7 @@
     stepTune(state, dt, rng, events);      // 7구역 주파수(3.1.0): 바늘이 움직이고, 송신 기사가 있으면 알아서 맞춘다
     var guard = guardRate(state) * dt * pushFactor(state, 'guard', dt);      // 6구역 통행 물자(순찰 중이면 더 많이)
     if (guard > 0) { earn(state, guard); state.guardEarned += guard; }
-    stepTubes(state, dt, rng, events);      // 5구역(3.9.0): 약품과 연구 점수는 시험관을 거둘 때 들어온다
+    stepWard(state, dt, rng, events);      // 5구역(3.9.0): 약품과 연구 점수는 시험관을 거둘 때 들어온다
     if (state.surgeLeft > 0 || state.surgeCool > 0) {
       var wasOn = state.surgeLeft > 0;
       state.surgeLeft = Math.max(0, state.surgeLeft - dt); state.surgeCool = Math.max(0, state.surgeCool - dt);
@@ -3966,7 +3975,7 @@
     if (elapsed >= 60) state.plat = newPlat();
     // 5구역 연구: 점수도 자리 비움 효율로 모인다
     report.points = researchRate(state) * counted * rate;      // 3.9.0: 자리를 비운 동안은 조교가 3단계에서 거둔 것으로 친다(약품도 위에서 labRate 로 쳤다)
-    if (elapsed >= 60 && Array.isArray(state.tubes)) state.tubes.forEach(function (t, ti) { t.t = 0; t.age = 0; t.r = 0.8 + (ti * 7 % 5) * 0.1; });
+    if (elapsed >= 60) { state.ward = newWard(); wardOf(state); }      // 자리를 비운 사이 병실은 새로 찬다
     state.points += report.points;
     state.awaySeconds += counted; state.runSeconds += counted;
     var clock = state.dayClock + counted, nights = Math.floor(clock / DAY_SECONDS);
@@ -4083,8 +4092,8 @@
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
-    TUBE_BASE: TUBE_BASE, TUBE_MAX: TUBE_MAX, TUBE_STAGE_SECONDS: TUBE_STAGE_SECONDS, TUBE_PEAK_SECONDS: TUBE_PEAK_SECONDS, TUBE_BURNT_SECONDS: TUBE_BURNT_SECONDS, TUBE_MULTS: TUBE_MULTS, TUBE_BURNT: TUBE_BURNT, TUBE_AUTO_STAGE: TUBE_AUTO_STAGE, TUBE_AUTO_MULT: TUBE_AUTO_MULT, TUBE_FAN: TUBE_FAN, TUBE_RICH: TUBE_RICH, TUBE_HEAT_MAX: TUBE_HEAT_MAX, TUBE_COOL_SECONDS: TUBE_COOL_SECONDS, CHAIN_SECONDS: CHAIN_SECONDS, CHAIN_STEP: CHAIN_STEP, CHAIN_MAX: CHAIN_MAX, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    tubeCount: tubeCount, peakSeconds: peakSeconds, tubesOf: tubesOf, tubeStage: tubeStage, tubeYield: tubeYield, harvestTube: harvestTube, stepTubes: stepTubes, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
+    seatCount: seatCount, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
