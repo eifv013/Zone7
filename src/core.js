@@ -93,7 +93,7 @@
   var STAFF_COST = 3e22;           // 첫 연구원의 값
   var LAB_VALUE = 2e18;            // 연구원 한 명이 초당 만드는 약품의 값(개조와 전체 배수를 곱하기 전)
   var STAFF_GROWTH = 1.25;         // 연구원을 한 명 더 뽑을 때마다 값이 오르는 배수
-  var PROJECT_BASE = 60;           // 첫 연구 과제에 드는 연구 점수
+  var PROJECT_BASE = 8, PROJECT_STEP = 2;      // 4.0.4: 연구 성과는 '놓은 혈청 수'로 찬다. 첫 성과는 8대, 그 뒤로 2대씩 늘어난다
   var PROJECT_GROWTH = 1.8;        // 과제를 하나 끝낼 때마다 다음 과제의 점수가 오르는 배수
   var OFFER_COUNT = 2;             // 한 번에 내미는 과제 수(3.9.0: 갈림길. 둘 가운데 하나)
   var REROLL_SHARE = 0.25;         // 과제를 다시 뽑는 데 드는 점수: 지금 과제 값의 이 비율
@@ -446,7 +446,7 @@
     { id: 'coupler', zone: 3, name: '튼튼한 연결기', desc: '무리에 닿아도 뒤쪽 3분의 1만 떼인다', key: 'keepmore', per: 1, baseCost: 5e20, growth: 1, max: 1 },
     { id: 'cooler',  zone: 4, name: '냉장 상자',  desc: '혈청을 2대 더 쌓아 둘 수 있다',   key: 'peak',    per: 1,    baseCost: 3e23, growth: 30, max: 3 },
     { id: 'sterile', zone: 4, name: '진정제',    desc: '변하는 줄이 15% 느리게 찬다', key: 'sterile', per: 0.15, baseCost: 2e23, growth: 20, max: 3 },
-    { id: 'notes',   zone: 4, name: '연구 노트', desc: '연구 성과에 드는 점수 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
+    { id: 'notes',   zone: 4, name: '연구 노트', desc: '연구 성과에 드는 혈청 -5%',   key: 'labcost', per: -0.05, baseCost: 3e23, growth: 3.5, max: 10 },
     { id: 'booth',   zone: 5, name: '검문대',    desc: '통행 물자 +25%',         key: 'z6',      per: 0.25, baseCost: 1.5e27, growth: 2.4, max: 40 },
     { id: 'lamp',    zone: 5, name: '탐조등',    desc: '다리 안전도 상한 +0.5',  key: 'margin',  per: 0.5,  baseCost: 5e27, growth: 6,   max: 4 },
     { id: 'amp',     zone: 6, name: '증폭기',    desc: '생존자가 모이는 속도 +25%', key: 'z7',    per: 0.25, baseCost: 1.5e30, growth: 2.4, max: 40 },
@@ -2013,7 +2013,7 @@
    * 값:   한 대의 값 = 약품 초당(labRate) × SERUM_SECONDS. 연구 점수도 같은 식(researchRate).
    * 줄:   연구원(값) · 의자(자리 수, 값도 그만큼) · 시약 등급(2배씩). 개조: 냉장 상자(쌓아 두는 수) · 진정제(변하는 줄이 느리게) · 연구 조교 · 간호사.
    */
-  var SEAT_BASE = 4, SEAT_MAX = 8, SERUM_SECONDS = 4, SERUM_CAP = 6, SERUM_CAP_STEP = 2, SERUM_TAP = 0.12, TURN_SECONDS = 20, TURN_BREAK = 2, TURN_STUN = 1.2, WARD_DOSES = 6, WARD_CURE = 12, WARD_STAY = 12, WARD_STAY_ONE = 5, WARD_ARRIVE = 2, NURSE_SECONDS = 2, NURSE_FROM = 0.5, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
+  var SEAT_BASE = 4, SEAT_MAX = 6, SERUM_SECONDS = 4, SERUM_CAP = 6, SERUM_CAP_STEP = 2, SERUM_TAP = 0.12, TURN_SECONDS = 16, TURN_BREAK = 2, TURN_STUN = 1.2, WARD_DOSES = 6, WARD_CURE = 12, WARD_STAY = 12, WARD_STAY_ONE = 5, WARD_ARRIVE = 2, NURSE_SECONDS = 2, NURSE_FROM = 0.7, REAGENT_STEP = 2, REAGENT_MAX = 10, LAB_SCALE = 1;
   var RACK_COST = 2e23, RACK_GROWTH = 30, REAGENT_COST = 5e23, REAGENT_GROWTH = 14;
   function seatCount(state) { return clamp(SEAT_BASE + Math.floor(safeNum(state.racks, 0)), SEAT_BASE, SEAT_MAX); }
   function serumCap(state) { return SERUM_CAP + SERUM_CAP_STEP * mods(state).peak; }
@@ -2053,7 +2053,7 @@
     if (!p || !(p.dose >= 0)) return fail('empty');
     if (!(w.stock >= 1)) return fail('nostock');
     w.stock--; p.dose++; p.stay = p.dose === 1 ? WARD_STAY_ONE : WARD_STAY;      // 한 대만 맞은 사람은 금방 자리를 비우고, 되돌리는 중인 사람은 더 기다려 준다
-    var mult = p.dose === 1 ? 1 : p.dose >= WARD_DOSES ? WARD_CURE - 1 : 0, gain = doseValue(state) * mult, points = researchRate(state) * SERUM_SECONDS * mult;
+    var mult = p.dose === 1 ? 1 : p.dose >= WARD_DOSES ? WARD_CURE - 1 : 0, gain = doseValue(state) * mult, points = recordMult(state);      // 연구 성과: 한 대에 1(서류가 늘려 준다)
     if (gain > 0) { earn(state, gain); state.labEarned = (state.labEarned || 0) + gain; }
     state.points += points;
     var out = { ok: true, at: i, dose: p.dose, stop: p.dose === 1, cure: p.dose >= WARD_DOSES, gain: gain, points: points, auto: !!auto };
@@ -2067,7 +2067,7 @@
     dt = safeNum(dt, 0); if (!(dt > 0)) return;
     var w = wardOf(state), auto = autoEvents(state, 4), aide = auto && (state.upgrades.autolab || 0) > 0, nurse = nurseOn(state), roll = typeof rng === 'function' ? rng : Math.random;
     if (dt > 5) {      // 굵은 걸음(자리 비움 등): 하나하나 세지 않는다. 조교와 간호사가 다 있어야 돌아간다
-      if (aide && nurse) { var flat = labRate(state) * dt; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; state.points += researchRate(state) * dt; }
+      if (aide && nurse) { var flat = labRate(state) * dt; earn(state, flat); state.labEarned = (state.labEarned || 0) + flat; state.points += dt / SERUM_SECONDS * recordMult(state); }
       w.seats = []; w.make = 0; w.nurse = 0; wardOf(state); return;
     }
     var steps = Math.max(1, Math.ceil(dt / 0.25)), h = dt / steps, turn = turnSeconds(state), cap = serumCap(state);
@@ -2097,7 +2097,12 @@
     }
   }
   /** 지금 과제 하나를 끝내는 데 드는 점수. 어느 과제를 고르든 같다. */
-  function projectCost(state) { return Math.ceil(PROJECT_BASE * Math.pow(PROJECT_GROWTH, state.projectsDone) * mods(state).labcost); }
+  /*
+   * 4.0.4 연구 성과에 드는 것을 바꿨다. 전에는 '연구 점수'가 시간에 따라 쌓이고 값은 번번이 1.8배가 되어서,
+   *   스무 번쯤 고르고 나면 다음 것까지 하염없이 기다려야 했다(누를 것도 없이). 이제는 혈청을 한 대 놓을 때마다 1씩 찬다(손이든 간호사든).
+   *   값은 조금씩만 는다(8, 10, 12 …). 서른 번째도 66대, 손으로 하면 2~3분이다. 서류(recordMult)는 한 대에 차는 양을 늘린다.
+   */
+  function projectCost(state) { return Math.ceil((PROJECT_BASE + PROJECT_STEP * state.projectsDone) * mods(state).labcost); }
   function rerollCost(state) { return Math.ceil(projectCost(state) * REROLL_SHARE); }
   /** 과제 OFFER_COUNT 개를 겹치지 않게 뽑는다. */
   /*
@@ -3974,7 +3979,7 @@
     if (railAway > 0) { earn(state, railAway); state.railEarned += railAway; report.gain += railAway; report.trains = Math.floor(counted / (carSeconds(state) * AUTO_CARS)); state.trainsSent = (state.trainsSent || 0) + report.trains; }
     if (elapsed >= 60) state.plat = newPlat();
     // 5구역 연구: 점수도 자리 비움 효율로 모인다
-    report.points = researchRate(state) * counted * rate;      // 3.9.0: 자리를 비운 동안은 조교가 3단계에서 거둔 것으로 친다(약품도 위에서 labRate 로 쳤다)
+    report.points = (state.upgrades.autolab || 0) > 0 && (state.upgrades.nurse || 0) > 0 && zoneOpen(state, 4) && state.staff > 0 ? counted * rate / SERUM_SECONDS * recordMult(state) : 0;      // 4.0.4: 자리를 비운 동안에도 조교와 간호사가 혈청을 놓은 만큼 연구 성과가 찬다
     if (elapsed >= 60) { state.ward = newWard(); wardOf(state); }      // 자리를 비운 사이 병실은 새로 찬다
     state.points += report.points;
     state.awaySeconds += counted; state.runSeconds += counted;
@@ -4088,7 +4093,7 @@
     TRAIN_VALUE: TRAIN_VALUE, TRAIN_COST: TRAIN_COST, TRAIN_GROWTH: TRAIN_GROWTH, TRAIN_MAX: TRAIN_MAX, ROUTE_GROWTH: ROUTE_GROWTH, ROUTE_SLOTS: ROUTE_SLOTS, ROUTE_MAX: ROUTE_MAX,
     FLEET_MILESTONES: FLEET_MILESTONES, ROUTES: ROUTES, fleetMilestone: fleetMilestone, trainCost: trainCost, maxTrains: maxTrains, buyTrain: buyTrain,
     routeCost: routeCost, buyRoute: buyRoute, tripSeconds: tripSeconds, railPlan: railPlan, cargoValue: cargoValue, railRate: railRate,
-    LAB_VALUE: LAB_VALUE, labRate: labRate, STAFF_COST: STAFF_COST, STAFF_GROWTH: STAFF_GROWTH, PROJECT_BASE: PROJECT_BASE, PROJECT_GROWTH: PROJECT_GROWTH, OFFER_COUNT: OFFER_COUNT,
+    LAB_VALUE: LAB_VALUE, labRate: labRate, STAFF_COST: STAFF_COST, STAFF_GROWTH: STAFF_GROWTH, PROJECT_BASE: PROJECT_BASE, PROJECT_STEP: PROJECT_STEP, PROJECT_GROWTH: PROJECT_GROWTH, OFFER_COUNT: OFFER_COUNT,
     REROLL_SHARE: REROLL_SHARE, SUPPLY_DROP_SECONDS: SUPPLY_DROP_SECONDS, PROJECTS: PROJECTS,
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,

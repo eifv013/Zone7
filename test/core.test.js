@@ -812,13 +812,13 @@ test('연구: 과제를 끝내면 점수를 쓰고 효과가 곱으로 쌓이며
   assert.equal(s.points, 0);
   assert.equal(s.projectsDone, 1);
   near(C.searchRate(s), before * 2);
-  assert.equal(C.projectCost(s), Math.ceil(C.PROJECT_BASE * C.PROJECT_GROWTH));
+  assert.equal(C.projectCost(s), C.PROJECT_BASE + C.PROJECT_STEP);
   assert.equal(s.offers.length, C.OFFER_COUNT, '과제 셋이 새로 나온다');
   s.offers = ['soil', 'drill', 'serum']; s.points = 1e9;
   C.runProject(s, 'soil', half);
   near(C.searchRate(s), before * 4);
   s.upgrades.notes = 2;
-  assert.equal(C.projectCost(s), Math.ceil(C.PROJECT_BASE * Math.pow(C.PROJECT_GROWTH, 2) * 0.95 * 0.95));
+  assert.equal(C.projectCost(s), Math.ceil((C.PROJECT_BASE + C.PROJECT_STEP * 2) * 0.95 * 0.95));
 });
 
 test('연구: 내밀지 않은 과제와 모르는 과제는 끝낼 수 없다', () => {
@@ -857,10 +857,11 @@ test('연구: 보급 요청은 효과가 남지 않고 물자를 바로 준다',
 });
 
 test('연구: 자리를 비운 동안에도 점수가 모인다', () => {
-  const s = inLab(); s.staff = 10; s.defenses.rail = 1e9;
+  const s = inLab(); s.staff = 10; s.defenses.rail = 1e9; s.upgrades.autolab = 1; s.upgrades.nurse = 1;      // 4.0.4: 조교와 간호사가 혈청을 놓은 만큼 찬다(4초에 한 대)
   const rep = C.applyOffline(s, 1000);
-  near(s.points, 20 * 1000 * C.OFFLINE_RATE);
+  near(s.points, 1000 * C.OFFLINE_RATE / C.SERUM_SECONDS);
   near(rep.points, s.points);
+  const no = inLab(); no.staff = 10; no.defenses.rail = 1e9; assert.equal(C.applyOffline(no, 1000).points, 0, '자동이 없으면 차지 않는다');
 });
 
 test('연구: 목표와 일지, 그리고 철수하면 연구가 사라진다', () => {
@@ -3014,7 +3015,7 @@ test('5구역 병실: 한 대면 멈추고 한 대의 값을, 여섯 대째에 �
   assert.equal(C.seatCount(s), 4); near(v, C.labRate(s) * C.SERUM_SECONDS);
   assert.equal(C.injectSeat(s, 0).reason, 'nostock');
   w.stock = 6; const sup = s.supplies, pts = s.points;
-  const a = C.injectSeat(s, 0); assert.ok(a.ok && a.stop && !a.cure); near(a.gain, v); near(s.supplies - sup, v); near(s.points - pts, C.researchRate(s) * C.SERUM_SECONDS); assert.equal(s.stopsRun, 1); assert.equal(w.stock, 5);
+  const a = C.injectSeat(s, 0); assert.ok(a.ok && a.stop && !a.cure); near(a.gain, v); near(s.supplies - sup, v); near(s.points - pts, 1, '연구 성과: 한 대에 1'); assert.equal(s.stopsRun, 1); assert.equal(w.stock, 5);
   for (let i = 2; i <= 5; i++) { const r = C.injectSeat(s, 0); assert.equal(r.dose, i); assert.equal(r.gain, 0, '사이의 대는 받는 것이 없다'); }
   w.stock = 1; const c = C.injectSeat(s, 0); assert.ok(c.cure); near(c.gain, v * (C.WARD_CURE - 1)); near(s.supplies - sup, v * C.WARD_CURE, '모두 합쳐 열두 대의 값'); assert.equal(s.curesRun, 1); assert.equal(s.dosesRun, 6);
   assert.ok(w.seats[0].wait > 0, '되돌아온 사람은 자리를 비운다');
@@ -3049,7 +3050,7 @@ test('5구역: 한 대도 못 맞으면 변한다. 변한 사람이 달려들어
 
 test('5구역 자동은 둘: 연구 조교는 혈청을 만들고, 간호사는 급한 사람을 멈춘다. 가만히 둠 < 둘 다 < 손', () => {
   const a = onWard(4); a.upgrades.autolab = 1; C.stepWard(a, C.SERUM_SECONDS + 0.1, calm, []); assert.equal(a.ward.stock, 1, '조교: 혈청 한 대'); assert.equal(a.stopsRun || 0, 0, '조교는 놓지 않는다');
-  const n = onWard(4); n.upgrades.nurse = 1; assert.ok(C.autoOn(n, 4), '간호사만 있어도 자동이 켜진 것으로 본다'); n.ward.stock = 2; n.ward.seats[1].m = 0.8; n.ward.seats[3].m = 0.2; const ev = [];
+  const n = onWard(4); n.upgrades.nurse = 1; assert.ok(C.autoOn(n, 4), '간호사만 있어도 자동이 켜진 것으로 본다'); n.ward.stock = 2; n.ward.seats[1].m = 0.75; n.ward.seats[3].m = 0.2; const ev = [];
   C.stepWard(n, C.NURSE_SECONDS + 0.1, calm, ev); const nv = ev.find((e) => e.type === 'ward-nurse'); assert.ok(nv && nv.at === 1 && nv.stop, '가장 급한 사람'); assert.equal(n.dosesRun || 0, 0, '손으로 놓은 횟수에 안 든다');
   assert.equal(n.ward.seats[3].dose, 0, '아직 덜 급한 사람은 두고 혈청을 남긴다'); assert.equal(n.ward.stock, 1);
   const off = onWard(4); off.upgrades.autolab = 1; off.upgrades.nurse = 1; C.setAutoEvents(off, 4, false); C.stepWard(off, C.SERUM_SECONDS * 2, calm, []); assert.equal(off.ward.stock, 0, '구역 자동을 끄면 둘 다 쉰다');
@@ -3078,8 +3079,8 @@ test('5구역 줄 · 연구 성과 · 저장 · 옛 저장 옮기기 · 자리 �
   const fixed = C.deserialize(JSON.stringify(raw), 0); assert.equal(fixed.racks, C.SEAT_MAX - C.SEAT_BASE); assert.equal(fixed.ward.stock, 0); assert.equal(fixed.ward.seats[0].dose, C.WARD_DOSES - 1); assert.equal(C.wardOf(fixed).seats.length, C.SEAT_MAX);
   // 옛 저장(시험관 시절): 시험관 수는 의자로, 남는 것은 시약 등급으로. 연구 조교가 있었으면 간호사도
   const old = JSON.parse(C.serialize(onWard(4))); old.labV = 2; delete old.ward; old.tubes = [{ t: 3, age: 3, r: 1 }]; old.racks = 8; old.reagent = 1; old.upgrades.autolab = 1; old.upgrades.cooler = 2;
-  const m = C.deserialize(JSON.stringify(old), 0); assert.equal(m.racks, 4); assert.equal(m.reagent, 3); assert.equal(m.upgrades.nurse, 1); assert.equal(m.upgrades.cooler, 2); assert.equal(m.tubes, undefined);
-  const again = C.deserialize(C.serialize(m), 0); assert.equal(again.reagent, 3, '한 번 옮긴 저장은 다시 옮기지 않는다');
+  const m = C.deserialize(JSON.stringify(old), 0); assert.equal(m.racks, C.SEAT_MAX - C.SEAT_BASE); assert.equal(m.reagent, 1 + Math.ceil((8 - (C.SEAT_MAX - C.SEAT_BASE)) / 2)); assert.equal(m.upgrades.nurse, 1); assert.equal(m.upgrades.cooler, 2); assert.equal(m.tubes, undefined);
+  const again = C.deserialize(C.serialize(m), 0); assert.equal(again.reagent, m.reagent, '한 번 옮긴 저장은 다시 옮기지 않는다');
   // 자리 비움: 조교와 간호사가 다 있으면 초당 그대로
   const away = onWard(4); away.defenses.rail = 1e5; away.upgrades.autolab = 1; away.upgrades.nurse = 1; const rate = C.labRate(away), sup = away.supplies; C.applyOffline(away, 1000); assert.ok(away.supplies - sup >= rate * 1000 * C.OFFLINE_RATE * 0.999);
   // 목표 · 철수

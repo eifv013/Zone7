@@ -373,28 +373,33 @@ def run_case(browser, name, size, state, mode):
             if not page.locator(up).count(): problems.append('새 줄이나 개조가 없다: ' + up)
         if not tap('#offer-0'): problems.append('연구 성과를 고를 수 없다')
         if page.get_attribute('#lab', 'data-forks') != '1': problems.append('연구 성과를 골랐는데 횟수가 안 오른다')
-        if not page.is_disabled('#offer-0'): problems.append('점수가 모자란데 연구 성과 단추가 켜져 있다')
+        for _ in range(12):      # 가진 만큼 다 고르고 나면 단추가 꺼져야 한다
+            if page.is_disabled('#offer-0'): break
+            tap('#offer-0')
+        if not page.is_disabled('#offer-0'): problems.append('혈청 수가 모자란데 연구 성과 단추가 켜져 있다')
         if not tap('#row-staff'): problems.append('연구원을 뽑을 수 없다')
         tap('[data-qty="10"]'); tap('#row-staff'); tap('[data-qty="1"]')
         if not fits(): problems.append('한 화면에 들어오지 않는다(5구역)')
         seats = lambda: (page.get_attribute('#labscene', 'data-seats') or '').split(',')
         def ward_xy(i):      # i < 0 이면 냉장 상자, 아니면 i번째 의자의 화면 자리
-            n = len(seats()); bx = page.locator('#labscene').bounding_box(); fx = 19 if i < 0 else 44 + 136 / n * (i + 0.5)
+            n = len(seats()); bx = page.locator('#labscene').bounding_box(); fx = 184 / n * (i + 0.5)
             return bx['x'] + bx['width'] * fx / 184, bx['y'] + bx['height'] * 0.62
         page.wait_for_timeout(3200)
         if len(seats()) != 4 or not any(v == '0' for v in seats()): problems.append('연구원을 뽑았는데 사람이 오지 않는다: %s' % seats())
         if not page.evaluate("(() => { const c = document.getElementById('labscene'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size >= 14; })()"): problems.append('병실 그림이 비어 있다')
         lb = page.locator('#labscene').bounding_box()
         if lb['height'] < 130 or lb['width'] < 250: problems.append('병실 그림이 너무 작다: %s' % lb)
-        # 손가락으로 상자를 빠르게 열 번: 열 번 다 먹히고 혈청이 한 대 생긴다
-        page.evaluate("""(pt) => new Promise((done) => { const el = document.getElementById('labscene'); let k = 0;
-          const one = () => { const x = pt[0], y = pt[1];
-            const mk = (type) => { const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y }); el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [t], changedTouches: [t] })); };
-            mk('touchstart'); mk('touchend'); el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y })); if (++k < 10) setTimeout(one, 70); else done(); };
-          one(); })""", list(ward_xy(-1)))
+        if lb['width'] / len(seats()) < 48: problems.append('한 사람의 누르는 자리가 좁다: %d' % (lb['width'] / len(seats())))
+        sbx = page.locator('#serum-btn').bounding_box()
+        if not sbx or sbx['height'] < 44 or sbx['width'] < 250: problems.append('혈청 만들기 단추가 작다: %s' % sbx)
+        # 손가락으로 혈청 만들기 단추를 빠르게 열 번: 열 번 다 먹히고 혈청이 한 대 생긴다
+        page.evaluate("""() => new Promise((done) => { const el = document.getElementById('serum-btn'), r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2; let k = 0;
+          const one = () => { const mk = (type) => { const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y }); el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [t], changedTouches: [t] })); };
+            mk('touchstart'); mk('touchend'); el.click(); if (++k < 10) setTimeout(one, 70); else done(); };
+          one(); })""")
         page.wait_for_timeout(300)
-        if int(page.get_attribute('#lab', 'data-taps') or 0) < 9: problems.append('상자를 열 번 두드렸는데 %s번만 먹혔다' % page.get_attribute('#lab', 'data-taps'))
-        if int(page.get_attribute('#labscene', 'data-stock') or 0) < 1: problems.append('상자를 두드렸는데 혈청이 안 생긴다')
+        if int(page.get_attribute('#lab', 'data-taps') or 0) < 9: problems.append('혈청 단추를 열 번 눌렀는데 %s번만 먹혔다' % page.get_attribute('#lab', 'data-taps'))
+        if int(page.get_attribute('#labscene', 'data-stock') or 0) < 1: problems.append('혈청 단추를 눌렀는데 혈청이 안 생긴다')
         who = next((i for i, v in enumerate(seats()) if v == '0'), -1)
         if who < 0: problems.append('놓을 사람이 없다: %s' % seats())
         else:
