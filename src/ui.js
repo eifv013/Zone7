@@ -4264,7 +4264,7 @@
     var r = bf.r, kind = C.PET_KINDS[r.breed.kind], sk = C.petSkillText(r.breed.id);
     bf.revealAt = bfNow(); bf.x = bf.tx = 58; bf.treat = null;
     for (var i = 0; i < 9; i++) bf.hearts.push({ x: 66 + (i % 3) * 4 - 4, y: 40, vx: (i - 4) * 5, vy: -18 - (i % 3) * 6 });
-    sfx('gopen' + ({ common: 0, fine: 1, rare: 2 }[r.rarity.id] || 0));
+    try { if (!(window.Sound && window.Sound.sample && window.Sound.sample(r.breed.kind === 'cat' ? 'cat' : 'dog'))) sfx('gopen' + ({ common: 0, fine: 1, rare: 2 }[r.rarity.id] || 0)); } catch (e) { /* 소리는 없어도 된다 */ }      // 4.5.6 고양이 · 강아지가 나타날 때 녹음한 울음소리(없으면 뽑기 소리)
     if (r.rarity.id === 'rare') buzz([30, 40, 30]);
     setText($('bf-msg'), r.dup ? r.breed.name + (C.hasBatchim(r.breed.name) ? '은' : '는') + ' 이미 친구예요' : r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 친구가 됐어요!');
     setText($('bf-sub'), r.rarity.name + ' · ' + kind.name + '\n' + (r.dup ? '항체 샘플 ' + fmt(r.refund) + ' 돌려받았어요' : '장착 ' + C.breedDesc(r.breed).split(' · ').pop() + (sk ? ' · 특기 ' + sk : '')));

@@ -28,7 +28,7 @@ VERSION="$(node -p "require('./package.json').version")"
 # 게임 파일 안에 끼워 넣은 것만 나간다. 그래서 음원은 이 작업 폴더에만 있고, 새로 받은 저장소에서 빌드하면 음악 없이 만들어진다.
 # .git 만 남기고 비운 뒤 다시 채운다(지운 파일이 저장소에 남지 않게).
 find "$REPO" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-tar -C "$SRC" --exclude=./dist --exclude=./node_modules --exclude='__pycache__' --exclude=./android/.gradle --exclude=./android/app/build --exclude='./assets/bgm/*.ogg' --exclude='./assets/bgm/*.mp3' --exclude='./assets/bgm/*.m4a' --exclude='./assets/bgm/*.wav' -cf - . | tar -C "$REPO" -xf -
+tar -C "$SRC" --exclude=./dist --exclude=./node_modules --exclude='__pycache__' --exclude=./android/.gradle --exclude=./android/app/build --exclude='./assets/bgm/*.ogg' --exclude='./assets/bgm/*.mp3' --exclude='./assets/bgm/*.m4a' --exclude='./assets/bgm/*.wav' --exclude='./assets/sfx/*.mp3' --exclude='./assets/sfx/*.ogg' --exclude='./assets/sfx/*.wav' -cf - . | tar -C "$REPO" -xf -
 mkdir -p "$REPO/docs" && cp -r "$SRC/dist/pwa/." "$REPO/docs/"
 touch "$REPO/docs/.nojekyll"     # GitHub Pages 가 파일을 가공하지 않고 그대로 내보내게 한다
 

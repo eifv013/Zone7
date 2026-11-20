@@ -34,6 +34,13 @@ try {
     if (bytes.length > 4 * 1024 * 1024) throw new Error(`음원 ${f} 이 4MB 를 넘습니다(${(bytes.length / 1048576).toFixed(1)}MB). 길이를 줄이거나 낮은 음질로 다시 뽑아 주세요.`);
     bgm[name] = `data:${bgmTypes[ext]};base64,${bytes.toString('base64')}`; bgmBytes += bytes.length;
   }
+  // 4.5.6 효과음 녹음(assets/sfx/cat · dog): 친구 만들기에서 고양이 · 강아지가 나타날 때. 없으면 빈 채로(소리 없이) 둔다
+  const sfx = {}, sfxDir = path.join(__dirname, 'assets', 'sfx');
+  if (fs.existsSync(sfxDir)) for (const f of fs.readdirSync(sfxDir).sort()) {
+    const ext = path.extname(f).toLowerCase(), name = path.basename(f, ext);
+    if (!bgmTypes[ext] || !['cat', 'dog'].includes(name) || sfx[name]) continue;
+    sfx[name] = `data:${bgmTypes[ext]};base64,${fs.readFileSync(path.join(sfxDir, f)).toString('base64')}`;
+  }
   // 음원을 만든 사람: assets/bgm/CREDIT.txt 의 첫 줄(설정에 보인다)
   const creditFile = path.join(bgmDir, 'CREDIT.txt');
   const bgmCredit = Object.keys(bgm).length && fs.existsSync(creditFile) ? fs.readFileSync(creditFile, 'utf8').split('\n')[0].trim().slice(0, 60) : '';
@@ -48,7 +55,7 @@ try {
   const artRe = /--art-boy: url\("data:image\/svg\+xml,[^"]*"\);/;
   if (!artRe.test(tpl)) throw new Error('template.html 에 --art-boy 의 처음 값이 없습니다.');
   const tplArt = tpl.replace(artRe, () => `--art-boy: url("data:image/svg+xml,${artSvg}");`);
-  const html = tplArt.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)}; window.ZONE7_BGM_CREDIT = ${JSON.stringify(bgmCredit)};`)
+  const html = tplArt.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)}; window.ZONE7_BGM_CREDIT = ${JSON.stringify(bgmCredit)}; window.ZONE7_SFX = ${JSON.stringify(sfx)};`)
     .replace('/*__BOOT__*/', () => read('boot.js'))
     .replace('/*__NOTES__*/', () => read('notes.js'))
     .replace('/*__FEEDBACK__*/', () => read('feedback.js'))
