@@ -3620,3 +3620,14 @@ test('광고 보상: 건너뛰기 · 출석 한 번 더는 하루 한 번, 철�
   s.runEarned = 1e25; const g0 = C.antibodiesOnRetreat(s); assert.ok(C.adReward(s, 'retreat', d).ok); assert.ok(C.antibodiesOnRetreat(s) >= Math.floor(g0 * 1.05)); assert.equal(C.adReward(s, 'retreat', d).reason, 'ready');
   const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.adRetreat, false); assert.equal(C.deserialize(C.serialize(n)).ad.day, d);
 });
+
+/* ---------- 4.8.6 외형 수집 보상 ---------- */
+test('외형 수집 보상: 수에 닿을 때마다 한 번씩, 100개에는 한정 우비', () => {
+  const s = fresh(); const pool = C.COSMETICS.filter(c => !c.base && !c.exclusive);
+  assert.equal(C.collectCount(s), 0); assert.deepEqual(C.collectCheck(s), []);
+  pool.slice(0, 10).forEach(c => { s.cosmetics[c.id] = true; });
+  const t0 = s.treats; const g = C.collectCheck(s); assert.equal(g.length, 1); assert.equal(s.treats, t0 + 50); assert.deepEqual(C.collectCheck(s), [], '두 번 주지 않는다');
+  pool.slice(0, 100).forEach(c => { s.cosmetics[c.id] = true; });
+  const g2 = C.collectCheck(s); assert.equal(g2.length, 4); assert.equal(s.cosmetics['coat-collector'], true); assert.equal(C.collectInfo(s).next, null);
+  assert.equal(C.deserialize(C.serialize(s)).collect, 5);
+});

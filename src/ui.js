@@ -2016,7 +2016,10 @@
     renderAttend(); renderStore(); renderPass();
     if (home) return;
     setText($('shop-count'), IC.ticket + state.tickets + ' · ' + IC.shard + state.shards + ' · ' + IC.treat + fmt(state.treats));
-    setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번');      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
+    /* 4.8.6 외형 수집 보상: 닿은 단계를 주고 알린다. 다음 단계까지를 뽑기 안내 아래에 적는다 */
+    C.collectCheck(state).forEach(function (t) { var gv = t.give; notice('외형 ' + t.n + '개를 모았어요!' + (gv.treats ? ' · ' + IC.treat + '+' + gv.treats : '') + (gv.tickets ? ' · ' + IC.ticket + '+' + gv.tickets : '') + (gv.cos ? '\n한정 외형 수집가 우비를 받았어요.' : '')); Store.save(); });
+    var ci = C.collectInfo(state), cn = ci.next;
+    setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번\n모은 외형 ' + ci.have + (cn ? ' · ' + cn.n + '개에 ' + (cn.give.cos ? '한정 우비' : (cn.give.treats ? IC.treat + cn.give.treats : '') + (cn.give.treats && cn.give.tickets ? ' ' : '') + (cn.give.tickets ? IC.ticket + cn.give.tickets : '')) : ' · 수집 보상을 다 받았어요'));      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
     $('gacha-pull').disabled = false;      // 4.4.1: 뽑기권이 없어도 기계는 열어 볼 수 있다(단추가 꺼진다)
     setText($('gacha-pull'), '뽑기 기계');
     $('ticket-buy').classList.toggle('short', !(state.treats >= C.TICKET_TREATS));      // 4.7.6 모자라도 눌린다(누르면 모자라다고 알려 준다). 모자란 동안은 흐리게만

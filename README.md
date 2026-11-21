@@ -1,4 +1,4 @@
-# 7구역 — 알파 4.8.5
+# 7구역 — 알파 4.8.6
 
 > **알파 0.6 부터 구조가 바뀌었다.** 지구(1-A ~ 7-Z)를 이주하던 규칙을 버리고, 구역이 쌓이고 철수로 항체 샘플을 얻는 구조로 새로 썼다.
 > 지금 규칙은 `src/core.js`, 예전 규칙과 화면·테스트·시뮬레이터는 `legacy/` 에 남겨 두었다(빌드에는 들어가지 않는다).
@@ -17,7 +17,7 @@ npm install
 npm run dist
 ```
 
-`release/` 폴더에 설치가 필요 없는 `7구역 4.8.5.exe` 가 생깁니다.
+`release/` 폴더에 설치가 필요 없는 `7구역 4.8.6.exe` 가 생깁니다.
 macOS 는 `npm run dist:mac`, Linux 는 `npm run dist:linux`. (각 OS 에서 실행해야 합니다.)
 
 빌드 전에 창으로 먼저 띄워 보려면 `npm start`.
@@ -75,6 +75,11 @@ macOS 는 `npm run dist:mac`, Linux 는 `npm run dist:linux`. (각 OS 에서 실
 - APK 는 `android/` 가 바뀔 때만 GitHub Actions(`.github/workflows/apk.yml`)가 다시 만든다.
 - 서명 키 `android/app/alpha.keystore` 는 공개 저장소에 든 알파 테스트용이다. 정식 배포 전에 GitHub Secrets 의 키로 바꿔야 하고, 그때는 앱을 지우고 다시 깔아야 한다.
 - 앱의 저장은 기기 안(웹뷰 localStorage)에만 있다. 앱을 지우면 사라지므로, 지우기 전에 기록 > 저장에서 내보내기 코드를 받아 둔다.
+
+## 나중에 할 일 (결제 · 광고)
+
+- 결제 연결 자리: 보급소의 결제 상품(간식 묶음 · 뽑기권 꾸러미 · 광고 제거)을 누르면 `window.ZONE7_PAY(상품, 끝났을때)` 를 부르게 한다. 광고(`window.ZONE7_AD`)와 같은 모양.
+- 실제 연결: Google Play 결제와 광고(AdMob 등). 판매자 계정 · 광고 계정은 직접 만든다.
 
 ## 뽑기 확률
 

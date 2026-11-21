@@ -633,6 +633,22 @@
     if (pose === 'search') return ['..............', '..............'].concat(rows).concat(['...bbb.bbb....']);      // 웅크린다: 몸을 두 칸 내리고 다리를 접는다
     return rows.concat(pose === 'walk' ? LARA_LEGS[step ? 1 : 0] : LARA_STAND);
   }
+  /*
+   * 4.8.6 우비 음영(시안): 빛은 왼쪽 위에서 온다. 후드 · 우비 줄마다 왼쪽 끝 한 칸은 밝게(Q · L), 오른쪽 끝 한 칸은 어둡게(Z · K).
+   *   우비 아랫단 한 줄은 어둡게(K). 손 · 얼굴 · 가방 칸은 건드리지 않는다.
+   */
+  var SHADE = { on: false };
+  function shadeRows(rows) {
+    return rows.map(function (row, r) {
+      var a = row.split(''), first = -1, last = -1, ch = r <= 7 ? 'y' : 'j';
+      for (var c = 0; c < a.length; c++) if (a[c] === ch) { if (first < 0) first = c; last = c; }
+      if (first < 0) return row;
+      if (r >= 2 && r <= 3) { a[first] = 'Q'; if (last > first) a[last] = 'Z'; }
+      else if (r >= 4 && r <= 7) { a[first] = 'Q'; if (last > first) a[last] = 'Z'; }
+      else if (r >= 8 && r <= 14) { if (r === 14) { for (var k = 0; k < a.length; k++) if (a[k] === 'j') a[k] = 'K'; } else { a[first] = 'L'; if (last > first) a[last] = 'K'; } }
+      return a.join('');
+    });
+  }
   /** 라라를 그린다. flip 이면 왼쪽을 본다. scale 은 한 칸의 크기. */
   function paintLara(ctx, x, y, scale, flip, look, pose, step) {
     if (!ctx) return false;
@@ -646,6 +662,8 @@
     var patCol2 = pat === 'camo' ? lerpColor(coat.j, '#ffffff', 0.35) : pat === 'flower' ? '#ffd95a' : pat === 'clover' ? '#3f8a3f' : patCol;      // 꽃 가운데는 노랑
     var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22', a: '#8a96a6', G: '#ffd95a', r: '#e0392b', T: '#c8a070' };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
+    if (SHADE.on && look.shade !== false) rows = shadeRows(rows);      // 4.8.6 우비 음영(시안)
+    pal.L = lerpColor(coat.j, '#ffffff', 0.28); pal.Q = lerpColor(coat.y, '#ffffff', 0.28); pal.K = darker(coat.j, 0.8); pal.Z = darker(coat.y, 0.8);
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
       if (ch === '.') continue;
@@ -1915,6 +1933,6 @@
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, colorNear: colorNear, skyAt: skyAt, dangerTier: dangerTier, dangerSky: dangerSky, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            paintPet: paintPet, petRows: petRows, PET_H: PET_H, PET_W: PET_W, paintPetBig: paintPetBig, PET_SPEC: PET_SPEC,
-           drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, paintLara: paintLara, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
+           drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, paintLara: paintLara, SHADE: SHADE, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });
