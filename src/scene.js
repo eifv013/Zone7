@@ -1596,7 +1596,9 @@
       var as = function (p, st) { var o = {}; for (var k in p) o[k] = p[k]; o.walk = moving; o.step = st; return o; };
       paintPet(ctx, f > 0 ? Math.round(h.x) - 10 - pw : Math.round(h.x) + 10, GROUND - PET_H, 1, f > 0, as(pet, step), (view.look && view.look.pet) || 'none', t);
       // 4.4.6 함께 장착한 다른 친구는 라라 앞에서 걷는다(옷은 데리고 다니는 아이만 입는다). 발은 반 박자 어긋나게
-      if (view.pet2) paintPet(ctx, f > 0 ? Math.round(h.x) + 12 : Math.round(h.x) - 12 - pw, GROUND - PET_H, 1, f > 0, as(view.pet2, 1 - step), 'none', t + 0.3);
+      // 4.6.2 밤에 거점에 서 있을 때는 라라 앞이 모닥불 자리라 불 위에 앉아 보였다. 그때는 둘 다 라라 뒤에 앉는다(다른 친구는 한 걸음 더 뒤)
+      var night2 = false; try { night2 = !moving && skyAt(view.t).dark > 0.35; } catch (e) { night2 = false; }
+      if (view.pet2) paintPet(ctx, night2 ? (f > 0 ? Math.round(h.x) - 12 - 2 * pw : Math.round(h.x) + 12 + pw) : (f > 0 ? Math.round(h.x) + 12 : Math.round(h.x) - 12 - pw), GROUND - PET_H, 1, f > 0, as(view.pet2, 1 - step), 'none', t + 0.3);
     }
     if (u.drone) {
       var qx = Math.round(h.x) + Math.round(Math.sin(t * 1.3) * 6) - 2, qy = GROUND - 24 + Math.round(Math.sin(t * 2.1) * 2);
