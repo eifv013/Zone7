@@ -358,7 +358,7 @@
           "반장은 철망을 잡고 흔들지 않았다. 그냥 서서 강 쪽을 보고 있었다. 내가 이름을 불렀다. 고개가 아주 천천히 돌아왔다. 입이 한 번 움직였다. 소리는 없었지만 나는 그 모양을 안다. {hero}. 그리고 내 노란 우비를 한참 봤다. 나는 그 눈이 나를 알아봤다고 지금도 생각한다.",
           "철망 사이로 반장의 손이 나와 내 왼쪽 소매를 잡았다. 망을 보던 사람들이 소리를 질렀다. 놈들은 산 사람을 잡으면 문다. 그런데 반장은 물지 않았다. 소매에 코를 대고 한참 있다가, 놓았다. 아무도 그 까닭을 묻지 않았고 나도 말하지 않았다.",
           "새벽에 무리가 움직이자 반장도 따라갔다. 선로 쪽으로. 열일곱 명 중에 몇이나 건넜을까. 나는 쪽지 뒷면의 이름 하나에 줄을 그었다. 선로를 따라가면 환승역이다."] }] },
-    { no: 4, name: '환승역', kind: 'rail', cost: 1e21, lead: '화물칸을 모아 열차를 보낸다',      /* 4.7.7 1e19 → 1e21: 3구역과 같은 날 열렸다 */
+    { no: 4, name: '환승역', kind: 'rail', cost: 3e20, lead: '화물칸을 모아 열차를 보낸다',      /* 4.7.7 1e19 → 1e21: 3구역과 같은 날 열렸다. 4.7.8 3e20 */
       story: [
         { title: "행선지", text: [
           "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
@@ -380,7 +380,7 @@
           "아저씨가 그건 신호라고 했다. 누가 거기서 손으로 켰다 껐다 하는 거라고. 녹음이 아니라 사람이라고.",
           "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. {student:이} 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
           "아무도 대답하지 못했다. 나는 방송의 목소리를 한 번 더 떠올렸다. 숨 쉴 틈 없이 말하는 여자. 엄마는 급할 때 그렇게 말한다. 그 생각은 입 밖에 내지 않았다. 다음 급행은 병원 앞까지 간다."] }] },
-    { no: 5, name: '대학 병원', kind: 'lab', cost: 2e25, lead: '남은 연구를 이어 가며 과제를 고른다',      /* 4.7.7 1.5e24 → 2e25 */
+    { no: 5, name: '대학 병원', kind: 'lab', cost: 8e24, lead: '남은 연구를 이어 가며 과제를 고른다',      /* 4.7.7 1.5e24 → 2e25. 4.7.8 8e24 */
       story: [
         { title: "감염내과, 7층", text: [
           "5구역. 응급실 문의 쇠사슬을 끊었다. 복도에 비상등이 깜박인다. 안내판의 화살표가 전부 한 곳을 가리킨다. 누가 매직으로 덧그려 놓았다. 감염내과, 7층.",
@@ -400,7 +400,7 @@
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
           "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
-    { no: 6, name: '강변 검문소', kind: 'guard', cost: 2e29, lead: '다리를 지키며 밀려오는 무리를 막는다',      /* 4.7.7 1.5e27 → 2e29: 5구역과 같은 날 열렸다 */
+    { no: 6, name: '강변 검문소', kind: 'guard', cost: 8e28, lead: '다리를 지키며 밀려오는 무리를 막는다',      /* 4.7.7 1.5e27 → 2e29: 5구역과 같은 날 열렸다. 4.7.8 8e28 */
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
@@ -418,7 +418,7 @@
           "새벽에 건너편에서 쇠 긁는 소리가 났다. 차단기가 올라가는 소리였다. 저쪽 차단기다. 절반쯤 올라가다 멈췄다.",
           "탐조등이 다리 한가운데를 비췄다. 버려진 버스 한 대가 가로로 서 있다. 그 지붕 위에 밧줄 뭉치가 놓여 있었다. 어제는 없던 것이다.",
           "아저씨가 말했다. “저쪽에서도 길을 내고 있는 거야. 우리가 여기서 버티는 걸 보고.” 나는 냉장 상자를 고쳐 멨다. 강은 넓고, 다리는 하나뿐이다."] }] },
-    { no: 7, name: '송신탑', kind: 'tower', cost: 5e31, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',      /* 4.7.7 1e31 → 5e31 */
+    { no: 7, name: '송신탑', kind: 'tower', cost: 4e31, lead: '방송을 멀리 보내 흩어진 사람들을 부른다',      /* 4.7.7 1e31 → 5e31. 4.7.8 4e31 */
       story: [
         { title: "밧줄", text: [
           "7구역. 버스 지붕의 밧줄을 잡고 건넜다. 밧줄은 저쪽에서 당겨 주었다. 당긴 손은 작았다. 여럿이었다.",
@@ -1105,7 +1105,7 @@
    *   전체 생산 배수 = 1 + TOWER_GAIN × log10(1 + 생존자).  10만 명이면 3.5배.
    *   혈청: 물자를 들여 세 단계로 완성한다(SERUM_COSTS). 마지막 단계를 끝내면 이야기가 끝난다(ended).
    */
-  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [9e32, 1.5e33, 2.2e33];      // 4.7.7 [2e31, 6e31, 2e32] → 7구역에 와서 이틀 만에 끝나던 것을 열흘 남짓으로
+  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [2.2e32, 4e32, 6.5e32];      // 4.7.7 [2e31, 6e31, 2e32] → [9e32 …](엔딩 40일, 너무 길었다) → 4.7.8 이 값(엔딩 약 25일)
   function towerMult(state) { return zoneOpen(state, 6) ? 1 + TOWER_GAIN * Math.log(1 + Math.max(0, state.survivors || 0)) / Math.LN10 : 1; }
   function globalMult(state) {
     return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state) * towerMult(state) * medalMult(state) * rescueMult(state) * dangerPower(state) * (challengeOn(state, 'lean') ? LEAN_MULT : 1);
@@ -1296,7 +1296,7 @@
    *     final : 마지막 단계는 '최후의 밤'을 막아야 한다. 스스로 맞으러 가는 습격이다(startFinal). FINAL_SECONDS 동안, 늘 협공, FINAL_LV 단계의 빠르기.
    *             막으면 finalHeld. 뚫려도 잃는 것은 보통 습격과 같고(건물 한 채 · 밤 단계 -2), 다시 맞을 수 있다.
    */
-  var SERUM_GATE = [{ night: 10, lvSum: 0 }, { night: 20, lvSum: 18 }, { night: 30, lvSum: 27, final: true }];
+  var SERUM_GATE = [{ night: 10, lvSum: 27 }, { night: 20, lvSum: 45 }, { night: 30, lvSum: 63, final: true }];      // 4.7.8 건물 단계 합을 올렸다(생존자가 금방 불어나서 전 값은 바로 찼다)
   var FINAL_SECONDS = 60, FINAL_LV = 45;
   function finalLv(state) { return Math.max(FINAL_LV, (state.camp && state.camp.nightLv) || 0); }
   function settleLvSum(state) { var n = 0; SETTLE.forEach(function (d) { n += settleLv(state, d.id); }); return n; }
@@ -1408,7 +1408,11 @@
       } else if (n.t <= 0) {      // 밤을 넘겼다
         var lostH = 0, gain = Math.max(TUNE_MIN, survivorRate(state) * NIGHT_PAY * (1 + 0.1 * (c.nightLv || 0))) * Math.max(0.2, n.fence) * mods(state).nightpay;      // 받는 사람: 모이는 속도의 NIGHT_PAY 초 치 × 단계 × 남은 울타리
         state.survivors = Math.min(1e15, (state.survivors || 0) + gain); c.nightLv = Math.min(NIGHT_LV_MAX, (c.nightLv || 0) + 1); state.nightsHeld = (state.nightsHeld || 0) + 1;
-        if (c.nightLv > (state.nightLvBest || 0)) state.nightLvBest = c.nightLv;
+        if (c.nightLv > (state.nightLvBest || 0)) {
+          state.nightLvBest = c.nightLv;
+          /* 4.7.8 성취감: 이번 회차에 처음 오른 밤 단계가 NIGHT_MILE 의 배수면 간식을 준다(작은 이정표가 자주 온다) */
+          if (c.nightLv % NIGHT_MILE === 0) { state.treats = (state.treats || 0) + NIGHT_MILE_TREATS; if (events) events.push({ type: 'night-mile', lv: c.nightLv, treats: NIGHT_MILE_TREATS }); }
+        }
         if (n.final) state.finalHeld = true;      // 4.7.5 최후의 밤을 막았다: 혈청 마지막 단계를 만들 수 있다
         if (events) events.push({ type: 'camp-held', gain: gain, lv: c.nightLv, fence: n.fence, lost: lostH, final: !!n.final });
         c.night = null; c.clock = 0; c.day = (c.day || 1) + 1;
@@ -1469,8 +1473,14 @@
     if (state.serumStage >= SERUM_COSTS.length) return fail('done');
     if (serumNeeds(state)) return fail('settle');      // 3.1.0: 그 단계의 건물(진료소 · 실험동 · 격리동)이 있어야 한다
     var gate = serumGate(state); if (gate && !gate.ok) return fail(gate.base ? 'final' : 'gate');      // 4.7.5 밤 단계 · 건물 단계 · 최후의 밤
-    return pay(state, serumCost(state), function () { state.serumStage++; });
+    var r = pay(state, serumCost(state), function () { state.serumStage++; });
+    /* 4.7.8 성취감: 혈청 1 · 2단계를 끝내면 보상(마지막 단계는 엔딩이 따로 있다) */
+    var rw = r.ok ? SERUM_REWARDS[state.serumStage - 1] : null;
+    if (rw) { state.tickets = (state.tickets || 0) + rw.tickets; state.treats = (state.treats || 0) + rw.treats; r.reward = rw; }
+    if (r.ok) r.stage = state.serumStage;
+    return r;
   }
+  var SERUM_REWARDS = [{ tickets: 2, treats: 20 }, { tickets: 3, treats: 30 }], NIGHT_MILE = 5, NIGHT_MILE_TREATS = 5;
 
   /* ---------- 값 계산(공통) ---------- */
   /** 지금 owned 개를 가진 것을 qty 개 더 살 때의 값(등비수열의 합). */
@@ -3707,7 +3717,7 @@
    */
   var ANTI_STEP = 4, ANTI_CURVE = 1.3, ANTI_KNEE = 11, ANTI_LATE = 4;
   /* 4.7.7 밸런스 손잡이: 철수로 받는 항체 샘플 전체에 곱한다(진행 속도 전체를 늦추고 당기는 가장 굵은 손잡이). 시뮬레이터가 바꿔 가며 잰다 */
-  var BAL = { anti: 0.5 };      // 4.7.7: 0.5(하루 1시간 기준 엔딩 약 40일. tools/sim.js 로 잰 값은 README)
+  var BAL = { anti: 0.75 };      // 4.7.8: 0.75(하루 1시간 기준 엔딩 약 25일. tools/sim.js 로 잰 값은 README)
   function antibodiesFor(run, mult) {
     if (!(run >= RETREAT_MIN)) return 0;
     var d = Math.log(run / RETREAT_MIN) / Math.LN10;
@@ -4938,7 +4948,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    BAL: BAL, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    BAL: BAL, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,

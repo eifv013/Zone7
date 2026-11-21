@@ -1590,6 +1590,8 @@
       }
       var r = C.buySerum(state);
       if (!r.ok) return;
+      /* 4.7.8 성취감: 1 · 2단계를 끝내면 보상과 함께 크게 알린다(마지막 단계는 엔딩이 이어진다) */
+      if (r.reward) notice('혈청 ' + r.stage + '단계 완성! · ' + IC.ticket + '+' + r.reward.tickets + ' · ' + IC.treat + '+' + r.reward.treats + '\n혈청 완성까지 ' + (C.SERUM_COSTS.length - r.stage) + '단계 남았어요.');
       log('혈청 ' + state.serumStage + '단계를 끝냈다.', 'good'); sfx('perk'); buzz(30); Store.save(); render();
     });
     $('ending-ok').addEventListener('click', function () { $('ending').hidden = true; pendingEnding = null; sfx('story'); });
@@ -3565,7 +3567,13 @@
     var stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state), need = C.serumNeeds(state), rNext = C.rescueNext(state);
     Array.prototype.forEach.call($('serum-steps').children, function (i, n) { i.className = n < stage ? 'on' : ''; });
     /* 4.7.5 문턱(밤 단계 · 건물 단계 · 최후의 밤). 단추는 막힌 까닭을 차례로 하나만 적는다: 건물 → 문턱 → 최후의 밤 → 물자 */
-    var gate = C.serumGate(state), gateTxt = gate ? '밤 단계 ' + Math.min(gate.nightNow, gate.night) + ' / ' + gate.night + (gate.lvSum ? ' · 건물 단계 ' + Math.min(gate.lvNow, gate.lvSum) + ' / ' + gate.lvSum : '') + (gate.final ? ' · 최후의 밤 ' + (gate.finalHeld ? '막음' : '아직') : '') : '';
+    /* 4.7.8 다음 단계의 할 일을 한 줄씩 적고, 채운 것에는 ✓(무엇을 하면 되는지, 얼마나 왔는지가 보이게) */
+    var ck = function (done, t) { return (done ? '✓ ' : '· ') + t; };
+    var gate = C.serumGate(state), gateTxt = gate ? ['혈청 ' + gate.stage + '단계에 필요한 것',
+      ck(gate.nightNow >= gate.night, '습격을 막아 밤 단계 ' + Math.min(gate.nightNow, gate.night) + ' / ' + gate.night),
+      ck(gate.lvNow >= gate.lvSum, '건물 단계 합 ' + Math.min(gate.lvNow, gate.lvSum) + ' / ' + gate.lvSum),
+      gate.final ? ck(gate.finalHeld, '최후의 밤 막기') : '',
+      ck(sCost <= state.supplies, IC.supply + fmt(Math.min(state.supplies, sCost)) + ' / ' + fmt(sCost))].filter(Boolean).join('\n') : '';
     var wantFinal = !!gate && !need && gate.base && gate.final && !gate.finalHeld, nightOn = !!(state.camp && state.camp.night);
     var sb = $('serum'); sb.classList.toggle('final', wantFinal);
     setText(sb, stage >= sMax ? '혈청을 완성했다' : need ? '혈청 ' + (stage + 1) + '단계 · ' + (stage + 1 >= sMax && !need.serum ? '정착지를 다 지어야 해요' : '가운데 줄의 다음 건물이 필요해요')
@@ -4724,6 +4732,10 @@
           break;
         case 'camp-shift':
           if (tab === 'z6' && pane === 'play') { sfx('tab'); buzz(15); if (campPopFn) campPopFn(92, 56, ev.pin ? '협공! 두 쪽으로 몰린다' : CAMP_SIDE[ev.side] + '으로 몰린다', 'bad'); }
+          break;
+        case 'night-mile':      // 4.7.8 밤 단계 이정표
+          if (tab === 'z6' && pane === 'play' && campPopFn) campPopFn(92, 40, '밤 단계 ' + ev.lv + ' · 간식 +' + ev.treats, 'done');
+          toast('밤 단계 ' + ev.lv + ' 달성 · ' + IC.treat + '+' + ev.treats);
           break;
         case 'camp-held':
           campFlash = { at: Date.now(), kind: 'held' }; if (tab === 'z6' && pane === 'play') { sfx('goal'); buzz(30); if (campPopFn) campPopFn(92, 56, '습격을 막았다 +' + fmt(Math.floor(ev.gain)) + '명', 'done'); }

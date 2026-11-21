@@ -1821,7 +1821,7 @@ test('7구역 송신탑: 안테나가 생존자를 모으고, 모인 만큼 전�
   // 혈청 세 단계
   // 3.1.0: 혈청은 정착지의 가운데 줄 건물이 있어야 만든다
   assert.equal(C.buySerum(s).reason, 'settle'); C.SETTLE.forEach(d => { s.settle[d.id] = true; });
-  s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 3; }); s.finalHeld = true;      // 4.7.5 문턱을 다 채운 채로
+  s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 7; }); s.finalHeld = true;      // 4.7.5 문턱을 다 채운 채로
   const costs = []; for (let i = 0; i < 3; i++) { costs.push(C.serumCost(s)); assert.ok(C.buySerum(s).ok); }
   assert.ok(costs[0] < costs[1] && costs[1] < costs[2]);
   assert.equal(s.serumStage, 3); assert.equal(C.buySerum(s).reason, 'done'); assert.equal(C.serumCost(s), Infinity);
@@ -2727,7 +2727,7 @@ test('7구역 정착지: 자리에 사람을 놓으면 그만큼 차고, 다 차
   assert.equal(C.settleFree(s), cost('farm') + cost('clinic') - r.sent, '놓은 사람은 문 앞에서 빠진다'); near(C.mods(s).prod, prod0, '다 차기 전에는 효과가 없다'); assert.equal(C.settleCount(s), 0);
   const d = fill7(s, 'farm'); assert.ok(d.done && d.lv === 1 && !d.repaired); assert.equal(C.settleLv(s, 'farm'), 1); assert.equal(C.settleWork(s, 'farm'), 0); near(C.mods(s).prod / prod0, 1.5);
   assert.equal(C.settleFree(s), cost('clinic')); assert.ok(C.towerMult(s) >= mult0, '놓은 사람도 생존자다');
-  assert.ok(fill7(s, 'clinic').done); assert.equal(C.serumNeeds(s), null); assert.equal(C.buySerum(s).reason, 'gate'); s.nightLvBest = 10; assert.ok(C.buySerum(s).ok); assert.equal(C.serumNeeds(s).id, 'lab7'); assert.equal(C.buySerum(s).reason, 'settle');
+  assert.ok(fill7(s, 'clinic').done); assert.equal(C.serumNeeds(s), null); assert.equal(C.buySerum(s).reason, 'gate'); s.nightLvBest = 10; { const g0 = C.SERUM_GATE[0].lvSum; C.SERUM_GATE[0].lvSum = 0; try { assert.ok(C.buySerum(s).ok); } finally { C.SERUM_GATE[0].lvSum = g0; } } assert.equal(C.serumNeeds(s).id, 'lab7');      /* 건물 단계 문턱은 여기서 보지 않는다(뒤의 시험이 본다) */ assert.equal(C.buySerum(s).reason, 'settle');
   const d0 = C.mods(s).defense, z0 = C.mods(s).z7, b0 = C.tuneBand(s);
   s.survivors = 1e7; ['guard7', 'mess', 'watch'].forEach((id) => assert.ok(fill7(s, id).done, id));
   near(C.mods(s).defense / d0, 2); near(C.mods(s).z7 / z0, 2); assert.ok(C.tuneBand(s) > b0); assert.equal(C.settleCount(s), 5);
@@ -3478,11 +3478,12 @@ test('혈청 문턱: 밤 단계와 건물 단계가 차야 단계가 선다', ()
   let g = C.serumGate(s);
   assert.equal(g.stage, 1); assert.equal(g.night, 10); assert.equal(g.ok, false);
   assert.equal(C.buySerum(s).reason, 'gate');
-  s.nightLvBest = 10; assert.ok(C.buySerum(s).ok);
-  s.nightLvBest = 20; assert.equal(C.buySerum(s).reason, 'gate', '건물 단계 합이 모자라다');
-  assert.equal(C.settleLvSum(s), 9);
-  C.SETTLE.forEach(d => { s.settleLv[d.id] = 2; }); assert.ok(C.buySerum(s).ok);
-  s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 3; });
+  const L = (n) => C.SETTLE.forEach(d => { s.settleLv[d.id] = n; });
+  s.nightLvBest = 10; assert.equal(C.settleLvSum(s), 9); assert.equal(C.buySerum(s).reason, 'gate', '건물 단계 합이 모자라다');
+  L(3); assert.equal(C.settleLvSum(s), 27); const r1 = C.buySerum(s); assert.ok(r1.ok); assert.deepEqual(r1.reward, C.SERUM_REWARDS[0], '1단계 보상');
+  s.nightLvBest = 20; assert.equal(C.buySerum(s).reason, 'gate');
+  L(5); assert.ok(C.buySerum(s).ok);
+  s.nightLvBest = 30; L(7);
   g = C.serumGate(s); assert.ok(g.base && g.final && !g.ok);
   assert.equal(C.buySerum(s).reason, 'final', '최후의 밤을 막아야 한다');
 });
@@ -3490,7 +3491,7 @@ test('최후의 밤: 맞으러 가는 습격. 막으면 마지막 단계가 열�
   const s = z7ready(); s.serumStage = 2;
   assert.equal(C.canFinal(s), false, '문턱 전에는 맞을 수 없다');
   assert.equal(C.startFinal(s).reason, 'gate');
-  s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 3; });
+  s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 7; });
   assert.ok(C.canFinal(s));
   const ev = []; assert.ok(C.startFinal(s, () => 0.3, ev).ok);
   const n = C.campOf(s).night;
@@ -3507,7 +3508,7 @@ test('최후의 밤: 맞으러 가는 습격. 막으면 마지막 단계가 열�
   assert.equal(s.finalTries, 1);
 });
 test('최후의 밤: 아무도 세우지 않으면 뚫리고, 다시 맞을 수 있다', () => {
-  const s = z7ready(); s.serumStage = 2; s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 3; });
+  const s = z7ready(); s.serumStage = 2; s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 7; });
   C.startFinal(s, () => 0.3); const ev = []; let t = 0;
   while (C.campOf(s).night && t < 200) { C.stepCamp(s, 0.5, () => 0.5, ev); t += 0.5; }
   assert.ok(ev.some(e => e.type === 'camp-breach' && e.final)); assert.equal(s.finalHeld, false);
@@ -3522,5 +3523,15 @@ test('4.7.7 밸런스 손잡이: 항체 샘플은 BAL.anti 배로 받는다', ()
   const bal0 = C.BAL.anti;
   try { C.BAL.anti = 1; const one = C.antibodiesOnRetreat(s); C.BAL.anti = 0.5; const half = C.antibodiesOnRetreat(s); assert.ok(one > 0); assert.ok(Math.abs(half - one / 2) <= 1); }
   finally { C.BAL.anti = bal0; }
-  assert.equal(C.BAL.anti, 0.5);
+  assert.equal(C.BAL.anti, 0.75);
+});
+
+test('4.7.8 밤 단계 이정표: 이번 회차에 처음 오른 5의 배수 단계마다 간식', () => {
+  const s = fresh(); s.zone = 6; s.bestZone = 6; s.survivors = 1e9; C.SETTLE.forEach(d => { s.settle[d.id] = true; s.settleLv[d.id] = 1; });
+  const c = C.campOf(s); c.nightLv = 4; s.nightLvBest = 4; s.treats = 0;
+  const ev = []; c.night = C.newRaid(s, () => 0.5); c.night.t = 0.01; c.night.fences = [1, 1, 1];
+  C.stepCamp(s, 0.05, () => 0.5, ev);
+  assert.ok(ev.some(e => e.type === 'night-mile' && e.lv === 5)); assert.equal(s.treats, C.NIGHT_MILE_TREATS);
+  c.nightLv = 4; c.night = C.newRaid(s, () => 0.5); c.night.t = 0.01; const ev2 = []; C.stepCamp(s, 0.05, () => 0.5, ev2);
+  assert.ok(!ev2.some(e => e.type === 'night-mile'), '이미 오른 단계는 다시 주지 않는다');
 });
