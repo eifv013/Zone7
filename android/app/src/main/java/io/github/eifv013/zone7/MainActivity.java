@@ -158,6 +158,9 @@ public class MainActivity extends Activity {
             TimeZone zone = TimeZone.getDefault();
             am.set(AlarmManager.RTC_WAKEUP, Notices.fireAt(now, Notices.FULL_AFTER_MS, zone), noticeIntent(NoticeReceiver.KIND_FULL, NoticeReceiver.ID_FULL));
             am.set(AlarmManager.RTC_WAKEUP, Notices.fireAt(now, Notices.BACK_AFTER_MS, zone), noticeIntent(NoticeReceiver.KIND_BACK, NoticeReceiver.ID_BACK));
+            // 4.7.3 출석 알림: 게임이 알려 준 마지막 출석 날을 보고 정한다(겹치면 -1 이라 걸지 않는다)
+            long attendAt = Notices.attendAt(now, noticePrefs().getString("attendLast", null), zone);
+            if (attendAt > now) am.set(AlarmManager.RTC_WAKEUP, attendAt, noticeIntent(NoticeReceiver.KIND_ATTEND, NoticeReceiver.ID_ATTEND));
         } catch (Throwable e) {
             // 예약하지 못해도 게임은 그대로다.
         }
@@ -169,6 +172,7 @@ public class MainActivity extends Activity {
             if (am != null) {
                 am.cancel(noticeIntent(NoticeReceiver.KIND_FULL, NoticeReceiver.ID_FULL));
                 am.cancel(noticeIntent(NoticeReceiver.KIND_BACK, NoticeReceiver.ID_BACK));
+                am.cancel(noticeIntent(NoticeReceiver.KIND_ATTEND, NoticeReceiver.ID_ATTEND));
             }
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) nm.cancelAll();      // 앱을 열었으면 떠 있던 알림은 지운다
@@ -200,6 +204,11 @@ public class MainActivity extends Activity {
         /** 알림 문구에 넣을 주인공과 동물 친구의 이름. 친구가 없으면 빈 글. */
         @JavascriptInterface public void setNames(String hero, String pet) {
             noticePrefs().edit().putString("hero", Notices.clean(hero, Notices.DEFAULT_HERO)).putString("pet", Notices.clean(pet, "")).apply();
+        }
+        /** 4.7.3 출석: 마지막으로 받은 날("YYYY-MM-DD", 아직 없으면 빈 글)과 다음 출석 알림의 문구. */
+        @JavascriptInterface public void setAttend(String last, String text) {
+            String l = last != null && last.matches("\\d{4}-\\d{2}-\\d{2}") ? last : null;
+            noticePrefs().edit().putString("attendLast", l).putString("attendText", Notices.cleanText(text, Notices.ATTEND_TEXT)).apply();
         }
     }
 

@@ -18,17 +18,21 @@ public class NoticeReceiver extends BroadcastReceiver {
     static final String CHANNEL = "zone7";
     static final String PREFS = "zone7-notice";
     static final String KIND = "kind";
-    static final String KIND_FULL = "full", KIND_BACK = "back";
-    static final int ID_FULL = 1, ID_BACK = 2;
+    static final String KIND_FULL = "full", KIND_BACK = "back", KIND_ATTEND = "attend";
+    static final int ID_FULL = 1, ID_BACK = 2, ID_ATTEND = 3;
 
     @Override
     public void onReceive(Context ctx, Intent intent) {
         try {
             SharedPreferences prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
             if (!prefs.getBoolean("enabled", true)) return;
-            boolean back = KIND_BACK.equals(intent.getStringExtra(KIND));
+            String kind = intent.getStringExtra(KIND);
+            boolean back = KIND_BACK.equals(kind), attend = KIND_ATTEND.equals(kind);
             String text;
-            if (back) {
+            if (attend) {
+                // 4.7.3 문구는 게임이 알려 준 것(받을 보상에 뽑기권이 있으면 그 말). 없으면 기본 문구
+                text = Notices.cleanText(prefs.getString("attendText", null), Notices.ATTEND_TEXT);
+            } else if (back) {
                 int index = prefs.getInt("backIndex", 0);
                 text = Notices.backText(index, prefs.getString("hero", null), prefs.getString("pet", null));
                 prefs.edit().putInt("backIndex", index + 1).apply();
@@ -48,7 +52,7 @@ public class NoticeReceiver extends BroadcastReceiver {
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setContentIntent(tap)
                 .setAutoCancel(true);
-            nm.notify(back ? ID_BACK : ID_FULL, b.build());
+            nm.notify(attend ? ID_ATTEND : back ? ID_BACK : ID_FULL, b.build());
         } catch (Throwable e) {
             // 알림 권한이 없거나 기기가 막은 경우 등. 할 수 있는 일이 없다.
         }
@@ -58,7 +62,7 @@ public class NoticeReceiver extends BroadcastReceiver {
     static void ensureChannel(NotificationManager nm) {
         if (Build.VERSION.SDK_INT < 26 || nm.getNotificationChannel(CHANNEL) != null) return;
         NotificationChannel ch = new NotificationChannel(CHANNEL, "거점 소식", NotificationManager.IMPORTANCE_DEFAULT);
-        ch.setDescription("창고가 가득 찼을 때와 오래 비웠을 때 알려 줘요. 하루에 많아야 두 번이에요.");
+        ch.setDescription("창고가 가득 찼을 때, 오래 비웠을 때, 출석 보상이 준비됐을 때 알려 줘요.");
         nm.createNotificationChannel(ch);
     }
 }

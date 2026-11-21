@@ -41,11 +41,65 @@ public final class Notices {
         return at;
     }
 
+    /*
+     * 4.7.3 출석 알림: 출석 보상을 받을 수 있게 되면 한 번. 게임(core.js 의 attendNoticeAt)과 같은 규칙이다.
+     *   오늘 이미 받았으면 내일 자정부터, 아직이면 지금부터 ATTEND_DELAY_MS 뒤부터 센다. 그 뒤로 처음 오는 12시나 19시(현지 시각)에 울린다.
+     *   다른 알림(FULL · BACK)과 ATTEND_GAP_MS 안으로 겹치면 울리지 않는다(-1).
+     */
+    public static final int[] ATTEND_SLOTS = { 12, 19 };
+    public static final long ATTEND_DELAY_MS = 60L * 60 * 1000, ATTEND_GAP_MS = 90L * 60 * 1000;
+    public static final String ATTEND_TEXT = "오늘의 보급품이 도착했어요. 출석 체크하고 받아 가세요.";
+
+    /** 시각 → 그 시각의 현지 날짜 "YYYY-MM-DD"(게임의 todayStr 과 같은 꼴). */
+    public static String dayOf(long t, TimeZone zone) {
+        Calendar c = Calendar.getInstance(zone == null ? TimeZone.getDefault() : zone);
+        c.setTimeInMillis(t);
+        return String.format(java.util.Locale.ROOT, "%04d-%02d-%02d", c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH));
+    }
+
+    /** 출석 알림 시각. lastDay 는 마지막으로 받은 날("YYYY-MM-DD", 없으면 null). 울리지 않을 때는 -1. */
+    public static long attendAt(long now, String lastDay, TimeZone zone) {
+        TimeZone z = zone == null ? TimeZone.getDefault() : zone;
+        boolean claimed = lastDay != null && lastDay.equals(dayOf(now, z));
+        Calendar c = Calendar.getInstance(z);
+        c.setTimeInMillis(now);
+        long start;
+        if (claimed) {
+            c.add(Calendar.DAY_OF_MONTH, 1);
+            c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0);
+            start = c.getTimeInMillis();
+        } else {
+            start = now + ATTEND_DELAY_MS;
+        }
+        long at = -1;
+        Calendar s = Calendar.getInstance(z);
+        for (int off = 0; off < 3 && at < 0; off++) {
+            for (int h : ATTEND_SLOTS) {
+                s.setTimeInMillis(start);
+                s.add(Calendar.DAY_OF_MONTH, off);
+                s.set(Calendar.HOUR_OF_DAY, h); s.set(Calendar.MINUTE, 0); s.set(Calendar.SECOND, 0); s.set(Calendar.MILLISECOND, 0);
+                if (s.getTimeInMillis() >= start) { at = s.getTimeInMillis(); break; }
+            }
+        }
+        if (at < 0) return -1;
+        long full = fireAt(now, FULL_AFTER_MS, z), back = fireAt(now, BACK_AFTER_MS, z);
+        if (Math.abs(full - at) < ATTEND_GAP_MS || Math.abs(back - at) < ATTEND_GAP_MS) return -1;
+        return at;
+    }
+
     /** 이름을 다듬는다: 비었거나 너무 길면 기본값(또는 빈 글)으로. 알림에 이상한 글이 들어가지 않게 한다. */
     public static String clean(String name, String fallback) {
         if (name == null) return fallback;
         String t = name.trim();
         if (t.isEmpty() || t.length() > 12) return fallback;
+        return t;
+    }
+
+    /** 게임이 보낸 알림 문구를 다듬는다: 비었거나 너무 길면(60자) 기본 문구. */
+    public static String cleanText(String text, String fallback) {
+        if (text == null) return fallback;
+        String t = text.trim();
+        if (t.isEmpty() || t.length() > 60) return fallback;
         return t;
     }
 

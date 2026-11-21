@@ -1490,7 +1490,7 @@ test('알림 문구: 네 가지가 차례로 돌고, 이름과 조사가 맞고,
   assert.equal(C.noticeBackText(s, 0), '여기는 7구역. 민준, 들리면 응답하라.');
   for (const bad of [-3, NaN, 'x', null]) assert.ok(C.noticeBackText(s, bad).length > 5);
   const plan = C.noticePlan(s, Date.UTC(2026, 10, 17, 10), 0, (t) => new Date(t).getUTCHours());
-  assert.deepEqual(plan.map(p => p.kind), ['full', 'back']);
+  assert.deepEqual(plan.slice(0, 2).map(p => p.kind), ['full', 'back'], '앞의 둘은 차례가 그대로다(ui 가 [1] 을 읽는다)');
   assert.equal(plan[0].text, C.NOTICE_FULL_TEXT);
   assert.ok(plan[0].at < plan[1].at);
 });
@@ -3397,4 +3397,65 @@ test('7구역 습격(4.7.2): 단계가 오르면 더 자주 바뀌고 더 빨리
   for (let i = 0; i < 200; i++) { const r = C.newRaid(s, Math.random); const sum = r.w[0] + r.w[1] + r.w[2]; assert.ok(Math.abs(sum - 1) < 1e-9); if (r.pin) { pins++; assert.deepEqual(r.w.slice().sort(), [0.1, 0.45, 0.45]); } assert.equal(r.t, C.raidLen(30)); }
   assert.ok(pins > 20 && pins < 140, '협공은 가끔: ' + pins);
   C.campOf(s).nightLv = 10; for (let i = 0; i < 100; i++) assert.equal(C.newRaid(s, Math.random).pin, false, '15단계 아래에는 협공이 없다');
+});
+
+/* ---------- 4.7.3 출석 알림 ---------- */
+test('출석 알림: 안 받았으면 한 시간 뒤의 첫 12시 · 19시, 받았으면 내일 12시', () => {
+  const T = (d, h, m) => new Date(2026, 10, d, h, m || 0).getTime();      // 현지 시각
+  assert.equal(C.attendNoticeAt(T(17, 10), false), T(17, 12));
+  assert.equal(C.attendNoticeAt(T(17, 11, 30), false), T(17, 19), '12시는 한 시간 안이라 건너뛴다');
+  assert.equal(C.attendNoticeAt(T(17, 20), false), T(18, 12));
+  assert.equal(C.attendNoticeAt(T(17, 21), true), T(18, 12), '오늘 받았으면 자정이 지나야 받을 수 있다');
+  assert.equal(C.attendNoticeAt(T(17, 9), true), T(18, 12));
+  assert.equal(C.localDay(T(17, 23, 59)), '2026-11-17');
+});
+
+test('출석 알림 문구: 뽑기권이 든 날은 그것을 말한다', () => {
+  const s = fresh();
+  assert.equal(C.attendNoticeText(s), '오늘의 보급품이 도착했어요. 출석 체크하고 받아 가세요.');
+  s.attend = { last: '2026-11-16', count: 6 };      // 다음이 7일째(뽑기권)
+  assert.ok(C.ATTEND_REWARDS[6].tickets > 0);
+  assert.equal(C.attendNoticeText(s), '오늘 보급 상자에 뽑기권이 들어 있어요. 출석 체크하고 받아 가세요.');
+});
+
+test('알림 목록: 출석 알림이 붙고, 다른 알림과 겹치면 빠진다', () => {
+  const s = fresh(), T = (d, h, m) => new Date(2026, 10, d, h, m || 0).getTime();
+  const p1 = C.noticePlan(s, T(17, 10), 0);
+  assert.deepEqual(p1.map(p => p.kind), ['full', 'back', 'attend']);
+  assert.equal(p1[2].at, T(17, 12));
+  const p2 = C.noticePlan(s, T(17, 8), 0);      // 창고 알림(12시)과 출석(12시)이 겹친다
+  assert.deepEqual(p2.map(p => p.kind), ['full', 'back']);
+  s.attend = { last: C.localDay(T(17, 15)), count: 3 };
+  const p3 = C.noticePlan(s, T(17, 15), 0);
+  assert.equal(p3[2].at, T(18, 12), '오늘 받았으면 내일');
+  p3.forEach(p => assert.ok(p.at > T(17, 15)));
+  assert.ok(C.noticePlan({ attend: null }, T(17, 10), 0).length >= 2, '상태가 이상해도 앞의 둘은 나온다');
+});
+
+/* ---------- 4.7.3 5구역: 멈춘 사람이 나가기까지 ---------- */
+test('멈춘 사람이 나가기까지: 오래 앉은 사람부터 WARD_ARRIVE 초 간격', () => {
+  const s = fresh(); s.zone = 4; s.staff = 1;
+  const w = C.wardOf(s);
+  w.seats = [{ dose: 1, since: 3, m: 0.2, r: 1 }, { dose: 0, since: 1, m: 0.1, r: 1 }, { dose: 1, since: 9, m: 0.2, r: 1 }, { dose: 3, since: 20, m: 0.2, r: 1 }];
+  w.arrive = 0.5;
+  const t = C.wardOutTimes(s);
+  assert.equal(t[2], 0.5 * C.WARD_ARRIVE, '가장 오래 앉은 멈춘 사람이 먼저');
+  assert.equal(t[0], 1.5 * C.WARD_ARRIVE);
+  assert.equal(t[1], null); assert.equal(t[3], null, '못 맞은 사람 · 되돌리는 중인 사람은 나가지 않는다');
+  w.seats[1] = { wait: 0 };      // 빈 의자가 있으면 먼저 그 자리가 찬다
+  const t2 = C.wardOutTimes(s);
+  assert.ok(t2[2] > t[2]);
+  assert.deepEqual(C.wardOutTimes({}), []);
+});
+
+test('멈춘 사람이 나가기까지: 셈과 실제로 나가는 때가 맞는다', () => {
+  const s = fresh(); s.zone = 4; s.staff = 1;
+  const w = C.wardOf(s);
+  w.seats = w.seats.map((_, i) => ({ dose: 1, since: 10 - i, m: 0.1, r: 0.01, look: i }));
+  w.arrive = 0; w.erNext = 1e9;
+  const want = C.wardOutTimes(s)[0], ev = [];
+  let t = 0; while (t < want + 1 && !ev.some(e => e.type === 'ward-out')) { C.stepWard(s, 0.25, () => 0.5, ev); t += 0.25; }
+  const out = ev.find(e => e.type === 'ward-out');
+  assert.ok(out && out.at === 0, '맨 처음 나가는 것은 가장 오래 앉은 0번');
+  assert.ok(Math.abs(t - want) <= 0.3, '셈한 시각(' + want + ')에 나간다(' + t + ')');
 });

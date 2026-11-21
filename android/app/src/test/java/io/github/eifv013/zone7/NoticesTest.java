@@ -50,4 +50,23 @@ public class NoticesTest {
         assertEquals("무전기가 하루째 조용해요.", Notices.backText(2, "라라", null));    // 친구가 없으면 두 번째 문구
         assertEquals("무전기가 하루째 조용해요.", Notices.backText(-3, "라라", null));   // 음수여도 죽지 않는다(-3 → 1번)
     }
+
+    // 4.7.3 출석 알림
+    @Test public void 출석을_안_했으면_한_시간_뒤의_첫_12시나_19시에_울린다() {
+        assertEquals(at(12, 0), Notices.attendAt(at(10, 0), "2026-11-16", SEOUL));
+        assertEquals(at(19, 0), Notices.attendAt(at(11, 30), null, SEOUL));      // 12시는 한 시간 안이라 건너뛴다
+    }
+
+    @Test public void 오늘_받았으면_내일_12시에_울린다() {
+        assertEquals(at(12, 0) + 24L * 60 * 60 * 1000, Notices.attendAt(at(21, 0), "2026-11-17", SEOUL));
+    }
+
+    @Test public void 다른_알림과_겹치면_울리지_않는다() {
+        assertEquals(-1, Notices.attendAt(at(8, 0), null, SEOUL));      // 창고 알림(12시)과 같은 때
+    }
+
+    @Test public void 날짜는_게임과_같은_꼴이다() {
+        assertEquals("2026-11-17", Notices.dayOf(at(0, 0), SEOUL));
+        assertEquals("오늘의 보급품이 도착했어요. 출석 체크하고 받아 가세요.", Notices.cleanText("  ", Notices.ATTEND_TEXT));
+    }
 }

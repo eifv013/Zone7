@@ -234,6 +234,17 @@
     nativeNames = key;
     try { app.setNames(state.heroName || C.HERO_DEFAULT, pet ? pet.name : ''); } catch (e) { /* 알림 문구만 예전 이름으로 남는다 */ }
   }
+  /* 4.7.3 출석 알림(안드로이드 앱): 마지막으로 받은 날과 다음 알림 문구를 앱에 알려 둔다. 시각은 앱이 닫힐 때 앱이 정한다(Notices.attendAt).
+     옛 앱(setAttend 가 없는 판)에서는 부르지 않는다 */
+  var nativeAttend = '';
+  function syncNativeAttend() {
+    var app = nativeApp();
+    if (!app || typeof app.setAttend !== 'function') return;
+    var a = state.attend || {}, text = C.attendNoticeText(state), key = (a.last || '') + '|' + text;
+    if (key === nativeAttend) return;
+    nativeAttend = key;
+    try { app.setAttend(a.last || '', text); } catch (e) { /* 출석 알림만 예전 것으로 남는다 */ }
+  }
   /*
    * 웹 앱 알림(아이폰 등, 홈 화면에 추가한 경우): 폰 안에서 예약할 수 없어서 알림 서버(push/worker.js)에 맡긴다.
    *   켤 때   : 알림 허락을 받고, 서버의 공개 키로 구독한다.
@@ -2887,6 +2898,7 @@
       if (aup) { R(16, 66, 1, 3, '#e6c9a0'); R(14, 65, 3, 1, '#e8f6ff'); } g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(16, 77, 10, 1); }
     // 칸막이 커튼(자리 사이): 레일에서 내려와 묶여 있다
     for (var c0 = 0; c0 <= n; c0++) { var kx = Math.min(181, Math.max(0, Math.round(W_LEFT + sp * c0) - 1)); R(kx, 9, 3, 30, '#4a8892'); R(kx + 1, 9, 1, 30, '#5a9aa4'); R(kx, 39, 3, 2, '#3a6a72'); R(kx, 41, 3, 20, '#4a8892'); R(kx + 2, 41, 1, 20, '#3a6a72'); R(kx + 1, 61, 1, 6, '#4a8892'); }
+    var outT = C.wardOutTimes(state);      // 4.7.3 멈춘 사람이 자리를 내 주기까지 남은 초(계기판 아래 줄이 줄어든다)
     for (var i = 0; i < n; i++) {
       var p = w.seats[i], cx = Math.round(W_LEFT + sp * i + sp / 2), x = cx - 7, fx = wardFx[i], has = on && p.dose >= 0;
       // 계기판(벽): 변하는 줄 + 맞은 대수 여섯 칸
@@ -2913,6 +2925,8 @@
       var fillW = Math.max(1, Math.round(22 * m)), colM = stopped ? '#6aaede' : m > 0.7 ? (Math.floor(now / 140) % 2 ? '#ff5a4a' : '#d8453a') : m > 0.4 ? '#e98a3c' : '#e0c04a';
       R(cx - 11, 20, 22, 5, '#0a1214'); R(cx - 11, 20, fillW, 5, colM); R(cx - 11, 20, fillW, 1, 'rgba(255,255,255,.3)'); if (stopped) R(cx - 11 + fillW, 20, 1, 5, '#e8f6ff');
       for (var d = 0; d < C.WARD_DOSES; d++) { R(cx - 11 + d * 4, 27, 3, 3, d < p.dose ? '#6aaede' : '#24383e'); if (d < p.dose) R(cx - 11 + d * 4, 27, 3, 1, '#e8f6ff'); }
+      /* 4.7.3 나갈 차례가 된 사람(다음 한 명): 계기판 아래 가장자리에 남은 시간 줄. 줄어들다 2초 안이면 붉게 깜빡인다 */
+      var oi = outT[i]; if (oi != null && oi <= C.WARD_ARRIVE) { var ow = Math.max(1, Math.round(24 * Math.min(1, oi / C.WARD_ARRIVE))), ob = oi <= 2 && Math.floor(now / 160) % 2; R(cx - 12, 31, 24, 1, '#0a1214'); R(cx - 12, 31, ow, 1, ob ? '#ff5a4a' : '#e8f6ff'); R(cx - 12, 32, ow, 1, ob ? '#7a2018' : '#4a6a78'); }
       if (hot) R(cx + 9, 18, 2, 1, Math.floor(now / 140) % 2 ? '#ff5a4a' : '#5a1a14');      // 급하다는 등
       if (fx && now - fx.at < 240) { R(x - 9, 64, 9, 2, '#e8f6ff'); R(x - 8, 64, 5, 2, '#f0b400'); R(x, 64, 2, 1, '#b4b8c0'); R(x - 10, 63, 1, 4, '#8a8f98'); if (fx.kind === 'stop') { g.fillStyle = 'rgba(106,174,222,.30)'; g.fillRect(cx - 14, 14, 28, 68); } }      // 주사 놓는 순간
     }
@@ -3564,7 +3578,7 @@
   /* ---------- 그리기 ---------- */
   function render() {
     renderNames();
-    syncNative();
+    syncNative(); syncNativeAttend();
     var m = C.mods(state), per = C.incomePerSec(state);      // 순찰조가 벌어 오는 몫까지 더해서 보여 준다
     setText($('supplies'), fmt(state.supplies));
     setText($('pps'), '초당 +' + fmt(per) + (state.buff ? ' · 지원 ×' + state.buff.mult + ' (' + Math.ceil(state.buff.left) + '초)' : ''));
@@ -4150,7 +4164,7 @@
       var lp = $('lab-points'), dv = C.doseValue(state); setText(lp, !(state.staff > 0) ? '' : '멈춤 +' + fmt(dv) + ' · 되돌림 +' + fmt(dv * C.WARD_CURE)); lp.classList.remove('bad');
       /* 4.0.6 무슨 일이 일어났는지 글로 보이게 한다.
          ① 그림 아래 한 줄: 자리마다의 상태(기다림 · 위험 · 멈춤 · 몇 대째 · 빈 자리). ② 집계 한 줄: 이번 회차에 멈춘 · 되돌린 · 변한 사람 수(자동에 맡긴 동안의 것도 여기 쌓인다) */
-      var strip = $('ward-strip'), cells = strip.children, colsT = C.SEAT_MAX + 1;
+      var strip = $('ward-strip'), cells = strip.children, colsT = C.SEAT_MAX + 1, outs = C.wardOutTimes(state);      /* 4.7.3 멈춘 사람이 나가기까지 남은 초 */
       strip.style.gridTemplateColumns = W_LEFT + 'fr ' + ward.seats.map(function () { return ((184 - W_LEFT) / nT).toFixed(2) + 'fr'; }).join(' ');
       for (var sc = 0; sc < colsT; sc++) {
         var cel = cells[sc], ps = sc === 0 ? null : ward.seats[sc - 1], show = sc === 0 || sc <= nT, txt = '', cls = '';
@@ -4159,7 +4173,7 @@
         if (sc === 0) { txt = '혈청 ' + ward.stock; cls = ward.stock > 0 ? 'has' : 'none'; }
         else if (!(state.staff > 0) || !(ps.dose >= 0)) { txt = '빈 자리'; cls = 'none'; }
         else if (ps.dose === 0) { txt = ps.m > 0.7 ? '위험' : '기다림'; cls = ps.m > 0.7 ? 'bad' : ''; }
-        else if (ps.dose === 1) { txt = '멈춤'; cls = 'stop'; }
+        else if (ps.dose === 1) { var ot = outs[sc - 1]; txt = ot == null ? '멈춤' : '멈춤 ' + Math.max(1, Math.ceil(ot)) + '초'; cls = ot != null && ot <= 2 ? 'stop leave' : 'stop'; }      /* 4.7.3 나갈 때까지 남은 초. 2초 안이면 붉게 깜빡인다 */
         else { txt = ps.dose + ' / ' + C.WARD_DOSES; cls = 'stop'; }
         setText(cel, txt); if (cel.className !== cls) cel.className = cls;
       }
