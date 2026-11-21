@@ -1582,6 +1582,7 @@
     });
     rows.camp = {}; C.CAMP_ROWS.forEach(function (d) { rows.camp[d.id] = buildRow({ id: d.id, name: d.name, desc: d.desc }, function () { buy(C.buyCampRow(state, d.id), 'route'); }); $('rows-z6').appendChild(rows.camp[d.id].btn); });
     rows.tier7.forEach(function (t) { $('rows-z6').appendChild(t.row.btn); $('rows-z6').appendChild(t.grid); });
+    $('rescue-send').addEventListener('click', function () { var r = C.sendRescue(state); if (!r.ok) return; sfx('buy'); toast('구조대가 ' + fmt(r.gain) + '명을 데려왔어요'); log('구조대를 보냈다. 생존자 ' + fmt(r.gain) + '명이 왔다.', 'good'); Store.save(); render(); });
     $('serum').addEventListener('click', function () {
       /* 4.7.5 최후의 밤: 문턱을 다 채운 마지막 단계에서는 단추가 습격을 부른다. 바로 운영 화면(정착지 지도)으로 옮겨 막게 한다 */
       if (C.canFinal(state)) {
@@ -3692,6 +3693,8 @@
     setText(sb, stage >= sMax ? '혈청을 완성했다' : need ? '혈청 ' + (stage + 1) + '단계 · ' + (stage + 1 >= sMax && !need.serum ? '정착지를 다 지어야 해요' : '가운데 줄의 다음 건물이 필요해요')
       : !gate.base ? '혈청 ' + (stage + 1) + '단계 · 습격을 막고 건물을 키워요' : wantFinal ? (nightOn ? '습격이 끝나면 최후의 밤을 맞을 수 있어요' : '최후의 밤을 맞는다') : '혈청 ' + (stage + 1) + '단계 · ' + IC.supply + fmt(sCost));
     sb.disabled = stage >= sMax || !!need || (gate && !gate.base) || (wantFinal ? nightOn : !(sCost <= state.supplies));
+    var ro = C.rescueOffer(state), rb = $('rescue-send');      // 4.8.7 구조대 보내기
+    if (rb) { rb.hidden = !ro; if (ro) { setText(rb, '구조대 보내기 · ' + IC.supply + fmt(ro.cost) + ' → ' + IC.people + '+' + fmt(ro.gain) + '명'); rb.disabled = !(state.supplies >= ro.cost); } }
     setText($('serum-note'), (gateTxt ? gateTxt + '\n' : '') + '혈청 ' + stage + ' / ' + sMax + '단계' + ((state.ended || 0) >= 1 ? '\n구조한 생존자 누적 ' + fmt(Math.floor(state.rescued)) + '명 · 생산 +' + Math.round((C.rescueMult(state) - 1) * 100) + '%' + (rNext ? ' · 다음 ' + fmt(rNext) + '명' : ' · 최대') : ''));
   }
   /** 순찰·직접 방송 단추를 그린다(밤샘 연구와 같은 모양). */

@@ -634,10 +634,10 @@
     return rows.concat(pose === 'walk' ? LARA_LEGS[step ? 1 : 0] : LARA_STAND);
   }
   /*
-   * 4.8.6 우비 음영(시안): 빛은 왼쪽 위에서 온다. 후드 · 우비 줄마다 왼쪽 끝 한 칸은 밝게(Q · L), 오른쪽 끝 한 칸은 어둡게(Z · K).
+   * 4.8.6 우비 음영: 빛은 왼쪽 위에서 온다. 후드 · 우비 줄마다 왼쪽 끝 한 칸은 밝게(Q · L), 오른쪽 끝 한 칸은 어둡게(Z · K).
    *   우비 아랫단 한 줄은 어둡게(K). 손 · 얼굴 · 가방 칸은 건드리지 않는다.
    */
-  var SHADE = { on: false };
+  var SHADE = { on: true };      // 4.8.7 켰다(시안을 보시고 좋다고 하셨다)
   function shadeRows(rows) {
     return rows.map(function (row, r) {
       var a = row.split(''), first = -1, last = -1, ch = r <= 7 ? 'y' : 'j';
@@ -662,7 +662,7 @@
     var patCol2 = pat === 'camo' ? lerpColor(coat.j, '#ffffff', 0.35) : pat === 'flower' ? '#ffd95a' : pat === 'clover' ? '#3f8a3f' : patCol;      // 꽃 가운데는 노랑
     var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22', a: '#8a96a6', G: '#ffd95a', r: '#e0392b', T: '#c8a070' };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
-    if (SHADE.on && look.shade !== false) rows = shadeRows(rows);      // 4.8.6 우비 음영(시안)
+    if (SHADE.on && look.shade !== false) rows = shadeRows(rows);      // 4.8.6 우비 음영
     pal.L = lerpColor(coat.j, '#ffffff', 0.28); pal.Q = lerpColor(coat.y, '#ffffff', 0.28); pal.K = darker(coat.j, 0.8); pal.Z = darker(coat.y, 0.8);
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];

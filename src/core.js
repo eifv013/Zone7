@@ -733,7 +733,8 @@
       pass: { season: -1, stamps: 0, premium: false, free: 0, prem: 0 },      // 4.8.2 생존자 수첩(시즌 30일): 도장 · 유료 줄 · 받은 칸 수
       starter: false,      // 4.8.2 첫 보급 상자를 샀는지(한 번만)
       ad: { day: '', skip: false, attend: false }, adRetreat: false, noAds: false,
-      collect: 0,      // 4.8.6 외형 수집 보상을 몇 단계까지 받았는지      // 4.8.5 광고 보상(하루 한 번씩) · 이번 철수 광고 보너스 · 광고 제거      // 4.8.0 시간 건너뛰기 하루 횟수 · 다음 철수 보급
+      collect: 0,      // 4.8.6 외형 수집 보상을 몇 단계까지 받았는지
+      rescueSent: 0,      // 4.8.7 이번 회차에 구조대를 보낸 횟수(값이 오른다)      // 4.8.5 광고 보상(하루 한 번씩) · 이번 철수 광고 보너스 · 광고 제거      // 4.8.0 시간 건너뛰기 하루 횟수 · 다음 철수 보급
       // 4.7.0 출석: 마지막으로 받은 날(YYYY-MM-DD, 기기의 날짜)과 받은 횟수
       shards: 0,             // 중복으로 받은 조각
       cosmetics: {}, cosNew: {},      // 4.7.1 cosNew: 새로 얻은 외형(NEW)         // 가진 외형 { id: true } (기본 외형은 적지 않는다)
@@ -903,6 +904,7 @@
     s.ad = { day: typeof rad.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rad.day) ? rad.day : '', skip: rad.skip === true, attend: rad.attend === true };
     s.adRetreat = raw.adRetreat === true; s.noAds = raw.noAds === true;
     s.collect = clamp(safeCount(raw.collect), 0, COLLECT_TIERS.length);
+    s.rescueSent = s.zone >= 6 ? clamp(safeCount(raw.rescueSent), 0, 1e6) : 0;
     s.attend = { last: typeof ra.last === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ra.last) ? ra.last : '', count: clamp(safeCount(ra.count), 0, 1e9) };
     s.tickets = clamp(safeCount(raw.tickets), 0, 1e9); s.shards = clamp(safeCount(raw.shards), 0, 1e9); s.gachaPity = clamp(safeCount(raw.gachaPity), 0, GACHA_PITY - 1); s.gachaPulls = clamp(safeCount(raw.gachaPulls), 0, 1e9);
     s.cosNew = {}; if (raw.cosNew && typeof raw.cosNew === 'object') COSMETICS.forEach(function (c) { if (raw.cosNew[c.id] === true) s.cosNew[c.id] = true; });
@@ -3898,6 +3900,24 @@
     while ((state.collect || 0) < COLLECT_TIERS.length && have >= COLLECT_TIERS[state.collect || 0].n) { var t = COLLECT_TIERS[state.collect || 0]; state.collect = (state.collect || 0) + 1; giveReward(state, t.give); got.push(t); have = collectCount(state); }
     return got;
   }
+  /*
+   * 4.8.7 구조대 보내기(7구역): 남는 물자를 생존자로 바꾼다. 7구역 뒤쪽에서는 물자가 쓸 데 없이 쌓였다.
+   *   값: 현재 수입 RESCUE_COST_SEC 초치 × RESCUE_GROW^(이번 회차에 보낸 횟수). 받는 사람: 현재 모이는 속도 RESCUE_GAIN_SEC 초치.
+   *   값이 오르니 한없이 바꿀 수는 없다(습격 · 건물 단계 같은 손의 일을 대신하지 않게).
+   */
+  var RESCUE_COST_SEC = 1800, RESCUE_GAIN_SEC = 600, RESCUE_GROW = 1.6;
+  function rescueOffer(state) {
+    if (!zoneOpen(state, 6)) return null;
+    var inc = incomePerSec(state), sr = survivorRate(state);
+    if (!(inc > 0) || !(sr > 0)) return null;
+    return { cost: inc * RESCUE_COST_SEC * Math.pow(RESCUE_GROW, state.rescueSent || 0), gain: Math.floor(sr * RESCUE_GAIN_SEC) };
+  }
+  function sendRescue(state) {
+    var o = rescueOffer(state); if (!o) return fail('locked');
+    if (!(state.supplies >= o.cost)) return fail('supplies');
+    state.supplies -= o.cost; state.survivors = Math.min(1e15, (state.survivors || 0) + o.gain); state.rescueSent = (state.rescueSent || 0) + 1;
+    return { ok: true, gain: o.gain, cost: o.cost };
+  }
   var BAL = { anti: 0.57, pact: 1.5 };      // 4.7.9: anti 0.57 · pact 1.5(하루 1시간 무과금 약 30일, 보급 계약 + 하루 건너뛰기 1번이면 약 21일. README)
   function antibodiesFor(run, mult) {
     if (!(run >= RETREAT_MIN)) return 0;
@@ -5214,7 +5234,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    BAL: BAL, COLLECT_TIERS: COLLECT_TIERS, collectCount: collectCount, collectInfo: collectInfo, collectCheck: collectCheck, AD_RETREAT: AD_RETREAT, adState: adState, adReward: adReward, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passSet: passSet, PASS_SETS: PASS_SETS, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    BAL: BAL, rescueOffer: rescueOffer, sendRescue: sendRescue, RESCUE_GROW: RESCUE_GROW, COLLECT_TIERS: COLLECT_TIERS, collectCount: collectCount, collectInfo: collectInfo, collectCheck: collectCheck, AD_RETREAT: AD_RETREAT, adState: adState, adReward: adReward, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passSet: passSet, PASS_SETS: PASS_SETS, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,

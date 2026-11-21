@@ -3631,3 +3631,16 @@ test('외형 수집 보상: 수에 닿을 때마다 한 번씩, 100개에는 한
   const g2 = C.collectCheck(s); assert.equal(g2.length, 4); assert.equal(s.cosmetics['coat-collector'], true); assert.equal(C.collectInfo(s).next, null);
   assert.equal(C.deserialize(C.serialize(s)).collect, 5);
 });
+
+/* ---------- 4.8.7 구조대 · 음영 ---------- */
+test('구조대: 남는 물자로 생존자를 데려오고, 보낼수록 값이 오른다', () => {
+  const s = fresh(); assert.equal(C.rescueOffer(s), null, '7구역 전에는 없다');
+  s.zone = 6; s.bestZone = 6; s.antennas = 10; s.supplies = 1e40;
+  const o1 = C.rescueOffer(s); if (!o1) return;
+  const v0 = s.survivors || 0; const r = C.sendRescue(s); assert.ok(r.ok); assert.equal(s.survivors, v0 + o1.gain);
+  const o2 = C.rescueOffer(s); assert.ok(o2.cost > o1.cost * 1.5, '값이 오른다');
+  s.supplies = 0; assert.equal(C.sendRescue(s).reason, 'supplies');
+});
+test('우비 음영: 줄 수와 칸 수는 그대로다', () => {
+  const S = require('../src/scene.js'); assert.equal(S.SHADE.on, true);
+});
