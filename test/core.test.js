@@ -407,6 +407,8 @@ test('구조 신호: 2분 뒤에 처음 오고, 응답하면 물자나 생산 3�
 /* ================= 철수와 영구 특성 ================= */
 
 test('철수: 이번 판에서 충분히 모아야 하고, 많이 모을수록 항체 샘플이 는다', () => {
+  const bal0 = C.BAL.anti; C.BAL.anti = 1;      // 4.7.7 이 시험은 식의 모양을 본다(밸런스 손잡이는 1로 두고 잰다)
+  try {
   const s = fresh();
   assert.equal(C.antibodiesOnRetreat(s), 0);
   assert.equal(C.canRetreat(s), false);
@@ -425,6 +427,7 @@ test('철수: 이번 판에서 충분히 모아야 하고, 많이 모을수록 �
   assert.equal(C.antibodiesOnRetreat(s), Math.floor(raw * 1.5));
   s.pendingPerks = ['harvest'];
   assert.equal(C.canRetreat(s), false, '고르지 않은 특전이 있으면 안 된다');
+  } finally { C.BAL.anti = bal0; }
 });
 
 test('철수: 거점은 전부 사라지고, 항체와 특성·일지·통계는 남는다', () => {
@@ -718,6 +721,8 @@ test('저장: 열차와 노선을 안전하게 읽는다', () => {
 });
 
 test('항체: 4구역 뒤로는 완만하게 늘고, 항체 정제는 3번까지(2.9.6)', () => {
+  const bal0 = C.BAL.anti; C.BAL.anti = 1;      // 4.7.7 이 시험은 식의 모양을 본다(밸런스 손잡이는 1로 두고 잰다)
+  try {
   const at = (e) => { const s = C.createState(0); s.zone = 3; s.runEarned = Math.pow(10, e); return C.antibodiesOnRetreat(s); };
   assert.equal(at(17), Math.floor(2 + 4 * Math.pow(9, 1.3)), '4구역 전까지는 예전 그대로');
   assert.ok(at(28) < 200 && at(28) > at(19), '뒤 구역: ' + at(28));
@@ -725,6 +730,7 @@ test('항체: 4구역 뒤로는 완만하게 늘고, 항체 정제는 3번까지
   const s = C.createState(0); s.zone = 4; s.research.refine = 3;
   for (let i = 0; i < 200; i++) { let k = i; assert.ok(!C.drawOffers(() => ((k = (k * 7919 + 13) % 1000) / 1000), s).includes('refine')); }
   s.offers = ['refine', 'serum', 'drill']; s.points = 1e30; assert.equal(C.runProject(s, 'refine', () => 0.5).reason, 'max');
+  } finally { C.BAL.anti = bal0; }
 });
 
 test('과제: 지나온 구역의 과제는 나오지 않는다(2.9.5)', () => {
@@ -3509,4 +3515,12 @@ test('최후의 밤: 아무도 세우지 않으면 뚫리고, 다시 맞을 수 
   assert.ok(C.canFinal(s), '다시 맞을 수 있다');
   const back = C.deserialize(C.serialize(Object.assign(s, { finalHeld: true })));
   assert.equal(back.finalHeld, true, '저장에 남는다');
+});
+
+test('4.7.7 밸런스 손잡이: 항체 샘플은 BAL.anti 배로 받는다', () => {
+  const s = fresh(); s.runEarned = 1e20;
+  const bal0 = C.BAL.anti;
+  try { C.BAL.anti = 1; const one = C.antibodiesOnRetreat(s); C.BAL.anti = 0.5; const half = C.antibodiesOnRetreat(s); assert.ok(one > 0); assert.ok(Math.abs(half - one / 2) <= 1); }
+  finally { C.BAL.anti = bal0; }
+  assert.equal(C.BAL.anti, 0.5);
 });
