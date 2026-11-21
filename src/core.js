@@ -729,7 +729,9 @@
       attend: { last: '', count: 0 },
       pact: false,      // 4.7.9 보급 계약(과금 상품 자리): 생산이 영구히 BAL.pact 배. 결제 연결은 아직 없다
       own: {},      // 4.8.0 보급소의 영구 상품(rest · night). pact 는 위의 따로 둔 칸
-      skipDay: { day: '', n: 0 }, retreatBoost: false,      // 4.8.0 시간 건너뛰기 하루 횟수 · 다음 철수 보급
+      skipDay: { day: '', n: 0 }, retreatBoost: false,
+      pass: { season: -1, stamps: 0, premium: false, free: 0, prem: 0 },      // 4.8.2 생존자 수첩(시즌 30일): 도장 · 유료 줄 · 받은 칸 수
+      starter: false,      // 4.8.2 첫 보급 상자를 샀는지(한 번만)      // 4.8.0 시간 건너뛰기 하루 횟수 · 다음 철수 보급
       // 4.7.0 출석: 마지막으로 받은 날(YYYY-MM-DD, 기기의 날짜)과 받은 횟수
       shards: 0,             // 중복으로 받은 조각
       cosmetics: {}, cosNew: {},      // 4.7.1 cosNew: 새로 얻은 외형(NEW)         // 가진 외형 { id: true } (기본 외형은 적지 않는다)
@@ -892,6 +894,9 @@
     var rk = raw.skipDay && typeof raw.skipDay === 'object' ? raw.skipDay : {};
     s.skipDay = { day: typeof rk.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rk.day) ? rk.day : '', n: clamp(safeCount(rk.n), 0, 99) };
     s.retreatBoost = raw.retreatBoost === true;
+    var rp = raw.pass && typeof raw.pass === 'object' ? raw.pass : {};
+    s.pass = { season: Number.isInteger(rp.season) && rp.season >= -1 ? rp.season : -1, stamps: clamp(safeCount(rp.stamps), 0, PASS_TIERS * PASS_STEP * 10), premium: rp.premium === true, free: clamp(safeCount(rp.free), 0, PASS_TIERS), prem: clamp(safeCount(rp.prem), 0, PASS_TIERS) };
+    s.starter = raw.starter === true;
     s.attend = { last: typeof ra.last === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ra.last) ? ra.last : '', count: clamp(safeCount(ra.count), 0, 1e9) };
     s.tickets = clamp(safeCount(raw.tickets), 0, 1e9); s.shards = clamp(safeCount(raw.shards), 0, 1e9); s.gachaPity = clamp(safeCount(raw.gachaPity), 0, GACHA_PITY - 1); s.gachaPulls = clamp(safeCount(raw.gachaPulls), 0, 1e9);
     s.cosNew = {}; if (raw.cosNew && typeof raw.cosNew === 'object') COSMETICS.forEach(function (c) { if (raw.cosNew[c.id] === true) s.cosNew[c.id] = true; });
@@ -1423,7 +1428,7 @@
         if (c.nightLv > (state.nightLvBest || 0)) {
           state.nightLvBest = c.nightLv;
           /* 4.7.8 성취감: 이번 회차에 처음 오른 밤 단계가 NIGHT_MILE 의 배수면 간식을 준다(작은 이정표가 자주 온다) */
-          if (c.nightLv % NIGHT_MILE === 0) { state.treats = (state.treats || 0) + NIGHT_MILE_TREATS; if (events) events.push({ type: 'night-mile', lv: c.nightLv, treats: NIGHT_MILE_TREATS }); }
+          if (c.nightLv % NIGHT_MILE === 0) { passStamp(state, PASS_STAMPS.night); state.treats = (state.treats || 0) + NIGHT_MILE_TREATS; if (events) events.push({ type: 'night-mile', lv: c.nightLv, treats: NIGHT_MILE_TREATS }); }
         }
         if (n.final) state.finalHeld = true;      // 4.7.5 최후의 밤을 막았다: 혈청 마지막 단계를 만들 수 있다
         if (events) events.push({ type: 'camp-held', gain: gain, lv: c.nightLv, fence: n.fence, lost: lostH, final: !!n.final });
@@ -1489,7 +1494,7 @@
     /* 4.7.8 성취감: 혈청 1 · 2단계를 끝내면 보상(마지막 단계는 엔딩이 따로 있다) */
     var rw = r.ok ? SERUM_REWARDS[state.serumStage - 1] : null;
     if (rw) { state.tickets = (state.tickets || 0) + rw.tickets; state.treats = (state.treats || 0) + rw.treats; r.reward = rw; }
-    if (r.ok) r.stage = state.serumStage;
+    if (r.ok) { r.stage = state.serumStage; passStamp(state, PASS_STAMPS.serum); }
     return r;
   }
   var SERUM_REWARDS = [{ tickets: 2, treats: 20 }, { tickets: 3, treats: 30 }], NIGHT_MILE = 5, NIGHT_MILE_TREATS = 5;
@@ -3788,6 +3793,63 @@
     if (!(gain > 0) || !isFinite(gain)) return fail('none');
     earn(state, gain); return { ok: true, gain: gain, hours: h };
   }
+  /*
+   * 4.8.2 생존자 수첩(시즌 패스 자리). 30일마다 새 수첩이 나온다(PASS_DAYS, 2026-01-01 부터 센 날로 나눈다).
+   *   도장: 출석 · 원정의 새 별 · 밤 단계 이정표 · 혈청 단계 · 철수에서 받는다(PASS_STAMPS). PASS_STEP 개마다 한 칸, PASS_TIERS 칸.
+   *   무료 줄: 칸마다 간식(다섯 칸마다 뽑기권). 유료 줄(지금은 간식 PASS_PRICE 로 연다): 더 많은 간식 · 뽑기권, 10칸 · 20칸에 수첩 한정 외형.
+   *   시즌이 바뀌면 도장 · 받은 칸 · 유료 줄이 처음으로 돌아간다(받은 외형은 남는다).
+   */
+  var PASS_DAYS = 30, PASS_TIERS = 20, PASS_STEP = 10, PASS_PRICE = 150, PASS_EPOCH = Date.UTC(2026, 0, 1);
+  var PASS_STAMPS = { attend: 5, star: 2, night: 3, serum: 10, retreat: 3 };
+  function passSeasonOf(dateStr) {
+    var m = typeof dateStr === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr); if (!m) return -1;
+    return Math.max(0, Math.floor((Date.UTC(+m[1], +m[2] - 1, +m[3]) - PASS_EPOCH) / 86400000 / PASS_DAYS));
+  }
+  function passOf(state) { if (!state.pass || typeof state.pass !== 'object') state.pass = { season: -1, stamps: 0, premium: false, free: 0, prem: 0 }; return state.pass; }
+  /** 날이 시즌을 넘었으면 새 수첩으로. 처음(-1)이면 이번 시즌으로 잡고 모아 둔 도장은 그대로 둔다. */
+  function passSync(state, dateStr) {
+    var p = passOf(state), sn = passSeasonOf(dateStr); if (sn < 0) return false;
+    if (p.season === sn) return false;
+    if (p.season >= 0) { p.stamps = 0; p.premium = false; p.free = 0; p.prem = 0; }
+    p.season = sn; return true;
+  }
+  function passStamp(state, n) { var p = passOf(state); p.stamps = Math.min(PASS_TIERS * PASS_STEP * 10, p.stamps + (n > 0 ? n : 0)); }
+  /** 칸 i(1부터)의 보상. track 'free' | 'prem'. */
+  function passReward(track, i) {
+    if (track === 'prem') { if (i === 10) return { cos: 'coat-pass1' }; if (i === PASS_TIERS) return { cos: 'coat-pass2' }; return i % 5 === 0 ? { tickets: 2 } : { treats: 8 }; }
+    return i % 5 === 0 ? { tickets: 1 } : { treats: 4 };
+  }
+  function passInfo(state, dateStr) {
+    passSync(state, dateStr);
+    var p = passOf(state), tier = Math.min(PASS_TIERS, Math.floor(p.stamps / PASS_STEP)), sn = p.season, end = PASS_EPOCH + (sn + 1) * PASS_DAYS * 86400000;
+    return { season: sn, stamps: p.stamps, tier: tier, toNext: tier >= PASS_TIERS ? 0 : PASS_STEP - p.stamps % PASS_STEP, premium: p.premium, free: p.free, prem: p.prem, canFree: p.free < tier, canPrem: p.premium && p.prem < tier, endsAt: end };
+  }
+  function giveReward(state, r) {
+    if (r.treats) state.treats = (state.treats || 0) + r.treats;
+    if (r.tickets) state.tickets = (state.tickets || 0) + r.tickets;
+    if (r.shards) state.shards = (state.shards || 0) + r.shards;
+    if (r.cos) { state.cosmetics = state.cosmetics || {}; if (!state.cosmetics[r.cos]) { state.cosmetics[r.cos] = true; state.cosNew = state.cosNew || {}; state.cosNew[r.cos] = true; } else state.shards = (state.shards || 0) + SHARDS_COST[2]; }      // 이미 있으면 조각으로
+  }
+  /** 받을 수 있는 칸을 모두 받는다(두 줄 함께). 받은 보상 목록을 돌려준다. */
+  function passClaim(state, dateStr) {
+    var info = passInfo(state, dateStr), p = passOf(state), got = [];
+    while (p.free < info.tier) { p.free++; var rf = passReward('free', p.free); giveReward(state, rf); got.push(rf); }
+    if (p.premium) while (p.prem < info.tier) { p.prem++; var rp2 = passReward('prem', p.prem); giveReward(state, rp2); got.push(rp2); }
+    return got.length ? { ok: true, got: got } : fail('none');
+  }
+  function buyPassPremium(state, dateStr) {
+    passSync(state, dateStr); var p = passOf(state);
+    if (p.premium) return fail('owned');
+    if (!((state.treats || 0) >= PASS_PRICE)) return fail('treats');
+    state.treats -= PASS_PRICE; p.premium = true; return { ok: true };
+  }
+  /* 4.8.2 첫 보급 상자: 한 번만. 값보다 훨씬 많이 든 상자(첫 구매의 문턱을 낮춘다). 보급소 한정 외형이 들어 있다 */
+  var STARTER = { treats: 60, give: { tickets: 5, shards: 10, cos: 'coat-starter' } };
+  function buyStarter(state) {
+    if (state.starter) return fail('owned');
+    if (!((state.treats || 0) >= STARTER.treats)) return fail('treats');
+    state.treats -= STARTER.treats; state.starter = true; giveReward(state, STARTER.give); return { ok: true, give: STARTER.give };
+  }
   var BAL = { anti: 0.57, pact: 1.5 };      // 4.7.9: anti 0.57 · pact 1.5(하루 1시간 무과금 약 30일, 보급 계약 + 하루 건너뛰기 1번이면 약 21일. README)
   function antibodiesFor(run, mult) {
     if (!(run >= RETREAT_MIN)) return 0;
@@ -3954,6 +4016,10 @@
     { id: 'coat-candy',  slot: 'coat', name: '사탕 우비',   rarity: 1, look: { y: '#5fd0b0', j: '#ff8fb8' } },
     { id: 'coat-silver', slot: 'coat', name: '은빛 우비',   rarity: 2, look: { y: '#c8ccd4', j: '#c8ccd4' } },
     { id: 'coat-gold',   slot: 'coat', name: '금빛 우비',   rarity: 2, look: { y: '#ffd95a', j: '#c8922a' } },      // 기본 노랑과 헷갈리지 않게 몸은 짙은 금색
+    // 4.8.2 뽑기에 없는 외형: 첫 보급 상자 · 생존자 수첩(reward 로 두고 받는 길은 FLAG_REWARDS 에 적는다)
+    { id: 'coat-starter', slot: 'coat', name: '보급 우비',  rarity: 1, reward: true, exclusive: true, look: { y: '#8a8f55', j: '#6b6f45' } },
+    { id: 'coat-pass1',  slot: 'coat', name: '수첩 우비',   rarity: 1, reward: true, exclusive: true, look: { y: '#e8762a', j: '#2a3a6a' } },
+    { id: 'coat-pass2',  slot: 'coat', name: '별밤 수첩 우비', rarity: 2, reward: true, exclusive: true, look: { y: '#ffd95a', j: '#1e2440' } },
     // 2.0.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
     { id: 'hood-none',   slot: 'hood', name: '기본 후드',   rarity: 0, base: true, look: 'none' },
     { id: 'hood-cat',    slot: 'hood', name: '고양이 귀',   rarity: 1, look: 'cat' },
@@ -4074,6 +4140,9 @@
     { id: 'flag-heart', text: '출석 21일', has: function (s) { return (s.attend && s.attend.count || 0) >= 21; } },
     { id: 'flag-star',  text: '출석 30일', has: function (s) { return (s.attend && s.attend.count || 0) >= 30; } },
     { id: 'flag-moon',  text: '최후의 밤 막기', has: function (s) { return !!s.finalHeld || (s.ended || 0) >= 1; } },
+    { id: 'coat-starter', text: '보급소 · 첫 보급 상자', has: function () { return false; } },      // 4.8.2 사서 받는다(저절로 주지 않는다)
+    { id: 'coat-pass1', text: '생존자 수첩 유료 줄 10칸', has: function () { return false; } },
+    { id: 'coat-pass2', text: '생존자 수첩 유료 줄 20칸', has: function () { return false; } },
     { id: 'flag-purple', text: '원정 별 30개', has: function (s) { return stageMarkCount(s).have >= 30; } },
     { id: 'flag-rainbow', text: '이야기의 끝 보기', has: function (s) { return (s.ended || 0) >= 1; } }
   ];
@@ -4142,6 +4211,7 @@
     var r = info.reward, a = attendOf(state);
     state.treats = (state.treats || 0) + (r.treats || 0); state.tickets = (state.tickets || 0) + (r.tickets || 0);
     a.last = dateStr; a.count += 1;
+    passSync(state, dateStr); passStamp(state, PASS_STAMPS.attend);      // 4.8.2 수첩 도장
     return { ok: true, day: info.day, reward: r };
   }
   function buyTicket(state) {
@@ -4155,6 +4225,7 @@
     var c = findById(COSMETICS, id);
     if (!c) return fail('unknown');
     if (ownsCosmetic(state, id)) return fail('owned');
+    if (c.exclusive) return fail('exclusive');      // 4.8.2 보급소 · 수첩 한정은 조각으로 만들 수 없다
     var cost = SHARDS_COST[c.rarity];
     if (!(state.shards >= cost)) return fail('shards');
     state.shards -= cost; state.cosmetics[id] = true; cosNewOf(state)[id] = true;
@@ -4318,7 +4389,7 @@
       return { ok: true, won: false, got: [], treats: stepTreats, stepTreats: stepTreats, badge: false, pct: frac, record: frac > before, before: before, why: why, breaches: stage.breaches || 0, retry: stageRetryBonus(main, stt.def.id, false) };
     }
     m.fails = 0; treats += stepTreats;
-    function mark(k) { if (!m[k]) { m[k] = true; got.push(k); treats += STAGE_TREATS[k]; } }      // 새 표시 하나마다 간식과 뽑기권 한 장
+    function mark(k) { if (!m[k]) { m[k] = true; got.push(k); treats += STAGE_TREATS[k]; passStamp(main, PASS_STAMPS.star); } }      // 4.8.2 새 별마다 수첩 도장      // 새 표시 하나마다 간식과 뽑기권 한 장
     var badge = !!stt.def.boss && !m.clear;
     mark('clear');
     if (stt.seconds <= stageSpeed(stt.def, false, stt.goalIndex)) mark('speed');
@@ -4408,7 +4479,8 @@
   }
   function retreat(state, now, rng) {
     if (!canRetreat(state)) return fail('not-ready');
-    var gained = antibodiesOnRetreat(state), next = createState(now);
+    var gained = antibodiesOnRetreat(state); passStamp(state, PASS_STAMPS.retreat);      // 4.8.2 철수도 수첩 도장(다음 판으로 이어진다)
+    var next = createState(now);
     next.goalPick = rollGoalPick(state.goalPick, rng);      // 다음 회차의 목표는 이번과 다르게
     next.medals = state.medals || {};      // 훈장은 남는다
     next.stageGoal = state.stageGoal || {};
@@ -4418,6 +4490,7 @@
     next.dangerNext = Math.min(state.dangerNext || 0, dangerMax(next)); next.danger = next.dangerNext;      // 골라 둔 위험 단계로 시작한다(다음에도 같은 단계로 이어진다)
     next.attend = state.attend || { last: '', count: 0 };      // 4.7.0 출석은 철수해도 이어진다
     next.pact = !!state.pact;      // 4.7.9 보급 계약은 영구
+    next.pass = state.pass || { season: -1, stamps: 0, premium: false, free: 0, prem: 0 }; next.starter = !!state.starter;      // 4.8.2 수첩 · 첫 보급 상자는 철수해도 이어진다
     next.own = state.own || {}; next.skipDay = state.skipDay || { day: '', n: 0 };      // 4.8.0 보급소 영구 상품 · 하루 횟수는 이어진다(철수 보급은 이번 철수에서 쓰였다)
     next.tickets = state.tickets || 0; next.shards = state.shards || 0; next.cosmetics = state.cosmetics || {}; next.cosNew = state.cosNew || {}; next.wear = state.wear || next.wear; next.gachaPity = state.gachaPity || 0; next.gachaPulls = state.gachaPulls || 0;      // 뽑기와 외형도 남는다
     next.challengeStreak = activeChallenge(state) ? 0 : (state.challengeStreak || 0);      // 도전을 달고 철수하면 포기한 것으로 친다
@@ -5076,7 +5149,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    BAL: BAL, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    BAL: BAL, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,

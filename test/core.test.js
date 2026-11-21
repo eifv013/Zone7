@@ -3581,3 +3581,29 @@ test('보급소: 철수 보급은 다음 철수의 항체 샘플을 늘리고 �
   const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.retreatBoost, false);
   const t = fresh(); t.treats = 5; assert.equal(C.buyShop(t, 'boost', 'd').reason, 'treats');
 });
+
+/* ---------- 4.8.2 생존자 수첩 · 첫 보급 상자 ---------- */
+test('수첩: 도장이 칸을 채우고, 두 줄을 받고, 시즌이 바뀌면 처음으로', () => {
+  const s = fresh(); s.treats = 500; const d = '2026-11-22', sn = C.passSeasonOf(d);
+  assert.ok(sn >= 0); assert.equal(C.passSeasonOf('nope'), -1);
+  let info = C.passInfo(s, d); assert.equal(info.tier, 0); assert.equal(C.passClaim(s, d).reason, 'none');
+  C.passStamp(s, C.PASS_STEP * 10 + 3); info = C.passInfo(s, d); assert.equal(info.tier, 10); assert.ok(info.canFree && !info.canPrem);
+  const t0 = s.tickets; const r = C.passClaim(s, d); assert.ok(r.ok); assert.equal(r.got.length, 10); assert.equal(s.tickets, t0 + 2, '5 · 10칸 뽑기권');
+  assert.ok(C.buyPassPremium(s, d).ok); assert.equal(C.buyPassPremium(s, d).reason, 'owned');
+  assert.ok(C.passClaim(s, d).ok); assert.equal(s.cosmetics['coat-pass1'], true, '유료 10칸 한정 외형');
+  assert.equal(C.craftCosmetic(Object.assign(fresh(), { shards: 999 }), 'coat-pass2').reason, 'exclusive');
+  // 다음 시즌
+  const later = '2026-12-31'; assert.ok(C.passSeasonOf(later) > sn);
+  info = C.passInfo(s, later); assert.equal(info.tier, 0); assert.equal(info.premium, false); assert.equal(s.cosmetics['coat-pass1'], true, '받은 외형은 남는다');
+  const back = C.deserialize(C.serialize(s)); assert.equal(back.pass.season, s.pass.season);
+});
+test('수첩 도장: 출석에서 받는다', () => {
+  const s = fresh(); C.claimAttend(s, '2026-11-22'); assert.equal(s.pass.stamps, C.PASS_STAMPS.attend);
+});
+test('첫 보급 상자: 한 번만, 한정 외형이 들어 있다', () => {
+  const s = fresh(); s.treats = 100; const t0 = s.tickets;
+  assert.ok(C.buyStarter(s).ok); assert.equal(s.tickets, t0 + C.STARTER.give.tickets); assert.equal(s.cosmetics['coat-starter'], true);
+  assert.equal(C.buyStarter(s).reason, 'owned');
+  const u = fresh(); u.treats = 5; assert.equal(C.buyStarter(u).reason, 'treats');
+  assert.ok(!C.gachaTable().some(t => t.id === 'coat-starter'), '뽑기에 없다');
+});

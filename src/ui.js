@@ -1907,12 +1907,24 @@
    * 4.8.0 보급소 창: 영구(한 번만) · 보급품(여러 번) · 결제(준비 중) 세 묶음. 단추에는 값 · 보유 · 오늘 다 씀 · 준비됨 · 준비 중.
    * 간식이 모자라면 눌렀을 때 알려 주고 그 줄을 흔든다(뽑기권 사기와 같은 모양).
    */
-  var STORE_GROUP = [['perm', '영구 · 한 번만'], ['cons', '보급품 · 여러 번'], ['paid', '결제 · 준비 중']];
+  var STORE_GROUP = [['starter', '처음 한 번'], ['perm', '영구 · 한 번만'], ['cons', '보급품 · 여러 번'], ['paid', '결제 · 준비 중']];
   function renderStore() {
     var box = $('store-list'); if (!box || $('store-veil').hidden) return;
     setText($('store-treats'), IC.treat + fmt(state.treats || 0));
     if (!box.firstChild) STORE_GROUP.forEach(function (g) {
       box.appendChild(el('h4', '', g[1]));
+      if (g[0] === 'starter') {      // 4.8.2 첫 보급 상자(한 번만): 뽑기권 · 조각 · 한정 외형
+        var srow = el('div', 'store-row'); srow.setAttribute('data-id', 'starter');
+        srow.appendChild(el('i', 'ic ic-ticket'));
+        var st0 = el('div', 't'); st0.appendChild(el('b', '', '첫 보급 상자')); st0.appendChild(el('small', '', IC.ticket + C.STARTER.give.tickets + ', ' + IC.shard + C.STARTER.give.shards + ', 한정 외형 보급 우비')); srow.appendChild(st0);
+        var sb0 = el('button', ''); sb0.type = 'button'; srow.appendChild(sb0);
+        sb0.addEventListener('click', function () {
+          var r = C.buyStarter(state);
+          if (r.ok) { sfx('buy'); toast('첫 보급 상자 · 받았어요'); Store.save(); renderShop(); renderStore(); return; }
+          if (r.reason === 'treats') { toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, C.STARTER.treats - Math.floor(state.treats || 0))) + ' 더 필요해요'); srow.classList.remove('nope'); void srow.offsetWidth; srow.classList.add('nope'); }
+        });
+        box.appendChild(srow); return;
+      }
       C.SHOP_ITEMS.filter(function (it) { return it.kind === g[0]; }).forEach(function (it) {
         var row = el('div', 'store-row'); row.setAttribute('data-id', it.id);
         row.appendChild(el('i', 'ic ic-' + it.icon));
@@ -1923,6 +1935,7 @@
       });
     });
     Array.prototype.forEach.call(box.querySelectorAll('.store-row'), function (row) {
+      if (row.getAttribute('data-id') === 'starter') { var sb1 = row.lastChild; sb1.className = state.starter ? 'own' : ''; setText(sb1, state.starter ? '보유' : IC.treat + C.STARTER.treats); sb1.classList.toggle('short', !state.starter && !(state.treats >= C.STARTER.treats)); return; }
       var it = C.shopItem(row.getAttribute('data-id')), st = C.shopState(state, it.id, todayStr()), b = row.lastChild;
       b.className = st.owned ? 'own' : it.kind === 'paid' ? 'paid' : '';
       setText(b, it.kind === 'paid' ? '₩' + String(it.won).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : st.owned ? '보유' : st.reason === 'daily' ? '오늘 다 씀' : st.reason === 'ready' ? '준비됨' : IC.treat + it.treats + (st.left != null ? ' (' + st.left + '번)' : ''));
@@ -1941,8 +1954,35 @@
     else if (r.reason === 'daily') toast('오늘은 다 썼어요 · 내일 다시 살 수 있어요');
     else if (r.reason === 'none') toast('아직 들어오는 물자가 없어요');
   }
+  /*
+   * 4.8.2 생존자 수첩 창: 도장 막대, 스무 칸(무료 · 유료 두 줄, 다섯 칸씩 네 줄), 받기 · 유료 줄 열기.
+   */
+  function passCell(r) { return r.cos ? '외형' : r.tickets ? IC.ticket + r.tickets : IC.treat + r.treats; }
+  function renderPass() {
+    if (!$('pass-veil') || $('pass-veil').hidden) return;
+    var info = C.passInfo(state, todayStr()), days = Math.max(0, Math.ceil((info.endsAt - Date.now()) / 86400000));
+    setText($('pass-sub'), '남은 ' + days + '일');
+    $('pass-fill').style.width = Math.min(100, info.stamps / (C.PASS_TIERS * C.PASS_STEP) * 100).toFixed(1) + '%';
+    $('pass-stamps').textContent = '도장 ' + fmt(info.stamps) + ', ' + info.tier + ' / ' + C.PASS_TIERS + '칸' + (info.toNext ? ', 다음 칸까지 ' + info.toNext : '');      // 한 줄로(fillText 는 ' · ' 마다 줄을 나눈다)
+    var g = $('pass-grid'); while (g.firstChild) g.removeChild(g.firstChild);
+    for (var b = 0; b < C.PASS_TIERS; b += 5) {
+      g.appendChild(el('div', 'n', (b + 1) + '~' + (b + 5) + '칸'));
+      ['free', 'prem'].forEach(function (tr) {
+        g.appendChild(el('div', 'h', tr === 'free' ? '무료' : '유료'));
+        for (var i = b + 1; i <= b + 5; i++) {
+          var got = tr === 'free' ? i <= info.free : i <= info.prem, reach = i <= info.tier, open = tr === 'free' || info.premium;
+          g.appendChild(el('div', 'c' + (tr === 'prem' ? ' prem' : '') + (got ? ' got' : reach && open ? ' can' : !open ? ' lock' : ''), (got ? '✓ ' : '') + passCell(C.passReward(tr, i))));
+        }
+      });
+    }
+    $('pass-claim').disabled = !(info.canFree || info.canPrem);
+    setText($('pass-claim'), info.canFree || info.canPrem ? '받기' : '받을 칸이 없어요');
+    $('pass-buy').hidden = info.premium; setText($('pass-buy'), '유료 줄 ' + IC.treat + C.PASS_PRICE);
+    var st = C.PASS_STAMPS;
+    setText($('pass-how'), '도장은 출석 ' + st.attend + ', 원정의 새 별 ' + st.star + ', 밤 단계 이정표 ' + st.night + ', 혈청 단계 ' + st.serum + ', 철수 ' + st.retreat + '개씩이에요. 유료 줄의 10칸 · 20칸에는 수첩 한정 외형이 있어요. 30일마다 새 수첩이 나와요.');
+  }
   function renderShop() {
-    renderAttend(); renderStore();
+    renderAttend(); renderStore(); renderPass();
     if (home) return;
     setText($('shop-count'), IC.ticket + state.tickets + ' · ' + IC.shard + state.shards + ' · ' + IC.treat + fmt(state.treats));
     setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번');      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
@@ -2020,6 +2060,7 @@
     setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '현재 입은 모습');
     $('look-act').hidden = !pc;
     if (pc && C.ownsCosmetic(state, pc.id)) { $('look-act').disabled = false; setText($('look-act'), '장착하기'); }
+    else if (pc && pc.exclusive) { $('look-act').disabled = true; setText($('look-act'), (C.FLAG_REWARDS.filter(function (f) { return f.id === pc.id; })[0] || { text: '한정' }).text + '에서 받아요'); }      // 4.8.2 한정 외형
     else if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
   }
   /*
@@ -5408,6 +5449,14 @@
     $('attend-open').addEventListener('click', function () { sfx('click'); renderAttend(); $('attend-veil').hidden = false; });
     $('store-open').addEventListener('click', function () { sfx('click'); $('store-veil').hidden = false; renderStore(); });
     $('store-close').addEventListener('click', function () { $('store-veil').hidden = true; });
+    $('pass-open').addEventListener('click', function () { sfx('click'); $('pass-veil').hidden = false; renderPass(); });
+    $('pass-close').addEventListener('click', function () { $('pass-veil').hidden = true; });
+    $('pass-claim').addEventListener('click', function () { var r = C.passClaim(state, todayStr()); if (!r.ok) return; sfx('goal'); toast('수첩 보상 ' + r.got.length + '칸을 받았어요'); Store.save(); renderShop(); });
+    $('pass-buy').addEventListener('click', function () {
+      var r = C.buyPassPremium(state, todayStr());
+      if (r.ok) { sfx('buy'); toast('유료 줄을 열었어요'); Store.save(); renderShop(); return; }
+      if (r.reason === 'treats') toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, C.PASS_PRICE - Math.floor(state.treats || 0))) + ' 더 필요해요');
+    });
     $('attend-close').addEventListener('click', function () { $('attend-veil').hidden = true; });
     // 4.7.1 받을 수 있는 날에는 하루에 한 번 저절로 뜬다(다른 창이 떠 있으면 닫힌 뒤에)
     var attendShown = '';
