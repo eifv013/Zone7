@@ -726,7 +726,9 @@
       bests: { time: 0, byDanger: {} },      // 가장 빨리 끝낸 시간(초): 전체, 단계별
       endLog: [],            // 최근에 본 끝 10번 [{ danger, seconds, retreats, saved }]
       tickets: 0,            // 뽑기권
-      attend: { last: '', count: 0 },      // 4.7.0 출석: 마지막으로 받은 날(YYYY-MM-DD, 기기의 날짜)과 받은 횟수
+      attend: { last: '', count: 0 },
+      pact: false,      // 4.7.9 보급 계약(과금 상품 자리): 생산이 영구히 CONTRACT_PROD 배. 결제 연결은 아직 없다
+      // 4.7.0 출석: 마지막으로 받은 날(YYYY-MM-DD, 기기의 날짜)과 받은 횟수
       shards: 0,             // 중복으로 받은 조각
       cosmetics: {}, cosNew: {},      // 4.7.1 cosNew: 새로 얻은 외형(NEW)         // 가진 외형 { id: true } (기본 외형은 적지 않는다)
       wear: { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' },      // 입은 외형(자리마다 하나)
@@ -882,6 +884,7 @@
     s.endLog = Array.isArray(raw.endLog) ? raw.endLog.filter(function (e) { return e && typeof e === 'object'; }).slice(-10).map(function (e) { return { danger: clamp(safeCount(e.danger), 0, DANGER_MAX), seconds: clamp(safeCount(e.seconds), 0, 1e9), retreats: clamp(safeCount(e.retreats), 0, 1e9), saved: clamp(safeNum(e.saved, 0), 0, 1e18) }; }) : [];
     // 4.7.0 출석: 날짜 글자는 YYYY-MM-DD 꼴만 받는다
     var ra = raw.attend && typeof raw.attend === 'object' ? raw.attend : {};
+    s.pact = raw.pact === true;
     s.attend = { last: typeof ra.last === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ra.last) ? ra.last : '', count: clamp(safeCount(ra.count), 0, 1e9) };
     s.tickets = clamp(safeCount(raw.tickets), 0, 1e9); s.shards = clamp(safeCount(raw.shards), 0, 1e9); s.gachaPity = clamp(safeCount(raw.gachaPity), 0, GACHA_PITY - 1); s.gachaPulls = clamp(safeCount(raw.gachaPulls), 0, 1e9);
     s.cosNew = {}; if (raw.cosNew && typeof raw.cosNew === 'object') COSMETICS.forEach(function (c) { if (raw.cosNew[c.id] === true) s.cosNew[c.id] = true; });
@@ -1082,6 +1085,7 @@
     m.antibody *= 1 + DANGER_ANTIBODY * dangerOf(state);      // 위험 단계: 철수 항체가 는다
     if (state.stageMarks) m.loot *= Math.pow(BOSS_BADGE_LOOT, badgeCount(state));      // 원정 지역 휘장
     if (state.medals) CHALLENGES.forEach(function (d) { if (state.medals[d.id] > 0 && d.perk) { if (d.perk.add) m[d.perk.key] += d.perk.add; else m[d.perk.key] *= d.perk.mult; } });
+    if (state.pact) m.prod *= BAL.pact;      // 4.7.9 보급 계약
     applyPets(state, m);      // 동물 친구(4.4.6: 보유 효과 + 장착한 강아지 · 고양이의 효과와 특기)
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
@@ -3717,7 +3721,19 @@
    */
   var ANTI_STEP = 4, ANTI_CURVE = 1.3, ANTI_KNEE = 11, ANTI_LATE = 4;
   /* 4.7.7 밸런스 손잡이: 철수로 받는 항체 샘플 전체에 곱한다(진행 속도 전체를 늦추고 당기는 가장 굵은 손잡이). 시뮬레이터가 바꿔 가며 잰다 */
-  var BAL = { anti: 0.75 };      // 4.7.8: 0.75(하루 1시간 기준 엔딩 약 25일. tools/sim.js 로 잰 값은 README)
+  /*
+   * 4.7.9 과금 상품의 효과(결제 연결은 나중). 밸런스는 '무과금으로도 끝까지 가되 좀 오래, 사면 빨라진다'에 맞춘다.
+   *   보급 계약: 한 번 사면 영구히 생산 ×BAL.pact(곡선 자체를 당긴다).
+   *   시간 건너뛰기: 현재 초당 수입의 SKIP_HOURS 시간치를 바로 받는다(물자만. 습격 · 밤 단계 · 건물 단계 같은 손으로 하는 것은 건너뛰지 않는다).
+   */
+  var SKIP_HOURS = 2;
+  function buyContract(state) { if (state.pact) return fail('done'); state.pact = true; return { ok: true }; }      /* 'contract' 는 3구역 납품 의뢰가 쓰는 이름이라 pact 로 둔다 */
+  function timeSkip(state, hours) {
+    var h = hours > 0 ? Math.min(24, hours) : SKIP_HOURS, gain = incomePerSec(state) * h * 3600;
+    if (!(gain > 0) || !isFinite(gain)) return fail('none');
+    earn(state, gain); return { ok: true, gain: gain, hours: h };
+  }
+  var BAL = { anti: 0.57, pact: 1.5 };      // 4.7.9: anti 0.57 · pact 1.5(하루 1시간 무과금 약 30일, 보급 계약 + 하루 건너뛰기 1번이면 약 21일. README)
   function antibodiesFor(run, mult) {
     if (!(run >= RETREAT_MIN)) return 0;
     var d = Math.log(run / RETREAT_MIN) / Math.LN10;
@@ -4293,6 +4309,7 @@
     next.ended = state.ended;      // dangerMax 가 본다
     next.dangerNext = Math.min(state.dangerNext || 0, dangerMax(next)); next.danger = next.dangerNext;      // 골라 둔 위험 단계로 시작한다(다음에도 같은 단계로 이어진다)
     next.attend = state.attend || { last: '', count: 0 };      // 4.7.0 출석은 철수해도 이어진다
+    next.pact = !!state.pact;      // 4.7.9 보급 계약은 영구
     next.tickets = state.tickets || 0; next.shards = state.shards || 0; next.cosmetics = state.cosmetics || {}; next.cosNew = state.cosNew || {}; next.wear = state.wear || next.wear; next.gachaPity = state.gachaPity || 0; next.gachaPulls = state.gachaPulls || 0;      // 뽑기와 외형도 남는다
     next.challengeStreak = activeChallenge(state) ? 0 : (state.challengeStreak || 0);      // 도전을 달고 철수하면 포기한 것으로 친다
     next.bestZone = Math.max(state.bestZone, state.zone);
@@ -4948,7 +4965,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    BAL: BAL, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    BAL: BAL, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,

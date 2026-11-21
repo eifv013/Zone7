@@ -3523,7 +3523,7 @@ test('4.7.7 밸런스 손잡이: 항체 샘플은 BAL.anti 배로 받는다', ()
   const bal0 = C.BAL.anti;
   try { C.BAL.anti = 1; const one = C.antibodiesOnRetreat(s); C.BAL.anti = 0.5; const half = C.antibodiesOnRetreat(s); assert.ok(one > 0); assert.ok(Math.abs(half - one / 2) <= 1); }
   finally { C.BAL.anti = bal0; }
-  assert.equal(C.BAL.anti, 0.75);
+  assert.equal(C.BAL.anti, 0.57);
 });
 
 test('4.7.8 밤 단계 이정표: 이번 회차에 처음 오른 5의 배수 단계마다 간식', () => {
@@ -3534,4 +3534,21 @@ test('4.7.8 밤 단계 이정표: 이번 회차에 처음 오른 5의 배수 단
   assert.ok(ev.some(e => e.type === 'night-mile' && e.lv === 5)); assert.equal(s.treats, C.NIGHT_MILE_TREATS);
   c.nightLv = 4; c.night = C.newRaid(s, () => 0.5); c.night.t = 0.01; const ev2 = []; C.stepCamp(s, 0.05, () => 0.5, ev2);
   assert.ok(!ev2.some(e => e.type === 'night-mile'), '이미 오른 단계는 다시 주지 않는다');
+});
+
+/* ---------- 4.7.9 과금 상품 효과(결제 연결 전) ---------- */
+test('보급 계약: 생산이 영구히 늘고 철수해도 남는다. 두 번 살 수 없다', () => {
+  const s = fresh(); const p0 = C.mods(s).prod;
+  assert.ok(C.buyContract(s).ok); assert.equal(C.buyContract(s).reason, 'done');
+  near(C.mods(s).prod / p0, C.BAL.pact);
+  s.runEarned = 1e30; const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.pact, true);
+  assert.equal(C.deserialize(C.serialize(n)).pact, true);
+  assert.equal(C.deserialize(JSON.stringify(Object.assign(JSON.parse(C.serialize(fresh())), { pact: 'yes' }))).pact, false, '이상한 값은 받지 않는다');
+});
+test('시간 건너뛰기: 현재 초당 수입의 SKIP_HOURS 시간치를 받는다', () => {
+  const s = fresh(); s.zone = 1; s.bestZone = 1; s.supplies = 0;
+  const per = C.incomePerSec(s); const r = C.timeSkip(s);
+  if (per > 0) { assert.ok(r.ok); near(s.supplies, per * C.SKIP_HOURS * 3600); }
+  const z = fresh(); z.supplies = 0; z.zone = 0;
+  const r2 = C.timeSkip(z, 100); assert.ok(!r2.ok || r2.hours === 24, '하루를 넘게 건너뛰지 않는다');
 });
