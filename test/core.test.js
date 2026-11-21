@@ -1815,6 +1815,7 @@ test('7구역 송신탑: 안테나가 생존자를 모으고, 모인 만큼 전�
   // 혈청 세 단계
   // 3.1.0: 혈청은 정착지의 가운데 줄 건물이 있어야 만든다
   assert.equal(C.buySerum(s).reason, 'settle'); C.SETTLE.forEach(d => { s.settle[d.id] = true; });
+  s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 3; }); s.finalHeld = true;      // 4.7.5 문턱을 다 채운 채로
   const costs = []; for (let i = 0; i < 3; i++) { costs.push(C.serumCost(s)); assert.ok(C.buySerum(s).ok); }
   assert.ok(costs[0] < costs[1] && costs[1] < costs[2]);
   assert.equal(s.serumStage, 3); assert.equal(C.buySerum(s).reason, 'done'); assert.equal(C.serumCost(s), Infinity);
@@ -2720,7 +2721,7 @@ test('7구역 정착지: 자리에 사람을 놓으면 그만큼 차고, 다 차
   assert.equal(C.settleFree(s), cost('farm') + cost('clinic') - r.sent, '놓은 사람은 문 앞에서 빠진다'); near(C.mods(s).prod, prod0, '다 차기 전에는 효과가 없다'); assert.equal(C.settleCount(s), 0);
   const d = fill7(s, 'farm'); assert.ok(d.done && d.lv === 1 && !d.repaired); assert.equal(C.settleLv(s, 'farm'), 1); assert.equal(C.settleWork(s, 'farm'), 0); near(C.mods(s).prod / prod0, 1.5);
   assert.equal(C.settleFree(s), cost('clinic')); assert.ok(C.towerMult(s) >= mult0, '놓은 사람도 생존자다');
-  assert.ok(fill7(s, 'clinic').done); assert.equal(C.serumNeeds(s), null); assert.ok(C.buySerum(s).ok); assert.equal(C.serumNeeds(s).id, 'lab7'); assert.equal(C.buySerum(s).reason, 'settle');
+  assert.ok(fill7(s, 'clinic').done); assert.equal(C.serumNeeds(s), null); assert.equal(C.buySerum(s).reason, 'gate'); s.nightLvBest = 10; assert.ok(C.buySerum(s).ok); assert.equal(C.serumNeeds(s).id, 'lab7'); assert.equal(C.buySerum(s).reason, 'settle');
   const d0 = C.mods(s).defense, z0 = C.mods(s).z7, b0 = C.tuneBand(s);
   s.survivors = 1e7; ['guard7', 'mess', 'watch'].forEach((id) => assert.ok(fill7(s, id).done, id));
   near(C.mods(s).defense / d0, 2); near(C.mods(s).z7 / z0, 2); assert.ok(C.tuneBand(s) > b0); assert.equal(C.settleCount(s), 5);
@@ -3458,4 +3459,54 @@ test('멈춘 사람이 나가기까지: 셈과 실제로 나가는 때가 맞는
   const out = ev.find(e => e.type === 'ward-out');
   assert.ok(out && out.at === 0, '맨 처음 나가는 것은 가장 오래 앉은 0번');
   assert.ok(Math.abs(t - want) <= 0.3, '셈한 시각(' + want + ')에 나간다(' + t + ')');
+});
+
+/* ---------- 4.7.5 혈청의 문턱과 최후의 밤 ---------- */
+function z7ready() {
+  const s = fresh(); s.zone = 6; s.bestZone = 6; s.supplies = 1e40; s.survivors = 1e6;
+  C.SETTLE.forEach(d => { s.settle[d.id] = true; s.settleLv[d.id] = 1; });
+  return s;
+}
+test('혈청 문턱: 밤 단계와 건물 단계가 차야 단계가 선다', () => {
+  const s = z7ready();
+  let g = C.serumGate(s);
+  assert.equal(g.stage, 1); assert.equal(g.night, 10); assert.equal(g.ok, false);
+  assert.equal(C.buySerum(s).reason, 'gate');
+  s.nightLvBest = 10; assert.ok(C.buySerum(s).ok);
+  s.nightLvBest = 20; assert.equal(C.buySerum(s).reason, 'gate', '건물 단계 합이 모자라다');
+  assert.equal(C.settleLvSum(s), 9);
+  C.SETTLE.forEach(d => { s.settleLv[d.id] = 2; }); assert.ok(C.buySerum(s).ok);
+  s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 3; });
+  g = C.serumGate(s); assert.ok(g.base && g.final && !g.ok);
+  assert.equal(C.buySerum(s).reason, 'final', '최후의 밤을 막아야 한다');
+});
+test('최후의 밤: 맞으러 가는 습격. 막으면 마지막 단계가 열린다', () => {
+  const s = z7ready(); s.serumStage = 2;
+  assert.equal(C.canFinal(s), false, '문턱 전에는 맞을 수 없다');
+  assert.equal(C.startFinal(s).reason, 'gate');
+  s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 3; });
+  assert.ok(C.canFinal(s));
+  const ev = []; assert.ok(C.startFinal(s, () => 0.3, ev).ok);
+  const n = C.campOf(s).night;
+  assert.ok(n.final && n.pin, '늘 협공'); assert.equal(n.t, C.FINAL_SECONDS);
+  assert.ok(ev.some(e => e.type === 'camp-night' && e.final));
+  assert.equal(C.startFinal(s).reason, 'night', '습격 중에는 또 맞을 수 없다');
+  // 사람을 넉넉히 세워 버틴다
+  const ev2 = []; let t = 0;
+  while (C.campOf(s).night && t < 200) { for (let k = 0; k < 6; k++) C.sendGuard(s, -1); C.stepCamp(s, 0.5, () => 0.5, ev2); t += 0.5; }
+  const held = ev2.find(e => e.type === 'camp-held'), breach = ev2.find(e => e.type === 'camp-breach');
+  assert.ok(held || breach, '끝이 난다');
+  if (held) { assert.ok(held.final); assert.equal(s.finalHeld, true); assert.ok(C.buySerum(s).ok); assert.equal(s.serumStage, 3); }
+  else { assert.ok(breach.final); assert.equal(s.finalHeld, false); assert.ok(C.campOf(s).nightLv >= 0); }
+  assert.equal(s.finalTries, 1);
+});
+test('최후의 밤: 아무도 세우지 않으면 뚫리고, 다시 맞을 수 있다', () => {
+  const s = z7ready(); s.serumStage = 2; s.nightLvBest = 30; C.SETTLE.forEach(d => { s.settleLv[d.id] = 3; });
+  C.startFinal(s, () => 0.3); const ev = []; let t = 0;
+  while (C.campOf(s).night && t < 200) { C.stepCamp(s, 0.5, () => 0.5, ev); t += 0.5; }
+  assert.ok(ev.some(e => e.type === 'camp-breach' && e.final)); assert.equal(s.finalHeld, false);
+  C.SETTLE.forEach(d => { s.camp.broken[d.id] = false; });
+  assert.ok(C.canFinal(s), '다시 맞을 수 있다');
+  const back = C.deserialize(C.serialize(Object.assign(s, { finalHeld: true })));
+  assert.equal(back.finalHeld, true, '저장에 남는다');
 });

@@ -1403,7 +1403,7 @@
     var openedAt = Date.now();
     setText($('confirm-title'), title);
     setText($('confirm-text'), text);
-    setText($('confirm-no'), noText);
+    setText($('confirm-no'), noText); $('confirm-no').hidden = !noText; $('confirm-yes').classList.toggle('calm', !noText);      // 4.7.5 알려 주기만 하는 창은 단추 하나
     setText($('confirm-yes'), yesText);
     function close() { $('confirm').hidden = true; $('confirm-no').onclick = null; $('confirm-yes').onclick = null; }
     $('confirm-no').onclick = close;
@@ -1583,6 +1583,11 @@
     rows.camp = {}; C.CAMP_ROWS.forEach(function (d) { rows.camp[d.id] = buildRow({ id: d.id, name: d.name, desc: d.desc }, function () { buy(C.buyCampRow(state, d.id), 'route'); }); $('rows-z6').appendChild(rows.camp[d.id].btn); });
     rows.tier7.forEach(function (t) { $('rows-z6').appendChild(t.row.btn); $('rows-z6').appendChild(t.grid); });
     $('serum').addEventListener('click', function () {
+      /* 4.7.5 최후의 밤: 문턱을 다 채운 마지막 단계에서는 단추가 습격을 부른다. 바로 운영 화면(정착지 지도)으로 옮겨 막게 한다 */
+      if (C.canFinal(state)) {
+        var fev = []; if (!C.startFinal(state, Math.random, fev).ok) return;
+        tab = 'z6'; pane = 'play'; log('최후의 밤을 맞았다. 무리가 세 쪽에서 몰려온다.', 'bad'); handleEvents(fev); Store.save(); render(); return;
+      }
       var r = C.buySerum(state);
       if (!r.ok) return;
       log('혈청 ' + state.serumStage + '단계를 끝냈다.', 'good'); sfx('perk'); buzz(30); Store.save(); render();
@@ -1748,7 +1753,8 @@
       + (d.boss ? '\n보상 · 지역 휘장 · 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
     // 4.7.2 보상: 새로 딴 별 하나마다 간식과 뽑기권 1장(하드는 간식이 두 배). 다 땄으면 그렇다고 적는다
     var leftStars = keys.filter(function (k) { return !m[k]; }).length, perTreat = C.STAGE_TREATS[keys[0]];
-    setText($('stage-d-reward'), why ? '보상 · ???' : leftStars ? '보상 · 별마다\n간식 ' + perTreat + ' · 뽑기권 1' : '보상 · 다 받았어요');
+    /* 4.7.5 보상 칸은 단추다: 누르면 별 여섯 개(일반 · 하드)의 조건과 별마다의 보상을 한 장에 보여 준다. 칸에는 아이콘으로 짧게 */
+    setText($('stage-d-reward'), why ? '보상 · ???' : leftStars ? '보상 ›\n별마다 ' + IC.treat + perTreat + ' · ' + IC.ticket + '1' : '보상 › 다 받았어요');
     setText($('stage-n-info'), m.best ? '최고 ' + clock(m.best) : m.pct > 0 ? '가장 멀리 ' + Math.floor(m.pct * 100) + '%' : '');
     setText($('stage-h-info'), whyHard && !why ? HID + ' · 일반을 클리어하면 열려요' : C.STAGE_RULES[d.hard] + ' · 닫으면 처음부터');
     setText($('stage-n-stars'), starOf(C.STAGE_STARS.normal)); setText($('stage-h-stars'), starOf(C.STAGE_STARS.hard));
@@ -1762,6 +1768,14 @@
       pair[1].forEach(function (k) { var sp = el('span', m[k] ? 'got' : ''); sp.appendChild(el('b', '', m[k] ? '★' : '☆')); sp.appendChild(document.createTextNode(STAR_HOW[k])); box.appendChild(sp); });
     });
     $('stage-go').disabled = !!block;
+    $('stage-d-reward').onclick = function () {
+      if (why) { notice('아직 열리지 않은 원정이에요.'); return; }
+      var line = function (k, hard) { return (m[k] ? '★ ' : '☆ ') + STAR_HOW[k] + ' · ' + IC.treat + C.STAGE_TREATS[k] + ' · ' + IC.ticket + '1' + (m[k] ? ' · 받음' : ''); };
+      var txt = '별 하나를 처음 딸 때마다 보상을 받아요. 한 번에 여러 개를 따도 하나하나 받아요.\n\n일반\n' + C.STAGE_STARS.normal.map(function (k) { return line(k, false); }).join('\n')
+        + '\n\n하드' + (whyHard ? ' · 일반을 클리어하면 열려요' : '') + '\n' + C.STAGE_STARS.hard.map(function (k) { return line(k, true); }).join('\n')
+        + (d.boss ? '\n\n지역 보스를 이기면 지역 휘장(전리품 +10%)도 받아요.' : '');
+      confirmBox('별과 보상', txt, '', '알겠어요', function () {});
+    };
   }
   /*
    * 원정 지도(1.8.1): 지역 I 하류 마을. 구역 지도와 같은 도트 그림으로, 길을 따라 스테이지 표지가 놓이고 끝에 선착장(보스)이 있다.
@@ -2136,10 +2150,14 @@
   function gIdleActs() {
     var t = state.tickets || 0;
     var m = gMany();
-    gActs([['1회 · ' + IC.ticket + '1', function () { gStart(1); }, t < 1, 'y'], [m >= 2 ? m + '회 · ' + IC.ticket + m : '여러 번 · ' + IC.ticket + '2부터', function () { gStart(gMany()); }, m < 2, '']]);
+    /* 4.7.5 1회 단추는 뽑기권이 없어도 눌린다: 누르면 모자라다고 알려 준다(전에는 그냥 꺼져 있어 왜 안 되는지 몰랐다).
+       오른쪽(가진 만큼 뽑기)은 2장 이상일 때만 켜진다. 모자라면 꺼진 채 '최대 뽑기'로만 적는다 */
+    gActs([['1회 · ' + IC.ticket + '1', function () { if ((state.tickets || 0) < 1) { gShort(); return; } gStart(1); }, false, 'y'], [m >= 2 ? m + '회 · ' + IC.ticket + m : '최대 뽑기', function () { gStart(gMany()); }, m < 2, '']]);
     gMsg(IC.ticket + fmt(t) + ' · 전설 보장까지 ' + C.gachaPityLeft(state) + '번');
   }
   /** 4.7.1 오른쪽 단추: 가진 뽑기권만큼 한 번에(10장까지). */
+  /** 4.7.5 뽑기권이 모자랄 때: 안내 글과 함께 기계를 한 번 흔든다. */
+  function gShort() { gMsg('뽑기권이 부족해요 · 상점에서 간식으로 살 수 있어요'); sfx('tab'); buzz([30, 30, 30]); var box = $('gacha-acts'); if (box) { box.classList.remove('nope'); void box.offsetWidth; box.classList.add('nope'); } }
   function gMany() { return Math.max(0, Math.min(10, Math.floor(state.tickets || 0))); }
   function gOpenMachine() { gst = { mode: 'idle', at: gNow(), items: [], taps: 0, tapAt: 0, raf: 0 }; $('gacha-veil').hidden = false; gIdleActs(); gLoop(); }
   /** 4.4.2 기계 창의 확률표: 등급별 합계, 품목마다 확률(코어의 gachaTable 그대로), 가진 것은 흐리게, 보장까지 남은 횟수. */
@@ -2160,7 +2178,7 @@
     var list = n === 1 ? [r] : r.list;
     list.forEach(function (x) { log('뽑기: ' + C.RARITIES[x.rarity] + ' · ' + x.name + (x.dup ? ' (이미 있어서 조각 ' + x.shards + '개)' : '') + '.', x.rarity ? 'good' : ''); });
     gst = { mode: 'turn', at: gNow(), n: n, items: list.map(function (x) { return { r: x, open: 0, openAt: 0 }; }), taps: 0, tapAt: 0, raf: gst.raf };
-    Store.save(); sfx('gturn'); gActs([['건너뛰기', gSkip, false, '']]); gMsg(n === 1 ? '손잡이를 돌려요' : '열 번 돌려요');
+    Store.save(); sfx('gturn'); gActs([['건너뛰기', gSkip, false, '']]); gMsg(n === 1 ? '손잡이를 돌려요' : n + '번 돌려요');
   }
   /** 건너뛰기: 1회는 바로 등장으로, 10회는 모두 연 판으로. */
   function gSkip() {
@@ -2171,7 +2189,7 @@
     var r = gst.items[0].r; gst.mode = 'reveal'; gst.at = gNow(); gGet(r.rarity); if (r.rarity === 2) buzz([30, 40, 30]);
     gMsg(C.RARITIES[r.rarity] + ' · ' + r.name + (r.dup ? ' · 이미 있어요 · 조각 +' + r.shards : ' · NEW') + (r.pity ? ' · 보장' : ''));
     var can = C.ownsCosmetic(state, r.id);
-    gActs([['입어 보기', function () { if (C.wearCosmetic(state, r.id).ok) { sfx('tab'); applyLaraArt(); Store.save(); gMsg(r.name + ' 입었어요'); } }, !can, ''], ['다시 뽑기', function () { gStart(1); }, (state.tickets || 0) < 1, 'y'], ['닫기', gClose, false, '']]);
+    gActs([['입어 보기', function () { if (C.wearCosmetic(state, r.id).ok) { sfx('tab'); applyLaraArt(); Store.save(); gMsg(r.name + ' 입었어요'); } }, !can, ''], ['다시 뽑기', function () { if ((state.tickets || 0) < 1) { gShort(); return; } gStart(1); }, false, 'y'], ['닫기', gClose, false, '']]);
   }
   /** 4.6.0 뽑은 것이 나올 때: 녹음한 '얻음' 소리(없으면 예전 소리). 전설은 화음을 함께 낸다. */
   function gGet(rar) { var ok = false; try { ok = !!(window.Sound && window.Sound.sample && window.Sound.sample('item')); } catch (e) { ok = false; } if (!ok || rar === 2) sfx('gopen' + rar); }
@@ -2179,7 +2197,7 @@
     if (gst.sndFor !== gst.items) { gst.sndFor = gst.items; gGet(gst.items.reduce(function (m, it) { return Math.max(m, it.r.rarity); }, 0)); }      // 10개를 다 열면 한 번(더 눌러도 다시 울리지 않는다)
     gst.mode = 'grid'; var best = 0, news = 0, sh = 0; gst.items.forEach(function (it) { best = Math.max(best, it.r.rarity); if (!it.r.dup) news++; sh += it.r.shards || 0; });
     gMsg('새 외형 ' + news + '개' + (sh ? ' · 조각 +' + sh : '') + (best === 2 ? ' · 전설!' : ''));
-    var m2 = gMany(); gActs([[m2 >= 2 ? m2 + '회 더' : '여러 번 더', function () { gStart(gMany()); }, m2 < 2, 'y'], ['닫기', gClose, false, '']]);
+    var m2 = gMany(); gActs([[m2 >= 2 ? m2 + '회 더' : '최대 뽑기', function () { gStart(gMany()); }, m2 < 2, 'y'], ['닫기', gClose, false, '']]);
   }
   function gCell(i) { return [22 + (i % 5) * 34, 64 + Math.floor(i / 5) * 70]; }
   function gTap(x, y) {
@@ -3449,7 +3467,7 @@
     var ttl = $('camp-title'), head = $('camp-head'); setText(ttl, n ? '습격' : '정착지'); ttl.classList.toggle('raid', !!n); setText(head, lvN > 0 ? lvN + '단계' : ''); head.classList.remove('bad');
     /* 띠: 생존자(낮에는 놓을 수 있는 사람 = '일할 생존자', 습격 때는 아직 세우지 않은 사람 = '싸울 생존자') · 습격까지 남은 시간. 4.3.1: 낮과 밤에 세는 사람이 다르니 어느 쪽인지 적는다 */
     // 4.3.3: 띠에는 늘 모인 생존자 전체를 적는다(낮과 밤에 다른 수를 같은 이름으로 적어 말이 안 됐다)
-    var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, IC.people + fmt(Math.floor(state.survivors || 0)) + '명'); setText(s1, n ? '습격 ' + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
+    var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, IC.people + fmt(Math.floor(state.survivors || 0)) + '명'); setText(s1, n ? (n.final ? '최후의 밤 ' : '습격 ') + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
     var gb = $('camp-guard'); if (gb.hidden !== !n) gb.hidden = !n;
     var er = $('camp-elder-row'), hasE = (state.upgrades.elder || 0) > 0; if (er.hidden !== !hasE) er.hidden = !hasE; if (hasE && $('camp-elder').checked !== C.elderOn(state)) $('camp-elder').checked = C.elderOn(state);
     if (n) CAMP_SIDE.forEach(function (nm, k) { var b = $('camp-g' + k), h = C.sideHold(state, k), key = nm + Math.round(h * 100) + (k === n.side); if (b.getAttribute('data-k') !== key) { b.setAttribute('data-k', key); b.innerHTML = ''; b.appendChild(document.createTextNode(nm)); b.appendChild(el('small', '', Math.round(h * 100) + '%')); } b.className = (k === n.side && h < 1 ? 'hot' : '') + (h >= 1 ? ' ok' : ''); });
@@ -3528,9 +3546,14 @@
     // 혈청: 가운데 줄의 건물이 문턱이다
     var stage = state.serumStage, sMax = C.SERUM_COSTS.length, sCost = C.serumCost(state), need = C.serumNeeds(state), rNext = C.rescueNext(state);
     Array.prototype.forEach.call($('serum-steps').children, function (i, n) { i.className = n < stage ? 'on' : ''; });
-    setText($('serum'), stage >= sMax ? '혈청을 완성했다' : need ? '혈청 ' + (stage + 1) + '단계 · ' + (stage + 1 >= sMax && !need.serum ? '정착지를 다 지어야 해요' : '가운데 줄의 다음 건물이 필요해요') : '혈청 ' + (stage + 1) + '단계 · 물자 ' + fmt(sCost));
-    $('serum').disabled = stage >= sMax || !!need || !(sCost <= state.supplies);
-    setText($('serum-note'), '혈청 ' + stage + ' / ' + sMax + '단계' + ((state.ended || 0) >= 1 ? '\n구조한 생존자 누적 ' + fmt(Math.floor(state.rescued)) + '명 · 생산 +' + Math.round((C.rescueMult(state) - 1) * 100) + '%' + (rNext ? ' · 다음 ' + fmt(rNext) + '명' : ' · 최대') : ''));
+    /* 4.7.5 문턱(밤 단계 · 건물 단계 · 최후의 밤). 단추는 막힌 까닭을 차례로 하나만 적는다: 건물 → 문턱 → 최후의 밤 → 물자 */
+    var gate = C.serumGate(state), gateTxt = gate ? '밤 단계 ' + Math.min(gate.nightNow, gate.night) + ' / ' + gate.night + (gate.lvSum ? ' · 건물 단계 ' + Math.min(gate.lvNow, gate.lvSum) + ' / ' + gate.lvSum : '') + (gate.final ? ' · 최후의 밤 ' + (gate.finalHeld ? '막음' : '아직') : '') : '';
+    var wantFinal = !!gate && !need && gate.base && gate.final && !gate.finalHeld, nightOn = !!(state.camp && state.camp.night);
+    var sb = $('serum'); sb.classList.toggle('final', wantFinal);
+    setText(sb, stage >= sMax ? '혈청을 완성했다' : need ? '혈청 ' + (stage + 1) + '단계 · ' + (stage + 1 >= sMax && !need.serum ? '정착지를 다 지어야 해요' : '가운데 줄의 다음 건물이 필요해요')
+      : !gate.base ? '혈청 ' + (stage + 1) + '단계 · 습격을 막고 건물을 키워요' : wantFinal ? (nightOn ? '습격이 끝나면 최후의 밤을 맞을 수 있어요' : '최후의 밤을 맞는다') : '혈청 ' + (stage + 1) + '단계 · ' + IC.supply + fmt(sCost));
+    sb.disabled = stage >= sMax || !!need || (gate && !gate.base) || (wantFinal ? nightOn : !(sCost <= state.supplies));
+    setText($('serum-note'), (gateTxt ? gateTxt + '\n' : '') + '혈청 ' + stage + ' / ' + sMax + '단계' + ((state.ended || 0) >= 1 ? '\n구조한 생존자 누적 ' + fmt(Math.floor(state.rescued)) + '명 · 생산 +' + Math.round((C.rescueMult(state) - 1) * 100) + '%' + (rNext ? ' · 다음 ' + fmt(rNext) + '명' : ' · 최대') : ''));
   }
   /** 순찰·직접 방송 단추를 그린다(밤샘 연구와 같은 모양). */
   function renderPush(id, label) {
@@ -4448,8 +4471,9 @@
     ['dog', 'cat'].forEach(function (kind) {
       var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
       setText(b.firstChild, k.name + (have ? ' 데려오기' : ' 맞이하기'));
-      setText(b.lastChild, cost ? IC.antibody + fmt(cost) : '첫 친구는 그냥 와요');
-      b.disabled = cost > state.antibodies;
+      var short = cost > state.antibodies;      // 4.7.5 모자라면 값 옆에 '샘플 부족!'을 붉게 적는다
+      setText(b.lastChild, cost ? IC.antibody + fmt(cost) + (short ? ' · 샘플 부족!' : '') : '첫 친구는 그냥 와요');
+      b.lastChild.classList.toggle('short', short); b.disabled = short;
     });
     setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 절반 환불');
     if (!p) return;
@@ -4671,8 +4695,8 @@
           if (ev.auto) campDone(C.SETTLE.filter(function (q) { return q.id === ev.id; })[0], ev.lv, ev.repaired, true);
           break;
         case 'camp-night':
-          campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([40, 40, 40]); if (campPopFn) campPopFn(92, 56, '습격 · ' + CAMP_SIDE[ev.side] + '으로 몰린다', 'bad'); }
-          log('정착지에 무리가 붙었다.', 'bad');
+          campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([40, 40, 40]); if (campPopFn) campPopFn(92, 56, ev.final ? '최후의 밤 · ' + C.FINAL_SECONDS + '초를 버텨요' : '습격 · ' + CAMP_SIDE[ev.side] + '으로 몰린다', 'bad'); }
+          if (!ev.final) log('정착지에 무리가 붙었다.', 'bad');
           break;
         case 'stray-in':
           if (tab === 'z6' && pane === 'play') sfx('tab');
@@ -4686,10 +4710,12 @@
         case 'camp-held':
           campFlash = { at: Date.now(), kind: 'held' }; if (tab === 'z6' && pane === 'play') { sfx('goal'); buzz(30); if (campPopFn) campPopFn(92, 56, '습격을 막았다 +' + fmt(Math.floor(ev.gain)) + '명', 'done'); }
           log('습격을 막았다. 생존자가 ' + fmt(Math.floor(ev.gain)) + '명 더 왔다.', 'good');
+          if (ev.final) { log('최후의 밤을 넘겼다. 혈청 마지막 단계를 만들 수 있다.', 'good'); notice('최후의 밤을 막았어요. 구역 › 개조에서 혈청 마지막 단계를 만들 수 있어요.'); }
           break;
         case 'camp-breach':
           campFlash = { at: Date.now(), kind: 'breach' }; if (tab === 'z6' && pane === 'play') { sfx('rush'); buzz([80, 40, 140]); if (campPopFn) campPopFn(92, 56, ev.name ? '뚫렸다 · ' + ev.name + ' 부서짐' : '뚫렸다', 'bad'); }
           log(ev.name ? '정착지가 뚫렸다. ' + ev.name + (C.hasBatchim(ev.name) ? '이' : '가') + ' 부서졌다.' : '정착지가 뚫렸다.', 'bad');
+          if (ev.final) log('최후의 밤에 뚫렸다. 건물을 고치고 다시 맞을 수 있다.', 'bad');
           break;
         case 'train':      // 3.4.0: 승강장의 열차가 떠났다(why: hand 손으로 · auto 역무원 · full 만차 · horde 무리에 닿음)
           platAnim = { at: Date.now(), kept: ev.kept, cut: ev.cars - ev.kept, why: ev.why };

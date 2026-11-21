@@ -70,6 +70,8 @@ def tower(**over):
     # 3.1.0: 정착지는 여덟 채를 지어 두고 마지막 한 채(학교)만 남긴다: 화면에서 짓는 것과 혈청의 문턱을 같이 본다
     s["settle"] = {k: True for k in ["farm", "mess", "store", "clinic", "lab7", "ward", "guard7", "watch"]}
     s["build"] = {"id": "school", "left": 1}
+    # 4.7.5 혈청의 문턱(밤 단계 · 건물 단계 · 최후의 밤)은 채워 둔다. 가운데 줄만 키운다(식당 · 망루를 키우면 사람이 빨리 모이거나 띠가 넓어져 뒤의 시험이 달라진다)
+    s["settleLv"] = {k: (7 if k in ("clinic", "lab7", "ward") else 1) for k in s["settle"]}; s["nightLvBest"] = 30; s["finalHeld"] = True
     s.update(over)
     return s
 

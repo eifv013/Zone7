@@ -676,7 +676,8 @@
       // 5구역 연구: staff 연구원, points 모인 연구 점수, research 과제별 끝낸 횟수, offers 지금 고를 수 있는 과제, projectsDone 끝낸 과제 수
       staff: 0, points: 0, research: {}, offers: [], projectsDone: 0, boons: { rich: 0, slow: 0, box: 0, quick: 0 }, chartBonus: 0, chartNo: 0, savedRun: 0, racks: 0, reagent: 0, ward: { seats: [], stock: 0, make: 0, nurse: 0, stun: 0, arrive: 0.8, mix: 0, boost: 0, hand: 999, erNext: 35, er: null, pick: null }, labEarned: 0, curesRun: 0, stopsRun: 0, turnedRun: 0, dosesRun: 0, dosesAll: 0, serumTaps: 0, labV: 3, labV4: 1,
       antennas: 0, survivors: 0, serumStage: 0,      // 7구역: 안테나 수, 모인 생존자, 혈청 단계(0~3)
-      ended: 0, endedAt: 0, endedRun: false,                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
+      ended: 0, endedAt: 0, endedRun: false, finalHeld: false, finalTries: 0,      // 4.7.5 최후의 밤을 막았는지 · 몇 번 맞았는지(이번 회차)
+                          // 이야기를 끝낸 횟수와 처음 끝낸 시각(철수해도 남는다)
       posts: 0, guardEarned: 0, safeNights: 0, bridge: { zs: [], spawn: 1, n: 0, shot: 0, combo: 1, hold: 0, wall: 14, fix: 0, down: 0, hand: 999, waveIn: 25, wave: 0, warn: 0, hurt: 0, nade: 0, streak: 0, heat: 0, jam: 0 }, streakBest: 0, breaches: 0, wavesHeld: 0, firepower: 0, morale: 0, bridgeKills: 0, handKills: 0, bigKills: 0, shotsRun: 0, comboBest: 1,      // 6구역: 초소 수, 통행 물자 누적, 넉넉하게 막은 밤
       // 밤
       day: 1, dayClock: 0, wavesCleared: 0, breaches: 0, siege: false, siegeNights: 0, defStreak: 0, edge: 0, nightEase: 1, counterAt: 0, perkOwed: 0, bossPerks: 0, perkFrom: 'goal',      // defStreak 연속으로 막은 밤, perkOwed 변이체를 막고 아직 못 고른 특전
@@ -871,6 +872,7 @@
     s.antennas = s.zone >= 6 ? clamp(safeCount(raw.antennas), 0, COUNT_MAX) : 0; s.survivors = s.zone >= 6 ? clamp(safeNum(raw.survivors, 0), 0, 1e15) : 0;
     s.serumStage = s.zone >= 6 ? clamp(safeCount(raw.serumStage), 0, SERUM_COSTS.length) : 0;
     s.endedRun = !!raw.endedRun && s.zone >= 6;
+    s.finalHeld = !!raw.finalHeld && s.zone >= 6; s.finalTries = s.zone >= 6 ? clamp(safeCount(raw.finalTries), 0, 1e6) : 0;
     s.medals = {}; CHALLENGES.forEach(function (d) { var n = raw.medals && typeof raw.medals === 'object' ? clamp(safeCount(raw.medals[d.id]), 0, 1e6) : 0; if (n > 0) s.medals[d.id] = n; });
     s.challengeStreak = clamp(safeCount(raw.challengeStreak), 0, 1e6);
     s.stageMarks = {}; STAGES.forEach(function (d) { var m = raw.stageMarks && typeof raw.stageMarks === 'object' ? raw.stageMarks[d.id] : null; if (m && typeof m === 'object' && (m.clear || m.speed || m.hard || m.pct > 0 || m.fails > 0)) s.stageMarks[d.id] = { clear: !!m.clear, speed: !!m.speed, hard: !!m.hard, hardSpeed: !!m.hardSpeed, safe: !!m.safe, hardSafe: !!m.hardSafe, best: clamp(safeCount(m.best), 0, 1e6), pct: clamp(safeNum(m.pct, 0), 0, 1), steps: clamp(safeCount(m.steps), 0, STAGE_STEPS), fails: clamp(safeCount(m.fails), 0, STAGE_RETRY_MAX) }; });
@@ -1280,8 +1282,45 @@
   function sideHold(state, i) { var n = state.camp && state.camp.night; if (!n) return 1; return Math.min(1, (n.g[i] || 0) / sideNeed(n, i) + towerHold(state)); }
   /** 습격 전체가 버티는 정도: 무리가 붙은 쪽 가운데 가장 약한 쪽. */
   function nightHold(state) { var n = state.camp && state.camp.night; if (!n) return 1; var h = 1; for (var i = 0; i < RAID_SIDES; i++) if (n.w[i] > 0.02) h = Math.min(h, sideHold(state, i)); return h; }
-  function raidWeights(roll, prev, lv) { var big = Math.floor(roll() * RAID_SIDES) % RAID_SIDES; if (big === prev) big = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES; var mid = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES, w = [0.1, 0.1, 0.1], pin = (lv || 0) >= 15 && roll() < 0.35; w[big] = pin ? 0.45 : 0.6; w[mid] = pin ? 0.45 : 0.3; return { w: w, side: big, pin: pin }; }      // pin: 협공(4.7.2)
-  function newRaid(state, roll) { var lv = state.camp && state.camp.nightLv || 0, r = raidWeights(roll, -1, lv); return { t: raidLen(lv), t0: raidLen(lv), need: raidNeed(state), w: r.w, side: r.side, pin: !!r.pin, g: [0, 0, 0], fences: [1, 1, 1], fence: 1, guards: 0, shift: raidShift(lv) }; }
+  function raidWeights(roll, prev, lv, force) { var big = Math.floor(roll() * RAID_SIDES) % RAID_SIDES; if (big === prev) big = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES; var mid = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES, w = [0.1, 0.1, 0.1], pin = force || ((lv || 0) >= 15 && roll() < 0.35);      /* force: 최후의 밤은 늘 협공 */ w[big] = pin ? 0.45 : 0.6; w[mid] = pin ? 0.45 : 0.3; return { w: w, side: big, pin: pin }; }      // pin: 협공(4.7.2)
+  function newRaid(state, roll, final) {
+    var lv = final ? finalLv(state) : state.camp && state.camp.nightLv || 0, r = raidWeights(roll, -1, lv, !!final), len = final ? FINAL_SECONDS : raidLen(lv);
+    return { t: len, t0: len, need: raidNeed(state), w: r.w, side: r.side, pin: !!r.pin, g: [0, 0, 0], fences: [1, 1, 1], fence: 1, guards: 0, shift: raidShift(lv), final: !!final };
+  }
+  /*
+   * 4.7.5 혈청의 문턱(7구역을 길게, 끝을 또렷하게).
+   *   왜: 7구역에 오면 이틀 만에 끝났다(혈청 세 단계가 물자만 있으면 바로 섰다). 7구역에서 한 일(습격을 막아 올린 밤 단계, 건물을 키운 단계)이 끝과 이어지지 않았다.
+   *   단계마다 가운데 줄 건물(전과 같다)에 더해 SERUM_GATE 를 채워야 한다:
+   *     night : 이번 회차에 오른 가장 높은 밤 단계(nightLvBest). 습격은 화면을 보고 있을 때만 오므로 손으로 올리는 값이다(가만히 둬서는 오르지 않는다)
+   *     lvSum : 정착지 건물 단계의 합
+   *     final : 마지막 단계는 '최후의 밤'을 막아야 한다. 스스로 맞으러 가는 습격이다(startFinal). FINAL_SECONDS 동안, 늘 협공, FINAL_LV 단계의 빠르기.
+   *             막으면 finalHeld. 뚫려도 잃는 것은 보통 습격과 같고(건물 한 채 · 밤 단계 -2), 다시 맞을 수 있다.
+   */
+  var SERUM_GATE = [{ night: 10, lvSum: 0 }, { night: 20, lvSum: 18 }, { night: 30, lvSum: 27, final: true }];
+  var FINAL_SECONDS = 60, FINAL_LV = 45;
+  function finalLv(state) { return Math.max(FINAL_LV, (state.camp && state.camp.nightLv) || 0); }
+  function settleLvSum(state) { var n = 0; SETTLE.forEach(function (d) { n += settleLv(state, d.id); }); return n; }
+  /** 다음 혈청 단계의 문턱과 현재 값. 다 끝났으면 null. */
+  function serumGate(state) {
+    var stage = (state.serumStage || 0) + 1, g = SERUM_GATE[stage - 1];
+    if (!g) return null;
+    var night = state.nightLvBest || 0, lv = settleLvSum(state), base = night >= g.night && lv >= g.lvSum;
+    return { stage: stage, night: g.night, nightNow: night, lvSum: g.lvSum, lvNow: lv, final: !!g.final, finalHeld: !!state.finalHeld, base: base, ok: base && (!g.final || !!state.finalHeld) };
+  }
+  /** 최후의 밤을 맞을 수 있는가: 마지막 단계의 문턱(밤 · 단계)과 건물이 다 갖춰졌고, 아직 막지 못했고, 습격 중이 아닐 때. */
+  function canFinal(state) {
+    if (!zoneOpen(state, 6) || state.serumStage !== SERUM_COSTS.length - 1 || state.finalHeld) return false;
+    var g = serumGate(state), c = campOf(state);
+    return !!g && g.final && g.base && !serumNeeds(state) && !c.night;
+  }
+  /** 최후의 밤을 맞는다(습격이 바로 시작된다). */
+  function startFinal(state, rng, events) {
+    if (!canFinal(state)) return fail(state.finalHeld ? 'done' : state.camp && state.camp.night ? 'night' : 'gate');
+    var c = campOf(state), roll = typeof rng === 'function' ? rng : Math.random;
+    c.night = newRaid(state, roll, true); c.clock = 0; c.hand = 0; state.finalTries = (state.finalTries || 0) + 1;
+    if (events) events.push({ type: 'camp-night', need: c.night.need, side: c.night.side, lv: c.nightLv || 0, final: true });
+    return { ok: true };
+  }
   /** 습격 중에 side(0 북 · 1 동 · 2 남, 안 주면 가장 약한 쪽) 울타리로 한 무리를 세운다. 문 앞에 사람이 없으면 가장 남는 쪽에서 옮긴다. */
   function sendGuard(state, side, auto) {
     if (!zoneOpen(state, 6)) return fail('locked');
@@ -1355,22 +1394,23 @@
     var n = c.night;
     if (n) {
       n.t -= dt;
-      var rr = raidRate(c.nightLv);      // 4.7.2 단계가 오를수록 빨리 깎인다
+      var rlv = n.final ? finalLv(state) : c.nightLv, rr = raidRate(rlv);      // 4.7.2 단계가 오를수록 빨리 깎인다(4.7.5 최후의 밤은 FINAL_LV 단계로)
       for (var si = 0; si < RAID_SIDES; si++) n.fences[si] -= (1 - sideHold(state, si)) * n.w[si] * RAID_SIDES * FENCE_RATE * rr / RAID_SECONDS * dt / mods(state).fence;
       n.fence = Math.min(n.fences[0], n.fences[1], n.fences[2]);
-      n.shift -= dt; if (n.shift <= 0 && n.t > 2) { n.shift = raidShift(c.nightLv); var rw = raidWeights(roll, n.side, c.nightLv); n.w = rw.w; n.side = rw.side; n.pin = !!rw.pin; if (events) events.push({ type: 'camp-shift', side: n.side, pin: n.pin }); }
+      n.shift -= dt; if (n.shift <= 0 && n.t > 2) { n.shift = raidShift(rlv); var rw = raidWeights(roll, n.side, rlv, !!n.final); n.w = rw.w; n.side = rw.side; n.pin = !!rw.pin; if (events) events.push({ type: 'camp-shift', side: n.side, pin: n.pin }); }
       if (n.fence <= 0) {      // 뚫렸다: 서 있는 건물 한 채가 부서진다(고칠 때까지 효과가 없다)
         var alive = SETTLE.filter(function (d) { return settleHas(state, d.id) && !c.broken[d.id]; }), v = alive.length ? alive[Math.floor(roll() * alive.length) % alive.length] : null;
         if (v) c.broken[v.id] = true;
         var lostB = 0;
         c.nightLv = Math.max(0, (c.nightLv || 0) - NIGHT_DROP); state.campBreaches = (state.campBreaches || 0) + 1;
-        if (events) events.push({ type: 'camp-breach', id: v ? v.id : '', name: v ? v.name : '', side: n.side, lost: lostB });
+        if (events) events.push({ type: 'camp-breach', id: v ? v.id : '', name: v ? v.name : '', side: n.side, lost: lostB, final: !!n.final });
         c.night = null; c.clock = 0; c.day = (c.day || 1) + 1;
       } else if (n.t <= 0) {      // 밤을 넘겼다
         var lostH = 0, gain = Math.max(TUNE_MIN, survivorRate(state) * NIGHT_PAY * (1 + 0.1 * (c.nightLv || 0))) * Math.max(0.2, n.fence) * mods(state).nightpay;      // 받는 사람: 모이는 속도의 NIGHT_PAY 초 치 × 단계 × 남은 울타리
         state.survivors = Math.min(1e15, (state.survivors || 0) + gain); c.nightLv = Math.min(NIGHT_LV_MAX, (c.nightLv || 0) + 1); state.nightsHeld = (state.nightsHeld || 0) + 1;
         if (c.nightLv > (state.nightLvBest || 0)) state.nightLvBest = c.nightLv;
-        if (events) events.push({ type: 'camp-held', gain: gain, lv: c.nightLv, fence: n.fence, lost: lostH });
+        if (n.final) state.finalHeld = true;      // 4.7.5 최후의 밤을 막았다: 혈청 마지막 단계를 만들 수 있다
+        if (events) events.push({ type: 'camp-held', gain: gain, lv: c.nightLv, fence: n.fence, lost: lostH, final: !!n.final });
         c.night = null; c.clock = 0; c.day = (c.day || 1) + 1;
       }
     } else if (c.hand < CAMP_HAND && settleCount(state) >= 1 && TEST.night !== 0) {
@@ -1428,6 +1468,7 @@
     if (!zoneOpen(state, 6)) return fail('locked');
     if (state.serumStage >= SERUM_COSTS.length) return fail('done');
     if (serumNeeds(state)) return fail('settle');      // 3.1.0: 그 단계의 건물(진료소 · 실험동 · 격리동)이 있어야 한다
+    var gate = serumGate(state); if (gate && !gate.ok) return fail(gate.base ? 'final' : 'gate');      // 4.7.5 밤 단계 · 건물 단계 · 최후의 밤
     return pay(state, serumCost(state), function () { state.serumStage++; });
   }
 
@@ -4895,7 +4936,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    seatCount: seatCount, wardOutTimes: wardOutTimes, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
