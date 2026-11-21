@@ -1803,7 +1803,29 @@
     if (can && b.getAttribute('aria-pressed') === 'true') dotSeen[id] = true;      // 보고 있는 탭은 본 것으로 친다
     if (b.classList.contains('dot') !== on) b.classList.toggle('dot', on);
   }
+  /** 4.7.0 기기의 오늘 날짜(YYYY-MM-DD, 현지 시각). */
+  function todayStr() { var d = new Date(); function z(n) { return (n < 10 ? '0' : '') + n; } return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+  function attendText(w) { var a = []; if (w.tickets) a.push('뽑기권 ' + w.tickets); if (w.treats) a.push('간식 ' + w.treats); return a.join(' · '); }
+  /** 4.7.0 출석 칸: 일곱 날, 받은 날은 흐리게 ✓, 오늘 받을 날은 노란 테두리. */
+  function renderAttend() {
+    var box = $('attend-days'); if (!box) return;
+    var info = C.attendInfo(state, todayStr()), key = info.count + '|' + info.can;
+    if (box.getAttribute('data-key') !== key) {
+      box.setAttribute('data-key', key);
+      while (box.firstChild) box.removeChild(box.firstChild);
+      C.ATTEND_REWARDS.forEach(function (w, i) {
+        var li = el('li', i < info.day ? 'done' : i === info.day && info.can ? 'now' : '');
+        li.appendChild(document.createTextNode((i + 1) + '일'));
+        var b = el('b', '', attendText(w).replace(' · ', '\n')); b.style.whiteSpace = 'pre-line'; li.appendChild(b);
+        box.appendChild(li);
+      });
+    }
+    $('attend-claim').disabled = !info.can;
+    setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '내일 또 받을 수 있어요');
+    setText($('attend-sub'), '모두 ' + info.count + '번');
+  }
   function renderShop() {
+    renderAttend();
     if (home) return;
     setText($('shop-count'), '뽑기권 ' + state.tickets + '장 · 조각 ' + state.shards + '개 · 간식 ' + fmt(state.treats) + '개');
     setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번');      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
@@ -3587,7 +3609,7 @@
     var canFill = fillReady(state.zone);      // 지금 있는 구역의 것만(2.8.0: 지나온 구역은 부르지 않는다)      // 주문·의뢰·화물, 그리고 3구역의 고장과 출하 트럭
     // 4.6.0 붉은 점은 '새로 할 수 있게 됐을 때'만 켜지고, 그 탭을 한 번 보면 꺼진다. 할 수 없게 됐다가 다시 할 수 있게 되면 또 켜진다
     navDot('mnav-exped', canTrait || canFeed);      // 성장(특성 · 일행)
-    navDot('mnav-shop', state.tickets > 0);      // 상점: 뽑기권으로 뽑을 수 있을 때
+    navDot('mnav-shop', state.tickets > 0 || C.attendInfo(state, todayStr()).can);      // 상점: 뽑기권으로 뽑을 수 있을 때 · 4.7.0 출석을 받을 수 있을 때
     navDot('mnav-manage', canOpen || canFill);
     navDot('mnav-base', C.strikeReady(state) || C.counterReady(state));      // 상황: 선제 공격이나 반격을 쓸 수 있다
     $('pet-feed').classList.toggle('ready', canFeed);
@@ -5192,6 +5214,14 @@
       });
     });
     $('mnav-hub').addEventListener('click', function () { sfx('click'); openHub(); });      // 4.5.5 모험 단추는 창을 연다
+    // 4.7.0 출석 받기
+    $('attend-claim').addEventListener('click', function () {
+      var r = C.claimAttend(state, todayStr());
+      if (!r.ok) { renderAttend(); return; }
+      log('출석 ' + (r.day + 1) + '일째 보상을 받았다: ' + attendText(r.reward) + '.', 'good');
+      toast('출석 ' + (r.day + 1) + '일째 · ' + attendText(r.reward)); sfx('buy');
+      Store.save(); renderShop(); render();
+    });
     var shopNav = document.querySelector('[data-mview-set="shop"]'); if (shopNav) shopNav.addEventListener('click', function () { renderShop(); });      // 4.5.1 상점 탭
     var lastNav = null;      // 4.6.0 기록 단추를 한 번 더 누르면 보던 탭으로 돌아간다
     document.querySelectorAll('[data-mview-set]').forEach(function (b) {

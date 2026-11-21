@@ -3357,3 +3357,20 @@ test('4.4.4 금냥이는 브리티시 숏헤어가 됐다: 기본 이름 그대�
   const a = C.deserialize(C.serialize(s), 0); assert.equal(a.kennel.golden, '브리티시 숏헤어');
   s.kennel = { golden: '노랑이' }; const b = C.deserialize(C.serialize(s), 0); assert.equal(b.kennel.golden, '노랑이');
 });
+
+test('출석 체크(4.7.0): 하루에 한 번, 일곱 날 한 바퀴, 빠져도 이어 가고 날짜를 되돌리면 못 받는다', () => {
+  const s = fresh(); const t0 = s.tickets, tr0 = s.treats;
+  assert.equal(C.attendInfo(s, '2026-11-21').can, true);
+  const r = C.claimAttend(s, '2026-11-21'); assert.ok(r.ok); assert.equal(r.day, 0); assert.equal(s.treats, tr0 + 5);
+  assert.equal(C.claimAttend(s, '2026-11-21').reason, 'done', '같은 날 두 번은 안 된다');
+  assert.equal(C.claimAttend(s, '2026-11-20').reason, 'done', '날짜를 되돌려도 안 된다');
+  assert.equal(C.claimAttend(s, 'x').reason, 'date');
+  assert.ok(C.claimAttend(s, '2026-11-25').ok, '빠진 날이 있어도 받는다'); assert.equal(s.tickets, t0 + 1, '둘째 날은 뽑기권');
+  for (let i = 0; i < 5; i++) C.claimAttend(s, '2026-12-0' + (i + 1));
+  assert.equal(s.attend.count, 7); assert.equal(C.attendInfo(s, '2026-12-10').day, 0, '일곱 날 뒤 처음으로');
+  // 저장 · 불러오기 · 철수
+  const back = C.deserialize(C.serialize(s), 0); assert.deepEqual(back.attend, { last: '2026-12-05', count: 7 });
+  const bad = JSON.parse(C.serialize(s)); bad.attend = { last: '어제', count: -3 };
+  assert.deepEqual(C.deserialize(JSON.stringify(bad), 0).attend, { last: '', count: 0 });
+  C.ATTEND_REWARDS.forEach(w => assert.ok((w.treats || 0) + (w.tickets || 0) > 0 && Object.keys(w).every(k => k === 'treats' || k === 'tickets'), '보상은 간식과 뽑기권뿐'));
+});
