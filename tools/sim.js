@@ -64,6 +64,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     // 4.3.7: 6구역 다리는 손으로 쏜다(총열이 달아오르면 쉬고, 수류탄이 차면 던진다). 전에는 쏘지 않아 '손으로 150마리' 목표에서 영영 멈췄다
     if (!IDLE && s.zone === 5) { const b6 = C.bridgeOf(s); for (let k = 0; k < Math.max(1, Math.round((taps || 1) * dt)); k++) { if ((b6.heat || 0) > 0.8 || !b6.zs.length) break; C.shootBridge(s); } if (C.throwNade) C.throwNade(s); }
     // 4.3.7: 7구역 습격에는 생존자를 몰리는 쪽에 세우고, 울타리 밖 생존자는 들인다
+    if (!IDLE && s.zone >= 6 && process.env.RESCUE) { const ro = C.rescueOffer(s), sc = C.serumCost(s); if (ro && s.supplies >= ro.cost + (isFinite(sc) ? sc : 0)) C.sendRescue(s); }      /* RESCUE=1: 혈청 값을 남기고 남는 물자로 구조대를 보낸다 */
     if (!IDLE && s.zone >= 6) { C.campSeen(s); if (C.canFinal && C.canFinal(s)) C.startFinal(s, rng); const c7 = C.campOf(s); if (c7.night) for (let k = 0, g7 = Math.round((+process.env.GUARD || 3) * dt); k < g7; k++) if (!C.sendGuard(s, -1).ok) break;      /* 4.7.5 보고 있으면 습격이 온다(GUARD=초당 세우는 횟수). 문턱을 채우면 최후의 밤을 맞는다 */ (c7.strays || []).slice().forEach(q => C.rescueStray(s, q.id)); }
     if (!IDLE) { if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s); }
     // 7구역 정착지와 주파수(3.1.0): 지을 수 있는 건물은 짓되 혈청 줄(가운데)을 먼저. 주파수는 바늘이 띠 안에 있을 때만 누른다

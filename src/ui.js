@@ -816,7 +816,8 @@
     var t = el('div', 'toast', text);
     t.addEventListener('animationend', function () { t.remove(); });
     box.appendChild(t);
-    while (box.children.length > 3) box.removeChild(box.firstChild); // 한꺼번에 쏟아져도 3장까지만
+    var keep = window.innerWidth > 640 ? 2 : 3;      // 4.8.9 PC 는 두 장까지(한꺼번에 쏟아져도 덜 가린다)
+    while (box.children.length > keep) box.removeChild(box.firstChild); // 한꺼번에 쏟아져도 3장까지만
   }
   /**
    * 화면 위 알림 띠. ms 를 주면 그 시간 뒤에 스스로 닫힌다(2.8.8: "업데이트됐다"는 읽고 나면 닫을 일만 남는 알림이었다).
