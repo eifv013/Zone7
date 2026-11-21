@@ -570,7 +570,7 @@
     // 4.6.0 물방울 · 별 · 위장 · 하트 · 빗방울을 다시 그렸다(점이 흩어져 무늬로 보이지 않았다)
     if (pat === 'dot') return y % 2 === 0 && y >= 10 && (x + (y % 4 === 0 ? 0 : 2)) % 4 === 1;      // 엇갈린 물방울
     if (pat === 'star') return PAT_CELLS.star[x + ',' + y] || false;      // 십자 별 둘
-    if (pat === 'camo') return PAT_CELLS.camo[x + ',' + y] || false;      // 두 빛깔 얼룩(1 짙은, 2 옅은)
+    if (pat === 'bolt') return PAT_CELLS.bolt[x + ',' + y] || false;      // 4.7.1 가슴의 번개(위장 무늬 대신)
     if (pat === 'heart') return PAT_CELLS.heart[x + ',' + y] || false;      // 하트 둘(3칸 너비)
     if (pat === 'reflect') return y === 11 || y === 14;      // 반사띠(소방 우비처럼 가슴과 밑단에 두 줄)
     if (pat === 'rain') return PAT_CELLS.rain[x + ',' + y] || false;      // 길쭉한 빗방울
@@ -581,6 +581,7 @@
     var camo = cells([[3, 10], [4, 10], [2, 11], [3, 11], [8, 11], [9, 11], [9, 12], [4, 14], [5, 14], [5, 15], [8, 15], [9, 15], [9, 16]], 1);
     [[6, 11], [7, 11], [7, 12], [2, 13], [3, 13], [3, 14], [7, 14], [8, 14], [3, 16], [4, 16]].forEach(function (c) { camo[c[0] + ',' + c[1]] = 2; });
     return {
+      bolt: cells([[5, 9], [4, 10], [3, 11], [4, 11], [5, 11], [4, 12], [3, 13], [2, 14]]),
       star: cells([[4, 10], [3, 11], [4, 11], [5, 11], [4, 12], [8, 13], [7, 14], [8, 14], [9, 14], [8, 15]]),
       heart: cells([[3, 10], [5, 10], [3, 11], [4, 11], [5, 11], [4, 12], [7, 13], [9, 13], [7, 14], [8, 14], [9, 14], [8, 15]]),
       rain: cells([[2, 10], [2, 11], [8, 10], [8, 11], [4, 13], [4, 14], [9, 14], [9, 15], [3, 16]]),
@@ -605,7 +606,7 @@
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
     // 든 것이 우비와 비슷한 색이면(빨간 우비에 빨간 구급 상자) 묻혀서 보이지 않았다(2.7.7). 그럴 때는 든 것의 몸 색과 밝은 색을 맞바꿔 그린다
     if (colorNear(bag.c, coat.j)) bag = { c: bag.C, C: bag.c, rows: bag.rows };
-    var patCol = pat === 'star' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : pat === 'heart' ? '#ff6f9f' : pat === 'reflect' ? '#dfe6ea' : pat === 'rain' ? '#8fc3ff' : '#f1f0e6';
+    var patCol = pat === 'star' || pat === 'bolt' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : pat === 'heart' ? '#ff6f9f' : pat === 'reflect' ? '#dfe6ea' : pat === 'rain' ? '#8fc3ff' : '#f1f0e6';
     // 2.8.9: 무늬 색이 우비 색과 비슷하면(흰 우비에 흰 무늬, 노란 우비에 노란 별) 보이지 않았다. 그럴 때는 우비를 어둡게 한 색으로 그린다
     if (pat && pat !== 'none' && colorNear(patCol, coat.j)) patCol = darker(coat.j, 0.55);
     var patCol2 = pat === 'camo' ? lerpColor(coat.j, '#ffffff', 0.35) : patCol;

@@ -1793,6 +1793,7 @@
    *   뽑기   : 뽑기권 한 장에 외형 하나. 확률은 "확률 보기"에 등급별·품목별로 모두 적는다(코어의 gachaTable 그대로). 전설 보장까지 남은 횟수도 적는다.
    *   옷장   : 가진 것은 눌러서 입는다. 없는 것은 조각이 모이면 눌러서 얻는다.
    */
+  var cosTab = 'coat', SLOT_TAB = { coat: '우비', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', pet: '친구', flag: '깃발' };
   var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', pet: '친구 옷', flag: '깃발 · 도전과 원정의 보상' };
   /** 4.6.0 아래 탭의 붉은 점: can 이 거짓→참으로 바뀌면 켜고, 그 탭을 누르면(dotSeen) 끈다. */
   var dotSeen = {};
@@ -1805,6 +1806,8 @@
   }
   /** 4.7.0 기기의 오늘 날짜(YYYY-MM-DD, 현지 시각). */
   function todayStr() { var d = new Date(); function z(n) { return (n < 10 ? '0' : '') + n; } return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+  /** 4.7.1 오늘 자정(기기 시각)까지 남은 시간 '3시간 12분'. */
+  function untilMidnight() { var n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1), s = Math.max(0, Math.floor((m - n) / 1000)), h = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60); return (h ? h + '시간 ' : '') + mm + '분'; }
   function attendText(w) { var a = []; if (w.tickets) a.push('뽑기권 ' + w.tickets); if (w.treats) a.push('간식 ' + w.treats); return a.join(' · '); }
   /** 4.7.0 출석 칸: 일곱 날, 받은 날은 흐리게 ✓, 오늘 받을 날은 노란 테두리. */
   function renderAttend() {
@@ -1814,15 +1817,16 @@
       box.setAttribute('data-key', key);
       while (box.firstChild) box.removeChild(box.firstChild);
       C.ATTEND_REWARDS.forEach(function (w, i) {
-        var li = el('li', i < info.day ? 'done' : i === info.day && info.can ? 'now' : '');
+        var li = el('li', (i < info.day ? 'done' : i === info.day && info.can ? 'now' : '') + ((i + 1) % 7 === 0 || i === 29 ? ' big' : ''));      // 7 · 14 · 21 · 28 · 30일은 큰 보상
         li.appendChild(document.createTextNode((i + 1) + '일'));
-        var b = el('b', '', attendText(w).replace(' · ', '\n')); b.style.whiteSpace = 'pre-line'; li.appendChild(b);
+        li.appendChild(el('b', '', (w.tickets ? '뽑기권 ' + w.tickets : '') + (w.tickets && w.treats ? '\n' : '') + (w.treats ? '간식 ' + w.treats : '')));
         box.appendChild(li);
       });
     }
     $('attend-claim').disabled = !info.can;
-    setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '내일 또 받을 수 있어요');
-    setText($('attend-sub'), '모두 ' + info.count + '번');
+    setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '다음 출석까지 ' + untilMidnight());
+    var ao = $('attend-open'); if (ao) setText(ao, info.can ? '출석 체크 · 오늘 받을 수 있어요' : '출석 체크 · 다음까지 ' + untilMidnight());
+    setText($('attend-sub'), (info.day + 1) + '일째');
   }
   function renderShop() {
     renderAttend();
@@ -1847,15 +1851,20 @@
     }
     if (!rows.shop) {
       rows.shop = {};
+      rows.shopTabs = {};
       C.COS_SLOTS.forEach(function (slot) {
-        $('wardrobe').appendChild(el('div', 'label', SLOT_NAME[slot]));
-        var grid = el('div', 'cos-grid'); $('wardrobe').appendChild(grid);
-        C.COSMETICS.filter(function (c) { return c.slot === slot; }).forEach(function (c) {
-          var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub');
+        // 4.7.1 칸마다 탭 하나. 고른 칸의 옷만 보인다
+        var tb = el('button', '', SLOT_TAB[slot] || SLOT_NAME[slot]); tb.type = 'button'; tb.setAttribute('role', 'tab');
+        tb.addEventListener('click', function () { cosTab = slot; sfx('tab'); renderShop(); });
+        $('cos-tabs').appendChild(tb); rows.shopTabs[slot] = tb;
+        var head = el('div', 'label', SLOT_NAME[slot]); head.setAttribute('data-slot', slot); $('wardrobe').appendChild(head);
+        var grid = el('div', 'cos-grid'); grid.setAttribute('data-slot', slot); $('wardrobe').appendChild(grid);
+        C.COSMETICS.filter(function (c) { return c.slot === slot; }).map(function (c, i) { return { c: c, i: i }; }).sort(function (a, b) { return (a.c.base ? -1 : a.c.reward ? 9 : a.c.rarity) - (b.c.base ? -1 : b.c.reward ? 9 : b.c.rarity) || a.i - b.i; }).map(function (x) { return x.c; }).forEach(function (c) {      // 4.7.1 등급 순서(기본 → 일반 → 희귀 → 전설 → 기념)
+          var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub'), nw = el('i', 'cos-new', 'NEW');
           b.type = 'button'; cv.className = 'cos-pic'; cv.width = 28; cv.height = 40;
-          b.appendChild(cv); b.appendChild(name); b.appendChild(sub);
+          b.appendChild(cv); b.appendChild(name); b.appendChild(sub); b.appendChild(nw);
           b.addEventListener('click', function () { clickCosmetic(c); });
-          rows.shop[c.id] = { btn: b, sub: sub, cv: cv, def: c };
+          rows.shop[c.id] = { btn: b, sub: sub, cv: cv, def: c, nw: nw };
           grid.appendChild(b);
         });
       });
@@ -1868,12 +1877,19 @@
         });
       });
     }
+    // 4.7.1 고른 칸만 보이고, 새로 얻은 것이 있는 칸 탭에는 붉은 점
+    Array.prototype.forEach.call($('wardrobe').children, function (n) { n.hidden = n.getAttribute('data-slot') !== cosTab; });
+    C.COS_SLOTS.forEach(function (slot) {
+      var tb = rows.shopTabs[slot]; tb.setAttribute('aria-selected', String(slot === cosTab));
+      tb.classList.toggle('has-new', C.COSMETICS.some(function (c) { return c.slot === slot && state.cosNew && state.cosNew[c.id]; }));
+    });
     var worn = C.cosmeticLook(state);
     C.COSMETICS.forEach(function (c) {
       var r = rows.shop[c.id], own = C.ownsCosmetic(state, c.id), on = state.wear[c.slot] === c.id, cost = C.SHARDS_COST[c.rarity];
       r.btn.className = 'cos r' + c.rarity + (own ? ' own' : ' not') + (on ? ' on' : '') + (lookPick === c.id ? ' pick' : '');
       var how = c.reward ? (C.FLAG_REWARDS.filter(function (f) { return f.id === c.id; })[0] || { text: '' }).text : C.RARITIES[c.rarity] + ' · 조각 ' + cost;
-      setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity]) : how);
+      setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity] + ' · 가짐') : '없음 · ' + how);      // 4.7.1 가진 것과 없는 것을 글로도 나눈다
+      r.nw.hidden = !(state.cosNew && state.cosNew[c.id]);
       // 작은 그림: 지금 입은 모습에 이 외형 하나만 바꿔 입힌 라라(깃발은 깃대)
       var key = JSON.stringify(worn) + c.id + (c.slot === 'pet' ? JSON.stringify(petLook()) : '');
       if (r.key !== key) { r.key = key; drawThumb(r.cv, c, worn); }
@@ -1955,6 +1971,7 @@
     if (S && S.paintPet) S.paintPet(ctx, 114, G - S.PET_H * 3, 3, false, petLook(), look.pet || 'none', t);      // 친구는 라라 곁에
   }
   function clickCosmetic(c) {
+    if (C.seeCosmetic(state, c.id)) Store.save();      // 4.7.1 누르면 NEW 가 사라진다
     if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); applyLaraArt(); renderShop(); } return; }
     lookPick = lookPick === c.id ? '' : c.id; sfx('tab'); renderShop();      // 아직 없는 외형: 입혀서 미리 보여 준다(다시 누르면 원래대로)
   }
@@ -2059,9 +2076,12 @@
   }
   function gIdleActs() {
     var t = state.tickets || 0;
-    gActs([['1회 · 뽑기권 1', function () { gStart(1); }, t < 1, 'y'], ['10회 · 뽑기권 10', function () { gStart(10); }, t < 10, '']]);
+    var m = gMany();
+    gActs([['1회 · 뽑기권 1', function () { gStart(1); }, t < 1, 'y'], [m >= 2 ? m + '회 · 뽑기권 ' + m : '여러 번 · 뽑기권 2장부터', function () { gStart(gMany()); }, m < 2, '']]);
     gMsg('뽑기권 ' + fmt(t) + '장 · 전설 보장까지 ' + C.gachaPityLeft(state) + '번');
   }
+  /** 4.7.1 오른쪽 단추: 가진 뽑기권만큼 한 번에(10장까지). */
+  function gMany() { return Math.max(0, Math.min(10, Math.floor(state.tickets || 0))); }
   function gOpenMachine() { gst = { mode: 'idle', at: gNow(), items: [], taps: 0, tapAt: 0, raf: 0 }; $('gacha-veil').hidden = false; gIdleActs(); gLoop(); }
   /** 4.4.2 기계 창의 확률표: 등급별 합계, 품목마다 확률(코어의 gachaTable 그대로), 가진 것은 흐리게, 보장까지 남은 횟수. */
   function gOdds() {
@@ -2100,7 +2120,7 @@
     if (gst.sndFor !== gst.items) { gst.sndFor = gst.items; gGet(gst.items.reduce(function (m, it) { return Math.max(m, it.r.rarity); }, 0)); }      // 10개를 다 열면 한 번(더 눌러도 다시 울리지 않는다)
     gst.mode = 'grid'; var best = 0, news = 0, sh = 0; gst.items.forEach(function (it) { best = Math.max(best, it.r.rarity); if (!it.r.dup) news++; sh += it.r.shards || 0; });
     gMsg('새 외형 ' + news + '개' + (sh ? ' · 조각 +' + sh : '') + (best === 2 ? ' · 전설!' : ''));
-    gActs([['10회 더', function () { gStart(10); }, (state.tickets || 0) < 10, 'y'], ['닫기', gClose, false, '']]);
+    var m2 = gMany(); gActs([[m2 >= 2 ? m2 + '회 더' : '여러 번 더', function () { gStart(gMany()); }, m2 < 2, 'y'], ['닫기', gClose, false, '']]);
   }
   function gCell(i) { return [22 + (i % 5) * 34, 64 + Math.floor(i / 5) * 70]; }
   function gTap(x, y) {
@@ -5220,8 +5240,22 @@
       if (!r.ok) { renderAttend(); return; }
       log('출석 ' + (r.day + 1) + '일째 보상을 받았다: ' + attendText(r.reward) + '.', 'good');
       toast('출석 ' + (r.day + 1) + '일째 · ' + attendText(r.reward)); sfx('buy');
-      Store.save(); renderShop(); render();
+      Store.save(); renderAttend(); render();
+      setTimeout(function () { $('attend-veil').hidden = true; }, 700);      // 받은 것을 잠깐 보여 주고 닫는다
     });
+    $('attend-open').addEventListener('click', function () { sfx('click'); renderAttend(); $('attend-veil').hidden = false; });
+    $('attend-close').addEventListener('click', function () { $('attend-veil').hidden = true; });
+    // 4.7.1 받을 수 있는 날에는 하루에 한 번 저절로 뜬다(다른 창이 떠 있으면 닫힌 뒤에)
+    var attendShown = '';
+    setInterval(function () {
+      try { if (!$('attend-veil').hidden || document.body.getAttribute('data-mview') === 'shop') renderAttend(); } catch (e) { /* 다음에 */ }      // 남은 시간을 새로 쓴다
+      try {
+        var d = todayStr(); if (attendShown === d || home || window.ZONE7_NO_ATTEND_POPUP) return;
+        if (!C.attendInfo(state, d).can) return;
+        if (Array.prototype.some.call(document.querySelectorAll('.story-veil, #story'), function (v) { return !v.hidden; })) return;
+        attendShown = d; renderAttend(); $('attend-veil').hidden = false;
+      } catch (e) { /* 다음에 다시 본다 */ }
+    }, 2500);
     var shopNav = document.querySelector('[data-mview-set="shop"]'); if (shopNav) shopNav.addEventListener('click', function () { renderShop(); });      // 4.5.1 상점 탭
     var lastNav = null;      // 4.6.0 기록 단추를 한 번 더 누르면 보던 탭으로 돌아간다
     document.querySelectorAll('[data-mview-set]').forEach(function (b) {

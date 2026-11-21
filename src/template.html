@@ -287,7 +287,7 @@ body { word-break: keep-all; }
   .mast-record[aria-pressed="true"] { background: var(--hazard); color: #17171a; border-color: var(--hazard); }
   .mast-record.dot::after { content: ''; position: absolute; top: -4px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--blood); }
   .dplus { margin-right: 36px; }
-  .dplus-sub { font-size: 10px; }
+  .dplus-sub { display: none; }      /* 4.7.1 좁은 화면에서는 구역 이름을 뺀다(지금 구역은 번호 칸에서 노랗게 보이고, 잘린 '7구역 송신…'만 남았다) */
   /* 성장 탭의 두 칸(특성 · 일행): 화면 위에 크게. 눌린 쪽이 노랗다 */
   .grow-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; flex: none; }
   .grow-seg button { padding: 10px 4px; background: transparent; color: var(--ink); border: 0; font: 700 15px/1.2 var(--font-body); cursor: pointer; }
@@ -328,7 +328,16 @@ body { word-break: keep-all; }
 #look-pic { display: block; width: 100%; height: auto; image-rendering: pixelated; }
 .look-side { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 10px; min-height: 30px; } .look-side b { font-size: 14px; line-height: 1.4; }
 .story-card .look-side button { align-self: center; padding: 5px 10px; font-size: 12px; } .story-card .look-side button:disabled { opacity: .5; background: transparent; color: #b9b8ab; border-color: #6d6d60; cursor: default; }
-.story-card .cos.not { border-style: dashed; } .cos.not .cos-pic { opacity: .75; }
+.story-card .cos { position: relative; }
+.story-card .cos.not { border-style: dashed; color: #9a998e; } .cos.not .cos-pic { opacity: .5; filter: grayscale(1); }      /* 4.7.1 없는 것: 그림을 잿빛으로, 글씨도 흐리게 */
+.story-card .cos.own:not(.on) { background: rgba(255, 255, 255, .04); }
+.cos-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px 2px; grid-column: 1 / -1; width: 100%; box-sizing: border-box; }
+#wardrobe [hidden] { display: none !important; }
+.story-card .cos-tabs button { align-self: auto; position: relative; flex: 1 1 auto; min-width: 0; padding: 6px 8px; border: 1px solid #6d6d60; border-radius: 6px; background: transparent; color: #e6e5db; font: 600 13px/1.2 var(--font-body); }
+.story-card .cos-tabs button[aria-selected="true"] { background: #f0b400; border-color: #f0b400; color: #17180f; }
+.cos-tabs button.has-new::after { content: ''; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%; background: #e0392b; }
+.cos-new { position: absolute; top: -7px; right: -5px; padding: 1px 5px; border-radius: 99px; background: #e0392b; color: #fff; font: 800 10px/1.3 var(--font-body); font-style: normal; letter-spacing: .02em; }
+.cos-new[hidden] { display: none; }
 .story-card .cos.pick { border-color: #f0b400; border-style: solid; box-shadow: 0 0 0 2px rgba(240, 180, 0, .35); }
 .cos b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .cos-sub { font: 500 11px/1.3 var(--font-mono); color: #b9b8ab; }
 .story-card .cos:disabled { opacity: .45; cursor: default; border-style: dashed; }
@@ -379,9 +388,15 @@ body { word-break: keep-all; }
 .shop-card { width: auto; background: #17180f; --ink: #e6e5db; --ink-soft: #b9b8ab; --rule: #6d6d60; gap: 8px; }
 .shop-card #wardrobe { max-height: none; overflow: visible; }
 .story-card.shop-card { gap: 8px; }
-.attend-days { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+/* 4.7.1 폰에서 그림(캔버스)을 누르면 브라우저가 칠하는 파란 눌림 빛을 없앤다(뽑기 캡슐을 두드릴 때 화면 전체가 파랗게 덮였다) */
+html, body, canvas, button, .story-veil, .story-card { -webkit-tap-highlight-color: transparent; }
+canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.attend-open { width: 100%; padding: 10px; border: 1px solid var(--ink); border-radius: 8px; background: transparent; color: var(--ink); font: 700 15px/1.3 var(--font-body); cursor: pointer; flex: none; }
+.attend-card { max-width: 440px; gap: 8px; }
+.attend-days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 .attend-days li { border: 1px solid var(--rule); border-radius: 6px; padding: 4px 2px; text-align: center; font: 600 11px/1.3 var(--font-body); color: var(--ink-soft); }
-.attend-days li b { display: block; font-size: 10px; font-weight: 500; }
+.attend-days li b { display: block; font-size: 10px; font-weight: 500; white-space: pre-line; }
+.attend-days li.big { border-color: var(--hazard); }
 .attend-days li.done { opacity: .45; } .attend-days li.done::after { content: '✓'; display: block; color: var(--good, #4caf50); }
 .attend-days li.now { border: 2px solid var(--hazard); color: var(--ink); }
 .attend-btn { width: 100%; margin-top: 8px; padding: 10px; border: 0; border-radius: 8px; background: var(--hazard); color: #17171a; font: 700 15px/1.3 var(--font-body); cursor: pointer; }
@@ -1476,7 +1491,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.7.0</div>
+  <div class="boot-ver">7구역 알파 4.7.1</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1876,12 +1891,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     </section>
   </div>
   <div class="col" data-view="shop">
-    <!-- 4.7.0 출석 체크: 하루 한 번, 일곱 날 한 바퀴. 빠진 날이 있어도 이어 간다 -->
-    <section class="panel attend" aria-labelledby="h-attend">
-      <div class="panel-head"><h2 id="h-attend">출석</h2><span class="label" id="attend-sub"></span></div>
-      <ol class="attend-days" id="attend-days"></ol>
-      <button type="button" class="attend-btn" id="attend-claim">오늘 받기</button>
-    </section>
+    <!-- 4.7.1 상점에는 출석 체크 단추 한 줄만. 누르면 출석 창이 뜬다(게임을 켤 때 하루 한 번 저절로도 뜬다) -->
+    <button type="button" class="attend-open" id="attend-open">출석 체크</button>
     <!-- 4.5.1 상점은 아래 탭 하나(4.4.8 에는 일행 탭 안). 입은 모습(look)은 위에 붙어 있어 옷장을 내려도 보인다 -->
     <section class="panel hub-pane story-card shop-card" aria-labelledby="h-shop" id="shop-panel">
       <!-- 4.5.2 칸 사이를 좁혔다: 제목 줄에 가진 것, 단추 둘, 보장 · 확률 한 줄 -->
@@ -1890,7 +1901,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="gacha-result" id="gacha-result" aria-live="polite"></div>
       <div class="shop-line"><span class="hub-line" id="shop-pity"></span><button type="button" class="odds-toggle" id="odds-toggle">확률 보기</button></div>
       <div id="odds" hidden></div>
-      <div class="look"><canvas id="look-pic" width="166" height="76"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div></div>
+      <div class="look"><canvas id="look-pic" width="166" height="76"></canvas><div class="look-side"><b id="look-name"></b><button type="button" id="look-act" hidden></button></div>
+        <!-- 4.7.1 옷장은 칸(우비 · 후드 · 무늬 · 가방 · 효과 · 친구 · 깃발)마다 한 쪽씩 본다. 탭은 위에 붙은 미리 보기 안에 있어 옷장을 내려도 보인다 -->
+        <div class="cos-tabs" id="cos-tabs" role="tablist" aria-label="외형 종류"></div></div>
       <div id="wardrobe"></div>
     </section>
   </div>
@@ -1979,7 +1992,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.7.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.7.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2082,6 +2095,14 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   </div>
 </div>
 <!-- 4.5.3 친구 만들기: 숨어 있던 아이에게 간식을 던져 주면 한 걸음씩 다가온다. 눈빛이 등급(기본 흰빛 · 고급 파란빛 · 희귀 금빛)을 알려 준다 -->
+<!-- 4.7.1 출석 창: 서른 날. 받을 수 있는 날에는 게임을 켤 때 하루 한 번 뜬다 -->
+<div class="story-veil" id="attend-veil" role="dialog" aria-modal="true" aria-labelledby="h-attend" hidden>
+  <div class="story-card feedback-card attend-card">
+    <div class="zmap-head"><div class="label" id="h-attend">출석 체크 · <span id="attend-sub"></span></div><button type="button" class="feedback-close" id="attend-close">닫기</button></div>
+    <ol class="attend-days" id="attend-days"></ol>
+    <button type="button" class="attend-btn" id="attend-claim">오늘 받기</button>
+  </div>
+</div>
 <div class="story-veil" id="bf-veil" role="dialog" aria-modal="true" aria-labelledby="bf-title" hidden>
   <div class="story-card feedback-card bf-card">
     <div class="zmap-head"><div class="label" id="bf-title">친구 만들기</div><button type="button" class="feedback-close" id="bf-skip">건너뛰기</button></div>

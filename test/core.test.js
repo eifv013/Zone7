@@ -3358,7 +3358,7 @@ test('4.4.4 금냥이는 브리티시 숏헤어가 됐다: 기본 이름 그대�
   s.kennel = { golden: '노랑이' }; const b = C.deserialize(C.serialize(s), 0); assert.equal(b.kennel.golden, '노랑이');
 });
 
-test('출석 체크(4.7.0): 하루에 한 번, 일곱 날 한 바퀴, 빠져도 이어 가고 날짜를 되돌리면 못 받는다', () => {
+test('출석 체크(4.7.1): 하루에 한 번, 서른 날 한 바퀴, 빠져도 이어 가고 날짜를 되돌리면 못 받는다', () => {
   const s = fresh(); const t0 = s.tickets, tr0 = s.treats;
   assert.equal(C.attendInfo(s, '2026-11-21').can, true);
   const r = C.claimAttend(s, '2026-11-21'); assert.ok(r.ok); assert.equal(r.day, 0); assert.equal(s.treats, tr0 + 5);
@@ -3366,11 +3366,25 @@ test('출석 체크(4.7.0): 하루에 한 번, 일곱 날 한 바퀴, 빠져도 
   assert.equal(C.claimAttend(s, '2026-11-20').reason, 'done', '날짜를 되돌려도 안 된다');
   assert.equal(C.claimAttend(s, 'x').reason, 'date');
   assert.ok(C.claimAttend(s, '2026-11-25').ok, '빠진 날이 있어도 받는다'); assert.equal(s.tickets, t0 + 1, '둘째 날은 뽑기권');
-  for (let i = 0; i < 5; i++) C.claimAttend(s, '2026-12-0' + (i + 1));
-  assert.equal(s.attend.count, 7); assert.equal(C.attendInfo(s, '2026-12-10').day, 0, '일곱 날 뒤 처음으로');
+  for (let i = 0; i < 28; i++) C.claimAttend(s, '2027-01-' + String(i + 1).padStart(2, '0'));
+  assert.equal(s.attend.count, 30); assert.equal(C.attendInfo(s, '2027-02-10').day, 0, '서른 날 뒤 처음으로');
+  assert.equal(C.ATTEND_REWARDS.length, 30); assert.deepEqual(C.ATTEND_REWARDS[29], { tickets: 5, treats: 40 }); assert.equal(C.ATTEND_REWARDS[7].treats, 10, '둘째 주는 간식이 5개 더');
   // 저장 · 불러오기 · 철수
-  const back = C.deserialize(C.serialize(s), 0); assert.deepEqual(back.attend, { last: '2026-12-05', count: 7 });
+  const back = C.deserialize(C.serialize(s), 0); assert.deepEqual(back.attend, { last: '2027-01-28', count: 30 });
   const bad = JSON.parse(C.serialize(s)); bad.attend = { last: '어제', count: -3 };
   assert.deepEqual(C.deserialize(JSON.stringify(bad), 0).attend, { last: '', count: 0 });
   C.ATTEND_REWARDS.forEach(w => assert.ok((w.treats || 0) + (w.tickets || 0) > 0 && Object.keys(w).every(k => k === 'treats' || k === 'tickets'), '보상은 간식과 뽑기권뿐'));
+});
+
+test('외형 NEW(4.7.1): 새로 얻으면 붙고, 누르면(seeCosmetic) 사라지고, 저장 · 철수에도 남는다', () => {
+  const s = fresh(); s.tickets = 5; let r;
+  do { r = C.pullGacha(s, Math.random); } while (r.ok && r.dup && s.tickets > 0);
+  if (r.ok && !r.dup) {
+    assert.equal(s.cosNew[r.id], true);
+    const back = C.deserialize(C.serialize(s), 0); assert.equal(back.cosNew[r.id], true);
+    assert.equal(C.seeCosmetic(s, r.id), true); assert.equal(s.cosNew[r.id], undefined); assert.equal(C.seeCosmetic(s, r.id), false);
+  }
+  const bad = JSON.parse(C.serialize(s)); bad.cosNew = { ghost: true, 'pat-camo': 'yes' };
+  assert.deepEqual(C.deserialize(JSON.stringify(bad), 0).cosNew, {});
+  assert.equal(C.COSMETICS.find(c => c.id === 'pat-camo').look, 'bolt', '위장 무늬는 번개로');
 });

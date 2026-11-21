@@ -98,6 +98,7 @@ def run_case(browser, name, size, state, mode):
     page.on('console', lambda m: problems.append('console.error: ' + m.text) if m.type == 'error' and 'Failed to load resource' not in m.text and 'net::' not in m.text else None)
     if state is not None:
         page.add_init_script("var s=%s; s.lastSeen=Date.now(); if(!localStorage.getItem('%s'))localStorage.setItem('%s', JSON.stringify(s))" % (json.dumps(state), SAVE_KEY, SAVE_KEY))
+    page.add_init_script("window.ZONE7_NO_ATTEND_POPUP = true")      # 4.7.1 출석 창이 저절로 떠서 다른 검사를 가리지 않게(창 자체는 따로 본다)
     page.goto(URL)
     # 시작 화면: 열자마자 보여야 하고, 준비가 끝나면(최소 2.2초 + 흐려지는 0.35초) 사라져야 한다.
     page.wait_for_timeout(300)
@@ -111,7 +112,7 @@ def run_case(browser, name, size, state, mode):
                 page.click('#story'); page.wait_for_timeout(250)
     def clear():    # 화면을 덮는 창(일지, 특전 고르기, 자리 비움 보상, 구역 지도)이 떠 있으면 닫는다. 특전은 첫 장을 고른다
         close_story()
-        for box, btn in [('away', '#away-ok'), ('zmap', '#zmap-close')]:
+        for box, btn in [('away', '#away-ok'), ('zmap', '#zmap-close'), ('attend-veil', '#attend-close')]:
             if page.evaluate("!document.getElementById('%s').hidden" % box): page.click(btn); page.wait_for_timeout(120)
         if page.evaluate("!document.getElementById('perk').hidden"):
             page.locator('#perk-list button').first.click(); page.wait_for_timeout(200)
@@ -174,6 +175,14 @@ def run_case(browser, name, size, state, mode):
         if '친구가 됐어요' not in text('bf-msg'): problems.append('친구 만들기가 끝나지 않았다: ' + text('bf-msg'))
         tap('#bf-act'); page.wait_for_timeout(200)
         if page.locator('#bf-veil').is_visible(): problems.append('친구 만들기 창이 닫히지 않았다')
+        # 4.7.1 출석: 상점의 '출석 체크' 단추로 창을 열고, 받으면 닫힌다
+        page.evaluate("document.querySelector('#mnav-shop').click()"); page.wait_for_timeout(200)
+        if not tap('#attend-open'): problems.append('출석 체크 단추가 없다')
+        elif page.locator('#attend-days li').count() != 30: problems.append('출석 칸이 서른이 아니다: %d' % page.locator('#attend-days li').count())
+        else:
+            tap('#attend-claim'); page.wait_for_timeout(900)
+            if page.locator('#attend-veil').is_visible(): problems.append('출석을 받았는데 창이 닫히지 않았다')
+        tap('#mnav-exped'); tap('[data-view=exped] [data-grow-set=party]')      # 일행으로 돌아간다(아래 이름 바꾸기 검사)
         if not page.locator('#pet-card').is_visible() or '친구 1 /' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))
         if '항체 샘플' not in text('adopt-dog'): problems.append('다시 데려오기 값이 보이지 않는다: ' + text('adopt-dog'))
         page.fill('#hero-input', '김씨'); page.click('#hero-rename'); page.wait_for_timeout(150)
