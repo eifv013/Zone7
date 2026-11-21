@@ -1902,7 +1902,7 @@
     $('attend-claim').disabled = !info.can;
     setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '다음 출석까지 ' + untilMidnight());
     var aad = $('attend-ad'); if (aad) { var ast2 = C.adState(state, 'attend', todayStr()); aad.hidden = !ast2.can; setText(aad, (state.noAds ? '' : '광고 보고 ') + '한 번 더 받기'); }      // 4.8.5
-    var ao = $('attend-open'); if (ao) setText(ao, info.can ? '출석 체크 · 오늘 받을 수 있어요' : '출석 체크 · 다음까지 ' + untilMidnight());
+    var ao = $('attend-open'); if (ao) { ao.textContent = info.can ? '출석 체크' : '출석 ' + untilMidnight(); ao.classList.toggle('can', info.can); }      // 4.8.8 단추 셋이 한 줄이라 짧게. 받을 수 있으면 노란 점
     setText($('attend-sub'), (info.day + 1) + '일째');
   }
   /*
