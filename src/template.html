@@ -217,7 +217,10 @@ h2 { margin: 0; font: 700 22px/1.1 var(--font-head); }
 #confirm-yes.calm { background: #f0b400; color: #17180f; border-color: #f0b400; }      /* 4.7.5 알려 주기만 하는 창의 단추는 노랗게 */
 .story-card button.stage-reward { align-self: flex-start; flex: none; margin-left: auto; padding: 5px 10px; background: transparent; color: #f0c040; border: 1px solid #b98c00; border-radius: 6px; font: 600 12px/1.5 var(--font-body); white-space: pre; text-align: right; }      /* 4.7.5 창 단추의 노란 칠을 쓰지 않는다 */
 #adopt-dog > .short, #adopt-cat > .short { color: var(--blood); font-weight: 700; }      /* 4.7.5 항체 샘플이 모자랄 때 */
-#gacha-acts.nope { animation: jam-shake .3s steps(2) 1; }
+.gacha-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; } .gacha-foot .gacha-odds-t { margin-top: 0; }
+.gacha-foot #gacha-close { padding: 8px 26px; background: transparent; color: #e6e5db; border: 2px solid #8a8a7c; }      /* 뽑기 단추(노랑)와 헷갈리지 않게 테두리만 */
+#gacha-acts.nope, .shop-acts.nope { animation: jam-shake .3s steps(2) 1; }
+#ticket-buy.short { opacity: .55; }      /* 4.7.6 간식이 모자랄 때(눌리기는 한다) */
 #serum.final:not(:disabled) { background: var(--blood); color: #fff; border-color: var(--blood); }      /* 4.7.5 최후의 밤을 부르는 단추 */
 .ending .story-card { text-align: center; align-items: center; }
 .ending-title { margin: 0; font: 400 clamp(56px, 20vw, 96px)/1 var(--font-display); color: #f0b400; }
@@ -1501,7 +1504,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.7.5</div>
+  <div class="boot-ver">7구역 알파 4.7.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -2002,7 +2005,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.7.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.7.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2124,11 +2127,12 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </div>
 <div class="story-veil" id="gacha-veil" role="dialog" aria-modal="true" aria-labelledby="gacha-title" hidden>
   <div class="story-card feedback-card gacha-card">
-    <div class="zmap-head"><div class="label" id="gacha-title">뽑기 기계</div><button type="button" class="feedback-close" id="gacha-close">닫기</button></div>
+    <div class="zmap-head"><div class="label" id="gacha-title">뽑기 기계</div></div>
     <canvas id="gacha-cv" width="180" height="200" role="button" tabindex="0" aria-label="뽑기 기계. 캡슐을 누르면 연다"></canvas>
     <p class="label gacha-msg" id="gacha-msg" aria-live="polite"></p>
     <div class="gacha-acts" id="gacha-acts"></div>
-    <button type="button" class="odds-toggle gacha-odds-t" id="gacha-odds-toggle">확률 보기</button>
+    <!-- 4.7.6 닫기는 아래로(엄지가 닿는 곳). 확률 보기와 한 줄 -->
+    <div class="gacha-foot"><button type="button" class="odds-toggle gacha-odds-t" id="gacha-odds-toggle">확률 보기</button><button type="button" class="feedback-close" id="gacha-close">닫기</button></div>
     <div class="gacha-odds" id="gacha-odds" hidden></div>
   </div>
 </div>

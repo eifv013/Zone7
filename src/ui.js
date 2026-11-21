@@ -1908,7 +1908,7 @@
     setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번');      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
     $('gacha-pull').disabled = false;      // 4.4.1: 뽑기권이 없어도 기계는 열어 볼 수 있다(단추가 꺼진다)
     setText($('gacha-pull'), '뽑기 기계');
-    $('ticket-buy').disabled = !(state.treats >= C.TICKET_TREATS);
+    $('ticket-buy').classList.toggle('short', !(state.treats >= C.TICKET_TREATS));      // 4.7.6 모자라도 눌린다(누르면 모자라다고 알려 준다). 모자란 동안은 흐리게만
     setText($('ticket-buy'), '뽑기권 사기 · ' + IC.treat + C.TICKET_TREATS);
     setText($('odds-toggle'), oddsOpen ? '확률 접기' : '확률 보기');
     $('odds').hidden = !oddsOpen;
@@ -1928,7 +1928,7 @@
       C.COS_SLOTS.forEach(function (slot) {
         // 4.7.1 칸마다 탭 하나. 고른 칸의 옷만 보인다
         var tb = el('button', '', SLOT_TAB[slot] || SLOT_NAME[slot]); tb.type = 'button'; tb.setAttribute('role', 'tab');
-        tb.addEventListener('click', function () { cosTab = slot; sfx('tab'); renderShop(); });
+        tb.addEventListener('click', function () { if (cosTab !== slot) { seeCosTab(cosTab); lookPick = ''; } cosTab = slot; sfx('tab'); renderShop(); });      // 4.7.6 칸을 떠날 때 그 칸의 NEW 를 지운다
         $('cos-tabs').appendChild(tb); rows.shopTabs[slot] = tb;
         var head = el('div', 'label', SLOT_NAME[slot]); head.setAttribute('data-slot', slot); $('wardrobe').appendChild(head);
         var grid = el('div', 'cos-grid'); grid.setAttribute('data-slot', slot); $('wardrobe').appendChild(grid);
@@ -1943,7 +1943,8 @@
       });
       $('look-act').addEventListener('click', function () {
         var c = C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0];
-        if (!c || C.ownsCosmetic(state, c.id)) return;
+        if (!c) return;
+        if (C.ownsCosmetic(state, c.id)) { wearPick(c); return; }      // 4.7.6 가진 외형은 이 단추가 '장착하기'
         confirmBox(c.name, '조각 ' + C.SHARDS_COST[c.rarity] + '개로 ' + c.name + (C.hasBatchim(c.name) ? '을' : '를') + ' 얻어요.', '그만둔다', '얻는다', function () {
           var r = C.craftCosmetic(state, c.id);
           if (r.ok) { C.wearCosmetic(state, c.id); lookPick = ''; log(r.name + (C.hasBatchim(r.name) ? '을' : '를') + ' 얻었다.', 'good'); sfx('goal'); Store.save(); renderShop(); }
@@ -1961,7 +1962,7 @@
       var r = rows.shop[c.id], own = C.ownsCosmetic(state, c.id), on = state.wear[c.slot] === c.id, cost = C.SHARDS_COST[c.rarity];
       r.btn.className = 'cos r' + c.rarity + (own ? ' own' : ' not') + (on ? ' on' : '') + (lookPick === c.id ? ' pick' : '');
       var how = c.reward ? (C.FLAG_REWARDS.filter(function (f) { return f.id === c.id; })[0] || { text: '' }).text : C.RARITIES[c.rarity] + ' · 조각 ' + cost;
-      setText(r.sub, on ? '입는 중' : own ? (c.base ? '기본' : C.RARITIES[c.rarity] + ' · 가짐') : '없음 · ' + how);      // 4.7.1 가진 것과 없는 것을 글로도 나눈다
+      setText(r.sub, on ? '입는 중' : own && lookPick === c.id ? '한 번 더 누르면 장착' : own ? (c.base ? '기본' : C.RARITIES[c.rarity] + ' · 가짐') : '없음 · ' + how);      // 4.7.1 가진 것과 없는 것을 글로도 나눈다
       r.nw.hidden = !(state.cosNew && state.cosNew[c.id]);
       // 작은 그림: 지금 입은 모습에 이 외형 하나만 바꿔 입힌 라라(깃발은 깃대)
       var key = JSON.stringify(worn) + c.id + (c.slot === 'pet' ? JSON.stringify(petLook()) : '');
@@ -1969,7 +1970,7 @@
     });
     // 미리 보기: 지금 입은 모습. 아직 없는 외형을 눌렀으면 그것을 입혀서 보여 준다
     var pc = lookPick ? C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0] : null;
-    if (pc && C.ownsCosmetic(state, pc.id)) { pc = null; lookPick = ''; }
+    if (pc && state.wear[pc.slot] === pc.id) { pc = null; lookPick = ''; }      // 이미 입은 것은 미리 볼 것이 없다
     lookNow = lookWith(worn, pc);
     drawLookScene($('look-pic'), lookNow, lookFrame);
     if (!lookTimer) lookTimer = setInterval(function () {      // 미리 보기의 라라는 제자리걸음을 하고 깃발은 펄럭인다(상점을 보고 있을 때만 그린다)
@@ -1978,7 +1979,8 @@
     }, 130);
     setText($('look-name'), pc ? '미리 보기 · ' + pc.name : '현재 입은 모습');
     $('look-act').hidden = !pc;
-    if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
+    if (pc && C.ownsCosmetic(state, pc.id)) { $('look-act').disabled = false; setText($('look-act'), '장착하기'); }
+    else if (pc) { var pcost = C.SHARDS_COST[pc.rarity]; $('look-act').disabled = !(state.shards >= pcost); setText($('look-act'), state.shards >= pcost ? '조각 ' + pcost + '개로 얻기' : pc.reward ? '조각 ' + pcost + '개 필요' : '조각 ' + pcost + '개 필요 · 뽑기로도 나와요'); }
   }
   /*
    * 외형 그림(2.0.0): 게임 화면과 같은 라라(Scene.drawHero)를 그대로 쓴다. 옷장에서 본 모습과 게임 속 모습이 같다.
@@ -2043,10 +2045,26 @@
     if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t, night ? 1 : 0);
     if (S && S.paintPet) S.paintPet(ctx, 114, G - S.PET_H * 3, 3, false, petLook(), look.pet || 'none', t);      // 친구는 라라 곁에
   }
+  /*
+   * 4.7.6 외형 누르기를 두 번으로 나눴다.
+   *   왜: 한 번 누르면 바로 갈아입어서, 구경만 하려다 입은 옷이 바뀌었다.
+   *   가진 외형: 처음 누르면 미리 보기(카드에 '한 번 더 누르면 장착', 위에 '장착하기' 단추) → 한 번 더 누르거나 단추를 누르면 입는다.
+   *   없는 외형: 전처럼 미리 보기만(다시 누르면 원래대로).
+   *   NEW 는 누를 때 지우지 않고, 그 칸(탭)을 떠나거나 상점을 나갈 때 지운다(화면으로 다 본 다음에).
+   */
+  function wearPick(c) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('goal'); Store.save(); applyLaraArt(); renderShop(); } }
   function clickCosmetic(c) {
-    if (C.seeCosmetic(state, c.id)) Store.save();      // 4.7.1 누르면 NEW 가 사라진다
-    if (C.ownsCosmetic(state, c.id)) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('tab'); Store.save(); applyLaraArt(); renderShop(); } return; }
+    if (C.ownsCosmetic(state, c.id)) {
+      if (state.wear[c.slot] === c.id) { lookPick = ''; renderShop(); return; }
+      if (lookPick === c.id) { wearPick(c); return; }
+      lookPick = c.id; sfx('tab'); renderShop(); return;
+    }
     lookPick = lookPick === c.id ? '' : c.id; sfx('tab'); renderShop();      // 아직 없는 외형: 입혀서 미리 보여 준다(다시 누르면 원래대로)
+  }
+  /** 그 칸(slot)의 NEW 를 모두 지운다. */
+  function seeCosTab(slot) {
+    var any = false; C.COSMETICS.forEach(function (c) { if (c.slot === slot && C.seeCosmetic(state, c.id)) any = true; });
+    if (any) Store.save();
   }
   /* 4.4.1 뽑기 기계 그림(2판): 구는 빛의 방향으로 네 단계 색 + 성긴 점(디더링)으로 둥글게, 기계는 빛 띠 · 리벳 · 크롬 테두리 */
   var GW = 180, GH = 200, GK = '#16110f';
@@ -2189,7 +2207,7 @@
     var r = gst.items[0].r; gst.mode = 'reveal'; gst.at = gNow(); gGet(r.rarity); if (r.rarity === 2) buzz([30, 40, 30]);
     gMsg(C.RARITIES[r.rarity] + ' · ' + r.name + (r.dup ? ' · 이미 있어요 · 조각 +' + r.shards : ' · NEW') + (r.pity ? ' · 보장' : ''));
     var can = C.ownsCosmetic(state, r.id);
-    gActs([['입어 보기', function () { if (C.wearCosmetic(state, r.id).ok) { sfx('tab'); applyLaraArt(); Store.save(); gMsg(r.name + ' 입었어요'); } }, !can, ''], ['다시 뽑기', function () { if ((state.tickets || 0) < 1) { gShort(); return; } gStart(1); }, false, 'y'], ['닫기', gClose, false, '']]);
+    gActs([['입어 보기', function () { if (C.wearCosmetic(state, r.id).ok) { sfx('tab'); applyLaraArt(); Store.save(); gMsg(r.name + ' 입었어요'); } }, !can, ''], ['다시 뽑기', function () { if ((state.tickets || 0) < 1) { gShort(); return; } gStart(1); }, false, 'y']]);
   }
   /** 4.6.0 뽑은 것이 나올 때: 녹음한 '얻음' 소리(없으면 예전 소리). 전설은 화음을 함께 낸다. */
   function gGet(rar) { var ok = false; try { ok = !!(window.Sound && window.Sound.sample && window.Sound.sample('item')); } catch (e) { ok = false; } if (!ok || rar === 2) sfx('gopen' + rar); }
@@ -2197,7 +2215,7 @@
     if (gst.sndFor !== gst.items) { gst.sndFor = gst.items; gGet(gst.items.reduce(function (m, it) { return Math.max(m, it.r.rarity); }, 0)); }      // 10개를 다 열면 한 번(더 눌러도 다시 울리지 않는다)
     gst.mode = 'grid'; var best = 0, news = 0, sh = 0; gst.items.forEach(function (it) { best = Math.max(best, it.r.rarity); if (!it.r.dup) news++; sh += it.r.shards || 0; });
     gMsg('새 외형 ' + news + '개' + (sh ? ' · 조각 +' + sh : '') + (best === 2 ? ' · 전설!' : ''));
-    var m2 = gMany(); gActs([[m2 >= 2 ? m2 + '회 더' : '최대 뽑기', function () { gStart(gMany()); }, m2 < 2, 'y'], ['닫기', gClose, false, '']]);
+    var m2 = gMany(); gActs([[m2 >= 2 ? m2 + '회 더' : '최대 뽑기', function () { gStart(gMany()); }, m2 < 2, 'y']]);
   }
   function gCell(i) { return [22 + (i % 5) * 34, 64 + Math.floor(i / 5) * 70]; }
   function gTap(x, y) {
@@ -4982,7 +5000,12 @@
     $('gacha-close').addEventListener('click', gClose);
     $('gacha-odds-toggle').addEventListener('click', function () { var o = $('gacha-odds'); o.hidden = !o.hidden; if (!o.hidden) gOdds(); setText($('gacha-odds-toggle'), o.hidden ? '확률 보기' : '확률 접기'); sfx('click'); });
     $('gacha-cv').addEventListener('click', function (e) { var rc = $('gacha-cv').getBoundingClientRect(); gTap((e.clientX - rc.left) / rc.width * GW, (e.clientY - rc.top) / rc.height * GH); });
-    $('ticket-buy').addEventListener('click', function () { if (C.buyTicket(state).ok) { sfx('buy'); Store.save(); renderShop(); } });
+    $('ticket-buy').addEventListener('click', function () {
+      if (C.buyTicket(state).ok) { sfx('buy'); Store.save(); renderShop(); return; }
+      /* 4.7.6 간식이 모자라면: 얼마나 모자란지 알리고 단추 줄을 한 번 흔든다(뽑기 기계의 뽑기권 부족과 같은 모양) */
+      toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, C.TICKET_TREATS - Math.floor(state.treats || 0))) + ' 더 필요해요'); sfx('tab'); buzz([30, 30, 30]);
+      var row = $('ticket-buy').parentElement; row.classList.remove('nope'); void row.offsetWidth; row.classList.add('nope');
+    });
     $('odds-toggle').addEventListener('click', function () { oddsOpen = !oddsOpen; renderShop(); });
     $('stage-quit').addEventListener('click', function () {
       if (!home) return;
@@ -5354,6 +5377,7 @@
         else if (b.id !== 'mnav-record') lastNav = b;
         else { var cur = document.querySelector('.mnav [data-mview-set][aria-pressed="true"]'); if (cur) lastNav = cur; }
         if (target.id) dotSeen[target.id] = true;
+        if (document.body.getAttribute('data-mview') === 'shop' && target.dataset.mviewSet !== 'shop') { seeCosTab(cosTab); lookPick = ''; }      // 4.7.6 상점을 나가면 보던 칸의 NEW 를 지운다
         document.body.setAttribute('data-mview', target.dataset.mviewSet);
         document.querySelectorAll('[data-mview-set]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === target)); });
         if (target.classList.contains('dot')) target.classList.remove('dot');
