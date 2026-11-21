@@ -3555,7 +3555,7 @@ test('시간 건너뛰기: 현재 초당 수입의 SKIP_HOURS 시간치를 받�
 
 /* ---------- 4.8.0 보급소 ---------- */
 test('보급소: 간식으로 사고, 영구 상품은 한 번만, 결제 상품은 아직 살 수 없다', () => {
-  const s = fresh(); s.treats = 2000; s.zone = 1; s.bestZone = 1; const day = '2026-11-22';
+  const s = fresh(); s.treats = 99999; s.zone = 1; s.bestZone = 1; const day = '2026-11-22'; const P = (id) => C.shopItem(id).treats;
   assert.equal(C.buyShop(s, 'nope', day).reason, 'unknown');
   assert.equal(C.buyShop(s, 'treat1', day).reason, 'paid');
   assert.ok(C.buyShop(s, 'pact', day).ok); assert.equal(s.pact, true); assert.equal(C.buyShop(s, 'pact', day).reason, 'owned');
@@ -3563,19 +3563,19 @@ test('보급소: 간식으로 사고, 영구 상품은 한 번만, 결제 상품
   const r0 = C.offlineRate(s); assert.ok(C.buyShop(s, 'night', day).ok); assert.ok(C.offlineRate(s) > r0);
   const t0 = s.tickets; assert.ok(C.buyShop(s, 'tix11', day).ok); assert.equal(s.tickets, t0 + 11);
   const h0 = s.shards; assert.ok(C.buyShop(s, 'shards', day).ok); assert.equal(s.shards, h0 + 10);
-  assert.equal(s.treats, 2000 - 400 - 250 - 250 - 100 - 30);
+  assert.equal(s.treats, 99999 - P('pact') - P('rest') - P('night') - P('tix11') - P('shards'));
   const back = C.deserialize(C.serialize(s)); assert.equal(back.own.rest, true); assert.equal(back.own.night, true); assert.equal(back.pact, true);
   s.runEarned = 1e30; const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.own.rest, true, '영구 상품은 철수해도 남는다');
 });
 test('보급소: 시간 건너뛰기는 하루 3번, 날이 바뀌면 다시', () => {
-  const s = fresh(); s.treats = 1000; s.zone = 1; s.bestZone = 1;
+  const s = fresh(); s.treats = 5000; s.zone = 1; s.bestZone = 1;
   if (!(C.incomePerSec(s) > 0)) { assert.equal(C.shopState(s, 'skip', 'd').reason, 'none'); return; }
   for (let i = 0; i < C.SKIP_DAILY; i++) assert.ok(C.buyShop(s, 'skip', '2026-11-22').ok);
   assert.equal(C.buyShop(s, 'skip', '2026-11-22').reason, 'daily');
   assert.ok(C.buyShop(s, 'skip', '2026-11-23').ok, '다음 날은 다시');
 });
 test('보급소: 철수 보급은 다음 철수의 항체 샘플을 늘리고 한 번 쓰면 사라진다', () => {
-  const s = fresh(); s.treats = 100; s.runEarned = 1e25;
+  const s = fresh(); s.treats = 1000; s.runEarned = 1e25;
   const g0 = C.antibodiesOnRetreat(s); assert.ok(C.buyShop(s, 'boost', 'd').ok); assert.equal(C.buyShop(s, 'boost', 'd').reason, 'ready');
   const g1 = C.antibodiesOnRetreat(s); assert.ok(g1 >= Math.floor(g0 * 1.2));
   const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.retreatBoost, false);
@@ -3584,24 +3584,25 @@ test('보급소: 철수 보급은 다음 철수의 항체 샘플을 늘리고 �
 
 /* ---------- 4.8.2 생존자 수첩 · 첫 보급 상자 ---------- */
 test('수첩: 도장이 칸을 채우고, 두 줄을 받고, 시즌이 바뀌면 처음으로', () => {
-  const s = fresh(); s.treats = 500; const d = '2026-11-22', sn = C.passSeasonOf(d);
+  const s = fresh(); s.treats = 5000; const d = '2026-11-22', sn = C.passSeasonOf(d);
   assert.ok(sn >= 0); assert.equal(C.passSeasonOf('nope'), -1);
   let info = C.passInfo(s, d); assert.equal(info.tier, 0); assert.equal(C.passClaim(s, d).reason, 'none');
   C.passStamp(s, C.PASS_STEP * 10 + 3); info = C.passInfo(s, d); assert.equal(info.tier, 10); assert.ok(info.canFree && !info.canPrem);
-  const t0 = s.tickets; const r = C.passClaim(s, d); assert.ok(r.ok); assert.equal(r.got.length, 10); assert.equal(s.tickets, t0 + 2, '5 · 10칸 뽑기권');
+  const t0 = s.tickets; const r = C.passClaim(s, d); assert.ok(r.ok); assert.equal(r.got.length, 10); assert.equal(s.tickets, t0 + 2 * C.passReward('free', 5).tickets, '5 · 10칸 뽑기권');
   assert.ok(C.buyPassPremium(s, d).ok); assert.equal(C.buyPassPremium(s, d).reason, 'owned');
-  assert.ok(C.passClaim(s, d).ok); assert.equal(s.cosmetics['coat-pass1'], true, '유료 10칸 한정 외형');
-  assert.equal(C.craftCosmetic(Object.assign(fresh(), { shards: 999 }), 'coat-pass2').reason, 'exclusive');
+  assert.ok(C.passClaim(s, d).ok); const set = C.passSet(s.pass.season); assert.equal(s.cosmetics[set.coat], true, '유료 10칸 한정 우비');
+  assert.equal(C.craftCosmetic(Object.assign(fresh(), { shards: 999 }), set.hood).reason, 'exclusive');
+  assert.notEqual(C.passSet(0).coat, C.passSet(1).coat, '시즌마다 다른 세트'); assert.equal(C.passSet(4).coat, C.passSet(0).coat, '네 시즌마다 돈다');
   // 다음 시즌
   const later = '2026-12-31'; assert.ok(C.passSeasonOf(later) > sn);
-  info = C.passInfo(s, later); assert.equal(info.tier, 0); assert.equal(info.premium, false); assert.equal(s.cosmetics['coat-pass1'], true, '받은 외형은 남는다');
+  info = C.passInfo(s, later); assert.equal(info.tier, 0); assert.equal(info.premium, false); assert.equal(s.cosmetics[set.coat], true, '받은 외형은 남는다');
   const back = C.deserialize(C.serialize(s)); assert.equal(back.pass.season, s.pass.season);
 });
 test('수첩 도장: 출석에서 받는다', () => {
   const s = fresh(); C.claimAttend(s, '2026-11-22'); assert.equal(s.pass.stamps, C.PASS_STAMPS.attend);
 });
 test('첫 보급 상자: 한 번만, 한정 외형이 들어 있다', () => {
-  const s = fresh(); s.treats = 100; const t0 = s.tickets;
+  const s = fresh(); s.treats = 1000; const t0 = s.tickets;
   assert.ok(C.buyStarter(s).ok); assert.equal(s.tickets, t0 + C.STARTER.give.tickets); assert.equal(s.cosmetics['coat-starter'], true);
   assert.equal(C.buyStarter(s).reason, 'owned');
   const u = fresh(); u.treats = 5; assert.equal(C.buyStarter(u).reason, 'treats');

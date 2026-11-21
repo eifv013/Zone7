@@ -3743,21 +3743,21 @@
   /*
    * 4.8.0 보급소: 지금은 간식으로 사고, 나중에 같은 칸에 결제를 붙인다(kind 'paid' 는 결제 전용이라 아직 살 수 없다).
    *   perm: 한 번만(보급 계약 · 긴 휴식 · 야간 근무). cons: 여러 번(시간 건너뛰기는 하루 SKIP_DAILY 번). paid: 결제 전용(won 은 원).
-   *   값은 tools/sim.js 로 다시 맞춘다(간식 수입과 함께).
+   *   4.8.3 값: 하루 1시간이면 간식이 250개쯤 들어온다(밤 방어 · 연장 목표 · 납품, 시뮬레이터로 잼). 보급 계약은 열흘 남짓 모아야 하는 값으로.
    */
   var REST_CAP = 8 * 3600, NIGHT_RATE = 0.75, RETREAT_BOOST = 1.25, SKIP_DAILY = 3;
   var SHOP_ITEMS = [
-    { id: 'pact', kind: 'perm', treats: 400, name: '보급 계약', desc: '모든 생산 1.5배, 철수해도 남아요', icon: 'supply' },
-    { id: 'rest', kind: 'perm', treats: 250, name: '긴 휴식', desc: '꺼 둔 시간을 8시간까지 쳐 줘요(기본 4시간)', icon: 'people' },
-    { id: 'night', kind: 'perm', treats: 250, name: '야간 근무', desc: '꺼 둔 동안 효율 75%(기본 50%)', icon: 'serum' },
-    { id: 'skip', kind: 'cons', treats: 20, name: '시간 건너뛰기', desc: '현재 수입 2시간치 물자를 바로, 하루 3번', icon: 'supply' },
-    { id: 'boost', kind: 'cons', treats: 40, name: '철수 보급', desc: '다음 철수 때 항체 샘플 1.25배', icon: 'antibody' },
-    { id: 'tix11', kind: 'cons', treats: 100, name: '뽑기권 11장 묶음', desc: '10장 값에 1장 더', icon: 'ticket' },
-    { id: 'shards', kind: 'cons', treats: 30, name: '조각 상자', desc: '조각 10개', icon: 'shard' },
-    { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 60개', icon: 'treat' },
-    { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 330개', icon: 'treat' },
-    { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 700개', icon: 'treat' },
-    { id: 'tixpay', kind: 'paid', won: 3300, name: '뽑기권 꾸러미', desc: '뽑기권 11장', icon: 'ticket' },
+    { id: 'pact', kind: 'perm', treats: 3000, name: '보급 계약', desc: '모든 생산 1.5배, 철수해도 남아요', icon: 'supply' },
+    { id: 'rest', kind: 'perm', treats: 1500, name: '긴 휴식', desc: '꺼 둔 시간을 8시간까지 쳐 줘요(기본 4시간)', icon: 'people' },
+    { id: 'night', kind: 'perm', treats: 1500, name: '야간 근무', desc: '꺼 둔 동안 효율 75%(기본 50%)', icon: 'serum' },
+    { id: 'skip', kind: 'cons', treats: 100, name: '시간 건너뛰기', desc: '현재 수입 2시간치 물자를 바로, 하루 3번', icon: 'supply' },
+    { id: 'boost', kind: 'cons', treats: 200, name: '철수 보급', desc: '다음 철수 때 항체 샘플 1.25배', icon: 'antibody' },
+    { id: 'tix11', kind: 'cons', treats: 200, name: '뽑기권 11장 묶음', desc: '10장 값에 1장 더', icon: 'ticket' },
+    { id: 'shards', kind: 'cons', treats: 150, name: '조각 상자', desc: '조각 10개', icon: 'shard' },
+    { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 300개', icon: 'treat' },
+    { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 1,800개', icon: 'treat' },
+    { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 4,000개', icon: 'treat' },
+    { id: 'tixpay', kind: 'paid', won: 2200, name: '뽑기권 꾸러미', desc: '뽑기권 30장', icon: 'ticket' },
     { id: 'noads', kind: 'paid', won: 5500, name: '광고 제거', desc: '광고 없이 광고 보상을 바로 받아요', icon: 'people' }
   ];
   function shopItem(id) { for (var i = 0; i < SHOP_ITEMS.length; i++) if (SHOP_ITEMS[i].id === id) return SHOP_ITEMS[i]; return null; }
@@ -3799,7 +3799,7 @@
    *   무료 줄: 칸마다 간식(다섯 칸마다 뽑기권). 유료 줄(지금은 간식 PASS_PRICE 로 연다): 더 많은 간식 · 뽑기권, 10칸 · 20칸에 수첩 한정 외형.
    *   시즌이 바뀌면 도장 · 받은 칸 · 유료 줄이 처음으로 돌아간다(받은 외형은 남는다).
    */
-  var PASS_DAYS = 30, PASS_TIERS = 20, PASS_STEP = 10, PASS_PRICE = 150, PASS_EPOCH = Date.UTC(2026, 0, 1);
+  var PASS_DAYS = 30, PASS_TIERS = 20, PASS_STEP = 10, PASS_PRICE = 800, PASS_EPOCH = Date.UTC(2026, 0, 1);
   var PASS_STAMPS = { attend: 5, star: 2, night: 3, serum: 10, retreat: 3 };
   function passSeasonOf(dateStr) {
     var m = typeof dateStr === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr); if (!m) return -1;
@@ -3815,9 +3815,13 @@
   }
   function passStamp(state, n) { var p = passOf(state); p.stamps = Math.min(PASS_TIERS * PASS_STEP * 10, p.stamps + (n > 0 ? n : 0)); }
   /** 칸 i(1부터)의 보상. track 'free' | 'prem'. */
-  function passReward(track, i) {
-    if (track === 'prem') { if (i === 10) return { cos: 'coat-pass1' }; if (i === PASS_TIERS) return { cos: 'coat-pass2' }; return i % 5 === 0 ? { tickets: 2 } : { treats: 8 }; }
-    return i % 5 === 0 ? { tickets: 1 } : { treats: 4 };
+  /* 4.8.3 시즌마다 한정 세트: 시즌 번호를 PASS_SETS 수로 나눈 나머지 차례(마녀의 밤 → 눈 오는 날 → 해적의 바다 → 봄 소풍) */
+  var PASS_SETS = ['마녀의 밤', '눈 오는 날', '해적의 바다', '봄 소풍'];
+  function passSet(season) { var n = PASS_SETS.length, k = ((season % n) + n) % n; return { name: PASS_SETS[k], coat: 'coat-s' + k, flag: 'flag-s' + k, hood: 'hood-s' + k }; }
+  function passReward(track, i, season) {
+    var set = passSet(season > 0 ? season : 0);
+    if (track === 'prem') { if (i === 10) return { cos: set.coat }; if (i === 15) return { cos: set.flag }; if (i === PASS_TIERS) return { cos: set.hood }; return i % 5 === 0 ? { tickets: 5 } : { treats: 60 }; }
+    return i % 5 === 0 ? { tickets: 2 } : { treats: 20 };
   }
   function passInfo(state, dateStr) {
     passSync(state, dateStr);
@@ -3833,8 +3837,8 @@
   /** 받을 수 있는 칸을 모두 받는다(두 줄 함께). 받은 보상 목록을 돌려준다. */
   function passClaim(state, dateStr) {
     var info = passInfo(state, dateStr), p = passOf(state), got = [];
-    while (p.free < info.tier) { p.free++; var rf = passReward('free', p.free); giveReward(state, rf); got.push(rf); }
-    if (p.premium) while (p.prem < info.tier) { p.prem++; var rp2 = passReward('prem', p.prem); giveReward(state, rp2); got.push(rp2); }
+    while (p.free < info.tier) { p.free++; var rf = passReward('free', p.free, p.season); giveReward(state, rf); got.push(rf); }
+    if (p.premium) while (p.prem < info.tier) { p.prem++; var rp2 = passReward('prem', p.prem, p.season); giveReward(state, rp2); got.push(rp2); }
     return got.length ? { ok: true, got: got } : fail('none');
   }
   function buyPassPremium(state, dateStr) {
@@ -3844,7 +3848,7 @@
     state.treats -= PASS_PRICE; p.premium = true; return { ok: true };
   }
   /* 4.8.2 첫 보급 상자: 한 번만. 값보다 훨씬 많이 든 상자(첫 구매의 문턱을 낮춘다). 보급소 한정 외형이 들어 있다 */
-  var STARTER = { treats: 60, give: { tickets: 5, shards: 10, cos: 'coat-starter' } };
+  var STARTER = { treats: 300, give: { tickets: 5, shards: 10, cos: 'coat-starter' } };
   function buyStarter(state) {
     if (state.starter) return fail('owned');
     if (!((state.treats || 0) >= STARTER.treats)) return fail('treats');
@@ -4018,8 +4022,19 @@
     { id: 'coat-gold',   slot: 'coat', name: '금빛 우비',   rarity: 2, look: { y: '#ffd95a', j: '#c8922a' } },      // 기본 노랑과 헷갈리지 않게 몸은 짙은 금색
     // 4.8.2 뽑기에 없는 외형: 첫 보급 상자 · 생존자 수첩(reward 로 두고 받는 길은 FLAG_REWARDS 에 적는다)
     { id: 'coat-starter', slot: 'coat', name: '보급 우비',  rarity: 1, reward: true, exclusive: true, look: { y: '#8a8f55', j: '#6b6f45' } },
-    { id: 'coat-pass1',  slot: 'coat', name: '수첩 우비',   rarity: 1, reward: true, exclusive: true, look: { y: '#e8762a', j: '#2a3a6a' } },
-    { id: 'coat-pass2',  slot: 'coat', name: '별밤 수첩 우비', rarity: 2, reward: true, exclusive: true, look: { y: '#ffd95a', j: '#1e2440' } },
+    // 4.8.3 생존자 수첩 한정(시즌마다 우비 · 깃발 · 후드 한 벌, PASS_SETS 차례로 돈다)
+    { id: 'coat-s0', slot: 'coat', name: '마녀의 우비',   rarity: 1, reward: true, exclusive: true, look: { y: '#5a3a8a', j: '#2a2440' } },
+    { id: 'coat-s1', slot: 'coat', name: '눈꽃 우비',     rarity: 1, reward: true, exclusive: true, look: { y: '#f1f0e6', j: '#8fc3ff' } },
+    { id: 'coat-s2', slot: 'coat', name: '해적 우비',     rarity: 1, reward: true, exclusive: true, look: { y: '#d8384a', j: '#2a3a6a' } },
+    { id: 'coat-s3', slot: 'coat', name: '소풍 우비',     rarity: 1, reward: true, exclusive: true, look: { y: '#ff9fc0', j: '#5fd0b0' } },
+    { id: 'hood-s0', slot: 'hood', name: '마녀 모자',     rarity: 2, reward: true, exclusive: true, look: 'witch' },
+    { id: 'hood-s1', slot: 'hood', name: '방울 털모자',   rarity: 2, reward: true, exclusive: true, look: 'snowcap' },
+    { id: 'hood-s2', slot: 'hood', name: '해적 두건',     rarity: 2, reward: true, exclusive: true, look: 'pirate' },
+    { id: 'hood-s3', slot: 'hood', name: '밀짚모자',      rarity: 2, reward: true, exclusive: true, look: 'straw' },
+    { id: 'flag-s0', slot: 'flag', name: '호박 깃발',     rarity: 1, reward: true, exclusive: true, look: '#e8762a' },
+    { id: 'flag-s1', slot: 'flag', name: '얼음 깃발',     rarity: 1, reward: true, exclusive: true, look: '#bfe6ff' },
+    { id: 'flag-s2', slot: 'flag', name: '해골 깃발',     rarity: 1, reward: true, exclusive: true, look: 'skull' },
+    { id: 'flag-s3', slot: 'flag', name: '벚꽃 깃발',     rarity: 1, reward: true, exclusive: true, look: '#ffb8d0' },
     // 2.0.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
     { id: 'hood-none',   slot: 'hood', name: '기본 후드',   rarity: 0, base: true, look: 'none' },
     { id: 'hood-cat',    slot: 'hood', name: '고양이 귀',   rarity: 1, look: 'cat' },
@@ -4141,8 +4156,10 @@
     { id: 'flag-star',  text: '출석 30일', has: function (s) { return (s.attend && s.attend.count || 0) >= 30; } },
     { id: 'flag-moon',  text: '최후의 밤 막기', has: function (s) { return !!s.finalHeld || (s.ended || 0) >= 1; } },
     { id: 'coat-starter', text: '보급소 · 첫 보급 상자', has: function () { return false; } },      // 4.8.2 사서 받는다(저절로 주지 않는다)
-    { id: 'coat-pass1', text: '생존자 수첩 유료 줄 10칸', has: function () { return false; } },
-    { id: 'coat-pass2', text: '생존자 수첩 유료 줄 20칸', has: function () { return false; } },
+    { id: 'coat-s0', text: '수첩 · 마녀의 밤 10칸', has: function () { return false; } }, { id: 'flag-s0', text: '수첩 · 마녀의 밤 15칸', has: function () { return false; } }, { id: 'hood-s0', text: '수첩 · 마녀의 밤 20칸', has: function () { return false; } },
+    { id: 'coat-s1', text: '수첩 · 눈 오는 날 10칸', has: function () { return false; } }, { id: 'flag-s1', text: '수첩 · 눈 오는 날 15칸', has: function () { return false; } }, { id: 'hood-s1', text: '수첩 · 눈 오는 날 20칸', has: function () { return false; } },
+    { id: 'coat-s2', text: '수첩 · 해적의 바다 10칸', has: function () { return false; } }, { id: 'flag-s2', text: '수첩 · 해적의 바다 15칸', has: function () { return false; } }, { id: 'hood-s2', text: '수첩 · 해적의 바다 20칸', has: function () { return false; } },
+    { id: 'coat-s3', text: '수첩 · 봄 소풍 10칸', has: function () { return false; } }, { id: 'flag-s3', text: '수첩 · 봄 소풍 15칸', has: function () { return false; } }, { id: 'hood-s3', text: '수첩 · 봄 소풍 20칸', has: function () { return false; } },
     { id: 'flag-purple', text: '원정 별 30개', has: function (s) { return stageMarkCount(s).have >= 30; } },
     { id: 'flag-rainbow', text: '이야기의 끝 보기', has: function (s) { return (s.ended || 0) >= 1; } }
   ];
@@ -5149,7 +5166,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    BAL: BAL, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    BAL: BAL, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passSet: passSet, PASS_SETS: PASS_SETS, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,

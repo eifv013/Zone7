@@ -1961,7 +1961,7 @@
   function renderPass() {
     if (!$('pass-veil') || $('pass-veil').hidden) return;
     var info = C.passInfo(state, todayStr()), days = Math.max(0, Math.ceil((info.endsAt - Date.now()) / 86400000));
-    setText($('pass-sub'), '남은 ' + days + '일');
+    setText($('pass-sub'), C.passSet(info.season).name + ' · 남은 ' + days + '일');
     $('pass-fill').style.width = Math.min(100, info.stamps / (C.PASS_TIERS * C.PASS_STEP) * 100).toFixed(1) + '%';
     $('pass-stamps').textContent = '도장 ' + fmt(info.stamps) + ', ' + info.tier + ' / ' + C.PASS_TIERS + '칸' + (info.toNext ? ', 다음 칸까지 ' + info.toNext : '');      // 한 줄로(fillText 는 ' · ' 마다 줄을 나눈다)
     var g = $('pass-grid'); while (g.firstChild) g.removeChild(g.firstChild);
@@ -1971,7 +1971,7 @@
         g.appendChild(el('div', 'h', tr === 'free' ? '무료' : '유료'));
         for (var i = b + 1; i <= b + 5; i++) {
           var got = tr === 'free' ? i <= info.free : i <= info.prem, reach = i <= info.tier, open = tr === 'free' || info.premium;
-          g.appendChild(el('div', 'c' + (tr === 'prem' ? ' prem' : '') + (got ? ' got' : reach && open ? ' can' : !open ? ' lock' : ''), (got ? '✓ ' : '') + passCell(C.passReward(tr, i))));
+          g.appendChild(el('div', 'c' + (tr === 'prem' ? ' prem' : '') + (got ? ' got' : reach && open ? ' can' : !open ? ' lock' : ''), (got ? '✓ ' : '') + passCell(C.passReward(tr, i, info.season))));
         }
       });
     }
@@ -1979,7 +1979,7 @@
     setText($('pass-claim'), info.canFree || info.canPrem ? '받기' : '받을 칸이 없어요');
     $('pass-buy').hidden = info.premium; setText($('pass-buy'), '유료 줄 ' + IC.treat + C.PASS_PRICE);
     var st = C.PASS_STAMPS;
-    setText($('pass-how'), '도장은 출석 ' + st.attend + ', 원정의 새 별 ' + st.star + ', 밤 단계 이정표 ' + st.night + ', 혈청 단계 ' + st.serum + ', 철수 ' + st.retreat + '개씩이에요. 유료 줄의 10칸 · 20칸에는 수첩 한정 외형이 있어요. 30일마다 새 수첩이 나와요.');
+    setText($('pass-how'), '도장은 출석 ' + st.attend + ', 원정의 새 별 ' + st.star + ', 밤 단계 이정표 ' + st.night + ', 혈청 단계 ' + st.serum + ', 철수 ' + st.retreat + '개씩이에요. 유료 줄의 10칸 · 15칸 · 20칸에는 이번 수첩 한정 우비 · 깃발 · 후드가 있어요. 30일마다 새 수첩이 나와요.');
   }
   function renderShop() {
     renderAttend(); renderStore(); renderPass();

@@ -555,6 +555,11 @@
     beret:   { 1: '....rrrrr.....', 2: '...rrrrrrr....', 0: '.......r......' },      // 4.8.1 베레모(빨강, 꼭지 하나)
     wreath:  { 1: '...g.g..g.g...', 2: '...wiGwiGwi...' },      // 화관(꽃과 잎)
     phones:  { 1: '...nnnnnnnn...', 4: '.ryyyssssyyyr.', 5: '.ryysessesyyr.' },      // 헤드폰(머리띠와 양쪽 귀)
+    // 4.8.3 생존자 수첩 한정 후드(시즌마다 하나)
+    witch:   { 0: '......nn......', 1: '.....nnnG.....', 2: '..nnnnnnnnnn..' },      // 마녀 모자(금빛 띠)
+    snowcap: { 0: '......rr......', 1: '....wwwwww....', 2: '...wrwrwrww...' },      // 빨간 방울 털모자
+    pirate:  { 1: '....rrrrrr....', 2: '...rrwrrrrrr..', 3: '...yyyyyyyyrr.' },      // 해적 두건(옆으로 묶은 끝)
+    straw:   { 1: '....TTTTTT....', 2: '..TTTrrrrTTT..' },      // 밀짚모자(빨간 띠)
     bandage: { 1: '..........ww..', 2: '....wwwwwww...' }      // 붕대 머리띠(옆으로 끝이 날린다)
   };
 
@@ -639,7 +644,7 @@
     // 2.8.9: 무늬 색이 우비 색과 비슷하면(흰 우비에 흰 무늬, 노란 우비에 노란 별) 보이지 않았다. 그럴 때는 우비를 어둡게 한 색으로 그린다
     if (pat && pat !== 'none' && colorNear(patCol, coat.j)) patCol = darker(coat.j, 0.55);
     var patCol2 = pat === 'camo' ? lerpColor(coat.j, '#ffffff', 0.35) : pat === 'flower' ? '#ffd95a' : pat === 'clover' ? '#3f8a3f' : patCol;      // 꽃 가운데는 노랑
-    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22', a: '#8a96a6', G: '#ffd95a', r: '#e0392b' };
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22', a: '#8a96a6', G: '#ffd95a', r: '#e0392b', T: '#c8a070' };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
@@ -978,6 +983,7 @@
   function flagRows(flag, t) {
     if (flag === 'rainbow') { var o = Math.floor((t || 0) * 1.5) % 4; return [0, 1, 2, 3].map(function (i) { return FLAG_RAINBOW[(i + o) % 4]; }); }
     if (flag === 'glow') return ['#d8ff7a', '#c6ff4a', '#c6ff4a', '#9fe01f'];
+    if (flag === 'skull') return ['#17180f', '#17180f', '#17180f', '#0e0f0a'];
     if (flag === 'heart') return ['#ff8fb8', '#ff8fb8', '#ff8fb8', '#e06a98'];
     if (flag === 'moon') return ['#1e2440', '#1e2440', '#1e2440', '#141830'];
     if (flag === 'check' || flag === 'star') return ['#2a3a6a', '#2a3a6a', '#2a3a6a', '#1e2a50'];      // 4.8.1 무늬 깃발(무늬는 drawFlag 가 덧그린다)
@@ -995,6 +1001,7 @@
       ctx.fillRect(x + 4 * scale, y + (i + (wave ? 0 : 0)) * scale + (i === 0 && wave ? scale : 0), scale, i === 3 && wave ? 0 : scale);      // 끝 한 칸이 펄럭인다
     });
     if (flag === 'check') { ctx.fillStyle = lerpColor('#f1f0e6', '#17180f', dark * 0.45); for (var cy = 0; cy < 4; cy++) for (var cx = 0; cx < 4; cx++) if ((cx + cy) % 2 === 0) ctx.fillRect(x + cx * scale, y + cy * scale, scale, scale); }      // 체크(흰 칸과 남색 칸)
+    if (flag === 'skull') { ctx.fillStyle = '#f1f0e6'; ctx.fillRect(x + 1 * scale, y, 3 * scale, 2 * scale); ctx.fillRect(x + 1 * scale, y + 2 * scale, scale, scale); ctx.fillRect(x + 3 * scale, y + 2 * scale, scale, scale); ctx.fillStyle = '#17180f'; ctx.fillRect(x + 1 * scale, y + scale, scale, scale); ctx.fillRect(x + 3 * scale, y + scale, scale, scale); }      // 해골(귀엽게: 눈 둘, 이 둘)
     if (flag === 'heart') { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1 * scale, y + 1 * scale, scale, scale); ctx.fillRect(x + 3 * scale, y + 1 * scale, scale, scale); ctx.fillRect(x + 1 * scale, y + 2 * scale, 3 * scale, scale); ctx.fillRect(x + 2 * scale, y + 3 * scale, scale, scale); }
     if (flag === 'moon') { ctx.fillStyle = '#ffe680'; ctx.fillRect(x + 1 * scale, y, scale, 4 * scale); ctx.fillRect(x + 2 * scale, y, scale, scale); ctx.fillRect(x + 2 * scale, y + 3 * scale, scale, scale); }
     if (flag === 'star') { ctx.fillStyle = '#ffd95a'; ctx.fillRect(x + 2 * scale, y + 1 * scale, scale, scale); ctx.fillRect(x + 1 * scale, y + 2 * scale, 3 * scale, scale); ctx.fillRect(x + 2 * scale, y + 3 * scale, scale, scale); }      // 남색 바탕의 노란 별
