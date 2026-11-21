@@ -1871,7 +1871,7 @@
    *   옷장   : 가진 것은 눌러서 입는다. 없는 것은 조각이 모이면 눌러서 얻는다.
    */
   var cosTab = 'coat', SLOT_TAB = { coat: '우비', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', pet: '친구', flag: '깃발' };
-  var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', pet: '친구 옷', flag: '깃발 · 도전과 원정의 보상' };
+  var oddsOpen = false, SLOT_NAME = { coat: '우비 색', hood: '후드', pat: '무늬', bag: '가방', fx: '효과', pet: '친구 옷', flag: '깃발 · 도전 · 원정 · 출석 · 수첩의 보상' };
   /** 4.6.0 아래 탭의 붉은 점: can 이 거짓→참으로 바뀌면 켜고, 그 탭을 누르면(dotSeen) 끈다. */
   var dotSeen = {};
   function navDot(id, can) {

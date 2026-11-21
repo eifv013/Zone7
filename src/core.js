@@ -170,7 +170,20 @@
     { id: 'persian', kind: 'cat', rarity: 'rare', name: '페르시안', body: '#ece6dc', patch: '#ece6dc' },
     { id: 'norwegian', kind: 'cat', rarity: 'rare', name: '노르웨이숲', body: '#8a7058', patch: '#efe4d0' },
     { id: 'maine', kind: 'cat', rarity: 'rare', name: '메인쿤', body: '#6a5038', patch: '#c8a888' },
-    { id: 'turkish', kind: 'cat', rarity: 'rare', name: '터키시 앙고라', body: '#f8f6f0', patch: '#f8f6f0' }
+    { id: 'turkish', kind: 'cat', rarity: 'rare', name: '터키시 앙고라', body: '#f8f6f0', patch: '#f8f6f0' },
+    // 4.9.0 열두 종을 더했다(등급마다 강아지 둘 · 고양이 둘)
+    { id: 'chihuahua', kind: 'dog', rarity: 'common', name: '치와와', body: '#e8c090', patch: '#f6ead6' },
+    { id: 'yorkie', kind: 'dog', rarity: 'common', name: '요크셔테리어', body: '#c8a060', patch: '#4a5058' },
+    { id: 'bulldog', kind: 'dog', rarity: 'fine', name: '불독', body: '#f1ede2', patch: '#b8783c' },
+    { id: 'frenchie', kind: 'dog', rarity: 'fine', name: '프렌치 불독', body: '#d8b888', patch: '#d8b888' },
+    { id: 'malamute', kind: 'dog', rarity: 'rare', name: '말라뮤트', body: '#6a6e78', patch: '#f1efe8' },
+    { id: 'saint', kind: 'dog', rarity: 'rare', name: '세인트버나드', body: '#f4f2ec', patch: '#a85a2a' },
+    { id: 'lilac', kind: 'cat', rarity: 'common', name: '라일락', body: '#b8a8b0', patch: '#b8a8b0' },
+    { id: 'silver', kind: 'cat', rarity: 'common', name: '실버 태비', body: '#c8ccd0', patch: '#4a4e56' },
+    { id: 'exotic', kind: 'cat', rarity: 'fine', name: '엑조틱', body: '#d8a060', patch: '#f0d0a0' },
+    { id: 'devon', kind: 'cat', rarity: 'fine', name: '데본렉스', body: '#a8a8a8', patch: '#e8e8e8' },
+    { id: 'snowbengal', kind: 'cat', rarity: 'rare', name: '스노우 벵갈', body: '#f4f0e6', patch: '#a89070' },
+    { id: 'birman', kind: 'cat', rarity: 'rare', name: '버만', body: '#f0e6d0', patch: '#5a4030' }
   ];
   /*
    * 4.4.6 친구의 효과는 셋이다.
@@ -229,7 +242,19 @@
     abyssinian: { key: 'traincost', mult: 0.95, text: '4구역 시설 값 -5%' },
     sphynx: { key: 'lucky', add: 0.05, text: '들어오는 상자가 한 단계 더 높을 확률 +5%p' },
     maine: { key: 'click', mult: 1.3, text: '수색 배수 +30%' },
-    turkish: { key: 'loot', mult: 1.3, text: '밤 전리품 +30%' }
+    turkish: { key: 'loot', mult: 1.3, text: '밤 전리품 +30%' },
+    chihuahua: { key: 'cool', mult: 0.95, text: '밀어붙이기 쉬는 시간 -5%' },
+    yorkie: { key: 'z1', mult: 1.15, text: '1구역 생산 +15%' },
+    bulldog: { key: 'defense', mult: 1.1, text: '방어력 +10%' },
+    frenchie: { key: 'z3', mult: 1.15, text: '3구역 생산 +15%' },
+    malamute: { key: 'z7', mult: 1.2, text: '7구역 생존자가 모이는 속도 +20%' },
+    saint: { key: 'loss', mult: 0.85, text: '뚫렸을 때 잃는 것 -15%' },
+    lilac: { key: 'z2', mult: 1.15, text: '2구역 생산 +15%' },
+    silver: { key: 'z1cost', mult: 0.95, text: '1구역 시설 값 -5%' },
+    exotic: { key: 'cap', mult: 1.15, text: '창고 +15%' },
+    devon: { key: 'lucky', add: 0.03, text: '들어오는 상자가 한 단계 더 높을 확률 +3%p' },
+    snowbengal: { key: 'prod', mult: 1.08, text: '전체 생산 +8% 더' },
+    birman: { key: 'antibody', mult: 1.06, text: '철수 항체 샘플 +6%' }
   };
   /*
    * 좀비 도감: 15종. 밤이 지날 때마다 그날 무리에 섞여 있던 것을 만난 것으로 적는다(zdex 에 만난 횟수).
@@ -4053,7 +4078,8 @@
    *   중복   : 이미 가진 것이 나오면 조각으로 바뀐다(SHARDS_DUP). 조각을 모으면 원하는 외형을 골라 얻는다(SHARDS_COST).
    * 세트를 다 모아야 보상을 주는 방식(컴플리트)은 두지 않는다. 뽑기에서 나오는 것은 전부 이 표에 있는 외형이다.
    */
-  var RARITIES = ['일반', '희귀', '전설'], GACHA_ODDS = [0.7, 0.25, 0.05], GACHA_PITY = 30, TICKET_TREATS = 40;      // 4.8.4 20 → 40
+  var RARITIES = ['일반', '희귀', '전설'], GACHA_ODDS = [0.76, 0.22, 0.02], GACHA_PITY = 60,      // 4.9.0 전설은 얻기 어렵게(5% → 2%, 보장 30 → 60번)
+      TICKET_TREATS = 40;      // 4.8.4 20 → 40
   var SHARDS_DUP = [1, 3, 10], SHARDS_COST = [5, 15, 50];
   var COSMETICS = [
     { id: 'coat-yellow', slot: 'coat', name: '노란 우비',   rarity: 0, base: true, look: { y: '#f0b400', j: '#f0b400' } },
@@ -4328,6 +4354,7 @@
   function cosmeticLook(state) {
     var out = {};
     COS_SLOTS.forEach(function (slot) { var id = state.wear && state.wear[slot], c = id && ownsCosmetic(state, id) ? findById(COSMETICS, id) : null; out[slot] = (c && c.slot === slot ? c : findById(COSMETICS, COS_BASE[slot])).look; });
+    out.legend = COS_SLOTS.filter(function (slot) { var id = state.wear && state.wear[slot], c = id && ownsCosmetic(state, id) ? findById(COSMETICS, id) : null; return c && c.rarity === 2 && slot !== 'fx' && slot !== 'flag'; }).length;      // 4.9.0 입은 전설(효과 칸 · 깃발 빼고) 수: 라라 둘레에 금빛 반짝임
     return out;
   }
 

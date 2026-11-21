@@ -684,6 +684,11 @@
       var la = Math.min(0.5, (dark - 0.3)) * (0.8 + 0.2 * Math.sin((t || 0) * 5)), lc = 'rgba(255, 217, 90, ' + la.toFixed(2) + ')', ls = scale || 1;
       ctx.fillStyle = lc; for (var ly = 10; ly <= 15; ly++) { var lw = ly === 10 || ly === 15 ? 4 : 6; ctx.fillRect(Math.round(x + (flip ? LARA_W - (10 - (lw - 4) / 2) - lw : 10 - (lw - 4) / 2) * ls), Math.round(y + ly * ls), lw * ls, ls); }
     }
+    /* 4.9.0 전설 광채: 전설 외형(후드 · 우비 · 무늬 · 든 것 · 친구 옷)을 입으면 둘레에 금빛 별이 하나씩 반짝인다. 여러 벌이면 더 자주 */
+    if (ctx && look && look.legend > 0) {
+      var lsc = scale || 1, per = 1.6 / Math.min(3, look.legend), ph = ((t || 0) % per) / per, spots = [[1, 4], [12, 3], [0, 10], [13, 11], [6, -1], [11, 15]], sp = spots[Math.floor((t || 0) / per) % spots.length];
+      if (ph < 0.45) { var lc2 = ph < 0.2 ? '#fff8c8' : '#ffd95a', fx0 = flip ? LARA_W - 1 - sp[0] : sp[0]; ctx.fillStyle = lc2; ctx.fillRect(Math.round(x + fx0 * lsc), Math.round(y + sp[1] * lsc), lsc, lsc); if (ph < 0.3) { ctx.fillStyle = 'rgba(255, 217, 90, .55)'; ctx.fillRect(Math.round(x + (fx0 - 1) * lsc), Math.round(y + sp[1] * lsc), lsc, lsc); ctx.fillRect(Math.round(x + (fx0 + 1) * lsc), Math.round(y + sp[1] * lsc), lsc, lsc); ctx.fillRect(Math.round(x + fx0 * lsc), Math.round(y + (sp[1] - 1) * lsc), lsc, lsc); ctx.fillRect(Math.round(x + fx0 * lsc), Math.round(y + (sp[1] + 1) * lsc), lsc, lsc); } }
+    }
     var fx = look && look.fx; if (!ctx || !fx || fx === 'none') return;
     scale = scale || 1; t = t || 0;
     function px(col, cx, cy, w, h) { ctx.fillStyle = col; ctx.fillRect(Math.round(x + (flip ? LARA_W - cx - (w || 1) : cx) * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
@@ -766,7 +771,19 @@
     abyssinian: {'ear': 'pt', 'tail': 'long', 'body': '#b8763c', 'patch': '#8a5028', 'pat': 'tabby', 'eye': '#7ad070', 'kind': 'cat'},
     sphynx: {'ear': 'pt', 'tail': 'long', 'body': '#e8c0b0', 'patch': '#e8c0b0', 'eye': '#7ad070', 'kind': 'cat'},
     maine: {'size': 'l', 'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#6a5038', 'patch': '#c8a888', 'pat': 'belly tabby', 'eye': '#e0c040', 'kind': 'cat'},
-    turkish: {'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#f8f6f0', 'patch': '#f8f6f0', 'eye': '#6ab0e8', 'kind': 'cat'}
+    turkish: {'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#f8f6f0', 'patch': '#f8f6f0', 'eye': '#6ab0e8', 'kind': 'cat'},
+    chihuahua: {'size': 's', 'ear': 'big', 'tail': 'up', 'snout': 'mid', 'body': '#e8c090', 'patch': '#f6ead6', 'pat': 'belly', 'kind': 'dog'},
+    yorkie: {'size': 's', 'ear': 'pt', 'tail': 'up', 'snout': 'mid', 'fur': 'fluff', 'body': '#c8a060', 'patch': '#4a5058', 'pat': 'saddle', 'kind': 'dog'},
+    bulldog: {'size': 'm', 'legs': 'short', 'ear': 'fold', 'tail': 'stub', 'snout': 'mid', 'body': '#f1ede2', 'patch': '#b8783c', 'pat': 'spots muzzle', 'kind': 'dog'},
+    frenchie: {'size': 's', 'ear': 'big', 'tail': 'stub', 'snout': 'mid', 'body': '#d8b888', 'patch': '#3a3430', 'pat': 'muzzle', 'kind': 'dog'},
+    malamute: {'size': 'l', 'ear': 'pt', 'tail': 'bush', 'snout': 'long', 'fur': 'fluff', 'body': '#6a6e78', 'patch': '#f1efe8', 'pat': 'belly mask', 'kind': 'dog'},
+    saint: {'size': 'l', 'ear': 'flop', 'tail': 'bush', 'snout': 'mid', 'fur': 'fluff', 'body': '#f4f2ec', 'patch': '#a85a2a', 'pat': 'saddle head', 'kind': 'dog'},
+    lilac: {'ear': 'pt', 'tail': 'long', 'body': '#b8a8b0', 'patch': '#b8a8b0', 'eye': '#e0a040', 'kind': 'cat'},
+    silver: {'ear': 'pt', 'tail': 'long', 'body': '#c8ccd0', 'patch': '#4a4e56', 'pat': 'tabby', 'eye': '#7ad070', 'kind': 'cat'},
+    exotic: {'chubby': true, 'ear': 'fold', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#d8a060', 'patch': '#f0d0a0', 'pat': 'belly', 'eye': '#e09040', 'kind': 'cat'},
+    devon: {'ear': 'pt', 'tail': 'long', 'body': '#a8a8a8', 'patch': '#e8e8e8', 'pat': 'chest', 'eye': '#e0c040', 'kind': 'cat'},
+    snowbengal: {'ear': 'pt', 'tail': 'long', 'body': '#f4f0e6', 'patch': '#a89070', 'pat': 'spots', 'eye': '#5aa8f0', 'kind': 'cat'},
+    birman: {'ear': 'pt', 'tail': 'fluffy', 'fur': 'fluff', 'body': '#f0e6d0', 'patch': '#5a4030', 'pat': 'point', 'eye': '#5aa8f0', 'kind': 'cat'}
   };
   function petLum(h){var n=parseInt(h.slice(1),16);return (((n>>16)&255)*0.3+((n>>8)&255)*0.5+(n&255)*0.2)/255;}
 
