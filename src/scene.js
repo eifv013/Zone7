@@ -547,7 +547,15 @@
     dino:   { 0: '.....g...g....', 1: '....ggg.ggg...', 2: '....yyyyyy....' },      // 공룡 가시 둘
     fox:    { 0: '..O........O..', 1: '..oo......oo..', 2: '...owyyyywo...' },      // 여우 귀: 주황 귀, 검은 끝, 흰 속
     panda:  { 0: '...nn....nn...', 1: '..nnnn..nnnn..', 2: '...nyyyyyyn...' },
-    sprout: { 0: '....gg..gg....', 1: '.....gkkg.....' }      // 새싹: 잎 둘과 줄기
+    sprout: { 0: '....gg..gg....', 1: '.....gkkg.....' },      // 새싹: 잎 둘과 줄기
+    // 4.8.1 더한 후드: a 회색(상어 지느러미) · G 금빛(왕관) · r 붉은 보석
+    shark:   { 0: '......a.......', 1: '.....aaa......', 2: '....yaaaay....' },      // 상어 지느러미(세 줄로 크게)
+    crown:   { 0: '....G.GG.G....', 1: '....GGrrGG....' },      // 왕관(가운데 붉은 보석)
+    antenna: { 0: '...oo....oo...', 1: '....n....n....' },      // 더듬이(끝에 주황 방울)
+    beret:   { 1: '....rrrrr.....', 2: '...rrrrrrr....', 0: '.......r......' },      // 4.8.1 베레모(빨강, 꼭지 하나)
+    wreath:  { 1: '...g.g..g.g...', 2: '...wiGwiGwi...' },      // 화관(꽃과 잎)
+    phones:  { 1: '...nnnnnnnn...', 4: '.ryyyssssyyyr.', 5: '.ryysessesyyr.' },      // 헤드폰(머리띠와 양쪽 귀)
+    bandage: { 1: '..........ww..', 2: '....wwwwwww...' }      // 붕대 머리띠(옆으로 끝이 날린다)
   };
 
   /* 가방: 줄 번호 → 오른쪽 네 칸(10~13번 칸)에 덮어 그린다. '.' 은 아래 그림을 그대로 둔다. 색은 c(몸), C(밝은 곳), e(눈) */
@@ -560,7 +568,15 @@
     lunch:  { c: '#ff7fb0', C: '#f8d8e6', rows: { 11: '.CC.', 12: 'cCCc', 13: 'cccc', 14: 'cccc' } },      // 분홍 보자기 도시락(위에 묶은 매듭)
     radio:  { c: '#30343c', C: '#7fc98a', rows: { 9: '.c..', 10: '.c..', 11: '.c..', 12: 'cccc', 13: 'cCCc', 14: 'cccc' } },      // 무전기(안테나와 초록 화면)
     pot:    { c: '#b8683c', C: '#5cb85c', rows: { 10: '.C.C', 11: '..C.', 12: 'cccc', 13: 'cccc', 14: '.cc.' } },      // 새싹 화분
-    lantern: { c: '#5a4a3a', C: '#ffd95a', rows: { 10: '..c.', 11: '.cc.', 12: 'cCCc', 13: 'cCCc', 14: '.cc.' } }      // 등불(밤에 둘레가 밝다)
+    lantern: { c: '#5a4a3a', C: '#ffd95a', rows: { 10: '..c.', 11: '.cc.', 12: 'cCCc', 13: 'cCCc', 14: '.cc.' } },      // 등불(밤에 둘레가 밝다)
+    // 4.8.1 더한 든 것
+    guitar:   { c: '#b8683c', C: '#30343c', rows: { 6: '...C', 7: '..C.', 8: '..C.', 9: '.cC.', 10: 'ccc.', 11: 'cCcc', 12: 'cccc', 13: 'cccc', 14: '.cc.' } },      // 기타(목이 어깨 위로)
+    balloon:  { c: '#e0392b', C: '#f1f0e6', rows: { 0: '.cc.', 1: 'cCcc', 2: 'cccc', 3: '.cc.', 4: '..C.', 5: '..C.', 6: '..C.', 7: '..C.', 8: '..C.', 9: '..C.', 10: '..C.', 11: '.cc.' } },      // 빨간 풍선(머리 옆으로 떠 있고 줄을 손에 쥔다)
+    bouquet:  { c: '#ff7fb0', C: '#5cb85c', rows: { 9: 'c.c.', 10: 'cccc', 11: '.cc.', 12: '.CC.', 13: '.C..', 14: '.C..' } },      // 꽃다발
+    torch:    { c: '#30343c', C: '#ffe680', rows: { 11: '....', 12: 'cccC', 13: 'cccC', 14: '....' } },      // 4.8.1 손전등(앞이 밝다)
+    shovel:   { c: '#8a6a4a', C: '#9aa4b0', rows: { 8: '...c', 9: '...c', 10: '..c.', 11: '..c.', 12: '.CC.', 13: 'CCCC', 14: '.CC.' } },      // 삽
+    kitty:    { c: '#9a9da3', C: '#f0a0b8', rows: { 11: 'c..c', 12: 'cccc', 13: 'cecc', 14: 'cCcc' } },      // 고양이 인형
+    fish:     { c: '#8fc3ff', C: '#30343c', rows: { 11: '..C.', 12: 'cc.c', 13: 'cCcc', 14: 'cc.c' } }      // 낚은 물고기
   };
   /** 무늬: 우비 칸 (x, y) 를 무늬 색으로 칠할지. */
   function laraPattern(pat, x, y) {
@@ -574,6 +590,14 @@
     if (pat === 'heart') return PAT_CELLS.heart[x + ',' + y] || false;      // 하트 둘(3칸 너비)
     if (pat === 'reflect') return y === 11 || y === 14;      // 반사띠(소방 우비처럼 가슴과 밑단에 두 줄)
     if (pat === 'rain') return PAT_CELLS.rain[x + ',' + y] || false;      // 길쭉한 빗방울
+    // 4.8.1 더한 무늬
+    if (pat === 'check') return y >= 9 && ((x >> 1) + (y >> 1)) % 2 === 0;      // 큰 바둑판(두 칸씩)
+    if (pat === 'flower') return PAT_CELLS.flower[x + ',' + y] || false;      // 꽃 둘(가운데는 노랑)
+    if (pat === 'moon') return PAT_CELLS.moon[x + ',' + y] || false;      // 가슴의 초승달
+    if (pat === 'paw') return PAT_CELLS.paw[x + ',' + y] || false;      // 발자국 둘
+    if (pat === 'pin') return y >= 9 && x % 3 === 1;      // 세로 줄무늬
+    if (pat === 'snowflake') return PAT_CELLS.snowflake[x + ',' + y] || false;      // 눈송이 둘
+    if (pat === 'clover') return PAT_CELLS.clover[x + ',' + y] || false;      // 네잎클로버
     return false;
   }
   var PAT_CELLS = (function () {
@@ -585,7 +609,12 @@
       star: cells([[4, 10], [3, 11], [4, 11], [5, 11], [4, 12], [8, 13], [7, 14], [8, 14], [9, 14], [8, 15]]),
       heart: cells([[3, 10], [5, 10], [3, 11], [4, 11], [5, 11], [4, 12], [7, 13], [9, 13], [7, 14], [8, 14], [9, 14], [8, 15]]),
       rain: cells([[2, 10], [2, 11], [8, 10], [8, 11], [4, 13], [4, 14], [9, 14], [9, 15], [3, 16]]),
-      camo: camo
+      camo: camo,
+      flower: (function () { var f = cells([[3, 9], [2, 10], [4, 10], [3, 11], [8, 12], [7, 13], [9, 13], [8, 14]]); f['3,10'] = 2; f['8,13'] = 2; return f; })(),
+      moon: cells([[4, 9], [5, 9], [3, 10], [3, 11], [3, 12], [4, 13], [5, 13]]),
+      snowflake: cells([[3, 9], [2, 10], [3, 10], [4, 10], [3, 11], [8, 12], [7, 13], [8, 13], [9, 13], [8, 14], [2, 9], [4, 11], [7, 12], [9, 14]]),
+      clover: (function () { var f = cells([[3, 9], [2, 10], [4, 10], [3, 11]]); f['3,10'] = 2; f['3,12'] = 2; return f; })(),
+      paw: cells([[3, 9], [5, 9], [3, 10], [4, 10], [5, 10], [4, 11], [7, 12], [9, 12], [7, 13], [8, 13], [9, 13], [8, 14]])
     };
   })();
   /** 두 색이 비슷한가(빨강·초록·파랑의 차이를 더해 120 아래). */
@@ -606,11 +635,11 @@
     var coat = look.coat || { y: '#f0b400', j: '#f0b400' }, bag = LARA_BAGS[look.bag] || LARA_BAGS.cooler, pat = look.pat;
     // 든 것이 우비와 비슷한 색이면(빨간 우비에 빨간 구급 상자) 묻혀서 보이지 않았다(2.7.7). 그럴 때는 든 것의 몸 색과 밝은 색을 맞바꿔 그린다
     if (colorNear(bag.c, coat.j)) bag = { c: bag.C, C: bag.c, rows: bag.rows };
-    var patCol = pat === 'star' || pat === 'bolt' ? '#ffd95a' : pat === 'camo' ? darker(coat.j, 0.6) : pat === 'heart' ? '#ff6f9f' : pat === 'reflect' ? '#dfe6ea' : pat === 'rain' ? '#8fc3ff' : '#f1f0e6';
+    var patCol = pat === 'star' || pat === 'bolt' || pat === 'moon' ? '#ffd95a' : pat === 'check' ? darker(coat.j, 0.7) : pat === 'paw' || pat === 'snowflake' ? '#f1f0e6' : pat === 'pin' ? lerpColor(coat.j, '#ffffff', 0.4) : pat === 'clover' ? '#5cb85c' : pat === 'camo' ? darker(coat.j, 0.6) : pat === 'heart' ? '#ff6f9f' : pat === 'reflect' ? '#dfe6ea' : pat === 'rain' ? '#8fc3ff' : '#f1f0e6';
     // 2.8.9: 무늬 색이 우비 색과 비슷하면(흰 우비에 흰 무늬, 노란 우비에 노란 별) 보이지 않았다. 그럴 때는 우비를 어둡게 한 색으로 그린다
     if (pat && pat !== 'none' && colorNear(patCol, coat.j)) patCol = darker(coat.j, 0.55);
-    var patCol2 = pat === 'camo' ? lerpColor(coat.j, '#ffffff', 0.35) : patCol;
-    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22' };
+    var patCol2 = pat === 'camo' ? lerpColor(coat.j, '#ffffff', 0.35) : pat === 'flower' ? '#ffd95a' : pat === 'clover' ? '#3f8a3f' : patCol;      // 꽃 가운데는 노랑
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22', a: '#8a96a6', G: '#ffd95a', r: '#e0392b' };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     for (var r = 0; r < rows.length; r++) for (var c = 0; c < LARA_W; c++) {
       var ch = rows[r][c];
@@ -650,6 +679,12 @@
     // 4.5.2 더한 효과: 꽃잎(분홍 잎이 천천히 떨어진다) · 비눗방울(둥근 방울이 떠오른다) · 등불 빛(밤에 든 등불 둘레가 밝다)
     if (fx === 'petal') for (var q = 0; q < 3; q++) { var pp = (t * 0.7 + q / 3) % 1, sx = 2 + q * 4 + Math.round(Math.sin(t * 2 + q) * 1.5); px(q % 2 ? '#ffb8d0' : '#ff8fb8', sx, -2 + Math.floor(pp * 18), 1, 1); }
     if (fx === 'bubble') for (var u = 0; u < 3; u++) { var bp = (t * 0.5 + u / 3) % 1, bx = 11 + (u % 2) + Math.round(Math.sin(t * 3 + u) * 1), by = 12 - Math.floor(bp * 14); px('rgba(160, 220, 255, .85)', bx, by, 1, 1); if (u === 1) { px('rgba(160, 220, 255, .6)', bx + 1, by, 1, 1); px('rgba(160, 220, 255, .6)', bx, by - 1, 1, 1); px('#ffffff', bx + 1, by - 1, 1, 1); } }
+    // 4.8.1 더한 효과: 눈(흰 눈송이가 내린다) · 반딧불(둘레를 떠돈다) · 음표(머리 옆으로 떠오른다)
+    if (fx === 'snow') for (var sq = 0; sq < 5; sq++) { var sp2 = (t * 0.45 + sq / 5) % 1, ssx = -1 + sq * 4 + Math.round(Math.sin(t * 1.5 + sq * 2) * 1.5); px(sq % 2 ? '#ffffff' : '#e8f2ff', ssx, -3 + Math.floor(sp2 * 21), 1, 1); }
+    if (fx === 'firefly') for (var fq = 0; fq < 3; fq++) { var fxp = 7 + Math.round(Math.cos(t * 1.1 + fq * 2.1) * 8), fyp = 9 + Math.round(Math.sin(t * 1.6 + fq * 1.3) * 6), on = (Math.floor(t * 3 + fq) % 3) !== 0; px(on ? '#e8ff70' : 'rgba(232, 255, 112, .35)', fxp, fyp, 1, 1); }
+    if (fx === 'note') for (var nq = 0; nq < 2; nq++) { var np = (t * 0.55 + nq * 0.5) % 1, nx = 11 + nq * 2 + Math.round(Math.sin(t * 3 + nq) * 1), ny = 5 - Math.floor(np * 9), nc = nq ? '#8fc3ff' : '#ffd95a'; if (np < 0.85) { px(nc, nx + 1, ny - 2, 1, 3); px(nc, nx, ny, 2, 1); px(nc, nx + 2, ny - 2, 1, 1); } }      // 음표 둘이 번갈아 떠오른다
+    if (fx === 'leaves') for (var lq = 0; lq < 3; lq++) { var lp = (t * 0.5 + lq / 3) % 1, lx = 1 + lq * 5 + Math.round(Math.sin(t * 1.8 + lq) * 2); px(lq % 2 ? '#e08a2a' : '#c0502a', lx, -2 + Math.floor(lp * 19), 2, 1); }      // 4.8.1 낙엽
+    if (fx === 'hearts') for (var hq = 0; hq < 2; hq++) { var hp = (t * 0.5 + hq * 0.5) % 1, hx = (hq ? 12 : 0) + Math.round(Math.sin(t * 2 + hq) * 1), hy = 9 - Math.floor(hp * 12); if (hp < 0.9) { px('#ff6f9f', hx, hy, 1, 1); px('#ff6f9f', hx + 2, hy, 1, 1); px('#ff6f9f', hx, hy + 1, 3, 1); px('#ff6f9f', hx + 1, hy + 2, 1, 1); } }      // 하트가 떠오른다
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
   }
   /*
@@ -906,6 +941,13 @@
     if (outfit === 'hat') { px('#3f7fb5', 3, tp, 3, 1); px('#3f7fb5', 4, tp - 1, 1, 1); px('#f1f0e6', 4, tp - 2, 1, 1); }
     if (outfit === 'cape') { px('#8a5fc0', 7, bk, 4, 2); px('#6a45a0', 8, bk + 2, 3, 1); px('#8a5fc0', 11, bk + wag, 1, 2); px('#ffd95a', 6, bk, 1, 1); }
     if (outfit === 'crown') { px('#ffd95a', 3, tp, 3, 1); px('#ffd95a', 3, tp - 1, 1, 1); px('#ffd95a', 5, tp - 1, 1, 1); px('#e0392b', 4, tp, 1, 1); if (Math.floor(t * 2) % 2) px('#ffffff', 4, tp - 2, 1, 1); }
+    // 4.8.1 더한 친구 옷: 선글라스 · 산타 모자 · 나뭇잎
+    if (outfit === 'shades') { px('#17180f', 1, B.eye, 7, 1); px('#17180f', 2, B.eye + 1, 2, 1); px('#17180f', 5, B.eye + 1, 2, 1); px('#6a7a8a', 2, B.eye, 1, 1); }
+    if (outfit === 'santa') { px('#f1f0e6', 3, tp, 4, 1); px('#d8384a', 4, tp - 1, 3, 1); px('#d8384a', 5, tp - 2, 2, 1); px('#ffffff', 7, tp - 2, 1, 1); }      // 흰 단 · 빨간 고깔 · 끝의 흰 방울
+    if (outfit === 'leaf') { px('#5cb85c', 4, tp - 1, 2, 1); px('#3f8a3f', 5, tp, 1, 1); px('#5cb85c', 3, tp - 2, 2, 1); }
+    if (outfit === 'scarf2') { px('#3f7fb5', 2, nk, 5, 1); px('#3f7fb5', 6, nk + 1, 1, 2); px('#f1f0e6', 3, nk, 1, 1); px('#f1f0e6', 5, nk, 1, 1); }      // 4.8.1 파란 줄무늬 목도리
+    if (outfit === 'tiara') { px('#dfe6ea', 3, tp, 3, 1); px('#dfe6ea', 4, tp - 1, 1, 1); px('#8fc3ff', 4, tp, 1, 1); if (Math.floor(t * 2) % 2) px('#ffffff', 4, tp - 2, 1, 1); }      // 티아라(반짝)
+    if (outfit === 'band') { px('#ff7fb0', 2, tp, 5, 1); px('#ffd95a', 6, tp - 1, 1, 1); }      // 머리띠(노란 별)
     if (outfit === 'halo') { var hy = tp - 2 - (Math.floor(t * 2) % 2); px('#ffe680', 3, hy, 3, 1); px('#fff8c8', 4, hy, 1, 1); }
     if (outfit === 'wings') {      // 4.5.0 다시 그렸다: 깃털 끝이 셋으로 갈라진 날개가 등에서 위로 펴지고, 접었다 폈다 한다
       var wy = bk - 1, up = wag;
@@ -936,6 +978,9 @@
   function flagRows(flag, t) {
     if (flag === 'rainbow') { var o = Math.floor((t || 0) * 1.5) % 4; return [0, 1, 2, 3].map(function (i) { return FLAG_RAINBOW[(i + o) % 4]; }); }
     if (flag === 'glow') return ['#d8ff7a', '#c6ff4a', '#c6ff4a', '#9fe01f'];
+    if (flag === 'heart') return ['#ff8fb8', '#ff8fb8', '#ff8fb8', '#e06a98'];
+    if (flag === 'moon') return ['#1e2440', '#1e2440', '#1e2440', '#141830'];
+    if (flag === 'check' || flag === 'star') return ['#2a3a6a', '#2a3a6a', '#2a3a6a', '#1e2a50'];      // 4.8.1 무늬 깃발(무늬는 drawFlag 가 덧그린다)
     var col = typeof flag === 'string' && flag.charAt(0) === '#' ? flag : '#f0b400';
     return [col, col, col, lerpColor(col, '#17180f', 0.25)];
   }
@@ -949,6 +994,10 @@
       ctx.fillRect(x, y + i * scale, 4 * scale, scale);
       ctx.fillRect(x + 4 * scale, y + (i + (wave ? 0 : 0)) * scale + (i === 0 && wave ? scale : 0), scale, i === 3 && wave ? 0 : scale);      // 끝 한 칸이 펄럭인다
     });
+    if (flag === 'check') { ctx.fillStyle = lerpColor('#f1f0e6', '#17180f', dark * 0.45); for (var cy = 0; cy < 4; cy++) for (var cx = 0; cx < 4; cx++) if ((cx + cy) % 2 === 0) ctx.fillRect(x + cx * scale, y + cy * scale, scale, scale); }      // 체크(흰 칸과 남색 칸)
+    if (flag === 'heart') { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1 * scale, y + 1 * scale, scale, scale); ctx.fillRect(x + 3 * scale, y + 1 * scale, scale, scale); ctx.fillRect(x + 1 * scale, y + 2 * scale, 3 * scale, scale); ctx.fillRect(x + 2 * scale, y + 3 * scale, scale, scale); }
+    if (flag === 'moon') { ctx.fillStyle = '#ffe680'; ctx.fillRect(x + 1 * scale, y, scale, 4 * scale); ctx.fillRect(x + 2 * scale, y, scale, scale); ctx.fillRect(x + 2 * scale, y + 3 * scale, scale, scale); }
+    if (flag === 'star') { ctx.fillStyle = '#ffd95a'; ctx.fillRect(x + 2 * scale, y + 1 * scale, scale, scale); ctx.fillRect(x + 1 * scale, y + 2 * scale, 3 * scale, scale); ctx.fillRect(x + 2 * scale, y + 3 * scale, scale, scale); }      // 남색 바탕의 노란 별
     return true;
   }
   /** 같은 구역이면 언제나 같은 배경이 나오도록 하는 작은 난수기. */

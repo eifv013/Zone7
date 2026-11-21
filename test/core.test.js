@@ -2519,7 +2519,7 @@ test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
 
 test('2.0.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발은 없다. 깃발은 도전과 원정의 확정 보상이다', () => {
   const table = C.gachaTable();
-  assert.equal(table.length, 60); assert.ok(!table.some(t => t.slot === 'flag'));
+  assert.equal(table.length, 101); assert.ok(!table.some(t => t.slot === 'flag'));      // 4.8.1 마흔한 가지를 더했다
   ['hood', 'pat', 'bag', 'fx', 'pet'].forEach(slot => assert.ok(table.some(t => t.slot === slot), slot));
   C.COS_SLOTS.forEach(slot => assert.equal(C.COSMETICS.filter(c => c.slot === slot && c.base).length, 1, slot + ': 기본은 하나'));
   const S = require('../src/scene.js');
@@ -2551,7 +2551,7 @@ test('2.0.1 야광 깃발과 무지개 깃발: 원정 표시 12개, 이야기의
 
 test('2.0.3 동물 친구의 옷: 뽑기에 있고, 친구 그림은 15×11칸', () => {
   const S = require('../src/scene.js');
-  assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 15);      // 4.4.6: 여덟 가지를 더했다
+  assert.equal(C.gachaTable().filter(t => t.slot === 'pet').length, 21);      // 4.4.6: 여덟 가지를 더했다. 4.8.1 여섯 가지 더
   // 4.4.6: 그림은 15×11칸(앉은 옆모습) 하나. 품종마다 그림이 있고, 모르는 품종은 그 종류의 첫 그림으로 그린다
   ['dog', 'cat', 'zzz'].forEach(k => [0, 1].forEach(w => { const r = S.petRows(k, w); assert.equal(r.length, S.PET_H); r.forEach(row => assert.equal(row.length, S.PET_W)); assert.ok(r.some(row => row.includes('e')), '눈'); }));
   C.PET_BREEDS.forEach(b => { assert.ok(S.PET_SPEC[b.id], '그림이 없다: ' + b.id); assert.equal(S.PET_SPEC[b.id].kind, b.kind, b.id); });

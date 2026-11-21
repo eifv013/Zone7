@@ -3944,6 +3944,16 @@
     { id: 'coat-duo',    slot: 'coat', name: '노랑 파랑 우비', rarity: 1, look: { y: '#f0b400', j: '#3f7fb5' } },
     { id: 'coat-berry',  slot: 'coat', name: '딸기 우비',   rarity: 1, look: { y: '#4f9a4a', j: '#d8384a' } },
     { id: 'coat-sunset', slot: 'coat', name: '노을 우비',   rarity: 2, look: { y: '#ff8f50', j: '#8a5fc0' } },
+    // 4.8.1 더한 외형(뽑기)
+    { id: 'coat-lavender', slot: 'coat', name: '라벤더 우비', rarity: 0, look: { y: '#b49ae0', j: '#b49ae0' } },
+    { id: 'coat-olive',  slot: 'coat', name: '올리브 우비', rarity: 0, look: { y: '#7a8a3a', j: '#7a8a3a' } },
+    { id: 'coat-mustard', slot: 'coat', name: '겨자 우비',  rarity: 0, look: { y: '#c8a030', j: '#c8a030' } },
+    { id: 'coat-navy',   slot: 'coat', name: '남색 우비',   rarity: 0, look: { y: '#2a3a6a', j: '#2a3a6a' } },
+    { id: 'coat-coral',  slot: 'coat', name: '코랄 우비',   rarity: 1, look: { y: '#ff7f6a', j: '#ff7f6a' } },
+    { id: 'coat-wine',   slot: 'coat', name: '와인 우비',   rarity: 1, look: { y: '#8a2a3a', j: '#8a2a3a' } },
+    { id: 'coat-candy',  slot: 'coat', name: '사탕 우비',   rarity: 1, look: { y: '#5fd0b0', j: '#ff8fb8' } },
+    { id: 'coat-silver', slot: 'coat', name: '은빛 우비',   rarity: 2, look: { y: '#c8ccd4', j: '#c8ccd4' } },
+    { id: 'coat-gold',   slot: 'coat', name: '금빛 우비',   rarity: 2, look: { y: '#ffd95a', j: '#c8922a' } },      // 기본 노랑과 헷갈리지 않게 몸은 짙은 금색
     // 2.0.0: 후드 모양·우비 무늬·가방·전설 효과. look 은 그림 쪽(scene.js)이 아는 이름이다
     { id: 'hood-none',   slot: 'hood', name: '기본 후드',   rarity: 0, base: true, look: 'none' },
     { id: 'hood-cat',    slot: 'hood', name: '고양이 귀',   rarity: 1, look: 'cat' },
@@ -3955,6 +3965,13 @@
     { id: 'hood-fox',    slot: 'hood', name: '여우 귀',     rarity: 1, look: 'fox' },
     { id: 'hood-panda',  slot: 'hood', name: '판다 귀',     rarity: 1, look: 'panda' },
     { id: 'hood-dino',   slot: 'hood', name: '공룡 가시',   rarity: 2, look: 'dino' },
+    { id: 'hood-bandage', slot: 'hood', name: '붕대 머리띠', rarity: 0, look: 'bandage' },
+    { id: 'hood-beret',  slot: 'hood', name: '베레모',      rarity: 1, look: 'beret' },
+    { id: 'hood-antenna', slot: 'hood', name: '더듬이',     rarity: 1, look: 'antenna' },
+    { id: 'hood-phones', slot: 'hood', name: '헤드폰',      rarity: 1, look: 'phones' },
+    { id: 'hood-wreath', slot: 'hood', name: '화관',        rarity: 2, look: 'wreath' },
+    { id: 'hood-shark',  slot: 'hood', name: '상어 지느러미', rarity: 2, look: 'shark' },
+    { id: 'hood-crown',  slot: 'hood', name: '작은 왕관',   rarity: 2, look: 'crown' },
     { id: 'pat-none',    slot: 'pat',  name: '무늬 없음',   rarity: 0, base: true, look: 'none' },
     { id: 'pat-stripe',  slot: 'pat',  name: '체크 밑단',   rarity: 0, look: 'stripe' },      // 2.7.5: 줄무늬가 보기 좋지 않다는 말에 그림을 바꿨다. 이미 가진 사람의 것이 사라지지 않게 id 와 look 의 이름은 그대로 둔다
     { id: 'pat-zigzag',  slot: 'pat',  name: '지그재그',    rarity: 0, look: 'zigzag' },      // 2.7.7 추가
@@ -3964,6 +3981,13 @@
     { id: 'pat-rain',    slot: 'pat',  name: '빗방울',      rarity: 0, look: 'rain' },      // 4.5.2 더한 무늬
     { id: 'pat-heart',   slot: 'pat',  name: '하트',        rarity: 1, look: 'heart' },
     { id: 'pat-reflect', slot: 'pat',  name: '반사띠',      rarity: 1, look: 'reflect' },
+    { id: 'pat-flower',  slot: 'pat',  name: '꽃 무늬',     rarity: 0, look: 'flower' },
+    { id: 'pat-pin',     slot: 'pat',  name: '세로 줄무늬', rarity: 0, look: 'pin' },
+    { id: 'pat-check',   slot: 'pat',  name: '바둑판',      rarity: 1, look: 'check' },
+    { id: 'pat-moon',    slot: 'pat',  name: '초승달',      rarity: 1, look: 'moon' },
+    { id: 'pat-paw',     slot: 'pat',  name: '발자국',      rarity: 1, look: 'paw' },
+    { id: 'pat-snow',    slot: 'pat',  name: '눈송이',      rarity: 1, look: 'snowflake' },
+    { id: 'pat-clover',  slot: 'pat',  name: '네잎클로버',  rarity: 1, look: 'clover' },
     { id: 'bag-cooler',  slot: 'bag',  name: '냉장 상자',   rarity: 0, base: true, look: 'cooler' },
     { id: 'bag-ruck',    slot: 'bag',  name: '낡은 배낭',   rarity: 0, look: 'ruck' },
     { id: 'bag-medkit',  slot: 'bag',  name: '구급 상자',   rarity: 1, look: 'medkit' },
@@ -3972,12 +3996,24 @@
     { id: 'bag-pot',     slot: 'bag',  name: '새싹 화분',   rarity: 0, look: 'pot' },
     { id: 'bag-radio',   slot: 'bag',  name: '무전기',      rarity: 1, look: 'radio' },
     { id: 'bag-lantern', slot: 'bag',  name: '등불',        rarity: 2, look: 'lantern' },
+    { id: 'bag-shovel',  slot: 'bag',  name: '삽',          rarity: 0, look: 'shovel' },
+    { id: 'bag-torch',   slot: 'bag',  name: '손전등',      rarity: 1, look: 'torch' },
+    { id: 'bag-kitty',   slot: 'bag',  name: '고양이 인형', rarity: 1, look: 'kitty' },
+    { id: 'bag-fish',    slot: 'bag',  name: '물고기',      rarity: 1, look: 'fish' },
+    { id: 'bag-bouquet', slot: 'bag',  name: '꽃다발',      rarity: 1, look: 'bouquet' },
+    { id: 'bag-balloon', slot: 'bag',  name: '빨간 풍선',   rarity: 1, look: 'balloon' },
+    { id: 'bag-guitar',  slot: 'bag',  name: '기타',        rarity: 2, look: 'guitar' },
     { id: 'fx-none',     slot: 'fx',   name: '효과 없음',   rarity: 0, base: true, look: 'none' },
     { id: 'fx-glow',     slot: 'fx',   name: '야광',        rarity: 2, look: 'glow' },
     { id: 'fx-sparkle',  slot: 'fx',   name: '반짝이 가루', rarity: 2, look: 'sparkle' },
     { id: 'fx-star',     slot: 'fx',   name: '머리 위 별',  rarity: 2, look: 'star' },
     { id: 'fx-petal',    slot: 'fx',   name: '꽃잎',        rarity: 2, look: 'petal' },      // 4.5.2 더한 효과
     { id: 'fx-bubble',   slot: 'fx',   name: '비눗방울',    rarity: 2, look: 'bubble' },
+    { id: 'fx-snow',     slot: 'fx',   name: '눈 내림',     rarity: 2, look: 'snow' },
+    { id: 'fx-firefly',  slot: 'fx',   name: '반딧불',      rarity: 2, look: 'firefly' },
+    { id: 'fx-note',     slot: 'fx',   name: '음표',        rarity: 2, look: 'note' },
+    { id: 'fx-leaves',   slot: 'fx',   name: '낙엽',        rarity: 2, look: 'leaves' },
+    { id: 'fx-hearts',   slot: 'fx',   name: '하트 둥실',   rarity: 2, look: 'hearts' },
     // 2.0.3: 동물 친구의 옷. 친구는 늘 라라 옆에 붙어 다닌다
     { id: 'pet-none',    slot: 'pet',  name: '옷 없음',     rarity: 0, base: true, look: 'none' },
     { id: 'pet-scarf',   slot: 'pet',  name: '빨간 목도리', rarity: 0, look: 'scarf' },
@@ -3986,7 +4022,7 @@
     { id: 'pet-coat',    slot: 'pet',  name: '작은 우비',   rarity: 1, look: 'coat' },
     { id: 'pet-hat',     slot: 'pet',  name: '고깔모자',    rarity: 1, look: 'hat' },
     { id: 'pet-cape',    slot: 'pet',  name: '망토',        rarity: 2, look: 'cape' },
-    { id: 'pet-crown',   slot: 'pet',  name: '왕관',        rarity: 2, look: 'crown' },
+    { id: 'pet-crown',   slot: 'pet',  name: '작은 왕관',   rarity: 2, look: 'crown' },
     // 4.4.6: 친구 그림이 바뀌어 옷 자리를 다시 잡고, 여덟 가지를 더했다
     { id: 'pet-bandana', slot: 'pet',  name: '노란 반다나', rarity: 0, look: 'bandana' },
     { id: 'pet-bowtie',  slot: 'pet',  name: '나비넥타이',  rarity: 0, look: 'bowtie' },
@@ -3996,6 +4032,12 @@
     { id: 'pet-pack',    slot: 'pet',  name: '작은 배낭',   rarity: 1, look: 'pack' },
     { id: 'pet-halo',    slot: 'pet',  name: '천사 고리',   rarity: 2, look: 'halo' },
     { id: 'pet-wings',   slot: 'pet',  name: '작은 날개',   rarity: 2, look: 'wings' },
+    { id: 'pet-leaf',    slot: 'pet',  name: '나뭇잎',      rarity: 0, look: 'leaf' },
+    { id: 'pet-scarf2',  slot: 'pet',  name: '파란 목도리', rarity: 0, look: 'scarf2' },
+    { id: 'pet-shades',  slot: 'pet',  name: '선글라스',    rarity: 1, look: 'shades' },
+    { id: 'pet-santa',   slot: 'pet',  name: '산타 모자',   rarity: 1, look: 'santa' },
+    { id: 'pet-band',    slot: 'pet',  name: '별 머리띠',   rarity: 1, look: 'band' },
+    { id: 'pet-tiara',   slot: 'pet',  name: '티아라',      rarity: 2, look: 'tiara' },
     // 깃발은 뽑기에서 뺐다(2.0.0: 화면에서 작아서 뽑아도 기쁘지 않았다). 도전·원정의 확정 보상으로 준다(FLAG_REWARDS). 조각으로도 얻을 수 있다
     { id: 'flag-yellow', slot: 'flag', name: '노란 깃발',   rarity: 0, base: true, look: '#f0b400' },
     { id: 'flag-red',    slot: 'flag', name: '빨간 깃발',   rarity: 0, reward: true, look: '#c0392b' },
@@ -4007,6 +4049,11 @@
     { id: 'flag-glow',   slot: 'flag', name: '야광 깃발',   rarity: 2, reward: true, look: 'glow' },        // 밤에 빛난다
     { id: 'flag-orange', slot: 'flag', name: '주황 깃발',   rarity: 1, reward: true, look: '#e8862e' },
     { id: 'flag-purple', slot: 'flag', name: '보라 깃발',   rarity: 2, reward: true, look: '#8a5fd0' },
+    { id: 'flag-mint',   slot: 'flag', name: '민트 깃발',   rarity: 0, reward: true, look: '#5fd0b0' },
+    { id: 'flag-check',  slot: 'flag', name: '체크 깃발',   rarity: 1, reward: true, look: 'check' },
+    { id: 'flag-heart',  slot: 'flag', name: '하트 깃발',   rarity: 1, reward: true, look: 'heart' },
+    { id: 'flag-moon',   slot: 'flag', name: '달 깃발',     rarity: 2, reward: true, look: 'moon' },
+    { id: 'flag-star',   slot: 'flag', name: '별 깃발',     rarity: 2, reward: true, look: 'star' },
     { id: 'flag-rainbow', slot: 'flag', name: '무지개 깃발', rarity: 2, reward: true, look: 'rainbow' }     // 네 줄이 천천히 흐른다
   ];
   var COS_SLOTS = ['coat', 'hood', 'pat', 'bag', 'fx', 'pet', 'flag'], COS_BASE = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' };
@@ -4021,6 +4068,12 @@
     { id: 'flag-glow',  text: '원정 별 12개', has: function (s) { return stageMarkCount(s).have >= 12; } },
     // 3.0.3: 별이 원정마다 여섯(일반 셋 · 하드 셋)으로 늘어서 보상을 둘 더 둔다
     { id: 'flag-orange', text: '원정 별 20개', has: function (s) { return stageMarkCount(s).have >= 20; } },
+    // 4.8.1 출석과 최후의 밤에 걸린 깃발(매일 들어올 까닭)
+    { id: 'flag-mint',  text: '출석 7일', has: function (s) { return (s.attend && s.attend.count || 0) >= 7; } },
+    { id: 'flag-check', text: '출석 14일', has: function (s) { return (s.attend && s.attend.count || 0) >= 14; } },
+    { id: 'flag-heart', text: '출석 21일', has: function (s) { return (s.attend && s.attend.count || 0) >= 21; } },
+    { id: 'flag-star',  text: '출석 30일', has: function (s) { return (s.attend && s.attend.count || 0) >= 30; } },
+    { id: 'flag-moon',  text: '최후의 밤 막기', has: function (s) { return !!s.finalHeld || (s.ended || 0) >= 1; } },
     { id: 'flag-purple', text: '원정 별 30개', has: function (s) { return stageMarkCount(s).have >= 30; } },
     { id: 'flag-rainbow', text: '이야기의 끝 보기', has: function (s) { return (s.ended || 0) >= 1; } }
   ];
