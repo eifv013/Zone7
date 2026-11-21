@@ -727,7 +727,9 @@
       endLog: [],            // 최근에 본 끝 10번 [{ danger, seconds, retreats, saved }]
       tickets: 0,            // 뽑기권
       attend: { last: '', count: 0 },
-      pact: false,      // 4.7.9 보급 계약(과금 상품 자리): 생산이 영구히 CONTRACT_PROD 배. 결제 연결은 아직 없다
+      pact: false,      // 4.7.9 보급 계약(과금 상품 자리): 생산이 영구히 BAL.pact 배. 결제 연결은 아직 없다
+      own: {},      // 4.8.0 보급소의 영구 상품(rest · night). pact 는 위의 따로 둔 칸
+      skipDay: { day: '', n: 0 }, retreatBoost: false,      // 4.8.0 시간 건너뛰기 하루 횟수 · 다음 철수 보급
       // 4.7.0 출석: 마지막으로 받은 날(YYYY-MM-DD, 기기의 날짜)과 받은 횟수
       shards: 0,             // 중복으로 받은 조각
       cosmetics: {}, cosNew: {},      // 4.7.1 cosNew: 새로 얻은 외형(NEW)         // 가진 외형 { id: true } (기본 외형은 적지 않는다)
@@ -885,6 +887,11 @@
     // 4.7.0 출석: 날짜 글자는 YYYY-MM-DD 꼴만 받는다
     var ra = raw.attend && typeof raw.attend === 'object' ? raw.attend : {};
     s.pact = raw.pact === true;
+    var ro = raw.own && typeof raw.own === 'object' ? raw.own : {}; s.own = {};
+    SHOP_ITEMS.forEach(function (it) { if (it.kind === 'perm' && it.id !== 'pact' && ro[it.id] === true) s.own[it.id] = true; });
+    var rk = raw.skipDay && typeof raw.skipDay === 'object' ? raw.skipDay : {};
+    s.skipDay = { day: typeof rk.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rk.day) ? rk.day : '', n: clamp(safeCount(rk.n), 0, 99) };
+    s.retreatBoost = raw.retreatBoost === true;
     s.attend = { last: typeof ra.last === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ra.last) ? ra.last : '', count: clamp(safeCount(ra.count), 0, 1e9) };
     s.tickets = clamp(safeCount(raw.tickets), 0, 1e9); s.shards = clamp(safeCount(raw.shards), 0, 1e9); s.gachaPity = clamp(safeCount(raw.gachaPity), 0, GACHA_PITY - 1); s.gachaPulls = clamp(safeCount(raw.gachaPulls), 0, 1e9);
     s.cosNew = {}; if (raw.cosNew && typeof raw.cosNew === 'object') COSMETICS.forEach(function (c) { if (raw.cosNew[c.id] === true) s.cosNew[c.id] = true; });
@@ -1085,7 +1092,8 @@
     m.antibody *= 1 + DANGER_ANTIBODY * dangerOf(state);      // 위험 단계: 철수 항체가 는다
     if (state.stageMarks) m.loot *= Math.pow(BOSS_BADGE_LOOT, badgeCount(state));      // 원정 지역 휘장
     if (state.medals) CHALLENGES.forEach(function (d) { if (state.medals[d.id] > 0 && d.perk) { if (d.perk.add) m[d.perk.key] += d.perk.add; else m[d.perk.key] *= d.perk.mult; } });
-    if (state.pact) m.prod *= BAL.pact;      // 4.7.9 보급 계약
+    if (state.pact) m.prod *= BAL.pact;
+    if (state.retreatBoost) m.antibody *= RETREAT_BOOST;      // 4.8.0 철수 보급: 이번 철수의 항체 샘플(철수 화면의 미리 보기도 같은 값)      // 4.7.9 보급 계약
     applyPets(state, m);      // 동물 친구(4.4.6: 보유 효과 + 장착한 강아지 · 고양이의 효과와 특기)
     // 연구 과제: 끝낸 횟수만큼 곱으로 쌓인다
     if (state.research) PROJECTS.forEach(function (d) { var lv = state.research[d.id] || 0; if (lv && d.key !== 'drop') m[d.key] *= Math.pow(d.mult, lv); });
@@ -3727,6 +3735,53 @@
    *   시간 건너뛰기: 현재 초당 수입의 SKIP_HOURS 시간치를 바로 받는다(물자만. 습격 · 밤 단계 · 건물 단계 같은 손으로 하는 것은 건너뛰지 않는다).
    */
   var SKIP_HOURS = 2;
+  /*
+   * 4.8.0 보급소: 지금은 간식으로 사고, 나중에 같은 칸에 결제를 붙인다(kind 'paid' 는 결제 전용이라 아직 살 수 없다).
+   *   perm: 한 번만(보급 계약 · 긴 휴식 · 야간 근무). cons: 여러 번(시간 건너뛰기는 하루 SKIP_DAILY 번). paid: 결제 전용(won 은 원).
+   *   값은 tools/sim.js 로 다시 맞춘다(간식 수입과 함께).
+   */
+  var REST_CAP = 8 * 3600, NIGHT_RATE = 0.75, RETREAT_BOOST = 1.25, SKIP_DAILY = 3;
+  var SHOP_ITEMS = [
+    { id: 'pact', kind: 'perm', treats: 400, name: '보급 계약', desc: '모든 생산 1.5배, 철수해도 남아요', icon: 'supply' },
+    { id: 'rest', kind: 'perm', treats: 250, name: '긴 휴식', desc: '꺼 둔 시간을 8시간까지 쳐 줘요(기본 4시간)', icon: 'people' },
+    { id: 'night', kind: 'perm', treats: 250, name: '야간 근무', desc: '꺼 둔 동안 효율 75%(기본 50%)', icon: 'serum' },
+    { id: 'skip', kind: 'cons', treats: 20, name: '시간 건너뛰기', desc: '현재 수입 2시간치 물자를 바로, 하루 3번', icon: 'supply' },
+    { id: 'boost', kind: 'cons', treats: 40, name: '철수 보급', desc: '다음 철수 때 항체 샘플 1.25배', icon: 'antibody' },
+    { id: 'tix11', kind: 'cons', treats: 100, name: '뽑기권 11장 묶음', desc: '10장 값에 1장 더', icon: 'ticket' },
+    { id: 'shards', kind: 'cons', treats: 30, name: '조각 상자', desc: '조각 10개', icon: 'shard' },
+    { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 60개', icon: 'treat' },
+    { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 330개', icon: 'treat' },
+    { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 700개', icon: 'treat' },
+    { id: 'tixpay', kind: 'paid', won: 3300, name: '뽑기권 꾸러미', desc: '뽑기권 11장', icon: 'ticket' },
+    { id: 'noads', kind: 'paid', won: 5500, name: '광고 제거', desc: '광고 없이 광고 보상을 바로 받아요', icon: 'people' }
+  ];
+  function shopItem(id) { for (var i = 0; i < SHOP_ITEMS.length; i++) if (SHOP_ITEMS[i].id === id) return SHOP_ITEMS[i]; return null; }
+  /** 상품의 현재 형편: { owned, left(오늘 남은 횟수), can, reason }. today 는 'YYYY-MM-DD'. */
+  function shopState(state, id, today) {
+    var it = shopItem(id); if (!it) return { can: false, reason: 'unknown' };
+    if (it.kind === 'paid') return { can: false, reason: 'paid' };
+    var owned = it.kind === 'perm' && (id === 'pact' ? !!state.pact : !!(state.own && state.own[id]));
+    if (owned) return { owned: true, can: false, reason: 'owned' };
+    var left = null;
+    if (id === 'skip') { var sd = state.skipDay || {}; left = SKIP_DAILY - (sd.day === today ? sd.n : 0); if (left <= 0) return { can: false, left: 0, reason: 'daily' }; if (!(incomePerSec(state) > 0)) return { can: false, left: left, reason: 'none' }; }
+    if (id === 'boost' && state.retreatBoost) return { can: false, reason: 'ready' };
+    if (!((state.treats || 0) >= it.treats)) return { can: false, left: left, reason: 'treats' };
+    return { can: true, left: left };
+  }
+  /** 보급소에서 산다(간식). */
+  function buyShop(state, id, today) {
+    var it = shopItem(id), st = shopState(state, id, today);
+    if (!st.can) return fail(st.reason);
+    state.treats -= it.treats;
+    var r = { ok: true, id: id };
+    if (id === 'pact') state.pact = true;
+    else if (it.kind === 'perm') { state.own = state.own || {}; state.own[id] = true; }
+    else if (id === 'skip') { var g = timeSkip(state); r.gain = g.gain; var sd = state.skipDay || {}; state.skipDay = { day: today, n: (sd.day === today ? sd.n : 0) + 1 }; }
+    else if (id === 'boost') state.retreatBoost = true;
+    else if (id === 'tix11') state.tickets = (state.tickets || 0) + 11;
+    else if (id === 'shards') state.shards = (state.shards || 0) + 10;
+    return r;
+  }
   function buyContract(state) { if (state.pact) return fail('done'); state.pact = true; return { ok: true }; }      /* 'contract' 는 3구역 납품 의뢰가 쓰는 이름이라 pact 로 둔다 */
   function timeSkip(state, hours) {
     var h = hours > 0 ? Math.min(24, hours) : SKIP_HOURS, gain = incomePerSec(state) * h * 3600;
@@ -4310,6 +4365,7 @@
     next.dangerNext = Math.min(state.dangerNext || 0, dangerMax(next)); next.danger = next.dangerNext;      // 골라 둔 위험 단계로 시작한다(다음에도 같은 단계로 이어진다)
     next.attend = state.attend || { last: '', count: 0 };      // 4.7.0 출석은 철수해도 이어진다
     next.pact = !!state.pact;      // 4.7.9 보급 계약은 영구
+    next.own = state.own || {}; next.skipDay = state.skipDay || { day: '', n: 0 };      // 4.8.0 보급소 영구 상품 · 하루 횟수는 이어진다(철수 보급은 이번 철수에서 쓰였다)
     next.tickets = state.tickets || 0; next.shards = state.shards || 0; next.cosmetics = state.cosmetics || {}; next.cosNew = state.cosNew || {}; next.wear = state.wear || next.wear; next.gachaPity = state.gachaPity || 0; next.gachaPulls = state.gachaPulls || 0;      // 뽑기와 외형도 남는다
     next.challengeStreak = activeChallenge(state) ? 0 : (state.challengeStreak || 0);      // 도전을 달고 철수하면 포기한 것으로 친다
     next.bestZone = Math.max(state.bestZone, state.zone);
@@ -4808,15 +4864,17 @@
   }
 
   /* ---------- 자리 비움 ---------- */
-  function offlineRate(state) { return (Math.min(1, OFFLINE_RATE + mods(state).offline)) * (challengeOn(state, 'hands') ? HANDS_AWAY : 1); }      // 도전 '손수': 자리를 비운 동안의 효율이 절반
+  /** 4.8.0 꺼 둔 시간을 몇 초까지 쳐 주나(보급소 '긴 휴식'이면 REST_CAP). */
+  function offlineCap(state) { return state && state.own && state.own.rest ? REST_CAP : OFFLINE_CAP; }
+  function offlineRate(state) { return (Math.min(1, (state && state.own && state.own.night ? NIGHT_RATE : OFFLINE_RATE) + mods(state).offline)) * (challengeOn(state, 'hands') ? HANDS_AWAY : 1); }      // 도전 '손수': 자리를 비운 동안의 효율이 절반
   /**
    * 게임을 꺼 둔 동안의 진행. 최대 OFFLINE_CAP 초를 offlineRate 효율로 계산한다.
    * 2구역은 평균 시세로 판 것으로 친다. 3구역 라인은 나갈 때의 상태 그대로 돈 것으로 친다. 밤은 막을 수 있는 동안만 막고, 못 막는 밤부터는 잃는 것 없이 버틴다.
    */
   function applyOffline(state, elapsed) {
     elapsed = safeNum(elapsed, 0);
-    var counted = Math.min(elapsed, OFFLINE_CAP), rate = offlineRate(state);
-    var report = { elapsed: elapsed, counted: counted, capped: elapsed > OFFLINE_CAP, rate: rate, gain: 0, nights: 0, nightReward: 0, held: false, trains: 0, points: 0, treats: 0 };
+    var cap = offlineCap(state), counted = Math.min(elapsed, cap), rate = offlineRate(state);
+    var report = { elapsed: elapsed, counted: counted, capped: elapsed > cap, cap: cap, rate: rate, gain: 0, nights: 0, nightReward: 0, held: false, trains: 0, points: 0, treats: 0 };
     if (!(counted > 0)) return report;
     state.buff = null;
     state.signalLeft = 0;
@@ -4965,7 +5023,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    BAL: BAL, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    BAL: BAL, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,

@@ -1903,8 +1903,46 @@
     var ao = $('attend-open'); if (ao) setText(ao, info.can ? '출석 체크 · 오늘 받을 수 있어요' : '출석 체크 · 다음까지 ' + untilMidnight());
     setText($('attend-sub'), (info.day + 1) + '일째');
   }
+  /*
+   * 4.8.0 보급소 창: 영구(한 번만) · 보급품(여러 번) · 결제(준비 중) 세 묶음. 단추에는 값 · 보유 · 오늘 다 씀 · 준비됨 · 준비 중.
+   * 간식이 모자라면 눌렀을 때 알려 주고 그 줄을 흔든다(뽑기권 사기와 같은 모양).
+   */
+  var STORE_GROUP = [['perm', '영구 · 한 번만'], ['cons', '보급품 · 여러 번'], ['paid', '결제 · 준비 중']];
+  function renderStore() {
+    var box = $('store-list'); if (!box || $('store-veil').hidden) return;
+    setText($('store-treats'), IC.treat + fmt(state.treats || 0));
+    if (!box.firstChild) STORE_GROUP.forEach(function (g) {
+      box.appendChild(el('h4', '', g[1]));
+      C.SHOP_ITEMS.filter(function (it) { return it.kind === g[0]; }).forEach(function (it) {
+        var row = el('div', 'store-row'); row.setAttribute('data-id', it.id);
+        row.appendChild(el('i', 'ic ic-' + it.icon));
+        var t = el('div', 't'); t.appendChild(el('b', '', it.name)); t.appendChild(el('small', '', it.desc)); row.appendChild(t);
+        var b = el('button', ''); b.type = 'button'; row.appendChild(b);
+        b.addEventListener('click', function () { storeBuy(it, row); });
+        box.appendChild(row);
+      });
+    });
+    Array.prototype.forEach.call(box.querySelectorAll('.store-row'), function (row) {
+      var it = C.shopItem(row.getAttribute('data-id')), st = C.shopState(state, it.id, todayStr()), b = row.lastChild;
+      b.className = st.owned ? 'own' : it.kind === 'paid' ? 'paid' : '';
+      setText(b, it.kind === 'paid' ? '₩' + String(it.won).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : st.owned ? '보유' : st.reason === 'daily' ? '오늘 다 씀' : st.reason === 'ready' ? '준비됨' : IC.treat + it.treats + (st.left != null ? ' (' + st.left + '번)' : ''));
+      b.classList.toggle('short', st.reason === 'treats');
+    });
+  }
+  function storeBuy(it, row) {
+    if (it.kind === 'paid') { toast('결제는 준비 중이에요'); return; }
+    var r = C.buyShop(state, it.id, todayStr());
+    if (r.ok) {
+      sfx('buy'); buzz(20);
+      toast(it.id === 'skip' ? '시간 건너뛰기 · ' + IC.supply + '+' + fmt(r.gain) : it.name + ' · 받았어요');
+      Store.save(); renderShop(); renderStore(); render(); return;
+    }
+    if (r.reason === 'treats') { toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, it.treats - Math.floor(state.treats || 0))) + ' 더 필요해요'); sfx('tab'); buzz([30, 30, 30]); row.classList.remove('nope'); void row.offsetWidth; row.classList.add('nope'); }
+    else if (r.reason === 'daily') toast('오늘은 다 썼어요 · 내일 다시 살 수 있어요');
+    else if (r.reason === 'none') toast('아직 들어오는 물자가 없어요');
+  }
   function renderShop() {
-    renderAttend();
+    renderAttend(); renderStore();
     if (home) return;
     setText($('shop-count'), IC.ticket + state.tickets + ' · ' + IC.shard + state.shards + ' · ' + IC.treat + fmt(state.treats));
     setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번');      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
@@ -5368,6 +5406,8 @@
       setTimeout(function () { $('attend-veil').hidden = true; }, 700);      // 받은 것을 잠깐 보여 주고 닫는다
     });
     $('attend-open').addEventListener('click', function () { sfx('click'); renderAttend(); $('attend-veil').hidden = false; });
+    $('store-open').addEventListener('click', function () { sfx('click'); $('store-veil').hidden = false; renderStore(); });
+    $('store-close').addEventListener('click', function () { $('store-veil').hidden = true; });
     $('attend-close').addEventListener('click', function () { $('attend-veil').hidden = true; });
     // 4.7.1 받을 수 있는 날에는 하루에 한 번 저절로 뜬다(다른 창이 떠 있으면 닫힌 뒤에)
     var attendShown = '';

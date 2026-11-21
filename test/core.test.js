@@ -3552,3 +3552,32 @@ test('시간 건너뛰기: 현재 초당 수입의 SKIP_HOURS 시간치를 받�
   const z = fresh(); z.supplies = 0; z.zone = 0;
   const r2 = C.timeSkip(z, 100); assert.ok(!r2.ok || r2.hours === 24, '하루를 넘게 건너뛰지 않는다');
 });
+
+/* ---------- 4.8.0 보급소 ---------- */
+test('보급소: 간식으로 사고, 영구 상품은 한 번만, 결제 상품은 아직 살 수 없다', () => {
+  const s = fresh(); s.treats = 2000; s.zone = 1; s.bestZone = 1; const day = '2026-11-22';
+  assert.equal(C.buyShop(s, 'nope', day).reason, 'unknown');
+  assert.equal(C.buyShop(s, 'treat1', day).reason, 'paid');
+  assert.ok(C.buyShop(s, 'pact', day).ok); assert.equal(s.pact, true); assert.equal(C.buyShop(s, 'pact', day).reason, 'owned');
+  assert.equal(C.offlineCap(s), C.OFFLINE_CAP); assert.ok(C.buyShop(s, 'rest', day).ok); assert.equal(C.offlineCap(s), C.REST_CAP);
+  const r0 = C.offlineRate(s); assert.ok(C.buyShop(s, 'night', day).ok); assert.ok(C.offlineRate(s) > r0);
+  const t0 = s.tickets; assert.ok(C.buyShop(s, 'tix11', day).ok); assert.equal(s.tickets, t0 + 11);
+  const h0 = s.shards; assert.ok(C.buyShop(s, 'shards', day).ok); assert.equal(s.shards, h0 + 10);
+  assert.equal(s.treats, 2000 - 400 - 250 - 250 - 100 - 30);
+  const back = C.deserialize(C.serialize(s)); assert.equal(back.own.rest, true); assert.equal(back.own.night, true); assert.equal(back.pact, true);
+  s.runEarned = 1e30; const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.own.rest, true, '영구 상품은 철수해도 남는다');
+});
+test('보급소: 시간 건너뛰기는 하루 3번, 날이 바뀌면 다시', () => {
+  const s = fresh(); s.treats = 1000; s.zone = 1; s.bestZone = 1;
+  if (!(C.incomePerSec(s) > 0)) { assert.equal(C.shopState(s, 'skip', 'd').reason, 'none'); return; }
+  for (let i = 0; i < C.SKIP_DAILY; i++) assert.ok(C.buyShop(s, 'skip', '2026-11-22').ok);
+  assert.equal(C.buyShop(s, 'skip', '2026-11-22').reason, 'daily');
+  assert.ok(C.buyShop(s, 'skip', '2026-11-23').ok, '다음 날은 다시');
+});
+test('보급소: 철수 보급은 다음 철수의 항체 샘플을 늘리고 한 번 쓰면 사라진다', () => {
+  const s = fresh(); s.treats = 100; s.runEarned = 1e25;
+  const g0 = C.antibodiesOnRetreat(s); assert.ok(C.buyShop(s, 'boost', 'd').ok); assert.equal(C.buyShop(s, 'boost', 'd').reason, 'ready');
+  const g1 = C.antibodiesOnRetreat(s); assert.ok(g1 >= Math.floor(g0 * 1.2));
+  const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.retreatBoost, false);
+  const t = fresh(); t.treats = 5; assert.equal(C.buyShop(t, 'boost', 'd').reason, 'treats');
+});

@@ -400,6 +400,18 @@ body { word-break: keep-all; }
 html, body, canvas, button, .story-veil, .story-card { -webkit-tap-highlight-color: transparent; }
 canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .stage-reward { margin-left: auto; padding: 4px 10px; border: 1px solid #b98c00; border-radius: 6px; background: transparent; color: #f0c040; font: 600 12px/1.45 var(--font-body); text-align: right; white-space: pre-line; cursor: pointer; min-height: 0; }      /* 4.7.5 누르면 별과 보상 설명 */      /* 4.7.2 원정 보상: 오른쪽 모서리 */
+.shop-top { display: flex; gap: 8px; } .shop-top .attend-open { flex: 1 1 0; min-width: 0; } .store-open { flex: 0 0 34% !important; border-color: #f0b400 !important; color: #f0b400 !important; }
+.store-card { max-height: 86vh; overflow-y: auto; }
+.store-list h4 { margin: 12px 0 6px; font: 700 12px/1.3 var(--font-body); color: #f0b400; }
+.store-row { display: flex; gap: 10px; align-items: center; border: 1px solid #3a3a30; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.store-row .ic { width: 32px; height: 28px; margin: 0; }
+.store-row .t { flex: 1; min-width: 0; } .store-row .t b { display: block; font-size: 14px; } .store-row .t small { color: #a8a290; font-size: 12px; }
+.story-card .store-row button { flex: none; min-width: 74px; padding: 8px 10px; font-size: 13px; white-space: nowrap; }
+.story-card .store-row button.own { background: transparent; color: #7fd8a0; border: 1px solid #4aa870; }
+.story-card .store-row button.paid { background: transparent; color: #a8a290; border: 1px dashed #6d6d60; }
+.story-card .store-row button .ic { width: 16px; height: 14px; vertical-align: -2px; }
+.store-row.nope { animation: jam-shake .3s steps(2) 1; }
+.store-note { margin-top: 8px; }
 .attend-open { width: 100%; padding: 10px; border: 1px solid var(--ink); border-radius: 8px; background: transparent; color: var(--ink); font: 700 15px/1.3 var(--font-body); cursor: pointer; flex: none; }
 .attend-card { max-width: 440px; gap: 8px; }
 .attend-days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }      /* 4.7.3 일곱 칸: 한 줄이 한 주라 7·14·21·28일째가 오른쪽 끝에 나란히 선다 */
@@ -1504,7 +1516,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.7.9</div>
+  <div class="boot-ver">7구역 알파 4.8.0</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1905,7 +1917,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   </div>
   <div class="col" data-view="shop">
     <!-- 4.7.1 상점에는 출석 체크 단추 한 줄만. 누르면 출석 창이 뜬다(게임을 켤 때 하루 한 번 저절로도 뜬다) -->
-    <button type="button" class="attend-open" id="attend-open">출석 체크</button>
+    <!-- 4.8.0 출석 체크 옆에 보급소(상품 창) -->
+    <div class="shop-top"><button type="button" class="attend-open" id="attend-open">출석 체크</button><button type="button" class="attend-open store-open" id="store-open">보급소</button></div>
     <!-- 4.5.1 상점은 아래 탭 하나(4.4.8 에는 일행 탭 안). 입은 모습(look)은 위에 붙어 있어 옷장을 내려도 보인다 -->
     <section class="panel hub-pane story-card shop-card" aria-labelledby="h-shop" id="shop-panel">
       <!-- 4.5.2 칸 사이를 좁혔다: 제목 줄에 가진 것, 단추 둘, 보장 · 확률 한 줄 -->
@@ -2005,7 +2018,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.7.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.8.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2114,6 +2127,13 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="zmap-head"><div class="label" id="h-attend">출석 체크 · <span id="attend-sub"></span></div><button type="button" class="feedback-close" id="attend-close">닫기</button></div>
     <ol class="attend-days" id="attend-days"></ol>
     <button type="button" class="attend-btn" id="attend-claim">오늘 받기</button>
+  </div>
+</div>
+<div class="story-veil" id="store-veil" role="dialog" aria-modal="true" aria-labelledby="h-store" hidden>
+  <div class="story-card feedback-card store-card">
+    <div class="zmap-head"><div class="label" id="h-store">보급소 · <span id="store-treats"></span></div><button type="button" class="feedback-close" id="store-close">닫기</button></div>
+    <div class="store-list" id="store-list"></div>
+    <p class="label store-note">간식은 출석 · 원정 별 · 밤 단계 이정표 · 혈청 단계로 모여요. 결제 상품은 준비 중이에요.</p>
   </div>
 </div>
 <div class="story-veil" id="bf-veil" role="dialog" aria-modal="true" aria-labelledby="bf-title" hidden>
