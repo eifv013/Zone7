@@ -1345,7 +1345,7 @@ test('간식과 친구 키우기: 밤을 막으면 간식을 얻고, 간식을 �
   const s = inMarket(); s.defenses.rail = 1e6; s.signalIn = 1e9; s.dayClock = C.DAY_SECONDS - 0.05;
   const ev = C.tick(s, 0.1, () => 0.5).find(e => e.type === 'defended');
   assert.ok(ev, '밤을 막았다');
-  assert.equal(s.treats, ev.boss ? C.TREAT_BOSS : C.TREAT_NIGHT);
+  assert.equal(s.treats, ev.treats); assert.ok(ev.boss ? ev.treats === C.TREAT_BOSS : (ev.treats === 0 || ev.treats === C.TREAT_NIGHT), '보통 밤은 몇 밤에 한 번(4.8.4)');
   assert.equal(C.feedPet(s).ok, false, '친구가 없으면 줄 수 없다');
   assert.equal(C.petFeedCost(s), Infinity);
   C.adoptPet(s, 'dog', () => 0);

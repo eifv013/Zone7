@@ -1689,7 +1689,7 @@
     { id: 'flower',  name: '꽃집 청년',       color: '#7a9a6a', hair: '#4a3628', text: '씨앗만 받아 가요.' },
     { id: 'busker',  name: '야시장 악사',     color: '#6a4a8a', hair: '#17180f', text: '값은 노래로도 받아 달래요.' }
   ];
-  var ORDER_SECONDS = 90, ORDER_GAP_MIN = 150, ORDER_GAP_MAX = 270, ORDER_PAY = 2, ORDER_BONUS = 0.01, ORDER_BONUS_MAX = 0.5, ORDER_TREATS = 2;
+  var ORDER_SECONDS = 90, ORDER_GAP_MIN = 150, ORDER_GAP_MAX = 270, ORDER_PAY = 2, ORDER_BONUS = 0.01, ORDER_BONUS_MAX = 0.5, ORDER_TREATS = 1;
   /** 이번 회차에 채운 주문으로 오른 상품 값 배수(1 ~ 1.5). */
   function orderMult(state) { return 1 + Math.min(ORDER_BONUS_MAX, (state.ordersRun || 0) * ORDER_BONUS); }
   function regularCount(state) { var n = 0; REGULARS.forEach(function (r) { if (state.regulars[r.id] > 0) n++; }); return n; }
@@ -1989,7 +1989,7 @@
     { id: 'battery', name: '배터리 가게',      color: '#7a9a6a', hair: '#3a2a22', text: '충전은 해 줄 테니 부품을 달래요.' },
     { id: 'radio',   name: '무전기 수리점',    color: '#6a4a8a', hair: '#4a3628', text: '잡음을 줄일 수 있대요.' }
   ];
-  var CONTRACT_SECONDS = 90, CONTRACT_PAY_SECONDS = 120, CONTRACT_GAP_MIN = 150, CONTRACT_GAP_MAX = 270, CONTRACT_BONUS = 0.01, CONTRACT_BONUS_MAX = 0.5, CONTRACT_TREATS = 2;
+  var CONTRACT_SECONDS = 90, CONTRACT_PAY_SECONDS = 120, CONTRACT_GAP_MIN = 150, CONTRACT_GAP_MAX = 270, CONTRACT_BONUS = 0.01, CONTRACT_BONUS_MAX = 0.5, CONTRACT_TREATS = 1;
   function contractMult(state) { return 1 + Math.min(CONTRACT_BONUS_MAX, (state.contractsRun || 0) * CONTRACT_BONUS); }
   function clientCount(state) { var n = 0; CLIENTS.forEach(function (c) { if (state.clients[c.id] > 0) n++; }); return n; }
   /** 의뢰가 찾는 단계의 상자가 판에 몇 개 있는가. */
@@ -2163,7 +2163,7 @@
     { id: 'cycle',   name: '자전거 칸',     color: '#d08a3c', text: '바람만 넣으면 탈 수 있어요.' },
     { id: 'mail',    name: '우편 칸',       color: '#f0b400', text: '부치지 못한 편지가 가득해요.' }
   ];
-  var SALVAGE_SECONDS = 150, SALVAGE_NEED_SECONDS = 35, SALVAGE_GAP_MIN = 180, SALVAGE_GAP_MAX = 300, SALVAGE_PAY = 2, SALVAGE_BONUS = 0.01, SALVAGE_BONUS_MAX = 0.5, SALVAGE_TREATS = 2;
+  var SALVAGE_SECONDS = 150, SALVAGE_NEED_SECONDS = 35, SALVAGE_GAP_MIN = 180, SALVAGE_GAP_MAX = 300, SALVAGE_PAY = 2, SALVAGE_BONUS = 0.01, SALVAGE_BONUS_MAX = 0.5, SALVAGE_TREATS = 1;
   function salvageMult(state) { return 1 + Math.min(SALVAGE_BONUS_MAX, (state.salvagesRun || 0) * SALVAGE_BONUS); }
   function cargoCount(state) { var n = 0; CARGOS.forEach(function (c) { if (state.cargos[c.id] > 0) n++; }); return n; }
   function salvageReward(state) { return state.salvage ? state.salvage.need * SALVAGE_PAY : 0; }
@@ -2389,7 +2389,7 @@
     { id: 'call',    name: '호출 기록',     color: '#e0b8a8', text: '같은 호실이 밤새 눌렸어요.' },
     { id: 'leave',   name: '퇴원 서류',     color: '#e8e0c8', text: '도장만 찍히고 비어 있어요.' }
   ];
-  var RECORD_CHANCE = 0.35, RECORD_BONUS = 0.01, RECORD_BONUS_MAX = 0.5, RECORD_TREATS = 2;
+  var RECORD_CHANCE = 0.35, RECORD_BONUS = 0.01, RECORD_BONUS_MAX = 0.5, RECORD_TREATS = 1;
   function recordMult(state) { return 1 + Math.min(RECORD_BONUS_MAX, (state.recordsRun || 0) * RECORD_BONUS); }
   function recordCount(state) { var n = 0; RECORDS.forEach(function (r) { if (state.records[r.id] > 0) n++; }); return n; }
   /** 과제를 끝낸 뒤 부른다. 서류를 찾았으면 { id, name, first } 를, 못 찾았으면 null 을 돌려준다. */
@@ -2796,7 +2796,7 @@
    *   레벨마다 효과가 PET_LEVEL_STEP(20%)씩 커진다(기본 효과에 곱한다). 값은 PET_FEED_BASE 에서 시작해 레벨마다 PET_FEED_GROWTH 배.
    *   레벨은 친구마다 따로이고, 간식과 레벨은 철수해도 남는다.
    */
-  var TREAT_NIGHT = 1, TREAT_BOSS = 5, PET_LEVEL_MAX = 10, PET_LEVEL_STEP = 0.2, PET_FEED_BASE = 5, PET_FEED_GROWTH = 1.6;
+  var TREAT_NIGHT = 1, TREAT_NIGHT_EVERY = 3, TREAT_BOSS = 3, PET_LEVEL_MAX = 10, PET_LEVEL_STEP = 0.2, PET_FEED_BASE = 5, PET_FEED_GROWTH = 1.6;
   function petLevel(state, breedId) { var n = state.petLv && state.petLv[breedId]; return typeof n === 'number' && n > 0 ? Math.min(PET_LEVEL_MAX, Math.floor(n)) : 0; }
   function petLevelMult(state, breedId) { return 1 + PET_LEVEL_STEP * petLevel(state, breedId); }
   /** 지금 데리고 다니는 친구에게 간식을 주는 값. 친구가 없거나 최대 레벨이면 Infinity. */
@@ -3379,7 +3379,7 @@
    *   한 목표에 EXT_MAX 단계까지. 7구역은 없다(마지막 장의 목표는 이야기의 끝이다).
    *   state.goalExt = { 목표 id: 채운 연장 단계 수 }. 철수하면 비워진다.
    */
-  var EXT_MAX = 5, EXT_TREATS = 2, EXT_SECONDS = 60;
+  var EXT_MAX = 5, EXT_TREATS = 1, EXT_SECONDS = 60;
   function extNeed(g, tier) { return g.need >= 1e6 && g.unit !== 'time' ? g.need * Math.pow(10, tier) : Math.ceil(g.need * (1 + 0.5 * tier)); }
   /** 목표 글 속의 수를 새 크기로 바꿔 적는다(글의 마지막 수를 바꾼다: "1구역 시설 합계 200곳" → "… 300곳"). */
   function extText(g, need) {
@@ -3659,7 +3659,7 @@
       var passer = null;
       if (zoneOpen(state, 5) && defense >= strength * SAFE_NIGHT) { state.safeNights++; passer = passBridge(state, rng); }      // 6구역: 넉넉하게 막은 밤(목표)에는 가끔 누가 다리를 건넌다
       state.siege = false; state.siegeNights = 0;
-      var treat = boss ? TREAT_BOSS : TREAT_NIGHT;
+      var treat = boss ? TREAT_BOSS : (w % TREAT_NIGHT_EVERY === 0 ? TREAT_NIGHT : 0);      // 4.8.4 보통 밤은 TREAT_NIGHT_EVERY 번째 밤마다(간식이 너무 많이 들어왔다)
       state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
       return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat, passer: passer, edgeFull: edgeFull };
     }
@@ -3743,21 +3743,21 @@
   /*
    * 4.8.0 보급소: 지금은 간식으로 사고, 나중에 같은 칸에 결제를 붙인다(kind 'paid' 는 결제 전용이라 아직 살 수 없다).
    *   perm: 한 번만(보급 계약 · 긴 휴식 · 야간 근무). cons: 여러 번(시간 건너뛰기는 하루 SKIP_DAILY 번). paid: 결제 전용(won 은 원).
-   *   4.8.3 값: 하루 1시간이면 간식이 250개쯤 들어온다(밤 방어 · 연장 목표 · 납품, 시뮬레이터로 잼). 보급 계약은 열흘 남짓 모아야 하는 값으로.
+   *   4.8.4 값: 간식 수입을 줄여 하루 1시간이면 120개쯤(밤 방어 · 연장 목표 · 납품, 시뮬레이터로 잼). 보급 계약은 열흘 남짓, 뽑기권은 하루 서너 장.
    */
   var REST_CAP = 8 * 3600, NIGHT_RATE = 0.75, RETREAT_BOOST = 1.25, SKIP_DAILY = 3;
   var SHOP_ITEMS = [
-    { id: 'pact', kind: 'perm', treats: 3000, name: '보급 계약', desc: '모든 생산 1.5배, 철수해도 남아요', icon: 'supply' },
-    { id: 'rest', kind: 'perm', treats: 1500, name: '긴 휴식', desc: '꺼 둔 시간을 8시간까지 쳐 줘요(기본 4시간)', icon: 'people' },
-    { id: 'night', kind: 'perm', treats: 1500, name: '야간 근무', desc: '꺼 둔 동안 효율 75%(기본 50%)', icon: 'serum' },
-    { id: 'skip', kind: 'cons', treats: 100, name: '시간 건너뛰기', desc: '현재 수입 2시간치 물자를 바로, 하루 3번', icon: 'supply' },
-    { id: 'boost', kind: 'cons', treats: 200, name: '철수 보급', desc: '다음 철수 때 항체 샘플 1.25배', icon: 'antibody' },
-    { id: 'tix11', kind: 'cons', treats: 200, name: '뽑기권 11장 묶음', desc: '10장 값에 1장 더', icon: 'ticket' },
-    { id: 'shards', kind: 'cons', treats: 150, name: '조각 상자', desc: '조각 10개', icon: 'shard' },
-    { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 300개', icon: 'treat' },
-    { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 1,800개', icon: 'treat' },
-    { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 4,000개', icon: 'treat' },
-    { id: 'tixpay', kind: 'paid', won: 2200, name: '뽑기권 꾸러미', desc: '뽑기권 30장', icon: 'ticket' },
+    { id: 'pact', kind: 'perm', treats: 1500, name: '보급 계약', desc: '모든 생산 1.5배, 철수해도 남아요', icon: 'supply' },
+    { id: 'rest', kind: 'perm', treats: 800, name: '긴 휴식', desc: '꺼 둔 시간을 8시간까지 쳐 줘요(기본 4시간)', icon: 'people' },
+    { id: 'night', kind: 'perm', treats: 800, name: '야간 근무', desc: '꺼 둔 동안 효율 75%(기본 50%)', icon: 'serum' },
+    { id: 'skip', kind: 'cons', treats: 50, name: '시간 건너뛰기', desc: '현재 수입 2시간치 물자를 바로, 하루 3번', icon: 'supply' },
+    { id: 'boost', kind: 'cons', treats: 100, name: '철수 보급', desc: '다음 철수 때 항체 샘플 1.25배', icon: 'antibody' },
+    { id: 'tix11', kind: 'cons', treats: 400, name: '뽑기권 11장 묶음', desc: '10장 값에 1장 더', icon: 'ticket' },
+    { id: 'shards', kind: 'cons', treats: 80, name: '조각 상자', desc: '조각 10개', icon: 'shard' },
+    { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 150개', icon: 'treat' },
+    { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 900개', icon: 'treat' },
+    { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 2,000개', icon: 'treat' },
+    { id: 'tixpay', kind: 'paid', won: 3300, name: '뽑기권 꾸러미', desc: '뽑기권 11장', icon: 'ticket' },
     { id: 'noads', kind: 'paid', won: 5500, name: '광고 제거', desc: '광고 없이 광고 보상을 바로 받아요', icon: 'people' }
   ];
   function shopItem(id) { for (var i = 0; i < SHOP_ITEMS.length; i++) if (SHOP_ITEMS[i].id === id) return SHOP_ITEMS[i]; return null; }
@@ -3799,7 +3799,7 @@
    *   무료 줄: 칸마다 간식(다섯 칸마다 뽑기권). 유료 줄(지금은 간식 PASS_PRICE 로 연다): 더 많은 간식 · 뽑기권, 10칸 · 20칸에 수첩 한정 외형.
    *   시즌이 바뀌면 도장 · 받은 칸 · 유료 줄이 처음으로 돌아간다(받은 외형은 남는다).
    */
-  var PASS_DAYS = 30, PASS_TIERS = 20, PASS_STEP = 10, PASS_PRICE = 800, PASS_EPOCH = Date.UTC(2026, 0, 1);
+  var PASS_DAYS = 30, PASS_TIERS = 20, PASS_STEP = 10, PASS_PRICE = 400, PASS_EPOCH = Date.UTC(2026, 0, 1);
   var PASS_STAMPS = { attend: 5, star: 2, night: 3, serum: 10, retreat: 3 };
   function passSeasonOf(dateStr) {
     var m = typeof dateStr === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr); if (!m) return -1;
@@ -3820,8 +3820,8 @@
   function passSet(season) { var n = PASS_SETS.length, k = ((season % n) + n) % n; return { name: PASS_SETS[k], coat: 'coat-s' + k, flag: 'flag-s' + k, hood: 'hood-s' + k }; }
   function passReward(track, i, season) {
     var set = passSet(season > 0 ? season : 0);
-    if (track === 'prem') { if (i === 10) return { cos: set.coat }; if (i === 15) return { cos: set.flag }; if (i === PASS_TIERS) return { cos: set.hood }; return i % 5 === 0 ? { tickets: 5 } : { treats: 60 }; }
-    return i % 5 === 0 ? { tickets: 2 } : { treats: 20 };
+    if (track === 'prem') { if (i === 10) return { cos: set.coat }; if (i === 15) return { cos: set.flag }; if (i === PASS_TIERS) return { cos: set.hood }; return i % 5 === 0 ? { tickets: 3 } : { treats: 30 }; }
+    return i % 5 === 0 ? { tickets: 1 } : { treats: 10 };
   }
   function passInfo(state, dateStr) {
     passSync(state, dateStr);
@@ -3848,7 +3848,7 @@
     state.treats -= PASS_PRICE; p.premium = true; return { ok: true };
   }
   /* 4.8.2 첫 보급 상자: 한 번만. 값보다 훨씬 많이 든 상자(첫 구매의 문턱을 낮춘다). 보급소 한정 외형이 들어 있다 */
-  var STARTER = { treats: 300, give: { tickets: 5, shards: 10, cos: 'coat-starter' } };
+  var STARTER = { treats: 150, give: { tickets: 5, shards: 10, cos: 'coat-starter' } };
   function buyStarter(state) {
     if (state.starter) return fail('owned');
     if (!((state.treats || 0) >= STARTER.treats)) return fail('treats');
@@ -3989,7 +3989,7 @@
    *   중복   : 이미 가진 것이 나오면 조각으로 바뀐다(SHARDS_DUP). 조각을 모으면 원하는 외형을 골라 얻는다(SHARDS_COST).
    * 세트를 다 모아야 보상을 주는 방식(컴플리트)은 두지 않는다. 뽑기에서 나오는 것은 전부 이 표에 있는 외형이다.
    */
-  var RARITIES = ['일반', '희귀', '전설'], GACHA_ODDS = [0.7, 0.25, 0.05], GACHA_PITY = 30, TICKET_TREATS = 20;
+  var RARITIES = ['일반', '희귀', '전설'], GACHA_ODDS = [0.7, 0.25, 0.05], GACHA_PITY = 30, TICKET_TREATS = 40;      // 4.8.4 20 → 40
   var SHARDS_DUP = [1, 3, 10], SHARDS_COST = [5, 15, 50];
   var COSMETICS = [
     { id: 'coat-yellow', slot: 'coat', name: '노란 우비',   rarity: 0, base: true, look: { y: '#f0b400', j: '#f0b400' } },
