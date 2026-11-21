@@ -3388,3 +3388,13 @@ test('외형 NEW(4.7.1): 새로 얻으면 붙고, 누르면(seeCosmetic) 사라�
   assert.deepEqual(C.deserialize(JSON.stringify(bad), 0).cosNew, {});
   assert.equal(C.COSMETICS.find(c => c.id === 'pat-camo').look, 'bolt', '위장 무늬는 번개로');
 });
+
+test('7구역 습격(4.7.2): 단계가 오르면 더 자주 바뀌고 더 빨리 깎이고 길어지며, 15단계부터 협공이 섞인다', () => {
+  assert.equal(C.raidShift(0), 6); assert.ok(C.raidShift(33) < 3.5); assert.equal(C.raidShift(200), 2.5);
+  assert.equal(C.raidRate(0), 1); assert.ok(C.raidRate(33) > 1.8);
+  assert.equal(C.raidLen(0), C.RAID_SECONDS); assert.equal(C.raidLen(200), C.RAID_SECONDS + 20);
+  const s = fresh(); C.campOf(s).nightLv = 30; let pins = 0;
+  for (let i = 0; i < 200; i++) { const r = C.newRaid(s, Math.random); const sum = r.w[0] + r.w[1] + r.w[2]; assert.ok(Math.abs(sum - 1) < 1e-9); if (r.pin) { pins++; assert.deepEqual(r.w.slice().sort(), [0.1, 0.45, 0.45]); } assert.equal(r.t, C.raidLen(30)); }
+  assert.ok(pins > 20 && pins < 140, '협공은 가끔: ' + pins);
+  C.campOf(s).nightLv = 10; for (let i = 0; i < 100; i++) assert.equal(C.newRaid(s, Math.random).pin, false, '15단계 아래에는 협공이 없다');
+});

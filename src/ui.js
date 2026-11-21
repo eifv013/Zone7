@@ -1690,6 +1690,9 @@
     var baseRules = C.stageRuleTexts(d, false).join(', ');
     setText($('stage-d-sub'), why ? (why === 'prev' ? '앞 스테이지를 클리어하면 열려요' : (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요') : (baseRules ? baseRules + '\n' : '') + C.stageGoalText(d, hardOn, gi) + ' · 제한 ' + clock(d.limit)
       + (d.boss ? '\n보상 · 지역 휘장 · 전리품 +10%' : '') + (why === 'prev' ? '\n앞 스테이지를 클리어하면 열려요' : why === 'locked' ? '\n' + (C.STAGE_OPEN_ZONE + 1) + '구역에 닿으면 열려요' : ''));
+    // 4.7.2 보상: 새로 딴 별 하나마다 간식과 뽑기권 1장(하드는 간식이 두 배). 다 땄으면 그렇다고 적는다
+    var leftStars = keys.filter(function (k) { return !m[k]; }).length, perTreat = C.STAGE_TREATS[keys[0]];
+    setText($('stage-d-reward'), why ? '보상 · ???' : leftStars ? '보상 · 별마다\n간식 ' + perTreat + ' · 뽑기권 1' : '보상 · 다 받았어요');
     setText($('stage-n-info'), m.best ? '최고 ' + clock(m.best) : m.pct > 0 ? '가장 멀리 ' + Math.floor(m.pct * 100) + '%' : '');
     setText($('stage-h-info'), whyHard && !why ? HID + ' · 일반을 클리어하면 열려요' : C.STAGE_RULES[d.hard] + ' · 닫으면 처음부터');
     setText($('stage-n-stars'), starOf(C.STAGE_STARS.normal)); setText($('stage-h-stars'), starOf(C.STAGE_STARS.hard));
@@ -3318,14 +3321,15 @@
     C.SETTLE.forEach(function (d) {
       var p = campPlot(d), x = p.x, by = p.by, lv = C.settleLv(state, d.id), why = C.settleBlock(state, d.id), work = C.settleWork(state, d.id), need = C.settleNeed(state, d.id), broken = C.settleBroken(state, d.id), col = CAMP_COL[d.col];
       if (lv > 0) { CAMP_ART[d.id](R, L, x, by, campTier(lv));
-        raw = true; over.push(function () { raw = true; if (aim !== d.id) { raw = false; return; }      /* 4.3.4: 단계는 고른 건물에만 보인다(모든 건물에 숫자를 달면 빽빽했다) */ if (lv <= 3) { for (var k = 0; k < 3; k++) { R(x + 15 + k * 5, by + 3, 4, 2, K); R(x + 16 + k * 5, by + 3, 2, 1, k < lv ? col : '#4a443c'); } } else { var ds = String(lv), dw = ds.length * 4 + 1; R(x + 22 - (dw >> 1) - 1, by + 2, dw + 2, 7, K); for (var di = 0; di < ds.length; di++) spr(g, x + 22 - (dw >> 1) + di * 4, by + 3, CAMP_DIGIT[+ds.charAt(di)], { '#': col }); } raw = false; });
+        raw = true; over.push(function () { raw = true; if (aim !== d.id) { raw = false; return; }      /* 4.3.4: 단계는 고른 건물에만 보인다(모든 건물에 숫자를 달면 빽빽했다) */ var bz = work > 0 && need > 0;      /* 4.7.2 짓는 중이면 단계 숫자를 줄 오른쪽 끝에 둔다(전에는 차오르는 줄이 숫자를 덮었다) */ if (lv <= 3) { var px0 = bz ? x + CAMP_W - 16 : x + 15; for (var k = 0; k < 3; k++) { R(px0 + k * 5, by + 3, 4, 2, K); R(px0 + 1 + k * 5, by + 3, 2, 1, k < lv ? col : '#4a443c'); } } else { var ds = String(lv), dw = ds.length * 4 + 1, cx0 = bz ? x + CAMP_W - (dw >> 1) - 2 : x + 22; R(cx0 - (dw >> 1) - 1, by + 2, dw + 2, 7, K); for (var di = 0; di < ds.length; di++) spr(g, cx0 - (dw >> 1) + di * 4, by + 3, CAMP_DIGIT[+ds.charAt(di)], { '#': col }); } raw = false; });
         if (broken) { R(x, by - 30, CAMP_W, 30, 'rgba(20,10,6,.5)'); for (var f = 0; f < 3; f++) { var fx = x + 7 + f * 13, fl = Math.floor(now / 120 + f) % 2; R(fx, by - 8 - fl, 3, 5 + fl, '#f08a3a'); R(fx + 1, by - 10 - fl, 1, 3, '#ffd95a'); var sa = ((now + f * 700) % 2400) / 2400; R(fx + 1 + sa * 3, by - 11 - sa * 12, 2, 1, 'rgba(60,56,64,' + (0.8 - sa * 0.7).toFixed(2) + ')'); } } raw = false;
       } else {
         var lock = why === 'prev' || why === 'locked'; R(x + 2, by - 6, 1, 6, '#6a5a44'); R(x + 40, by - 6, 1, 6, '#6a5a44'); for (var e = 3; e < 40; e += 3) R(x + e, by - 5 + (e % 2), 2, 1, lock ? '#4a443c' : '#c9bc8a');
         if (!(work > 0)) { R(x + 21, by - 12, 1, 12, '#6a5a44'); R(x + 17, by - 17, 9, 6, K); raw = !lock; R(x + 18, by - 16, 7, 4, lock ? '#3a342e' : col); if (!lock) { R(x + 21, by - 16, 1, 4, '#fff'); R(x + 19, by - 14, 5, 1, '#fff'); } raw = false; }
       }
       if (work > 0 && need > 0) {      // 놓는 중: 차오르는 노란 줄(4.3.8: 비계 칸은 뺐다. 줄만으로 짓는 중인 걸 안다고 하셨다)
-        over.push(function () { raw = true; R(x - 1, by + 3, CAMP_W, 4, K); R(x, by + 4, Math.max(1, Math.round((CAMP_W - 2) * work / need)), 2, '#f0b400'); raw = false; });
+        var bw = aim === d.id && lv > 0 ? CAMP_W - (lv <= 3 ? 17 : String(lv).length * 4 + 5) : CAMP_W;      // 4.7.2 단계 숫자가 보일 때는 줄을 그만큼 짧게
+        over.unshift(function () { raw = true; R(x - 1, by + 3, bw, 4, K); R(x, by + 4, Math.max(1, Math.round((bw - 2) * work / need)), 2, '#f0b400'); raw = false; });
       }
       if (aim === d.id) { raw = true; var bc = '#e8e6dc', X = x - 2, Y = by - 42, W = CAMP_W + 4, H = 50; R(X, Y, 5, 1, bc); R(X, Y, 1, 5, bc); R(X + W - 5, Y, 5, 1, bc); R(X + W - 1, Y, 1, 5, bc); R(X, Y + H - 1, 5, 1, bc); R(X, Y + H - 5, 1, 5, bc); R(X + W - 5, Y + H - 1, 5, 1, bc); R(X + W - 1, Y + H - 5, 1, 5, bc); raw = false; }
     });
@@ -3342,10 +3346,10 @@
     (c.strays || []).forEach(function (s, si) { var q = campStrayPos(s), wv = Math.floor(now / 160 + si) % 2; man(q[0] - 4, q[1] - 3, s.id); man(q[0], q[1] - 3 - wv, s.id + 1); R(q[0] + 1, q[1] - 5 - wv, 1, 2, '#e6c9a0'); if (s.t / C.STRAY_TIME < 0.5) zed(q[0] + (s.side === 0 ? -5 : 5), q[1] - 3, si); });
     // 습격: 쪽마다 붙은 무리, 그쪽에 선 사람들, 깎인 자리
     if (n) {
-      var zAll = Math.min(40, 14 + (c.nightLv || 0) * 2);
+      var zAll = Math.min(60, 16 + (c.nightLv || 0) * 2), into = Math.max(0, 1 - ((n.t0 || C.RAID_SECONDS) - n.t) / 2.5);      // 4.7.2 더 많이, 그리고 처음 2.5초는 바깥에서 몰려 들어온다
       for (var sd = 0; sd < 3; sd++) {
         var zN = Math.round(zAll * n.w[sd]), gN = Math.round(Math.min(1, n.g[sd] / C.sideNeed(n, sd)) * 8), dmg = 1 - Math.max(0, n.fences[sd]);
-        for (var zi = 0; zi < zN; zi++) { var uu = ((zi * 37 + sd * 11) % 100) / 100, jig = Math.floor(now / 200 + zi) % 2; if (sd === 0) zed(1 + (zi % 3) * 2 + jig, 116 + (zi % 4) * 5 + (zi % 2), zi); else if (sd === 1) zed(180 + (zi % 2) - jig, 40 + uu * 96, zi); else zed(14 + uu * 160, 147 + (zi % 2) - jig, zi); }
+        for (var zi = 0; zi < zN; zi++) { var uu = ((zi * 37 + sd * 11) % 100) / 100, jig = Math.floor(now / 200 + zi) % 2; var off = Math.round(into * (18 + (zi % 5) * 4)); if (sd === 0) zed(1 + (zi % 3) * 2 + jig - off, 116 + (zi % 4) * 5 + (zi % 2), zi); else if (sd === 1) zed(180 + (zi % 2) - jig + off, 40 + uu * 96, zi); else zed(14 + uu * 160, 147 + (zi % 2) - jig + off, zi); }
         for (var gi = 0; gi < gN; gi++) { if (sd === 0) man(12 + gi * 3, 136 - (gi % 2), gi, 0, 1); else if (sd === 1) man(174 - (gi % 3) * 4, CAMP_FL[gi % 3] - 6, gi, 0, 1); else man(48 + gi * 16, 136, gi, 0, 1); }
         raw = true; if (gN > 0 && zN > 0 && Math.floor(now / 90 + sd) % 3 === 0) { if (sd === 0) R(4, 137, 5, 1, '#ffd95a'); else if (sd === 1) R(177, CAMP_FL[(now / 90 | 0) % 3] - 4, 5, 1, '#ffd95a'); else R(50 + ((now / 90 | 0) * 29 % 110), 142, 1, 4, '#ffd95a'); }
         for (var di2 = 0; di2 < Math.round(dmg * 6); di2++) { if (sd === 0) R(1 + (di2 % 2) * 7, 124 + di2 * 3, 2, 2, '#f08a3a'); else if (sd === 1) R(180 + (di2 % 2), 40 + di2 * 16, 3, 3, '#f08a3a'); else R(20 + di2 * 26, 144, 3, 1, '#f08a3a'); } raw = false;
@@ -4618,7 +4622,7 @@
           if (tab === 'z6' && pane === 'play') { if (ev.id) { var sd8 = C.SETTLE.filter(function (q) { return q.id === ev.id; })[0]; if (sd8) campSendWalkers(campPath(sd8), 2, false); } else if (ev.side >= 0) { var to8 = ev.side === 0 ? [14, 136] : ev.side === 1 ? [172, 96] : [100, 136]; campSendWalkers(ev.side === 1 ? [[60, 136], [34, 136], [44, 96], to8] : [[60, 136], to8], 2, true); } }
           break;
         case 'camp-shift':
-          if (tab === 'z6' && pane === 'play') { sfx('tab'); buzz(15); if (campPopFn) campPopFn(92, 56, CAMP_SIDE[ev.side] + '으로 몰린다', 'bad'); }
+          if (tab === 'z6' && pane === 'play') { sfx('tab'); buzz(15); if (campPopFn) campPopFn(92, 56, ev.pin ? '협공! 두 쪽으로 몰린다' : CAMP_SIDE[ev.side] + '으로 몰린다', 'bad'); }
           break;
         case 'camp-held':
           campFlash = { at: Date.now(), kind: 'held' }; if (tab === 'z6' && pane === 'play') { sfx('goal'); buzz(30); if (campPopFn) campPopFn(92, 56, '습격을 막았다 +' + fmt(Math.floor(ev.gain)) + '명', 'done'); }

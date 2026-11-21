@@ -1247,6 +1247,16 @@
    */
   var RAID_SHIFT = 6, RAID_SIDES = 3;
   /*
+   * 4.7.2 습격이 단계에 따라 거세진다. 왜(해 보신 말씀: '33단계인데도 너무 쉽다, 긴장감이 하나도 없다'): 전에는 단계가 올라도
+   *   몰리는 쪽이 6초마다 바뀌고 울타리가 깎이는 빠르기와 습격 길이가 같아서, 한 번 익히면 늘 같은 손놀림으로 넘겼다.
+   *   이제 단계마다: 몰리는 쪽이 더 자주 바뀌고(6초 → 많아야 2.5초), 울타리가 더 빨리 깎이고(단계마다 +2.5%),
+   *   습격이 길어진다(25초 → 많아야 45초). 15단계부터는 두 쪽이 함께 몰리는 '협공'(0.45 · 0.45 · 0.1)이 섞인다.
+   *   세울 사람의 몫(T)은 그대로라 어느 순간의 모양이든 막을 수는 있다. 어려워지는 것은 '얼마나 빨리 옮기느냐'다.
+   */
+  function raidShift(lv) { return Math.max(2.5, RAID_SHIFT - 0.1 * (lv || 0)); }
+  function raidRate(lv) { return 1 + 0.025 * (lv || 0); }
+  function raidLen(lv) { return RAID_SECONDS + Math.min(20, 0.5 * (lv || 0)); }
+  /*
    * 4.2.2 울타리 밖의 사람들(c.strays): 이 화면을 보고 있으면 STRAY_EVERY 초쯤마다 울타리 밖에 길 잃은 무리가 나타난다(많아야 STRAY_MAX).
    *   STRAY_TIME 초 안에 누르면 문으로 들어온다(모이는 속도의 STRAY_PAY 초 치 × 습격 단계). 못 누르면 사라진다.
    *   왜: 낮에는 주파수를 맞추고 사람이 차기를 기다리는 것뿐이었다. 지도에서 눈과 손이 할 일을 둔다.
@@ -1270,8 +1280,8 @@
   function sideHold(state, i) { var n = state.camp && state.camp.night; if (!n) return 1; return Math.min(1, (n.g[i] || 0) / sideNeed(n, i) + towerHold(state)); }
   /** 습격 전체가 버티는 정도: 무리가 붙은 쪽 가운데 가장 약한 쪽. */
   function nightHold(state) { var n = state.camp && state.camp.night; if (!n) return 1; var h = 1; for (var i = 0; i < RAID_SIDES; i++) if (n.w[i] > 0.02) h = Math.min(h, sideHold(state, i)); return h; }
-  function raidWeights(roll, prev) { var big = Math.floor(roll() * RAID_SIDES) % RAID_SIDES; if (big === prev) big = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES; var mid = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES, w = [0.1, 0.1, 0.1]; w[big] = 0.6; w[mid] = 0.3; return { w: w, side: big }; }
-  function newRaid(state, roll) { var r = raidWeights(roll, -1); return { t: RAID_SECONDS, need: raidNeed(state), w: r.w, side: r.side, g: [0, 0, 0], fences: [1, 1, 1], fence: 1, guards: 0, shift: RAID_SHIFT }; }
+  function raidWeights(roll, prev, lv) { var big = Math.floor(roll() * RAID_SIDES) % RAID_SIDES; if (big === prev) big = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES; var mid = (big + 1 + Math.floor(roll() * (RAID_SIDES - 1))) % RAID_SIDES, w = [0.1, 0.1, 0.1], pin = (lv || 0) >= 15 && roll() < 0.35; w[big] = pin ? 0.45 : 0.6; w[mid] = pin ? 0.45 : 0.3; return { w: w, side: big, pin: pin }; }      // pin: 협공(4.7.2)
+  function newRaid(state, roll) { var lv = state.camp && state.camp.nightLv || 0, r = raidWeights(roll, -1, lv); return { t: raidLen(lv), t0: raidLen(lv), need: raidNeed(state), w: r.w, side: r.side, pin: !!r.pin, g: [0, 0, 0], fences: [1, 1, 1], fence: 1, guards: 0, shift: raidShift(lv) }; }
   /** 습격 중에 side(0 북 · 1 동 · 2 남, 안 주면 가장 약한 쪽) 울타리로 한 무리를 세운다. 문 앞에 사람이 없으면 가장 남는 쪽에서 옮긴다. */
   function sendGuard(state, side, auto) {
     if (!zoneOpen(state, 6)) return fail('locked');
@@ -1345,9 +1355,10 @@
     var n = c.night;
     if (n) {
       n.t -= dt;
-      for (var si = 0; si < RAID_SIDES; si++) n.fences[si] -= (1 - sideHold(state, si)) * n.w[si] * RAID_SIDES * FENCE_RATE / RAID_SECONDS * dt / mods(state).fence;
+      var rr = raidRate(c.nightLv);      // 4.7.2 단계가 오를수록 빨리 깎인다
+      for (var si = 0; si < RAID_SIDES; si++) n.fences[si] -= (1 - sideHold(state, si)) * n.w[si] * RAID_SIDES * FENCE_RATE * rr / RAID_SECONDS * dt / mods(state).fence;
       n.fence = Math.min(n.fences[0], n.fences[1], n.fences[2]);
-      n.shift -= dt; if (n.shift <= 0 && n.t > 2) { n.shift = RAID_SHIFT; var rw = raidWeights(roll, n.side); n.w = rw.w; n.side = rw.side; if (events) events.push({ type: 'camp-shift', side: n.side }); }
+      n.shift -= dt; if (n.shift <= 0 && n.t > 2) { n.shift = raidShift(c.nightLv); var rw = raidWeights(roll, n.side, c.nightLv); n.w = rw.w; n.side = rw.side; n.pin = !!rw.pin; if (events) events.push({ type: 'camp-shift', side: n.side, pin: n.pin }); }
       if (n.fence <= 0) {      // 뚫렸다: 서 있는 건물 한 채가 부서진다(고칠 때까지 효과가 없다)
         var alive = SETTLE.filter(function (d) { return settleHas(state, d.id) && !c.broken[d.id]; }), v = alive.length ? alive[Math.floor(roll() * alive.length) % alive.length] : null;
         if (v) c.broken[v.id] = true;
@@ -4843,7 +4854,7 @@
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
     ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
-    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, setElder: setElder, raidTight: raidTight, NIGHT_FLOOR: NIGHT_FLOOR, NIGHT_STEP: NIGHT_STEP, NIGHT_CAP: NIGHT_CAP, LV_MAX: LV_MAX7, CAMP_ROWS: CAMP_ROWS, campRow: campRow, campRowCost: campRowCost, buyCampRow: buyCampRow, levelNeed: levelNeed, CART_STEP: CART_STEP, WALL7_STEP: WALL7_STEP, ARMS_STEP: ARMS_STEP, guardPool: guardPool, NIGHT_FRAC: NIGHT_FRAC, rescueStray: rescueStray, strayGain: strayGain, STRAY_PAY: STRAY_PAY, STRAY_TIME: STRAY_TIME, STRAY_MAX: STRAY_MAX, STRAY_EVERY: STRAY_EVERY, sideHold: sideHold, sideNeed: sideNeed, towerHold: towerHold, newRaid: newRaid, RAID_SHIFT: RAID_SHIFT, campSeen: campSeen, raidNeed: raidNeed, levelPow: levelPow, LV_GROW: LV_GROW, TOWER_HOLD_MAX: TOWER_HOLD_MAX, GUARD_LOSS: GUARD_LOSS, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
+    settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, setElder: setElder, raidTight: raidTight, raidShift: raidShift, raidRate: raidRate, raidLen: raidLen, NIGHT_FLOOR: NIGHT_FLOOR, NIGHT_STEP: NIGHT_STEP, NIGHT_CAP: NIGHT_CAP, LV_MAX: LV_MAX7, CAMP_ROWS: CAMP_ROWS, campRow: campRow, campRowCost: campRowCost, buyCampRow: buyCampRow, levelNeed: levelNeed, CART_STEP: CART_STEP, WALL7_STEP: WALL7_STEP, ARMS_STEP: ARMS_STEP, guardPool: guardPool, NIGHT_FRAC: NIGHT_FRAC, rescueStray: rescueStray, strayGain: strayGain, STRAY_PAY: STRAY_PAY, STRAY_TIME: STRAY_TIME, STRAY_MAX: STRAY_MAX, STRAY_EVERY: STRAY_EVERY, sideHold: sideHold, sideNeed: sideNeed, towerHold: towerHold, newRaid: newRaid, RAID_SHIFT: RAID_SHIFT, campSeen: campSeen, raidNeed: raidNeed, levelPow: levelPow, LV_GROW: LV_GROW, TOWER_HOLD_MAX: TOWER_HOLD_MAX, GUARD_LOSS: GUARD_LOSS, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
     SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
     tuneBand: tuneBand, tunePos: tunePos, tuneGain: tuneGain, tuneHit: tuneHit, tuneNow: tuneNow, TUNE_PERIOD: TUNE_PERIOD, TUNE_COOL: TUNE_COOL, TUNE_MISS_COOL: TUNE_MISS_COOL, TUNE_GAIN_SECONDS: TUNE_GAIN_SECONDS, TUNE_AUTO: TUNE_AUTO,
     stageRetryBonus: stageRetryBonus, stageNeed: stageNeed, stageVar: stageVar, stageGoalIndex: stageGoalIndex, stageSpeed: stageSpeed, stageSafe: stageSafe, STAGE_STARS: STAGE_STARS, STAGE_STEP_TREATS: STAGE_STEP_TREATS, STAGE_RETRY_SUPPLIES: STAGE_RETRY_SUPPLIES, STAGE_RETRY_MAX: STAGE_RETRY_MAX,
