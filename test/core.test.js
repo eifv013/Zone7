@@ -3608,3 +3608,15 @@ test('첫 보급 상자: 한 번만, 한정 외형이 들어 있다', () => {
   const u = fresh(); u.treats = 5; assert.equal(C.buyStarter(u).reason, 'treats');
   assert.ok(!C.gachaTable().some(t => t.id === 'coat-starter'), '뽑기에 없다');
 });
+
+/* ---------- 4.8.5 광고 보상 ---------- */
+test('광고 보상: 건너뛰기 · 출석 한 번 더는 하루 한 번, 철수 보너스는 이번 철수에 한 번', () => {
+  const s = fresh(); s.zone = 1; s.bestZone = 1; const d = '2026-11-22';
+  assert.equal(C.adState(s, 'attend', d).reason, 'notyet', '출석을 받기 전');
+  C.claimAttend(s, d); const t0 = s.treats, k0 = s.tickets;
+  assert.ok(C.adReward(s, 'attend', d).ok); const w = C.ATTEND_REWARDS[0]; assert.equal(s.treats, t0 + (w.treats || 0)); assert.equal(s.tickets, k0 + (w.tickets || 0));
+  assert.equal(C.adReward(s, 'attend', d).reason, 'daily');
+  if (C.incomePerSec(s) > 0) { assert.ok(C.adReward(s, 'skip', d).ok); assert.equal(C.adReward(s, 'skip', d).reason, 'daily'); assert.ok(C.adState(s, 'skip', '2026-11-23').can, '다음 날 다시'); }
+  s.runEarned = 1e25; const g0 = C.antibodiesOnRetreat(s); assert.ok(C.adReward(s, 'retreat', d).ok); assert.ok(C.antibodiesOnRetreat(s) >= Math.floor(g0 * 1.05)); assert.equal(C.adReward(s, 'retreat', d).reason, 'ready');
+  const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.adRetreat, false); assert.equal(C.deserialize(C.serialize(n)).ad.day, d);
+});

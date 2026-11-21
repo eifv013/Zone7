@@ -1900,6 +1900,7 @@
     }
     $('attend-claim').disabled = !info.can;
     setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '다음 출석까지 ' + untilMidnight());
+    var aad = $('attend-ad'); if (aad) { var ast2 = C.adState(state, 'attend', todayStr()); aad.hidden = !ast2.can; setText(aad, (state.noAds ? '' : '광고 보고 ') + '한 번 더 받기'); }      // 4.8.5
     var ao = $('attend-open'); if (ao) setText(ao, info.can ? '출석 체크 · 오늘 받을 수 있어요' : '출석 체크 · 다음까지 ' + untilMidnight());
     setText($('attend-sub'), (info.day + 1) + '일째');
   }
@@ -1907,12 +1908,21 @@
    * 4.8.0 보급소 창: 영구(한 번만) · 보급품(여러 번) · 결제(준비 중) 세 묶음. 단추에는 값 · 보유 · 오늘 다 씀 · 준비됨 · 준비 중.
    * 간식이 모자라면 눌렀을 때 알려 주고 그 줄을 흔든다(뽑기권 사기와 같은 모양).
    */
-  var STORE_GROUP = [['starter', '처음 한 번'], ['perm', '영구 · 한 번만'], ['cons', '보급품 · 여러 번'], ['paid', '결제 · 준비 중']];
+  var STORE_GROUP = [['ad', '광고 보고 받기'], ['starter', '처음 한 번'], ['perm', '영구 · 한 번만'], ['cons', '보급품 · 여러 번'], ['paid', '결제 · 준비 중']];
   function renderStore() {
     var box = $('store-list'); if (!box || $('store-veil').hidden) return;
     setText($('store-treats'), IC.treat + fmt(state.treats || 0));
     if (!box.firstChild) STORE_GROUP.forEach(function (g) {
       box.appendChild(el('h4', '', g[1]));
+      if (g[0] === 'ad') {      // 4.8.5 광고 보상 두 줄(출석 한 번 더는 출석 창에)
+        [['skip', 'supply', '시간 건너뛰기', '현재 수입 2시간치 물자, 하루 1번'], ['retreat', 'antibody', '철수 응원', '다음 철수 때 항체 샘플 1.1배']].forEach(function (a) {
+          var arow = el('div', 'store-row'); arow.setAttribute('data-ad', a[0]); arow.appendChild(el('i', 'ic ic-' + a[1]));
+          var at = el('div', 't'); at.appendChild(el('b', '', a[2])); at.appendChild(el('small', '', a[3])); arow.appendChild(at);
+          var ab = el('button', 'ad'); ab.type = 'button'; arow.appendChild(ab); ab.addEventListener('click', function () { watchAd(a[0]); });
+          box.appendChild(arow);
+        });
+        return;
+      }
       if (g[0] === 'starter') {      // 4.8.2 첫 보급 상자(한 번만): 뽑기권 · 조각 · 한정 외형
         var srow = el('div', 'store-row'); srow.setAttribute('data-id', 'starter');
         srow.appendChild(el('i', 'ic ic-ticket'));
@@ -1935,6 +1945,8 @@
       });
     });
     Array.prototype.forEach.call(box.querySelectorAll('.store-row'), function (row) {
+      var adk = row.getAttribute('data-ad');
+      if (adk) { var ast = C.adState(state, adk, todayStr()), abt = row.lastChild; abt.disabled = !ast.can; setText(abt, ast.can ? (state.noAds ? '바로 받기' : '광고 보기') : ast.reason === 'daily' ? '오늘 다 봤어요' : ast.reason === 'ready' ? '준비됨' : '아직'); return; }
       if (row.getAttribute('data-id') === 'starter') { var sb1 = row.lastChild; sb1.className = state.starter ? 'own' : ''; setText(sb1, state.starter ? '보유' : IC.treat + C.STARTER.treats); sb1.classList.toggle('short', !state.starter && !(state.treats >= C.STARTER.treats)); return; }
       var it = C.shopItem(row.getAttribute('data-id')), st = C.shopState(state, it.id, todayStr()), b = row.lastChild;
       b.className = st.owned ? 'own' : it.kind === 'paid' ? 'paid' : '';
@@ -1980,6 +1992,25 @@
     $('pass-buy').hidden = info.premium; setText($('pass-buy'), '유료 줄 ' + IC.treat + C.PASS_PRICE);
     var st = C.PASS_STAMPS;
     setText($('pass-how'), '도장은 출석 ' + st.attend + ', 원정의 새 별 ' + st.star + ', 밤 단계 이정표 ' + st.night + ', 혈청 단계 ' + st.serum + ', 철수 ' + st.retreat + '개씩이에요. 유료 줄의 10칸 · 15칸 · 20칸에는 이번 수첩 한정 우비 · 깃발 · 후드가 있어요. 30일마다 새 수첩이 나와요.');
+  }
+  /*
+   * 4.8.5 광고: 광고 제거면 바로 보상. 앱이 광고를 붙여 window.ZONE7_AD(kind, done) 을 주면 그것을 부르고,
+   * 아직 없으면 '광고 자리' 창을 3초 띄운 뒤 보상 받기 단추가 켜진다(광고를 붙일 자리를 미리 만들어 둔 것).
+   */
+  var adBusy = false;
+  function giveAd(kind) {
+    var r = C.adReward(state, kind, todayStr()); if (!r.ok) return;
+    sfx('goal');
+    toast(kind === 'skip' ? '시간 건너뛰기 · ' + IC.supply + '+' + fmt(r.gain) : kind === 'attend' ? '출석 보상을 한 번 더 받았어요 · ' + attendText(r.reward) : '다음 철수 때 항체 샘플 1.1배');
+    Store.save(); renderShop(); render();
+  }
+  function watchAd(kind) {
+    if (adBusy || !C.adState(state, kind, todayStr()).can) return;
+    if (state.noAds) { giveAd(kind); return; }
+    if (typeof window.ZONE7_AD === 'function') { adBusy = true; try { window.ZONE7_AD(kind, function (ok) { adBusy = false; if (ok) giveAd(kind); }); } catch (e) { adBusy = false; } return; }
+    adBusy = true; var left = 3, done = $('ad-done'); $('ad-veil').hidden = false; done.disabled = true; setText(done, '보상 받기 · ' + left);
+    var iv = setInterval(function () { left--; if (left > 0) { setText(done, '보상 받기 · ' + left); return; } clearInterval(iv); done.disabled = false; setText(done, '보상 받기'); }, 1000);
+    done.onclick = function () { clearInterval(iv); $('ad-veil').hidden = true; adBusy = false; giveAd(kind); };
   }
   function renderShop() {
     renderAttend(); renderStore(); renderPass();
@@ -5447,6 +5478,7 @@
       setTimeout(function () { $('attend-veil').hidden = true; }, 700);      // 받은 것을 잠깐 보여 주고 닫는다
     });
     $('attend-open').addEventListener('click', function () { sfx('click'); renderAttend(); $('attend-veil').hidden = false; });
+    $('attend-ad').addEventListener('click', function () { watchAd('attend'); });
     $('store-open').addEventListener('click', function () { sfx('click'); $('store-veil').hidden = false; renderStore(); });
     $('store-close').addEventListener('click', function () { $('store-veil').hidden = true; });
     $('pass-open').addEventListener('click', function () { sfx('click'); $('pass-veil').hidden = false; renderPass(); });
