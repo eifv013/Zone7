@@ -396,7 +396,11 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .attend-card { max-width: 440px; gap: 8px; }
 .attend-days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }      /* 4.7.3 일곱 칸: 한 줄이 한 주라 7·14·21·28일째가 오른쪽 끝에 나란히 선다 */
 .attend-days li { border: 1px solid var(--rule); border-radius: 6px; padding: 4px 2px; text-align: center; font: 600 11px/1.3 var(--font-body); color: var(--ink-soft); }
-.attend-days li b { display: block; font-size: 9.5px; font-weight: 500; white-space: pre; letter-spacing: -.4px; overflow: hidden; }      /* 4.7.3 일곱 칸이라 좁다: '뽑기권 1' 이 둘로 쪼개지지 않게 줄을 바꾸지 않는다 */
+/* 4.7.4 재화 아이콘(ui.js icInit 이 그림을 넣는다): 글자 크기에 맞춰 줄 안에 놓인다. 16×14 도트(테두리 포함) */
+.ic { display: inline-block; width: 1.3em; height: 1.14em; background: no-repeat center / 100% 100%; image-rendering: pixelated; vertical-align: -.2em; margin-right: .12em; font-style: normal; flex: none; }
+.stock-num .ic { width: .8em; height: .69em; vertical-align: -.02em; margin-right: .14em; }      /* 큰 물자 숫자 앞의 상자: 숫자보다 조금 작게 */
+.attend-days li b { display: block; font-size: 11px; font-weight: 600; white-space: pre; overflow: hidden; line-height: 1.5; }
+.attend-days li b .ic { width: 16px; height: 14px; vertical-align: -3px; margin-right: 1px; }      /* 4.7.4 글 대신 그림이라 칸에 여유가 생겼다: 그림과 숫자를 키운다 */      /* 4.7.3 일곱 칸이라 좁다: '뽑기권 1' 이 둘로 쪼개지지 않게 줄을 바꾸지 않는다 */
 .attend-days li.big { border-color: var(--hazard); }
 .attend-days li.done { opacity: .45; } .attend-days li.done::after { content: '✓'; display: block; color: var(--good, #4caf50); }
 .attend-days li.now { border: 2px solid var(--hazard); color: var(--ink); }
@@ -1492,7 +1496,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 4.7.3</div>
+  <div class="boot-ver">7구역 알파 4.7.4</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1589,7 +1593,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="stock-num" id="supplies">0</div>
       <div class="stock-rates">
         <div class="stock-rate num" id="pps">초당 +0</div>
-        <div class="stock-rate num">항체 샘플 <b id="antibodies">0</b></div>
+        <div class="stock-rate num"><i class="ic ic-antibody" role="img" aria-label="항체 샘플"></i>항체 샘플 <b id="antibodies">0</b></div>
       </div>
       <div id="scavenge-wrap">
         <button type="button" class="scavenge" id="scavenge">
@@ -1864,7 +1868,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <button type="button" class="perk-open" id="perk-open">특전 모두 보기</button>
     </section>
     <section class="panel" aria-labelledby="h-traits" data-ex="trait">
-      <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label trait-pts">항체 샘플 <b class="num" id="trait-points">0</b></span></div>
+      <div class="panel-head"><h2 id="h-traits">영구 특성</h2><span class="label trait-pts"><i class="ic ic-antibody" role="img" aria-label="항체 샘플"></i>항체 샘플 <b class="num" id="trait-points">0</b></span></div>
       <p class="hint">철수해도 남아요. 되돌리면 샘플을 모두 돌려받아요.</p>
       <div class="rows" id="traits"></div>
       <button type="button" class="recall trait-reset" id="trait-reset">특성 되돌리기</button>
@@ -1993,7 +1997,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 4.7.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 4.7.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

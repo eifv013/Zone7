@@ -694,9 +694,54 @@
    *   전에는 문장마다 무조건 줄을 바꿔서, 짧은 두 문장도 두 줄이 됐다.
    *   글 안의 줄바꿈(\n)은 그대로 줄을 바꾼다.
    */
+  /*
+   * 4.7.4 재화 아이콘: 물자 · 항체 샘플 · 간식 · 뽑기권 · 조각 · 혈청 · 생존자를 글 대신 작은 도트 그림으로 보인다.
+   *   글 안에 IC.ticket 같은 표(\u0002이름\u0002)를 넣으면 fillText 가 그 자리에 그림(<i class="ic ic-이름">)을 넣는다.
+   *   그림은 처음 한 번 캔버스로 그려 CSS 배경(data URL)으로 만든다(icInit). 어두운 테두리를 둘러서 노란 단추 위에서도 묻히지 않는다.
+   *   화면 읽기 프로그램은 aria-label(이름)을 읽고, PC 에서는 마우스를 올리면 이름이 뜬다(title).
+   *   일지(log)처럼 문장으로 읽는 글에는 넣지 않는다. 숫자와 함께 짧게 보이는 곳에만 쓴다.
+   */
+  var IC_MARK = '\u0002';      // SEP(\u0001)과 겹치지 않게
+  var IC_ART = {
+    supply:   { name: '물자', pal: { t: '#c8945a', T: '#a87440', b: '#8a5a32', B: '#6b4426', s: '#5a5048' }, g: ['..............', '..tttttttttt..', '.tTTTTTTTTTTt.', '.bbbsbbbbsbbb.', '.bbbsbbbbsbbb.', '.BBBsBBBBsBBB.', '.bbbsbbbbsbbb.', '.bbbsbbbbsbbb.', '.BBBsBBBBsBBB.', '.bbbsbbbbsbbb.', '.BBBBBBBBBBBB.', '..............'] },
+    antibody: { name: '항체 샘플', pal: { c: '#d8453a', C: '#a83028', g: '#cfe6f0', G: '#8fb0bc', l: '#7fd8a0', L: '#4aa870', w: '#ffffff' }, g: ['.....cccc.....', '.....CCCC.....', '......gG......', '......gG......', '.....gggG.....', '....gwlllG....', '...gwllllLG...', '...gllllllLG..', '...glllllLLG..', '....gLLLLLG...', '.....GGGGG....', '..............'] },
+    treat:    { name: '간식', pal: { t: '#ecd09a', T: '#c89a5a', w: '#fff4dc' }, g: ['..............', '..............', '.ww........ww.', 'wttw......wttw', 'wtttttttttttTw', '.ttttttttttTT.', '.tttttttttTTT.', 'wttTTTTTTTTTTw', 'tTTt......tTTT', '.TT........TT.', '..............', '..............'] },
+    ticket:   { name: '뽑기권', pal: { w: '#fff2a0', y: '#f0b400', Y: '#c88a00', d: '#a85a00', s: '#c86a00' }, g: ['..............', 'wwwwwwwwwwwwww', 'yyyyyyyyydyyyY', 'yyyysyyyyyyyyY', '.yysssyyydyyy.', '..yysyyyyyyy..', '.yyyyyyyydyyy.', 'yyyyyyyyyyyyyY', 'yyyyyyyyydyyyY', 'YYYYYYYYYYYYYY', '..............', '..............'] },
+    shard:    { name: '조각', pal: { p: '#b48aff', P: '#7a52c8', w: '#e8d8ff' }, g: ['..............', '......pp......', '.....wppP.....', '....wpppPP....', '...wppppPP....', '...ppppppPP...', '..pppppppPP...', '..ppppppPPP...', '...pppppPP....', '....ppPPP.....', '.....PPP......', '..............'] },
+    serum:    { name: '혈청', pal: { H: '#b4b8c0', g: '#e8f6ff', G: '#a8c0cc', y: '#f0b400', Y: '#c88a00', n: '#d0d4dc' }, g: ['..............', '..............', '.H............', '.HgggggggG....', 'HHgyyyyyyGHnnn', '.HgYYYYYYG....', '.HGGGGGGGG....', '.H............', '..............', '..............', '..............', '..............'] },
+    people:   { name: '생존자', pal: { s: '#e6c9a0', h: '#4a3428', c: '#3f7f8a', C: '#2c5a62', r: '#d8644e', R: '#a84030', q: '#6b4a3a' }, g: ['..............', '..hh.....qq...', '.hhhh...qqqq..', '.hssh...qssq..', '.hssh...ssss..', '..ss.....ss...', '.cccc...rrrr..', 'ccccCC.rrrrRR.', 'sccCCs.srrRRs.', '.ccCC...rrRR..', '.cc.C...rr.R..', '..............'] }
+  };
+  var IC = {}; Object.keys(IC_ART).forEach(function (k) { IC[k] = IC_MARK + k + IC_MARK; });
+  /** 아이콘 그림을 CSS 로 만든다(한 번만). 그림 둘레 1칸에 어두운 테두리. 실패해도 글자는 그대로 보인다(그림 자리만 빈다). */
+  function icInit() {
+    try {
+      if (document.getElementById('ic-style')) return;
+      var css = '';
+      Object.keys(IC_ART).forEach(function (k) {
+        var a = IC_ART[k], W = a.g[0].length + 2, H = a.g.length + 2, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        var g = cv.getContext('2d'), on = function (x, y) { var r = a.g[y]; return !!(r && a.pal[r.charAt(x)]); };
+        g.fillStyle = 'rgba(14,11,8,.85)';      // 테두리: 그림 칸의 위아래 · 옆 칸 가운데 비어 있는 곳
+        for (var y = -1; y <= a.g.length; y++) for (var x = -1; x <= a.g[0].length; x++) if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) g.fillRect(x + 1, y + 1, 1, 1);
+        a.g.forEach(function (row, yy) { for (var xx = 0; xx < row.length; xx++) { var c = a.pal[row.charAt(xx)]; if (c) { g.fillStyle = c; g.fillRect(xx + 1, yy + 1, 1, 1); } } });
+        css += '.ic-' + k + '{background-image:url(' + cv.toDataURL() + ')}';
+      });
+      var st = document.createElement('style'); st.id = 'ic-style'; st.textContent = css; document.head.appendChild(st);
+    } catch (e) { /* 그림이 없어도 놀이에는 지장이 없다 */ }
+  }
+  /** 글을 node 에 붙인다. 아이콘 표가 있으면 그 자리에 그림을 넣는다. */
+  function appendRich(node, str) {
+    if (str.indexOf(IC_MARK) < 0) { node.appendChild(document.createTextNode(str)); return; }
+    str.split(IC_MARK).forEach(function (part, i) {
+      if (i % 2 === 1 && IC_ART[part]) { var ic = document.createElement('i'); ic.className = 'ic ic-' + part; ic.setAttribute('role', 'img'); ic.setAttribute('aria-label', IC_ART[part].name); ic.title = IC_ART[part].name; node.appendChild(ic); }
+      else if (part) node.appendChild(document.createTextNode(part));
+    });
+  }
   function fillText(node, text) {
     var marked = lines(text);
-    if (typeof marked !== 'string' || (marked.indexOf(SEP) < 0 && marked.indexOf('\n') < 0 && marked.indexOf(' · ') < 0)) { node.textContent = text; return; }
+    if (typeof marked !== 'string' || (marked.indexOf(SEP) < 0 && marked.indexOf('\n') < 0 && marked.indexOf(' · ') < 0)) {
+      if (typeof text === 'string' && text.indexOf(IC_MARK) >= 0) { node.textContent = ''; appendRich(node, text); } else node.textContent = text;      // 4.7.4 아이콘이 든 글
+      return;
+    }
     node.textContent = '';
     marked.split('\n').forEach(function (row, ri) {
       if (ri > 0) node.appendChild(document.createElement('br'));
@@ -708,7 +753,7 @@
         bits.forEach(function (bit, bi) {
           if (bi > 0) node.appendChild(document.createTextNode(' '));
           var span = document.createElement('span');
-          span.className = 'sn'; span.textContent = bit + (bi < bits.length - 1 ? ' ·' : '');
+          span.className = 'sn'; appendRich(span, bit + (bi < bits.length - 1 ? ' ·' : ''));
           node.appendChild(span);
         });
       });
@@ -1822,7 +1867,7 @@
   function todayStr() { var d = new Date(); function z(n) { return (n < 10 ? '0' : '') + n; } return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
   /** 4.7.1 오늘 자정(기기 시각)까지 남은 시간 '3시간 12분'. */
   function untilMidnight() { var n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1), s = Math.max(0, Math.floor((m - n) / 1000)), h = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60); return (h ? h + '시간 ' : '') + mm + '분'; }
-  function attendText(w) { var a = []; if (w.tickets) a.push('뽑기권 ' + w.tickets); if (w.treats) a.push('간식 ' + w.treats); return a.join(' · '); }
+  function attendText(w) { var a = []; if (w.tickets) a.push(IC.ticket + w.tickets); if (w.treats) a.push(IC.treat + w.treats); return a.join(' · '); }
   /** 4.7.0 출석 칸: 일곱 날, 받은 날은 흐리게 ✓, 오늘 받을 날은 노란 테두리. */
   function renderAttend() {
     var box = $('attend-days'); if (!box) return;
@@ -1833,7 +1878,7 @@
       C.ATTEND_REWARDS.forEach(function (w, i) {
         var li = el('li', (i < info.day ? 'done' : i === info.day && info.can ? 'now' : '') + ((i + 1) % 7 === 0 || i === 29 ? ' big' : ''));      // 7 · 14 · 21 · 28 · 30일은 큰 보상
         li.appendChild(document.createTextNode((i + 1) + '일'));
-        li.appendChild(el('b', '', (w.tickets ? '뽑기권 ' + w.tickets : '') + (w.tickets && w.treats ? '\n' : '') + (w.treats ? '간식 ' + w.treats : '')));
+        li.appendChild(el('b', '', (w.tickets ? IC.ticket + w.tickets : '') + (w.tickets && w.treats ? '\n' : '') + (w.treats ? IC.treat + w.treats : '')));      // 4.7.4 글 대신 아이콘
         box.appendChild(li);
       });
     }
@@ -1845,12 +1890,12 @@
   function renderShop() {
     renderAttend();
     if (home) return;
-    setText($('shop-count'), '뽑기권 ' + state.tickets + '장 · 조각 ' + state.shards + '개 · 간식 ' + fmt(state.treats) + '개');
+    setText($('shop-count'), IC.ticket + state.tickets + ' · ' + IC.shard + state.shards + ' · ' + IC.treat + fmt(state.treats));
     setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번');      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
     $('gacha-pull').disabled = false;      // 4.4.1: 뽑기권이 없어도 기계는 열어 볼 수 있다(단추가 꺼진다)
     setText($('gacha-pull'), '뽑기 기계');
     $('ticket-buy').disabled = !(state.treats >= C.TICKET_TREATS);
-    setText($('ticket-buy'), '뽑기권 사기 · 간식 ' + C.TICKET_TREATS + '개');
+    setText($('ticket-buy'), '뽑기권 사기 · ' + IC.treat + C.TICKET_TREATS);
     setText($('odds-toggle'), oddsOpen ? '확률 접기' : '확률 보기');
     $('odds').hidden = !oddsOpen;
     if (oddsOpen && !$('odds').firstChild) {
@@ -2091,8 +2136,8 @@
   function gIdleActs() {
     var t = state.tickets || 0;
     var m = gMany();
-    gActs([['1회 · 뽑기권 1', function () { gStart(1); }, t < 1, 'y'], [m >= 2 ? m + '회 · 뽑기권 ' + m : '여러 번 · 뽑기권 2장부터', function () { gStart(gMany()); }, m < 2, '']]);
-    gMsg('뽑기권 ' + fmt(t) + '장 · 전설 보장까지 ' + C.gachaPityLeft(state) + '번');
+    gActs([['1회 · ' + IC.ticket + '1', function () { gStart(1); }, t < 1, 'y'], [m >= 2 ? m + '회 · ' + IC.ticket + m : '여러 번 · ' + IC.ticket + '2부터', function () { gStart(gMany()); }, m < 2, '']]);
+    gMsg(IC.ticket + fmt(t) + ' · 전설 보장까지 ' + C.gachaPityLeft(state) + '번');
   }
   /** 4.7.1 오른쪽 단추: 가진 뽑기권만큼 한 번에(10장까지). */
   function gMany() { return Math.max(0, Math.min(10, Math.floor(state.tickets || 0))); }
@@ -3404,7 +3449,7 @@
     var ttl = $('camp-title'), head = $('camp-head'); setText(ttl, n ? '습격' : '정착지'); ttl.classList.toggle('raid', !!n); setText(head, lvN > 0 ? lvN + '단계' : ''); head.classList.remove('bad');
     /* 띠: 생존자(낮에는 놓을 수 있는 사람 = '일할 생존자', 습격 때는 아직 세우지 않은 사람 = '싸울 생존자') · 습격까지 남은 시간. 4.3.1: 낮과 밤에 세는 사람이 다르니 어느 쪽인지 적는다 */
     // 4.3.3: 띠에는 늘 모인 생존자 전체를 적는다(낮과 밤에 다른 수를 같은 이름으로 적어 말이 안 됐다)
-    var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, '생존자 ' + fmt(Math.floor(state.survivors || 0)) + '명'); setText(s1, n ? '습격 ' + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
+    var s0 = $('camp-s0'), s1 = $('camp-s1'); setText(s0, IC.people + fmt(Math.floor(state.survivors || 0)) + '명'); setText(s1, n ? '습격 ' + clock(Math.max(0, n.t)) : started ? '습격까지 ' + clock(Math.max(0, C.RAID_EVERY - (c.clock || 0))) : ''); var s1c = n ? 'bad' : 'has'; if (s1.className !== s1c) s1.className = s1c;
     var gb = $('camp-guard'); if (gb.hidden !== !n) gb.hidden = !n;
     var er = $('camp-elder-row'), hasE = (state.upgrades.elder || 0) > 0; if (er.hidden !== !hasE) er.hidden = !hasE; if (hasE && $('camp-elder').checked !== C.elderOn(state)) $('camp-elder').checked = C.elderOn(state);
     if (n) CAMP_SIDE.forEach(function (nm, k) { var b = $('camp-g' + k), h = C.sideHold(state, k), key = nm + Math.round(h * 100) + (k === n.side); if (b.getAttribute('data-k') !== key) { b.setAttribute('data-k', key); b.innerHTML = ''; b.appendChild(document.createTextNode(nm)); b.appendChild(el('small', '', Math.round(h * 100) + '%')); } b.className = (k === n.side && h < 1 ? 'hot' : '') + (h >= 1 ? ' ok' : ''); });
@@ -3503,7 +3548,7 @@
     setText($('zev-' + id + '-left'), clock(ev.left));
     var reward = C.zevReward(state, id, false);
     setText($('zev-' + id + '-text'), t.lead);
-    setText($('zev-' + id + '-now'), t.now + ' · ' + (id === 'tower' ? '생존자 +' + fmt(reward) + '명' : '물자 +' + fmt(reward)));
+    setText($('zev-' + id + '-now'), t.now + ' · ' + (id === 'tower' ? IC.people + '+' + fmt(reward) + '명' : IC.supply + '+' + fmt(reward)));
     if (t.boost) {
       var cur = id === 'rail' ? state.railBoost : state.guardBoost, full = cur >= C.ZEV_BOOST_MAX - 1e-9, bb = $('zev-' + id + '-boost');
       bb.disabled = full;
@@ -3580,7 +3625,7 @@
     renderNames();
     syncNative(); syncNativeAttend();
     var m = C.mods(state), per = C.incomePerSec(state);      // 순찰조가 벌어 오는 몫까지 더해서 보여 준다
-    setText($('supplies'), fmt(state.supplies));
+    setText($('supplies'), IC.supply + fmt(state.supplies));      // 4.7.4 물자 상자 아이콘
     setText($('pps'), '초당 +' + fmt(per) + (state.buff ? ' · 지원 ×' + state.buff.mult + ' (' + Math.ceil(state.buff.left) + '초)' : ''));
     setText($('antibodies'), fmt(state.antibodies));
     setText($('click-value'), '+' + fmt(C.clickValue(state)));
@@ -3695,7 +3740,7 @@
     var gain = C.antibodiesOnRetreat(state), rb = $('retreat'), can = C.canRetreat(state);
     rb.disabled = !can;
     setText($('retreat-count'), state.retreats ? state.retreats + '번 철수함' : '');
-    setText(rb, can ? '철수하고 +' + fmt(gain) + ' 받기' : '아직 철수할 수 없다');
+    setText(rb, can ? '철수하고 ' + IC.antibody + '+' + fmt(gain) + ' 받기' : '아직 철수할 수 없다');
     // 철수의 기준은 "이번 회차에 모은 물자"(쓴 것도 포함한 누적)다. 지금 가진 물자와 헷갈리지 않게 이름을 붙여 적는다
     // 2.9.9: 물자 숫자("1.35구")는 적지 않는다. 받는 샘플을 크게, 지난번과 견준 한 줄, 다음 샘플(또는 철수 문턱)까지는 막대와 남은 시간으로.
     $('rt-gain').hidden = !can; $('rt-two').hidden = !can;
@@ -3900,7 +3945,7 @@
         setText(r.count, n + ' / ' + C.COUNT_MAX);
         setMile(r, n, q, cost <= state.supplies);
         setText(r.info, (n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state))) + (r.next ? ' · ' + r.next + '곳에서 2배' : ''));
-        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
+        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + IC.supply + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
     }
@@ -3965,13 +4010,13 @@
       setText(rows.stall.count, state.stalls + ' / ' + C.COUNT_MAX);
       setMile(rows.stall, state.stalls, q2, sc <= state.supplies);
       setText(rows.stall.info, '초당 상품 ' + fmt(C.goodsRate(state)) + ' · 초당 물자 ' + fmt(C.tradeRate(state)));
-      setText(rows.stall.cost, isFinite(sc) ? '×' + q2 + ' ' + fmt(sc) : '최대');
+      setText(rows.stall.cost, isFinite(sc) ? '×' + q2 + ' ' + IC.supply + fmt(sc) : '최대');
       rows.stall.btn.disabled = !(sc <= state.supplies); afford(rows.stall.cost, sc);
       C.HANDS.forEach(function (d) {
         var r = rows.hands[d.id], n = state.hands[d.id], q = qtyFor(C.maxHands(state, d.id), d.max - n), cost = C.handCost(state, d.id, q);
         setText(r.count, n + ' / ' + d.max);
         setText(r.info, '현재 +' + Math.round((C.handBonus(state, d.id) - 1) * 100) + '%');
-        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
+        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + IC.supply + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
     }
@@ -3999,7 +4044,7 @@
           : d.id === 'forge' ? C.boxName(line.spawn) + (lv < d.max ? ' → ' + C.boxName(line.spawn + 1) : '')
           : '×' + fmt((1 + lv) * line.milestone) + (lv < d.max ? ' · 레벨당 +' + fmt(line.milestone) : ''));
         if (d.id === 'paint') setMile(r, lv, q, cost <= state.supplies, C.LINE_MILESTONES);
-        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + fmt(cost) : '최대');
+        setText(r.cost, isFinite(cost) ? '×' + q + ' ' + IC.supply + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
       var ld = $('line-load');
@@ -4082,14 +4127,14 @@
         // 줄마다 "지금 어떤가 → 사면 어떻게 되나"
         setText(r.info, d.id === 'grade' ? '×' + fmt(Math.pow(C.GRADE_STEP, lv)) + (lv < d.max ? ' → ×' + fmt(Math.pow(C.GRADE_STEP, lv + 1)) : '')
           : lv < d.max ? C.carSeconds(state).toFixed(2) + '초 → ' + (C.carSeconds(state) * C.CREW_STEP).toFixed(2) + '초' : C.carSeconds(state).toFixed(2) + '초마다');      // 3.8.8: 3구역 줄과 같은 꼴(현재 → 다음)
-        setText(r.cost, isFinite(cost) ? '×1 ' + fmt(cost) : '최대');
+        setText(r.cost, isFinite(cost) ? '×1 ' + IC.supply + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
       var tq = qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains), tcost = C.trainCost(state, tq);
       setText(rows.train.count, state.trains + ' / ' + C.TRAIN_MAX);
       setMile(rows.train, state.trains, tq, tcost <= state.supplies, C.FLEET_MILESTONES);
       setText(rows.train.info, state.trains ? '초당 ' + fmt(C.railRate(state)) + ' · 레벨당 +' + fmt(C.railRate(state) / state.trains) : '사면 승강장에 열차가 서요');
-      setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + fmt(tcost) : '최대');
+      setText(rows.train.cost, isFinite(tcost) ? '×' + tq + ' ' + IC.supply + fmt(tcost) : '최대');
       rows.train.btn.disabled = !(tcost <= state.supplies); afford(rows.train.cost, tcost);
     }
     if (tab === 'z6' && open) {
@@ -4111,13 +4156,13 @@
       });
       C.CAMP_ROWS.forEach(function (d) { var r7 = rows.camp[d.id], lv7 = C.campRow(state, d.id), c7 = C.campRowCost(state, d.id), pct = function (v) { return Math.round(v * 100) + '%'; };
         var now7 = d.id === 'cart' ? '무리 +' + pct(C.CART_STEP * lv7) : d.id === 'wall7' ? '더디게 +' + pct(C.WALL7_STEP * lv7) : '세울 수 −' + pct(1 - Math.pow(1 - C.ARMS_STEP, lv7)), nx7 = d.id === 'cart' ? '+' + pct(C.CART_STEP * (lv7 + 1)) : d.id === 'wall7' ? '+' + pct(C.WALL7_STEP * (lv7 + 1)) : '−' + pct(1 - Math.pow(1 - C.ARMS_STEP, lv7 + 1));
-        setText(r7.count, 'Lv ' + lv7 + ' / ' + d.max); setText(r7.info, now7 + (isFinite(c7) ? ' → ' + nx7 : '')); setText(r7.cost, isFinite(c7) ? '×1 ' + fmt(c7) : '최대'); r7.btn.disabled = !(c7 <= state.supplies); afford(r7.cost, c7); r7.btn.classList.toggle('row-max', !isFinite(c7)); });
+        setText(r7.count, 'Lv ' + lv7 + ' / ' + d.max); setText(r7.info, now7 + (isFinite(c7) ? ' → ' + nx7 : '')); setText(r7.cost, isFinite(c7) ? '×1 ' + IC.supply + fmt(c7) : '최대'); r7.btn.disabled = !(c7 <= state.supplies); afford(r7.cost, c7); r7.btn.classList.toggle('row-max', !isFinite(c7)); });
       renderTune();
       var aq = qtyFor(C.maxAntennas(state), C.COUNT_MAX - state.antennas), acost = C.antennaCost(state, aq);
       setText(rows.antenna.count, state.antennas + ' / ' + C.COUNT_MAX);
       setMile(rows.antenna, state.antennas, aq, acost <= state.supplies);
       setText(rows.antenna.info, state.antennas ? '초당 ' + fmt(sRate) + '명' : '세우면 생존자가 모여요');
-      setText(rows.antenna.cost, isFinite(acost) ? '×' + aq + ' ' + fmt(acost) : '최대');
+      setText(rows.antenna.cost, isFinite(acost) ? '×' + aq + ' ' + IC.supply + fmt(acost) : '최대');
       rows.antenna.btn.disabled = !(acost <= state.supplies); afford(rows.antenna.cost, acost);
     }
     if (tab === 'z5' && open) {
@@ -4145,14 +4190,14 @@
       setText($('guard-note'), !(state.posts > 0) ? '' : (state.handKills || 0) < 3 ? '건너오는 것을 눌러 쏘아요. 연달아 잡으면 더 받아요' : (state.breaches || 0) < 1 && (state.handKills || 0) < 40 ? '닿으면 방벽이 깎여요. 다 깎이면 뚫려요' : (br.streak || 0) > 0 && (state.wavesHeld || 0) < 4 ? '무리 습격을 막으면 단계가 올라요. 더 많이 오고 더 받아요' : '다리 안전도 ×' + C.bridgeSafety(state).toFixed(2) + ' · 통행인 ' + C.passerCount(state) + ' / ' + C.PASSERS.length);
       var fl6 = state.firepower || 0, fc6 = C.fireCost(state), ml6 = state.morale || 0, mc6 = C.moraleCost(state);
       setText(rows.fire.count, 'Lv ' + fl6 + ' / ' + C.FIRE_MAX); setText(rows.fire.info, '한 발 ' + (1 + fl6) + (isFinite(fc6) ? ' → ' + (2 + fl6) : ''));
-      setText(rows.fire.cost, isFinite(fc6) ? '×1 ' + fmt(fc6) : '최대'); rows.fire.btn.disabled = !(fc6 <= state.supplies); afford(rows.fire.cost, fc6); rows.fire.btn.classList.toggle('row-max', !isFinite(fc6));
+      setText(rows.fire.cost, isFinite(fc6) ? '×1 ' + IC.supply + fmt(fc6) : '최대'); rows.fire.btn.disabled = !(fc6 <= state.supplies); afford(rows.fire.cost, fc6); rows.fire.btn.classList.toggle('row-max', !isFinite(fc6));
       setText(rows.morale.count, 'Lv ' + ml6 + ' / ' + C.MORALE_MAX); setText(rows.morale.info, '연속 ×' + cap.toFixed(1) + (isFinite(mc6) ? ' → ×' + (cap + 0.5).toFixed(1) : ''));
-      setText(rows.morale.cost, isFinite(mc6) ? '×1 ' + fmt(mc6) : '최대'); rows.morale.btn.disabled = !(mc6 <= state.supplies); afford(rows.morale.cost, mc6); rows.morale.btn.classList.toggle('row-max', !isFinite(mc6));
+      setText(rows.morale.cost, isFinite(mc6) ? '×1 ' + IC.supply + fmt(mc6) : '최대'); rows.morale.btn.disabled = !(mc6 <= state.supplies); afford(rows.morale.cost, mc6); rows.morale.btn.classList.toggle('row-max', !isFinite(mc6));
       var pq = qtyFor(C.maxPosts(state), C.COUNT_MAX - state.posts), pcost = C.postCost(state, pq);
       setText(rows.post.count, state.posts + ' / ' + C.COUNT_MAX);
       setMile(rows.post, state.posts, pq, pcost <= state.supplies);
       setText(rows.post.info, state.posts ? '한 마리 ' + fmt(gRate * C.BRIDGE_SPAWN) : '세우면 다리를 막아요');
-      setText(rows.post.cost, isFinite(pcost) ? '×' + pq + ' ' + fmt(pcost) : '최대');
+      setText(rows.post.cost, isFinite(pcost) ? '×' + pq + ' ' + IC.supply + fmt(pcost) : '최대');
       rows.post.btn.disabled = !(pcost <= state.supplies); afford(rows.post.cost, pcost);
     }
     if (tab === 'z4' && open) {
@@ -4170,7 +4215,7 @@
         var cel = cells[sc], ps = sc === 0 ? null : ward.seats[sc - 1], show = sc === 0 || sc <= nT, txt = '', cls = '';
         if (cel.hidden !== !show) cel.hidden = !show;
         if (!show) continue;
-        if (sc === 0) { txt = '혈청 ' + ward.stock; cls = ward.stock > 0 ? 'has' : 'none'; }
+        if (sc === 0) { txt = IC.serum + ward.stock; cls = ward.stock > 0 ? 'has' : 'none'; }
         else if (!(state.staff > 0) || !(ps.dose >= 0)) { txt = '빈 자리'; cls = 'none'; }
         else if (ps.dose === 0) { txt = ps.m > 0.7 ? '위험' : '기다림'; cls = ps.m > 0.7 ? 'bad' : ''; }
         else if (ps.dose === 1) { var ot = outs[sc - 1]; txt = ot == null ? '멈춤' : '멈춤 ' + Math.max(1, Math.ceil(ot)) + '초'; cls = ot != null && ot <= 2 ? 'stop leave' : 'stop'; }      /* 4.7.3 나갈 때까지 남은 초. 2초 안이면 붉게 깜빡인다 */
@@ -4213,14 +4258,14 @@
       // 줄: 시험관 · 시약 등급
       var rkc = C.rackCost(state), rgc = C.reagentCost(state), rgl = state.reagent || 0;
       setText(rows.rack.count, nT + ' / ' + C.SEAT_MAX); setText(rows.rack.info, isFinite(rkc) ? nT + '개 → ' + (nT + 1) + '개' : nT + '개');
-      setText(rows.rack.cost, isFinite(rkc) ? '×1 ' + fmt(rkc) : '최대'); rows.rack.btn.disabled = !(rkc <= state.supplies); afford(rows.rack.cost, rkc); rows.rack.btn.classList.toggle('row-max', !isFinite(rkc));
+      setText(rows.rack.cost, isFinite(rkc) ? '×1 ' + IC.supply + fmt(rkc) : '최대'); rows.rack.btn.disabled = !(rkc <= state.supplies); afford(rows.rack.cost, rkc); rows.rack.btn.classList.toggle('row-max', !isFinite(rkc));
       setText(rows.reagent.count, 'Lv ' + rgl + ' / ' + C.REAGENT_MAX); setText(rows.reagent.info, '×' + fmt(Math.pow(C.REAGENT_STEP, rgl)) + (isFinite(rgc) ? ' → ×' + fmt(Math.pow(C.REAGENT_STEP, rgl + 1)) : ''));
-      setText(rows.reagent.cost, isFinite(rgc) ? '×1 ' + fmt(rgc) : '최대'); rows.reagent.btn.disabled = !(rgc <= state.supplies); afford(rows.reagent.cost, rgc); rows.reagent.btn.classList.toggle('row-max', !isFinite(rgc));
+      setText(rows.reagent.cost, isFinite(rgc) ? '×1 ' + IC.supply + fmt(rgc) : '최대'); rows.reagent.btn.disabled = !(rgc <= state.supplies); afford(rows.reagent.cost, rgc); rows.reagent.btn.classList.toggle('row-max', !isFinite(rgc));
       var sq = qtyFor(C.maxStaff(state), C.COUNT_MAX - state.staff), scost = C.staffCost(state, sq);
       setText(rows.staff.count, state.staff + ' / ' + C.COUNT_MAX);
       setMile(rows.staff, state.staff, sq, scost <= state.supplies);
       setText(rows.staff.info, '초당 ' + fmt(C.labRate(state)));      // 1.5.9: 연구원은 약품(물자)도 만든다
-      setText(rows.staff.cost, isFinite(scost) ? '×' + sq + ' ' + fmt(scost) : '최대');
+      setText(rows.staff.cost, isFinite(scost) ? '×' + sq + ' ' + IC.supply + fmt(scost) : '최대');
       rows.staff.btn.disabled = !(scost <= state.supplies); afford(rows.staff.cost, scost);
     }
     if (tab === 'wall') {
@@ -4232,7 +4277,7 @@
         var r = rows.defenses[d.id], q = qtyFor(C.maxDefenses(state, d.id), 1e6), cost = C.defenseCost(state, d.id, q);
         setText(r.count, String(state.defenses[d.id]));
         setText(r.info, '하나에 방어력 +' + fmt(d.power * m.defense));
-        setText(r.cost, '×' + q + ' ' + fmt(cost));
+        setText(r.cost, '×' + q + ' ' + IC.supply + fmt(cost));
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
         var adLeft = C.autoDefLeft(state, d.id);
         setText(rows.autoDef[d.id], d.name + ' · ' + (adLeft ? adLeft + '개 더' : '끔'));
@@ -4269,7 +4314,7 @@
       // 숙련 상한: 철수와 특성이 적으면 그 위로는 값이 크게 뛴다
       if (softCap < u.max && lv >= softCap && lv < u.max) infoText = (infoText ? infoText + ' · ' : '') + '숙련 상한 Lv ' + softCap + ' · 넘기면 값이 ' + C.CAP_OVER + '배씩';      // 지금까지 쌓인 효과(1.3.0). 설명 줄은 레벨당 오르는 양이다
       setText(r.info, infoText);
-      setText(r.cost, isFinite(cost) ? fmt(cost) : lv >= u.max ? '최대' : '잠김');
+      setText(r.cost, isFinite(cost) ? IC.supply + fmt(cost) : lv >= u.max ? '최대' : '잠김');
       r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       r.btn.classList.toggle('row-owned', lv >= u.max);
     });
@@ -4399,11 +4444,11 @@
     $('pet-empty').hidden = !!p; $('pet-card').hidden = !p;
     $('hero-input').placeholder = state.heroName;
     document.querySelectorAll('[data-gender]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-gender') === state.heroGender ? 'true' : 'false'); });
-    setText($('pet-kind'), (p ? '친구 ' + have + ' / ' + C.PET_BREEDS.length : '아직 친구가 없어요') + ' · 간식 ' + fmt(state.treats));
+    setText($('pet-kind'), (p ? '친구 ' + have + ' / ' + C.PET_BREEDS.length : '아직 친구가 없어요') + ' · ' + IC.treat + fmt(state.treats));
     ['dog', 'cat'].forEach(function (kind) {
       var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
       setText(b.firstChild, k.name + (have ? ' 데려오기' : ' 맞이하기'));
-      setText(b.lastChild, cost ? '항체 샘플 ' + fmt(cost) : '첫 친구는 그냥 와요');
+      setText(b.lastChild, cost ? IC.antibody + fmt(cost) : '첫 친구는 그냥 와요');
       b.disabled = cost > state.antibodies;
     });
     setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 절반 환불');
@@ -4414,7 +4459,7 @@
     setText($('pet-eff'), '장착 · ' + C.petEffectText(state) + (p.skill ? ' · 특기 ' + p.skill : ''));      // 4.4.6 장착 효과와 특기
     var own = C.petOwnBonus(state), pct = function (v) { return (Math.round(v * 1000) / 10) + '%'; };
     setText($('pet-own'), '보유 효과 · ' + C.PET_KINDS.dog.label + ' +' + pct(own.dog) + ' · ' + C.PET_KINDS.cat.label + ' +' + pct(own.cat) + ' · 만난 친구마다 쌓여요');
-    setText($('pet-feed'), isFinite(feed) ? '간식 주기 · 간식 ' + fmt(feed) : '다 컸어요(최대 레벨)');
+    setText($('pet-feed'), isFinite(feed) ? '간식 주기 · ' + IC.treat + fmt(feed) : '다 컸어요(최대 레벨)');
     $('pet-feed').disabled = !(feed <= state.treats);
     $('pet-input').placeholder = p.name;
     var face = $('pet-face');
@@ -4481,7 +4526,7 @@
       if (t.id === 'auto') { nowT = tInfo; nextT = ''; }
       var stp = traitStep(nowT, nextT), dk = typeof stp === 'string' ? stp : stp.a + '→' + stp.b;
       if (r.desc.getAttribute('data-k') !== dk) { r.desc.setAttribute('data-k', dk); r.desc.textContent = ''; if (typeof stp === 'string') r.desc.textContent = stp || t.desc; else { r.desc.appendChild(document.createTextNode(stp.a + ' ')); r.desc.appendChild(el('i', '', '→ ' + stp.b)); } }
-      setText(r.cost, isFinite(cost) ? fmt(cost) : '최대');
+      setText(r.cost, isFinite(cost) ? IC.antibody + fmt(cost) : '최대');      // 특성 값은 항체 샘플
       r.barI.style.width = Math.round(lv / t.max * 100) + '%';
       r.btn.disabled = !(cost <= state.antibodies);
       var full = lv >= t.max; r.btn.classList.toggle('row-owned', full); if (r.btn.hidden !== full) r.btn.hidden = full;
@@ -4929,7 +4974,7 @@
     $('signal').addEventListener('click', function () {
       var r = C.answerSignal(state);
       if (!r.ok) return; // 누르는 순간 신호가 끊긴 경우
-      toast(r.kind === 'supplies' ? '보급품 · 물자 +' + fmt(r.gain) : r.kind === 'treats' ? '간식 +' + r.treats : '지원 · ' + r.seconds + '초 동안 생산 ' + r.mult + '배');
+      toast(r.kind === 'supplies' ? '보급품 · ' + IC.supply + '+' + fmt(r.gain) : r.kind === 'treats' ? '보급품 · ' + IC.treat + '+' + r.treats : '지원 · ' + r.seconds + '초 동안 생산 ' + r.mult + '배');
       sfx(r.kind === 'treats' ? 'feed' : 'answer'); render();
     });
     $('fortify').addEventListener('click', function () {
@@ -5444,6 +5489,7 @@
     boot.mark('ready');
     setInterval(safeFrame, 100);
     try { renderShop(); } catch (e) { /* 상점은 일행 탭을 열 때 다시 그린다 */ }      // 4.4.8 상점이 일행 탭에 늘 있으니(넓은 화면) 처음에 한 번 그린다
+    icInit();
     window.ZONE7_STARTED = true;      // 안전장치(template.html)에게 무사히 시작했다고 알린다. 게임은 여기서 이미 돌고 있다
     // 아래 셋은 부가 기능이다(1.2.2): 여기서 오류가 나도 게임 시작을 막지 않게 하나씩 감싼다
     try { Cloud.init(); } catch (e) { console.warn('cloud', e); }

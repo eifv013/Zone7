@@ -184,7 +184,7 @@ def run_case(browser, name, size, state, mode):
             if page.locator('#attend-veil').is_visible(): problems.append('출석을 받았는데 창이 닫히지 않았다')
         tap('#mnav-exped'); tap('[data-view=exped] [data-grow-set=party]')      # 일행으로 돌아간다(아래 이름 바꾸기 검사)
         if not page.locator('#pet-card').is_visible() or '친구 1 /' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))
-        if '항체 샘플' not in text('adopt-dog'): problems.append('다시 데려오기 값이 보이지 않는다: ' + text('adopt-dog'))
+        if not page.query_selector('#adopt-dog .ic-antibody'): problems.append('다시 데려오기 값이 보이지 않는다: ' + text('adopt-dog'))
         page.fill('#hero-input', '김씨'); page.click('#hero-rename'); page.wait_for_timeout(150)
         if page.get_attribute('#hero-input', 'placeholder') != '김씨': problems.append('주인공 이름이 바뀌지 않았다')
         page.fill('#pet-input', '나비'); page.click('#pet-rename'); page.wait_for_timeout(150)
@@ -345,7 +345,7 @@ def run_case(browser, name, size, state, mode):
         # 4.2.0 정착지 지도: 그림이 있고, 아홉 채가 서 있고(옛 저장의 '짓는 중'도 선 것으로 옮긴다), 송신탑을 누르면 주파수를 맞춘다
         if not page.locator('#campscene').is_visible(): problems.append('정착지 지도가 없다')
         if int(page.get_attribute('#campscene', 'data-levels') or 0) < 9: problems.append('정착지 아홉 채가 다 서지 않았다: %s' % page.get_attribute('#campscene', 'data-levels'))
-        if '생존자' not in text('camp-s0') or '습격까지' not in text('camp-s1'): problems.append('띠에 생존자와 습격까지가 없다: %s | %s' % (text('camp-s0'), text('camp-s1')))
+        if not page.query_selector('#camp-s0 .ic-people') or '습격까지' not in text('camp-s1'): problems.append('띠에 생존자와 습격까지가 없다: %s | %s' % (text('camp-s0'), text('camp-s1')))
         if page.evaluate("(() => { const c = document.getElementById('campscene'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size; })()") < 30: problems.append('정착지 지도가 비어 있다')
         if page.locator('#settle-grid').count() or page.locator('#tower-people').count(): problems.append('없앤 정착지 표나 옛 머리줄이 남아 있다')
         page.locator('#campscene').scroll_into_view_if_needed(); page.wait_for_timeout(150); clear()
