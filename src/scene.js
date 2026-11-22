@@ -1716,6 +1716,39 @@
     });
   }
 
+  /*
+   * 5.0.5 간식 던지기: 간식 주기를 누르면 라라 손에서 친구에게 간식이 포물선으로 날아가고(0.55초), 받은 친구가 폴짝 뛰며 하트가 오른다(1.2초).
+   *   강아지는 뼈 간식, 고양이는 생선 간식. ui 가 Scene.tossTreat() 를 부른다. 그림만이라 게임 값에는 손대지 않는다.
+   */
+  var FEED = { at: -1 }, FEED_FLY = 0.55, FEED_AFTER = 1.2;
+  function nowSec() { return (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()) / 1000; }
+  function tossTreat() { FEED.at = nowSec(); }
+  /** 지금 간식 던지기 장면의 단계: { fly: 0~1 } 날아가는 중, { land: 초 } 받은 뒤. 끝났으면 null. */
+  function feedPhase() {
+    if (FEED.at < 0) return null;
+    var e = nowSec() - FEED.at;
+    if (e < 0 || e > FEED_FLY + FEED_AFTER) { FEED.at = -1; return null; }
+    return e < FEED_FLY ? { fly: e / FEED_FLY } : { land: e - FEED_FLY };
+  }
+  function drawFeed(ctx, fe, x0, y0, x1, y1, cat) {
+    function treat(x, y) {
+      x = Math.round(x); y = Math.round(y);
+      if (cat) { ctx.fillStyle = '#8fb8d8'; ctx.fillRect(x - 2, y, 4, 2); ctx.fillRect(x + 2, y - 1, 1, 1); ctx.fillRect(x + 2, y + 2, 1, 1); ctx.fillStyle = '#17180f'; ctx.fillRect(x - 1, y, 1, 1); }      // 생선
+      else { ctx.fillStyle = '#f1efe6'; ctx.fillRect(x - 2, y, 5, 1); ctx.fillRect(x - 3, y - 1, 1, 3); ctx.fillRect(x + 3, y - 1, 1, 3); }      // 뼈
+    }
+    if (fe.fly != null) {
+      var k = fe.fly, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k - Math.sin(k * Math.PI) * 14;      // 포물선
+      treat(x, y);
+      if (k > 0.1) { ctx.fillStyle = 'rgba(255,255,255,.5)'; var kb = k - 0.1; ctx.fillRect(Math.round(x0 + (x1 - x0) * kb), Math.round(y0 + (y1 - y0) * kb - Math.sin(kb * Math.PI) * 14), 1, 1); }      // 꼬리 빛
+      return;
+    }
+    var a = fe.land / FEED_AFTER, hy = Math.round(y1 - 6 - a * 10);
+    if (a < 0.8) {      // 하트가 오른다
+      ctx.fillStyle = '#ff6b8a';
+      ctx.fillRect(x1 - 2, hy, 2, 1); ctx.fillRect(x1 + 1, hy, 2, 1); ctx.fillRect(x1 - 2, hy + 1, 5, 1); ctx.fillRect(x1 - 1, hy + 2, 3, 1); ctx.fillRect(x1, hy + 3, 1, 1);
+    }
+    if (a < 0.25) { ctx.fillStyle = '#fff4b0'; ctx.fillRect(x1 - 5, y1 - 2, 1, 1); ctx.fillRect(x1 + 5, y1 - 3, 1, 1); ctx.fillRect(x1 + 3, y1 - 6, 1, 1); }      // 반짝
+  }
   /** 주인공이 산 수색 장비: 배낭은 등에, 수색견은 뒤를 따르고, 정찰 드론은 머리 위를 맴돈다. */
   function drawHeroKit(ctx, model, view, hx) {
     var u = view.upgrades || {}, h = model.hero, t = model.time, back = h.face < 0 ? 6 : 0;
@@ -1727,7 +1760,10 @@
       var f = h.face > 0 ? 1 : -1, moving = h.state === 'out' || h.state === 'back', step = Math.floor(t * 8) % 2;
       var pw = PET_W;
       var as = function (p, st) { var o = {}; for (var k in p) o[k] = p[k]; o.walk = moving; o.step = st; return o; };
-      paintPet(ctx, f > 0 ? Math.round(h.x) - 10 - pw : Math.round(h.x) + 10, GROUND - PET_H, 1, f > 0, as(pet, step), (view.look && view.look.pet) || 'none', t);
+      var petX = f > 0 ? Math.round(h.x) - 10 - pw : Math.round(h.x) + 10, fe = feedPhase();      // 5.0.5 간식을 받으면 폴짝 뛴다
+      var hop = fe && fe.land ? Math.round(Math.sin(Math.min(1, fe.land / 0.35) * Math.PI) * 3) : 0;
+      paintPet(ctx, petX, GROUND - PET_H - hop, 1, f > 0, as(pet, step), (view.look && view.look.pet) || 'none', t);
+      if (fe) drawFeed(ctx, fe, Math.round(h.x) + 7, GROUND - 12, petX + Math.round(pw / 2), GROUND - PET_H + 3, pet.kind === 'cat');
       // 4.4.6 함께 장착한 다른 친구는 라라 앞에서 걷는다(옷은 데리고 다니는 아이만 입는다). 발은 반 박자 어긋나게
       // 4.6.2 밤에 거점에 서 있을 때는 라라 앞이 모닥불 자리라 불 위에 앉아 보였다. 그때는 둘 다 라라 뒤에 앉는다(다른 친구는 한 걸음 더 뒤)
       var night2 = false; try { night2 = !moving && skyAt(view.t).dark > 0.35; } catch (e) { night2 = false; }
@@ -1991,6 +2027,6 @@
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, colorNear: colorNear, skyAt: skyAt, dangerTier: dangerTier, dangerSky: dangerSky, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            paintPet: paintPet, petRows: petRows, PET_H: PET_H, PET_W: PET_W, paintPetBig: paintPetBig, PET_SPEC: PET_SPEC,
-           drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, HI: HI, hiBlit: hiBlit, paintLara: paintLara, SHADE: SHADE, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
+           drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, tossTreat: tossTreat, HI: HI, hiBlit: hiBlit, paintLara: paintLara, SHADE: SHADE, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });

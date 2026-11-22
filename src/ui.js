@@ -5681,7 +5681,8 @@
       bar.addEventListener('input', function () { apply(bar.value, true); });
       bar.addEventListener('change', function () { sfx('buy'); });
     })();
-    $('pet-feed').addEventListener('click', function () { var r = C.feedPet(state); if (r.ok) { sfx('feed'); toast('Lv ' + r.level + ' · ' + C.petEffectText(state)); Store.save(); render(); } });
+    $('pet-feed').addEventListener('click', function () { var r = C.feedPet(state); if (r.ok) { sfx('feed'); try { if (window.Scene && window.Scene.tossTreat) window.Scene.tossTreat(); } catch (e) { /* 장면은 없어도 된다 */ }      // 5.0.5 간식 던지는 장면
+      toast('Lv ' + r.level + ' · ' + C.petEffectText(state)); Store.save(); render(); } });
     // 주인공의 성별: 고르면 일지의 호칭이 바뀐다(설정 안 함이면 중립)
     document.querySelectorAll('[data-ex-set]').forEach(function (b) { b.addEventListener('click', function () { exTab = b.getAttribute('data-ex-set'); sfx('click'); renderExTab(); }); });
     document.querySelectorAll('[data-gender]').forEach(function (b) {
