@@ -113,6 +113,14 @@
    * 등급: 데려올 때 weight 의 비율로 정해진다(100 가운데). 등급이 높을수록 효과가 크다.
    *   dog·cat 은 그 등급의 강아지·고양이가 올려 주는 비율(0.1 = +10%).
    */
+  /** 같은 값끼리는 원래 순서를 지키는 정렬(제자리). 오래된 브라우저의 sort 는 안정 정렬이 아닐 수 있어 순번으로 묶는다. */
+  function sortStable(arr, cmp) {
+    var tagged = arr.map(function (v, i) { return { v: v, i: i }; });
+    tagged.sort(function (x, y) { return cmp(x.v, y.v) || x.i - y.i; });
+    for (var k = 0; k < tagged.length; k++) arr[k] = tagged[k].v;
+    return arr;
+  }
+  function petRarityRank(r) { var n = ['common', 'fine', 'rare'].indexOf(r); return n < 0 ? 9 : n; }
   var PET_RARITIES = [
     { id: 'common', name: '기본', weight: 70, dog: 0.10, cat: 0.05 },
     { id: 'fine',   name: '고급', weight: 24, dog: 0.20, cat: 0.10 },
@@ -120,6 +128,8 @@
   ];
   var PET_PULL_MIN = 2;            // 다시 데려오기에 드는 항체 샘플의 최소값
   var PET_PULL_SHARE = 0.05;       // 다시 데려오기 값: 지금까지 얻은 항체 샘플 총량의 이 비율(판이 커져도 값이 헐해지지 않게)
+  /* 4.9.6 겹치면 별: 처음 만나면 별 1개, 같은 아이가 또 나오면 별 +1(최대 5). 별 하나마다 장착 효과 +25%(5성이면 2배). 5성 뒤에 또 나오면 예전처럼 절반 환불 */
+  var PET_STAR_MAX = 5, PET_STAR_STEP = 0.25;
   var PET_DUP_REFUND = 0.5;        // 이미 함께 있는 아이가 또 나왔을 때 돌려받는 비율
   var PET_BREEDS = [
     // 4.4.6: 강아지 24 · 고양이 24(등급마다 여덟). 4.4.4 의 36종에 12종을 더했다. 그림은 scene.js 의 PET_SPEC(품종 id)로 그린다. body · patch 는 작은 표시(얼굴 칸 등)에 쓰는 대표 색이다
@@ -185,6 +195,12 @@
     { id: 'snowbengal', kind: 'cat', rarity: 'rare', name: '스노우 벵갈', body: '#f4f0e6', patch: '#a89070' },
     { id: 'birman', kind: 'cat', rarity: 'rare', name: '버만', body: '#f0e6d0', patch: '#5a4030' }
   ];
+  /*
+   * 4.9.6 등급 순서로 정리한다(종류 → 등급, 같은 등급은 적은 순서 그대로).
+   *   왜: 새 품종을 표 끝에 붙이면 친구 목록 · 도감이 등급 뒤죽박죽이 됐다. 추가할 때 손으로 맞추지 않아도 늘 정리되게 여기서 줄 세운다.
+   *   시험이 이 순서를 지킨다(새로 넣어도 순서가 깨지면 시험이 실패한다).
+   */
+  sortStable(PET_BREEDS, function (a, b) { return (a.kind === b.kind ? 0 : a.kind === 'dog' ? -1 : 1) || petRarityRank(a.rarity) - petRarityRank(b.rarity); });
   /*
    * 4.4.6 친구의 효과는 셋이다.
    *   장착 효과: 강아지 칸 하나 · 고양이 칸 하나(party). 장착한 아이는 종류 효과(강아지 방어력 · 고양이 전체 생산, 등급 × 레벨)와 특기를 준다.
@@ -720,6 +736,8 @@
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
       treats: 0,             // 간식: 친구를 키우는 재화(철수해도 남는다)
       petLv: {},             // 친구마다의 레벨 { 품종: 레벨 }
+      daily: null,           // 4.9.6 오늘의 임무 { day, n:{키:횟수}, got:{키:true}, all, drip, play }
+      petStar: {},           // 4.9.6 친구마다의 별 { 품종: 2~5 } (없으면 1성)
       party: { dog: null, cat: null },   // 4.4.6 장착한 친구(강아지 칸 · 고양이 칸의 품종 id). pet 은 그 가운데 라라 곁을 걷고 간식을 받는 아이
       kennel: {},            // 함께 있는 친구들 { 품종: 이름 }. 한 번 데려온 아이는 계속 남고, 누구를 데리고 다닐지 고른다
       heroName: HERO_DEFAULT,
@@ -837,6 +855,10 @@
     PET_BREEDS.forEach(function (b) { var n = clamp(safeCount(rl[b.id]), 0, PET_LEVEL_MAX); if (n > 0) s.petLv[b.id] = n; });
     var rk = raw.kennel && typeof raw.kennel === 'object' && !Array.isArray(raw.kennel) ? raw.kennel : {};
     PET_BREEDS.forEach(function (b) { if (Object.prototype.hasOwnProperty.call(rk, b.id)) s.kennel[b.id] = cleanName(rk[b.id], b.name); });
+    s.daily = cleanDaily(raw.daily);      // 4.9.6 오늘의 임무
+    s.petStar = {};      // 4.9.6 함께 있는 아이만, 2~5 사이만 남긴다
+    var rs = raw.petStar && typeof raw.petStar === 'object' && !Array.isArray(raw.petStar) ? raw.petStar : {};
+    PET_BREEDS.forEach(function (b) { var n = clamp(Math.floor(safeCount(rs[b.id])), 0, PET_STAR_MAX); if (n >= 2 && s.kennel[b.id]) s.petStar[b.id] = n; });
     if (s.kennel.golden === '금냥이') s.kennel.golden = '브리티시 숏헤어';      // 4.4.4: 금냥이가 브리티시 숏헤어가 됐다(기본 이름 그대로였던 아이만 바꾼다)
     s.pet = null;
     if (raw.pet && typeof raw.pet === 'object') {
@@ -1610,7 +1632,7 @@
   function buyBuilding(state, id, qty) {
     qty = Math.floor(qty);
     if (!findById(BUILDINGS, id) || !(qty >= 1)) return fail('unknown');
-    return pay(state, buildingCost(state, id, qty), function () { state.buildings[id] += qty; });
+    return pay(state, buildingCost(state, id, qty), function () { state.buildings[id] += qty; dailyBump(state, 'build', qty); });
   }
   /** 시설 한 종류의 초당 생산(배수 포함). */
   function buildingRate(state, id) {
@@ -1764,7 +1786,7 @@
     state.goods -= state.order.need;
     earn(state, gain);
     state.tradeEarned += gain;
-    state.treats = Math.min(1e9, state.treats + ORDER_TREATS);
+    state.treats = Math.min(1e9, state.treats + ORDER_TREATS); dailyBump(state, 'job');
     state.regulars[state.order.who] = Math.min(1e9, (state.regulars[state.order.who] || 0) + 1);
     state.ordersRun = (state.ordersRun || 0) + 1;
     state.order = null;
@@ -2068,7 +2090,7 @@
     for (var i = b.length - 1, left = c.need; i >= 0 && left > 0; i--) if (b[i] === c.level) { b[i] = 0; left--; }
     earn(state, gain);
     state.lineEarned += gain;
-    state.treats = Math.min(1e9, state.treats + CONTRACT_TREATS);
+    state.treats = Math.min(1e9, state.treats + CONTRACT_TREATS); dailyBump(state, 'job');
     state.clients[c.who] = Math.min(1e9, (state.clients[c.who] || 0) + 1);
     state.contractsRun = (state.contractsRun || 0) + 1;
     state.contract = null;
@@ -2233,7 +2255,7 @@
     var who = findById(CARGOS, state.salvage.who), gain = salvageReward(state), first = !(state.cargos[state.salvage.who] > 0);
     earn(state, gain);
     state.railEarned += gain;
-    state.treats = Math.min(1e9, state.treats + SALVAGE_TREATS);
+    state.treats = Math.min(1e9, state.treats + SALVAGE_TREATS); dailyBump(state, 'job');
     state.cargos[state.salvage.who] = Math.min(1e9, (state.cargos[state.salvage.who] || 0) + 1);
     state.salvagesRun = (state.salvagesRun || 0) + 1;
     state.salvage = null;
@@ -2812,11 +2834,82 @@
     var rarity = rollRarity(rng());
     var pool = PET_BREEDS.filter(function (b) { return b.kind === kind && b.rarity === rarity.id; });
     var breed = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(safeNum(rng(), 0) * pool.length)))];
-    var dup = !!state.kennel[breed.id], refund = dup ? Math.floor(cost * PET_DUP_REFUND) : 0;
+    var dup = !!state.kennel[breed.id], star = petStar(state, breed.id), starUp = dup && star < PET_STAR_MAX;
+    var refund = dup && !starUp ? Math.floor(cost * PET_DUP_REFUND) : 0;      // 4.9.6 별을 올릴 수 있으면 환불 대신 별
     state.antibodies -= cost - refund;
+    if (starUp) { if (!state.petStar || typeof state.petStar !== 'object') state.petStar = {}; state.petStar[breed.id] = star + 1; }
     if (!dup) { state.kennel[breed.id] = breed.name; state.pet = { kind: kind, breed: breed.id, name: breed.name }; partyOf(state)[kind] = breed.id; syncPetWear(state); }      // 새 아이는 바로 그 종류 칸에 장착한다
-    return { ok: true, breed: breed, rarity: rarity, dup: dup, cost: cost, refund: refund };
+    return { ok: true, breed: breed, rarity: rarity, dup: dup, cost: cost, refund: refund, starUp: starUp, star: petStar(state, breed.id) };
   }
+  /** 4.9.6 친구의 별(1~5). 함께 있지 않으면 0. */
+  /*
+   * 4.9.6 오늘의 임무 + 꾸준한 간식.
+   *   왜: 간식이 출석 · 원정 별 · 수첩에 몰려 있어서, 평소에 하는 일로는 거의 모이지 않았다(뽑기를 꾸준히 못 한다).
+   *   임무: 날마다 DAILY_POOL 에서 세 개(날짜로 정해져 누구나 같은 날 같은 임무). 하나마다 간식 DAILY_TREATS, 셋 다 하면 뽑기권 1장 더.
+   *   꾸준한 간식: 게임을 켜 두고 노는 동안 DRIP_SECONDS 마다 간식 1개, 하루 DRIP_MAX 개까지(꺼 둔 시간은 세지 않는다).
+   *   횟수는 하루가 바뀌면(dailySync) 비운다. 날짜는 기기 날짜(출석과 같은 규칙: 거꾸로 돌리면 새로 주지 않는다).
+   */
+  var DAILY_POOL = [
+    { key: 'night', need: 5, text: '밤 5번 막기' },
+    { key: 'build', need: 20, text: '시설 20번 짓기' },
+    { key: 'job', need: 3, text: '주문 · 계약 · 인양 3번 받기', can: function (st) { return zoneOpen(st, 1); } },      // 단골 주문은 2구역부터
+    { key: 'pull', need: 1, text: '뽑기 기계 1번 돌리기' },
+    { key: 'feed', need: 1, text: '친구에게 간식 1번 주기', can: function (st) { return !!st.pet; } },
+    { key: 'stage', need: 1, text: '원정 1번 다녀오기', can: function (st) { return zoneOpen(st, STAGE_OPEN_ZONE); } },
+    { key: 'play', need: 20, text: '20분 동안 지키기' }
+  ];
+  var DAILY_COUNT = 3, DAILY_TREATS = 10, DAILY_ALL_TICKETS = 1, DRIP_SECONDS = 600, DRIP_MAX = 12;
+  function cleanDaily(raw) {
+    if (!raw || typeof raw !== 'object' || typeof raw.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.day)) return null;
+    var d = { day: raw.day, keys: Array.isArray(raw.keys) ? raw.keys.filter(function (k) { return DAILY_POOL.some(function (m) { return m.key === k; }); }).slice(0, DAILY_COUNT) : [], n: {}, got: {}, all: !!raw.all, drip: clamp(Math.floor(safeCount(raw.drip)), 0, DRIP_MAX), play: clamp(safeNum(raw.play, 0), 0, 86400) };
+    DAILY_POOL.forEach(function (m) { var v = raw.n && raw.n[m.key]; if (typeof v === 'number' && v > 0) d.n[m.key] = Math.min(1e6, Math.floor(v)); if (raw.got && raw.got[m.key] === true) d.got[m.key] = true; });
+    return d;
+  }
+  /** 날짜로 정하는 오늘의 임무 셋. 아직 열리지 않은 일(원정 · 단골 주문 · 친구)은 빼고 고른다. 하루가 시작될 때 한 번 정해 저장한다. */
+  function dailyPicks(day, state) {
+    var h = 0; for (var i = 0; i < day.length; i++) h = (h * 31 + day.charCodeAt(i)) >>> 0;
+    var pool = DAILY_POOL.filter(function (m) { return !state || !m.can || m.can(state); }), out = [];
+    while (out.length < DAILY_COUNT && pool.length) { h = (h * 1103515245 + 12345) >>> 0; out.push(pool.splice(h % pool.length, 1)[0]); }
+    return out;
+  }
+  /** 하루가 바뀌었으면 임무를 새로. 날짜가 거꾸로면 그대로 둔다. */
+  function dailySync(state, today) {
+    if (typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return state.daily;
+    if (!state.daily || today > state.daily.day) state.daily = { day: today, keys: dailyPicks(today, state).map(function (m) { return m.key; }), n: {}, got: {}, all: false, drip: 0, play: 0 };
+    if (!state.daily.keys || !state.daily.keys.length) state.daily.keys = dailyPicks(state.daily.day, state).map(function (m) { return m.key; });
+    return state.daily;
+  }
+  function findKey(k) { for (var i = 0; i < DAILY_POOL.length; i++) if (DAILY_POOL[i].key === k) return DAILY_POOL[i]; return null; }
+  function dailyBump(state, key, n) { if (!state.daily) return; var d = state.daily; d.n[key] = Math.min(1e6, (d.n[key] || 0) + (n > 0 ? Math.floor(n) : 1)); }
+  /** 켜 두고 노는 시간을 센다: 꾸준한 간식과 '지키기' 임무. 돌려주는 값: 이번에 얻은 간식 수. */
+  function dailyPlay(state, dt, today) {
+    var d = dailySync(state, today); if (!d || !(dt > 0)) return 0;
+    dt = Math.min(dt, 5);      // 화면이 멈췄다 돌아와도 한꺼번에 세지 않는다
+    var before = Math.floor(d.play / DRIP_SECONDS); d.play = Math.min(86400, d.play + dt);
+    d.n.play = Math.floor(d.play / 60);
+    var gain = Math.min(DRIP_MAX - d.drip, Math.floor(d.play / DRIP_SECONDS) - before);
+    if (gain > 0) { d.drip += gain; state.treats = Math.min(1e9, (state.treats || 0) + gain); return gain; }
+    return 0;
+  }
+  /** 오늘의 임무 보기: [{ key, text, need, have, done, got }], 모두 했는지 · 보너스 받았는지. */
+  function dailyInfo(state, today) {
+    var d = dailySync(state, today) || { n: {}, got: {}, all: false, drip: 0 };
+    var list = (d.keys || []).map(function (k) { return findKey(k); }).filter(Boolean).map(function (m) { var have = Math.min(m.need, d.n[m.key] || 0); return { key: m.key, text: m.text, need: m.need, have: have, done: have >= m.need, got: !!d.got[m.key] }; });
+    var allDone = list.length > 0 && list.every(function (x) { return x.got; });
+    return { list: list, can: list.some(function (x) { return x.done && !x.got; }) || (allDone && !d.all), allDone: allDone, allGot: d.all, drip: d.drip, dripMax: DRIP_MAX, treats: DAILY_TREATS, tickets: DAILY_ALL_TICKETS };
+  }
+  /** 다 한 임무의 간식을 받는다(셋 다 받으면 뽑기권도). */
+  function dailyClaim(state, today) {
+    var info = dailyInfo(state, today), d = state.daily, t = 0, k = 0;
+    if (!d) return fail('day');
+    info.list.forEach(function (x) { if (x.done && !x.got) { d.got[x.key] = true; t += DAILY_TREATS; } });
+    if (info.list.every(function (x) { return d.got[x.key]; }) && !d.all) { d.all = true; k = DAILY_ALL_TICKETS; }
+    if (!t && !k) return fail('none');
+    state.treats = Math.min(1e9, (state.treats || 0) + t); state.tickets = (state.tickets || 0) + k;
+    return { ok: true, treats: t, tickets: k };
+  }
+  function petStar(state, breedId) { if (!state.kennel || !state.kennel[breedId]) return 0; var n = state.petStar && state.petStar[breedId]; return typeof n === 'number' && n >= 2 ? Math.min(PET_STAR_MAX, Math.floor(n)) : 1; }
+  function petStarMult(state, breedId) { var n = petStar(state, breedId); return n > 1 ? 1 + PET_STAR_STEP * (n - 1) : 1; }
   /** 함께 있는 친구 가운데 누구를 데리고 다닐지 고른다. */
   function choosePet(state, breedId) {
     var breed = findById(PET_BREEDS, breedId);
@@ -2854,7 +2947,7 @@
     if (!isFinite(cost)) return fail('max');
     if (!(state.treats >= cost)) return fail('treats');
     state.treats -= cost;
-    state.petLv[state.pet.breed] = petLevel(state, state.pet.breed) + 1;
+    state.petLv[state.pet.breed] = petLevel(state, state.pet.breed) + 1; dailyBump(state, 'feed');
     return { ok: true, level: state.petLv[state.pet.breed], cost: cost };
   }
   /** 장착 칸 { dog, cat }. 예전 상태(party 가 없음)도 받는다. */
@@ -2867,7 +2960,7 @@
     var breed = findById(PET_BREEDS, breedId), kind = breed && PET_KINDS[breed.kind];
     if (!kind || !state.kennel || !state.kennel[breedId]) return null;
     var rarity = findById(PET_RARITIES, breed.rarity) || PET_RARITIES[0];
-    return { key: kind.key, bonus: rarity[breed.kind] * petLevelMult(state, breed.id) };
+    return { key: kind.key, bonus: rarity[breed.kind] * petLevelMult(state, breed.id) * petStarMult(state, breed.id) };      // 4.9.6 별까지 곱한다
   }
   /** 데리고 다니는 친구의 종류 효과 { key, bonus }. 없으면 null. */
   function petEffect(state) { return state.pet ? equipEffect(state, state.pet.breed) : null; }
@@ -3704,6 +3797,7 @@
       state.siege = false; state.siegeNights = 0;
       var treat = boss ? TREAT_BOSS : (w % TREAT_NIGHT_EVERY === 0 ? TREAT_NIGHT : 0);      // 4.8.4 보통 밤은 TREAT_NIGHT_EVERY 번째 밤마다(간식이 너무 많이 들어왔다)
       state.treats = Math.min(1e9, state.treats + treat);      // 밤을 막으면 간식을 얻는다
+      dailyBump(state, 'night');
       return { type: 'defended', wave: w, strength: strength, defense: defense, reward: reward, boss: boss, treats: treat, passer: passer, edgeFull: edgeFull };
     }
     state.defStreak = 0;      // 못 막았다: 연속 방어가 끊긴다
@@ -4238,6 +4332,12 @@
     { id: 'flag-rainbow', slot: 'flag', name: '무지개 깃발', rarity: 2, reward: true, look: 'rainbow' }     // 네 줄이 천천히 흐른다
   ];
   var COS_SLOTS = ['coat', 'hood', 'pat', 'bag', 'fx', 'pet', 'flag'], COS_BASE = { coat: 'coat-yellow', hood: 'hood-none', pat: 'pat-none', bag: 'bag-cooler', fx: 'fx-none', pet: 'pet-none', flag: 'flag-yellow' };
+  /*
+   * 4.9.6 외형도 등급 순서로 정리한다: 칸 → 기본 → 일반 → 희귀 → 전설 → 보상(한정) 순, 같은 무리는 적은 순서 그대로.
+   *   뽑기 확률표 · 확률 보기 · README 표 · 옷장이 모두 이 순서를 따른다. 시험이 지킨다.
+   */
+  function cosRank(c) { return c.base ? -1 : c.reward ? 9 : c.rarity; }
+  sortStable(COSMETICS, function (a, b) { return COS_SLOTS.indexOf(a.slot) - COS_SLOTS.indexOf(b.slot) || cosRank(a) - cosRank(b); });
   /* 깃발을 주는 조건(확정 보상): 도전 훈장의 수, 원정 표시의 수, 지역 휘장 */
   var FLAG_REWARDS = [
     { id: 'flag-red',   text: '도전 훈장 1개', has: function (s) { return medalCount(s) >= 1; } },
@@ -4292,7 +4392,7 @@
     var dup = ownsCosmetic(state, pick.id), shards = 0;
     if (dup) { shards = SHARDS_DUP[pick.rarity]; state.shards = Math.min(1e9, (state.shards || 0) + shards); }
     else { state.cosmetics[pick.id] = true; cosNewOf(state)[pick.id] = true; }      // 4.7.1 새로 얻은 외형은 NEW(옷장에서 누르면 사라진다)
-    return { ok: true, id: pick.id, name: pick.name, slot: pick.slot, rarity: pick.rarity, dup: dup, shards: shards, pity: forced };
+    dailyBump(state, 'pull'); return { ok: true, id: pick.id, name: pick.name, slot: pick.slot, rarity: pick.rarity, dup: dup, shards: shards, pity: forced };
   }
   /*
    * 4.9.3 하루 무료 1회 뽑기(기기의 날짜로 하루 한 번). 보장 횟수도 보통 뽑기처럼 센다.
@@ -4521,6 +4621,7 @@
    * 돌려주는 값: { ok, won, got: ['clear'|'speed'|'hard'…] 새로 얻은 표시, treats, badge(보스를 처음 잡았는가) }
    */
   function finishStage(main, stage, rng) {
+    dailyBump(main, 'stage');      // 4.9.6 원정은 이기든 지든 한 번
     var stt = stageStatus(stage);
     if (!stt) return fail('none');
     // 다녀왔으면(이기든 지든 포기하든) 다음 목표를 다른 것으로 바꾼다. 다만 한 발짝도 못 가고 바로 돌아온 포기는 바꾸지 않는다(마음에 드는 목표가 나올 때까지 들락거리지 못하게)
@@ -5309,7 +5410,7 @@
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
-    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND,
+    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect,
     cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, petOwnBonus: petOwnBonus, petSkillText: petSkillText, partyOf: partyOf, PET_SKILLS: PET_SKILLS, PET_OWN: PET_OWN, breedDesc: breedDesc, petInfo: petInfo,
     MOM_CHAPTER: MOM_CHAPTER, MOM_PAGES: MOM_PAGES, momRead: momRead, afterEnding: afterEnding,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,

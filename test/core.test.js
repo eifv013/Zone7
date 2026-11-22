@@ -1120,12 +1120,18 @@ test('동물 친구: 다시 데려오기는 항체 샘플이 들고, 판이 커�
   assert.equal(C.petPullCost(s), Math.ceil(1000 * C.PET_PULL_SHARE));
 });
 
-test('동물 친구: 이미 함께 있는 아이가 또 나오면 값의 일부를 돌려받는다', () => {
-  const s = fresh(); s.antibodyTotal = 400; s.antibodies = 100;
+test('동물 친구: 이미 함께 있는 아이가 또 나오면 별이 오르고(4.9.6), 5성 뒤에는 값의 일부를 돌려받는다', () => {
+  const s = fresh(); s.antibodyTotal = 400; s.antibodies = 1e6;
   C.adoptPet(s, 'dog', () => 0);
-  const active = s.pet.breed, cost = C.petPullCost(s), before = s.antibodies;
   C.renamePet(s, '초코');
+  const id = s.pet.breed, e1 = C.equipEffect(s, id).bonus;
+  assert.equal(C.petStar(s, id), 1, '처음엔 1성');
+  for (let k = 2; k <= C.PET_STAR_MAX; k++) { const u = C.adoptPet(s, 'dog', () => 0); assert.equal(u.starUp, true); assert.equal(u.refund, 0, '별이 오를 때는 환불 없다'); assert.equal(C.petStar(s, id), k); }
+  assert.ok(Math.abs(C.equipEffect(s, id).bonus - e1 * (1 + C.PET_STAR_STEP * 4)) < 1e-9, '5성은 장착 효과 2배');
+  assert.equal(C.deserialize(C.serialize(s)).petStar[id], 5, '저장해도 남는다');
+  const active = s.pet.breed, cost = C.petPullCost(s), before = s.antibodies;
   const r = C.adoptPet(s, 'dog', () => 0);
+  assert.equal(r.starUp, false); assert.equal(C.petStar(s, id), 5, '5성이 끝');
   assert.equal(r.dup, true);
   assert.equal(r.refund, Math.floor(cost * C.PET_DUP_REFUND));
   assert.equal(s.antibodies, before - cost + r.refund);
@@ -3687,4 +3693,45 @@ test('4.9.5: 강아지와 고양이는 친구 옷을 따로 입고, 데리고 �
   // 예전 저장(petWear 없음): 입던 옷은 데리고 다니던 아이 종류가 입는다
   var raw = JSON.parse(C.serialize(s)); delete raw.petWear; raw.wear.pet = 'pet-bell';
   var old = C.deserialize(JSON.stringify(raw)); assert.strictEqual(old.petWear.dog, 'pet-bell'); assert.strictEqual(old.petWear.cat, 'pet-none');
+});
+
+test('4.9.6: 외형과 친구 품종은 늘 등급 순서로 정리돼 있다(새로 넣어도 손으로 맞출 필요 없게)', function () {
+  C.COS_SLOTS.forEach(function (slot) {
+    var r = C.COSMETICS.filter(function (c) { return c.slot === slot; }).map(function (c) { return c.base ? -1 : c.reward ? 9 : c.rarity; });
+    for (var i = 1; i < r.length; i++) assert.ok(r[i - 1] <= r[i], slot + ' 칸의 순서가 등급대로가 아니다: ' + r.join(''));
+  });
+  var slots = C.COSMETICS.map(function (c) { return C.COS_SLOTS.indexOf(c.slot); });
+  for (var j = 1; j < slots.length; j++) assert.ok(slots[j - 1] <= slots[j], '칸끼리 섞여 있다');
+  var rank = { common: 0, fine: 1, rare: 2 };
+  ['dog', 'cat'].forEach(function (k) {
+    var r = C.PET_BREEDS.filter(function (b) { return b.kind === k; }).map(function (b) { return rank[b.rarity]; });
+    for (var i = 1; i < r.length; i++) assert.ok(r[i - 1] <= r[i], k + ' 품종이 등급대로가 아니다');
+  });
+  var t = C.gachaTable(), sl = t.map(function (x) { return C.COS_SLOTS.indexOf(C.COSMETICS.filter(function (c) { return c.name === x.name; })[0].slot) * 10 + x.rarity; });
+  for (var q = 1; q < sl.length; q++) assert.ok(sl[q - 1] <= sl[q], '뽑기 확률표가 칸 · 등급 순서가 아니다');
+});
+
+test('4.9.6: 오늘의 임무 — 날짜로 정해진 셋, 하면 간식, 셋 다 하면 뽑기권, 하루가 바뀌면 새로', function () {
+  var s = C.createState(0), day = '2026-11-23';
+  var info = C.dailyInfo(s, day);
+  assert.strictEqual(info.list.length, 3);
+  assert.deepStrictEqual(C.dailyPicks(day, s).map(function (m) { return m.key; }), info.list.map(function (x) { return x.key; }), '같은 날은 같은 임무');
+  assert.ok(info.list.every(function (x) { return ['job', 'feed', 'stage'].indexOf(x.key) < 0; }), '처음 시작한 사람에게는 아직 못 하는 임무가 나오지 않는다');
+  assert.strictEqual(C.dailyClaim(s, day).ok, false, '한 게 없으면 못 받는다');
+  info.list.forEach(function (x) { s.daily.n[x.key] = x.need; });
+  var t0 = s.treats, k0 = s.tickets, r = C.dailyClaim(s, day);
+  assert.ok(r.ok); assert.strictEqual(s.treats - t0, 3 * C.DAILY_TREATS); assert.strictEqual(s.tickets - k0, 1);
+  assert.strictEqual(C.dailyClaim(s, day).ok, false, '두 번은 못 받는다');
+  var back = C.deserialize(C.serialize(s)); assert.strictEqual(C.dailyInfo(back, day).allGot, true, '저장해도 남는다');
+  C.dailySync(s, '2026-11-22'); assert.strictEqual(s.daily.day, day, '날짜를 거꾸로 돌려도 새로 주지 않는다');
+  C.dailySync(s, '2026-11-24'); assert.strictEqual(s.daily.day, '2026-11-24'); assert.deepStrictEqual(s.daily.got, {}, '다음 날은 새로');
+});
+
+test('4.9.6: 켜 두고 노는 동안 10분마다 간식 1개, 하루 최대치까지. 임무 횟수는 실제 행동에서 오른다', function () {
+  var s = C.createState(0), day = '2026-11-23', got = 0;
+  for (var i = 0; i < 3600 * 3; i++) got += C.dailyPlay(s, 1, day);      // 3시간
+  assert.strictEqual(got, C.DRIP_MAX, '하루 최대치');
+  assert.strictEqual(C.dailyPlay(s, 1e9, day), 0, '큰 dt 도 한꺼번에 세지 않는다');
+  var n = C.createState(0); C.dailySync(n, day); n.supplies = 1e12;
+  assert.ok(C.buyBuilding(n, C.BUILDINGS[0].id, 3).ok); assert.strictEqual(n.daily.n.build, 3);
 });

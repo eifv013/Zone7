@@ -208,6 +208,8 @@
    *   따라다니면 그림을 가리므로 도트 화면의 왼쪽 아래 구석에 고정해 둔다: '주인공 · 동물 친구'. 밤 싸움 중이거나 설정에서 끄면 숨긴다.
    *   자리는 도트 화면 모델의 주인공 위치(hero.x)를 화면 너비에 대한 비율로 옮긴 것이다.
    */
+  /** 4.9.6 별 글: ★★★☆☆ */
+  function starText(n) { var o = ''; for (var i = 1; i <= C.PET_STAR_MAX; i++) o += i <= n ? '★' : '☆'; return o; }
   function renderNames() {
     var tag = $('tag-hero');
     if (!tag) return;
@@ -1887,6 +1889,24 @@
   /** 4.7.1 오늘 자정(기기 시각)까지 남은 시간 '3시간 12분'. */
   function untilMidnight() { var n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1), s = Math.max(0, Math.floor((m - n) / 1000)), h = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60); return (h ? h + '시간 ' : '') + mm + '분'; }
   function attendText(w) { var a = []; if (w.tickets) a.push(IC.ticket + w.tickets); if (w.treats) a.push(IC.treat + w.treats); return a.join(' · '); }
+  /** 4.9.6 오늘의 임무 목록(출석 창 아래). 창이 닫혀 있으면 단추 점만 갱신된다. */
+  function renderDaily(di) {
+    var box = $('daily-list'); if (!box || $('attend-veil').hidden) return;
+    var key = JSON.stringify(di.list) + di.allGot;
+    if (box.getAttribute('data-key') !== key) {
+      box.setAttribute('data-key', key);
+      while (box.firstChild) box.removeChild(box.firstChild);
+      di.list.forEach(function (x) {
+        var li = el('li', x.got ? 'got' : x.done ? 'done' : '');
+        li.appendChild(el('span', '', x.text)); li.appendChild(el('b', '', x.got ? '받음' : x.have + ' / ' + x.need));
+        var bar = el('span', 'bar'), fill = el('i', ''); fill.style.width = Math.round(x.have / x.need * 100) + '%'; bar.appendChild(fill); li.appendChild(bar);
+        box.appendChild(li);
+      });
+    }
+    setText($('daily-drip'), '하나마다 ' + IC.treat + di.treats + ' · 셋 다 하면 ' + IC.ticket + di.tickets + ' · 켜 두면 10분마다 ' + IC.treat + '1 (오늘 ' + di.drip + ' / ' + di.dripMax + ')');
+    $('daily-claim').disabled = !di.can;
+    setText($('daily-claim'), di.can ? '임무 보상 받기' : di.allGot ? '오늘 임무 끝 · 다음까지 ' + untilMidnight() : '임무를 하면 받을 수 있어요');
+  }
   /** 4.7.0 출석 칸: 일곱 날, 받은 날은 흐리게 ✓, 오늘 받을 날은 노란 테두리. */
   function renderAttend() {
     var box = $('attend-days'); if (!box) return;
@@ -1904,7 +1924,9 @@
     $('attend-claim').disabled = !info.can;
     setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '다음 출석까지 ' + untilMidnight());
     var aad = $('attend-ad'); if (aad) { var ast2 = C.adState(state, 'attend', todayStr()); aad.hidden = !ast2.can; setText(aad, (state.noAds ? '' : '광고 보고 ') + '한 번 더 받기'); }      // 4.8.5
-    var ao = $('attend-open'); if (ao) { ao.textContent = info.can ? '출석 체크' : '출석 ' + untilMidnight(); ao.classList.toggle('can', info.can); }      // 4.8.8 단추 셋이 한 줄이라 짧게. 받을 수 있으면 노란 점
+    var di = C.dailyInfo(mainState(), todayStr());
+    var ao = $('attend-open'); if (ao) { ao.textContent = info.can ? '출석 체크' : di.can ? '오늘 임무' : '출석 ' + untilMidnight(); ao.classList.toggle('can', info.can || di.can); }      // 4.9.6 임무 보상이 있어도 빨간 점
+    renderDaily(di);      // 4.8.8 단추 셋이 한 줄이라 짧게. 받을 수 있으면 노란 점
     setText($('attend-sub'), (info.day + 1) + '일째');
   }
   /*
@@ -2688,8 +2710,8 @@
         art.style.background = (got ? petIcon(b) : petShadow(b.kind)) + ' center / contain no-repeat';      // 4.4.6: 만난 친구는 품종 그림, 못 만난 친구는 종류마다 같은 그림자(품종이 드러나지 않는다)
         if (!got) { card(art, '???', rname + ' 등급', '데려오기에서 만날 수 있어요.', true, 'r-' + b.rarity); return; }
         var lv = C.petLevel(state, b.id), with_ = C.partyOf(state)[b.kind] === b.id;
-        var bonus = Math.round((rar ? rar[b.kind] : 0) * (1 + C.PET_LEVEL_STEP * lv) * 100);
-        card(art, state.kennel[b.id] + (with_ ? ' ★' : ''), rname + ' · ' + b.name + ' · Lv ' + lv + ' / ' + C.PET_LEVEL_MAX, '장착 ' + kind.label + ' +' + bonus + '% · 특기 ' + C.petSkillText(b.id), false, 'r-' + b.rarity);
+        var ee = C.equipEffect(state, b.id), bonus = Math.round((ee ? ee.bonus : 0) * 100);      // 4.9.6 레벨 · 별까지 반영한 값(식을 한 곳에서만)
+        card(art, state.kennel[b.id] + (with_ ? ' · 함께' : ''), starText(C.petStar(state, b.id)) + ' · ' + rname + ' · ' + b.name + ' · Lv ' + lv + ' / ' + C.PET_LEVEL_MAX, '장착 ' + kind.label + ' +' + bonus + '% · 특기 ' + C.petSkillText(b.id), false, 'r-' + b.rarity);
       });
     } else if (dexTab === 'zombie') {
       C.ZOMBIE_KINDS.forEach(function (z) {
@@ -4594,8 +4616,8 @@
     for (var i = 0; i < 9; i++) bf.hearts.push({ x: 66 + (i % 3) * 4 - 4, y: 40, vx: (i - 4) * 5, vy: -18 - (i % 3) * 6 });
     try { if (!(window.Sound && window.Sound.sample && window.Sound.sample(r.breed.kind === 'cat' ? 'cat' : 'dog'))) sfx('gopen' + ({ common: 0, fine: 1, rare: 2 }[r.rarity.id] || 0)); } catch (e) { /* 소리는 없어도 된다 */ }      // 4.5.6 고양이 · 강아지가 나타날 때 녹음한 울음소리(없으면 뽑기 소리)
     if (r.rarity.id === 'rare') buzz([30, 40, 30]);
-    setText($('bf-msg'), r.dup ? r.breed.name + (C.hasBatchim(r.breed.name) ? '은' : '는') + ' 이미 친구예요' : r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 친구가 됐어요!');
-    setText($('bf-sub'), r.rarity.name + ' · ' + kind.name + '\n' + (r.dup ? '항체 샘플 ' + fmt(r.refund) + ' 돌려받았어요' : '장착 ' + C.breedDesc(r.breed).split(' · ').pop() + (sk ? ' · 특기 ' + sk : '')));
+    setText($('bf-msg'), r.starUp ? r.breed.name + ' 별 ' + r.star + '개로 강화!' : r.dup ? r.breed.name + (C.hasBatchim(r.breed.name) ? '은' : '는') + ' 이미 별 ' + C.PET_STAR_MAX + '개예요' : r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 친구가 됐어요!');
+    setText($('bf-sub'), r.rarity.name + ' · ' + kind.name + '\n' + (r.starUp ? starText(r.star) + ' · 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100 * (r.star - 1)) + '%' : r.dup ? '항체 샘플 ' + fmt(r.refund) + ' 돌려받았어요' : '장착 ' + C.breedDesc(r.breed).split(' · ').pop() + (sk ? ' · 특기 ' + sk : '')));
     setText($('bf-act'), '좋아요');
     $('bf-skip').hidden = true;
   }
@@ -4662,11 +4684,11 @@
       setText(b.lastChild, cost ? IC.antibody + fmt(cost) + (short ? ' · 샘플 부족!' : '') : '첫 친구는 그냥 와요');
       b.lastChild.classList.toggle('short', short); b.disabled = short;
     });
-    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 절반 환불');
+    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 별 +1(최대 ' + C.PET_STAR_MAX + '개, 별마다 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100) + '%) · 5성 뒤엔 절반 환불');
     if (!p) return;
     setText($('pet-name'), p.name);
     var plv = C.petLevel(state, p.breed.id), feed = C.petFeedCost(state);
-    setText($('pet-desc'), p.rarity.name + ' · ' + p.breed.name + ' · Lv ' + plv + ' / ' + C.PET_LEVEL_MAX);
+    setText($('pet-desc'), starText(C.petStar(state, p.breed.id)) + ' · ' + p.rarity.name + ' · ' + p.breed.name + ' · Lv ' + plv + ' / ' + C.PET_LEVEL_MAX);
     setText($('pet-eff'), '장착 · ' + C.petEffectText(state) + (p.skill ? ' · 특기 ' + p.skill : ''));      // 4.4.6 장착 효과와 특기
     var own = C.petOwnBonus(state), pct = function (v) { return (Math.round(v * 1000) / 10) + '%'; };
     setText($('pet-own'), '보유 효과 · ' + C.PET_KINDS.dog.label + ' +' + pct(own.dog) + ' · ' + C.PET_KINDS.cat.label + ' +' + pct(own.cat) + ' · 만난 친구마다 쌓여요');
@@ -5090,7 +5112,7 @@
     if (paused) return;    // 다른 기기가 진행 중: 이 기기의 시간은 흐르지 않는다
     if (!(dt > 0)) return; // 시스템 시계가 뒤로 간 경우
     if (dt > AWAY_THRESHOLD) { if (!home) reportAway(C.applyOffline(state, dt), true); }      // 탭이 잠들었다 깨어남: 정산 화면을 먼저 보여 준다. 스테이지는 그동안 멈춰 있었던 것으로 친다
-    else handleEvents(C.tick(state, dt));
+    else { handleEvents(C.tick(state, dt)); if (!document.hidden && C.dailyPlay(mainState(), dt, todayStr()) > 0) log('켜 두고 지킨 덕에 간식 1개를 얻었다.'); }      // 4.9.6 켜 두고 노는 시간
     if (home && state.stage && C.stageStatus(state).over) endStage(false);      // 스테이지가 끝났다: 결과를 본 게임에 적고 돌아간다
 
     if (now >= nextFlavor) {
@@ -5247,6 +5269,7 @@
         var r = C.adoptPet(state, kind);
         if (!r.ok) return;
         if (!r.dup) log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
+        else if (r.starUp) log(r.breed.name + ' 별이 ' + r.star + '개가 됐다. 장착 효과가 더 커졌다.', 'good');      // 4.9.6
         $('pet-input').value = '';
         Store.save(); render();
         bfOpen(r);      // 4.5.3 결과는 이미 정해져 저장됐다. 연출은 보여 주기만 한다(닫거나 건너뛰어도 잃는 것이 없다)
@@ -5528,7 +5551,14 @@
       Store.save(); renderAttend(); render();
       setTimeout(function () { $('attend-veil').hidden = true; }, 700);      // 받은 것을 잠깐 보여 주고 닫는다
     });
-    $('attend-open').addEventListener('click', function () { sfx('click'); renderAttend(); $('attend-veil').hidden = false; });
+    $('attend-open').addEventListener('click', function () { sfx('click'); $('attend-veil').hidden = false; renderAttend(); });
+    $('daily-claim').addEventListener('click', function () {      // 4.9.6 오늘의 임무 보상
+      var r = C.dailyClaim(mainState(), todayStr());
+      if (!r.ok) { renderAttend(); return; }
+      var got = IC.treat + r.treats + (r.tickets ? ' · ' + IC.ticket + r.tickets : '');
+      log('오늘의 임무 보상을 받았다.', 'good'); toast('임무 보상 · ' + got); sfx('buy');
+      Store.save(); renderAttend(); render();
+    });
     $('attend-ad').addEventListener('click', function () { watchAd('attend'); });
     $('store-open').addEventListener('click', function () { sfx('click'); $('store-veil').hidden = false; renderStore(); });
     $('store-close').addEventListener('click', function () { $('store-veil').hidden = true; });
