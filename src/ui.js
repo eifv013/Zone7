@@ -4687,7 +4687,7 @@
       setText(b.firstChild, k.name + (have ? ' 데려오기' : ' 맞이하기'));
       var free = have && C.petFreeReady(state, kind, todayStr());      // 5.0.1 오늘 무료
       var short = !free && cost > state.antibodies;      // 4.7.5 모자라면 값 옆에 '샘플 부족!'을 붉게 적는다
-      setText(b.lastChild, free ? '오늘 무료 1번' : cost ? IC.antibody + fmt(cost) + (short ? ' · 샘플 부족!' : '') : '첫 친구는 그냥 와요');
+      setText(b.lastChild, free ? '오늘 무료 1번' : cost ? IC.antibody + fmt(cost) + (short ? ' · 샘플 부족!' : '') + (have ? ' · 무료까지 ' + untilMidnight() : '') : '첫 친구는 그냥 와요');      // 5.0.4 무료를 썼으면 다음 무료까지 남은 시간
       b.classList.toggle('can', !!free);
       b.lastChild.classList.toggle('short', short); b.disabled = short;
       var sb = $('adopt-' + kind + '-shard');      // 4.9.8 조각 데려오기: 조각이 있을 때만 보인다
