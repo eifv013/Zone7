@@ -961,6 +961,7 @@
   function paintPet(ctx, x, y, scale, flip, pet, outfit, t) {
     if (!ctx) return false;
     scale = scale || 1; pet = pet || {}; t = t || 0;
+    if (!pet.raw && hiOk(ctx, scale)) { var raw = {}; for (var q0 in pet) raw[q0] = pet[q0]; raw.raw = true; if (hiBlit(ctx, x, y, scale, PET_W, PET_H, 4, function (g, px0, py0) { paintPet(g, px0, py0, 1, flip, raw, outfit, t); })) return true; }      // 4.9.2 크게 그릴 때는 고운 그림(옷이 머리 위로 나가도 되게 둘레 4칸)
     var kind = petKind(pet.kind), sp = petSpec(pet), top = PET_BOX[kind].top, W = PET_W, wag = Math.floor(t * 4) % 2;
     sp.kind = kind; sp.wag = !!wag; sp.walk = !!pet.walk; sp.step = pet.step ? 1 : 0; sp.shadow = !!pet.shadow;      // 4.5.3 친구 만들기의 그림자
     var g = ctx;
@@ -1003,10 +1004,48 @@
   /** 창에 쓰는 그림: 같은 칸 그림을 k 배로 키운다. */
   function paintPetBig(ctx, x, y, k, pet) { if (!ctx) return false; var sp = petSpec(pet); sp.kind = petKind(sp.kind); if (pet && pet.shadow) { sp = petSpec({ kind: sp.kind }); sp.kind = petKind(sp.kind); sp.shadow = true; } petPaint2(ctx, x, y, k || 1, sp); return true; }
 
+  /*
+   * 4.9.2 고운 그림(HI): 옷장 · 뽑기 · 도감처럼 크게(2배 이상) 그릴 때만 쓴다.
+   *   왜: 라라(14×18)와 친구(15×11)는 칸이 적어 귀 · 뿔 · 옷이 네모 덩어리로 보였다(뽑아도 기쁘지 않았다).
+   *   어떻게: 한 칸 크기로 따로 그린 뒤 Scale2x 로 칸을 반으로 쪼개 비스듬한 곳을 매끈하게 다듬고,
+   *   그림의 바깥 가장자리 칸을 조금 어둡게 해 테두리처럼 보이게 한 다음, 원래 크기로 키워 붙인다.
+   *   게임 화면(한 칸 = 한 점)에서는 쪼갤 수 없어 예전 그대로 그린다. 캔버스가 없는 곳(시험)도 예전 그대로.
+   */
+  var HI = { on: true, edge: 0.72, keep: ['#17180f', '#b8402e'] };      // keep: 눈 · 입 · 장화 색은 번지지 않게(입이 뾰족해 보였다)
+  function hiOk(ctx, scale) { return HI.on && scale >= 2 && typeof document !== 'undefined' && !!(ctx && ctx.drawImage); }
+  /** 한 칸 크기 그림(w×h, 둘레 pad 칸)을 고운 그림으로 ctx 의 (x, y) 에 scale 배로 붙인다. 실패하면 false(부른 쪽이 예전대로 그린다). */
+  function hiBlit(ctx, x, y, scale, w, h, pad, paint) {
+    try {
+      var W = w + pad * 2, H = h + pad * 2, src = document.createElement('canvas'); src.width = W; src.height = H;
+      var sg = src.getContext('2d'); if (!sg || !sg.getImageData) return false;
+      paint(sg, pad, pad);
+      var a = new Uint32Array(sg.getImageData(0, 0, W, H).data.buffer.slice(0)), out = sg.createImageData(W * 2, H * 2), o = new Uint32Array(out.data.buffer);
+      function at(cx, cy) { return cx < 0 || cy < 0 || cx >= W || cy >= H ? 0 : a[cy * W + cx]; }
+      var keep = {}; HI.keep.forEach(function (hx) { var v = hexToRgb(hx); keep[(255 << 24 | v[2] << 16 | v[1] << 8 | v[0]) >>> 0] = 1; });      // 캔버스 점은 ABGR 순서
+      function pick(c, E) { return keep[E] || (keep[c] && !keep[E]) ? E : c; }      // 눈 · 입 칸은 깎지도 번지지도 않는다
+      for (var cy = 0; cy < H; cy++) for (var cx = 0; cx < W; cx++) {
+        var E = a[cy * W + cx], B = at(cx, cy - 1), D = at(cx - 1, cy), F = at(cx + 1, cy), Hh = at(cx, cy + 1), i0 = (cy * 2) * W * 2 + cx * 2;
+        o[i0] = D === B && B !== F && D !== Hh ? pick(D, E) : E;      // Scale2x: 이웃 두 칸이 같은 색이면 모서리를 그 색으로 채워 계단을 없앤다
+        o[i0 + 1] = B === F && B !== D && F !== Hh ? pick(F, E) : E;
+        o[i0 + W * 2] = D === Hh && D !== B && Hh !== F ? pick(D, E) : E;
+        o[i0 + W * 2 + 1] = Hh === F && D !== Hh && B !== F ? pick(F, E) : E;
+      }
+      var d = out.data, W2 = W * 2, H2 = H * 2, edge = [];
+      function solid(px, py) { return px >= 0 && py >= 0 && px < W2 && py < H2 && d[(py * W2 + px) * 4 + 3] > 0; }
+      for (var py = 0; py < H2; py++) for (var px = 0; px < W2; px++) if (solid(px, py) && (!solid(px - 1, py) || !solid(px + 1, py) || !solid(px, py - 1) || !solid(px, py + 1))) edge.push((py * W2 + px) * 4);
+      edge.forEach(function (k) { d[k] = Math.round(d[k] * HI.edge); d[k + 1] = Math.round(d[k + 1] * HI.edge); d[k + 2] = Math.round(d[k + 2] * HI.edge); });      // 바깥 가장자리만 어둡게(테두리)
+      var big = document.createElement('canvas'); big.width = W2; big.height = H2; big.getContext('2d').putImageData(out, 0, 0);
+      var was = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(big, Math.round(x - pad * scale), Math.round(y - pad * scale), W * scale, H * scale);
+      ctx.imageSmoothingEnabled = was;
+      return true;
+    } catch (e) { return false; }
+  }
   /** 옷장의 그림: 그 자리에 서 있는 라라를 그린다(scene 밖에서 쓴다). */
   function drawHero(ctx, x, y, scale, look, step, t, dark) {
     if (!ctx) return false;
-    paintLara(ctx, x, y, scale || 1, false, look, step === undefined ? 'stand' : 'walk', step);
+    var pose = step === undefined ? 'stand' : 'walk';
+    if (!(hiOk(ctx, scale) && hiBlit(ctx, x, y, scale, LARA_W, LARA_H, 1, function (g, px0, py0) { paintLara(g, px0, py0, 1, false, look, pose, step); }))) paintLara(ctx, x, y, scale || 1, false, look, pose, step);      // 4.9.2 크게 그릴 때는 고운 그림
     paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0, step === undefined ? 'stand' : 'walk', step, dark);
     return true;
   }
@@ -1951,6 +1990,6 @@
   return { wallStyle: wallStyle, WALL_STYLES: WALL_STYLES, leadWeapon: leadWeapon, leadWeight: leadWeight, SHOT_MAX: SHOT_MAX, ZOMBIE_TYPES: ZOMBIE_TYPES, pickSpecial: pickSpecial, zombieType: zombieType, zombieFrames: zombieFrames, fogStrength: fogStrength, glow: glow, WEAPONS: WEAPONS, BOSS_HP: BOSS_HP, CORPSE_TIME: CORPSE_TIME, CORPSE_MAX: CORPSE_MAX, facilityTier: facilityTier, stockCrates: stockCrates, STOCK_MAX: STOCK_MAX, baseStage: baseStage, BASE_STAGES: BASE_STAGES, roomSlot: roomSlot, ROOMS: ROOMS, HORDES: HORDES, SURGE_EXTRA: SURGE_EXTRA, hordeFor: hordeFor, H: H, GROUND: GROUND, WALL_X: WALL_X, WALL_WIDE: WALL_WIDE, DUSK: DUSK, SEARCH_TIME: SEARCH_TIME, SQUAD_TIME: SQUAD_TIME,
            lerpColor: lerpColor, colorNear: colorNear, skyAt: skyAt, dangerTier: dangerTier, dangerSky: dangerSky, pilesFor: pilesFor, wallFor: wallFor, squadAt: squadAt, weatherFor: weatherFor,
            paintPet: paintPet, petRows: petRows, PET_H: PET_H, PET_W: PET_W, paintPetBig: paintPetBig, PET_SPEC: PET_SPEC,
-           drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, paintLara: paintLara, SHADE: SHADE, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
+           drawFlag: drawFlag, flagRows: flagRows, drawHero: drawHero, HI: HI, hiBlit: hiBlit, paintLara: paintLara, SHADE: SHADE, paintLaraFx: paintLaraFx, laraRows: laraRows, laraPattern: laraPattern, LARA_W: LARA_W, LARA_H: LARA_H, LARA_HOODS: LARA_HOODS, LARA_BAGS: LARA_BAGS, travel: travel, shownZone: shownZone, TRAVEL_TIME: TRAVEL_TIME,
            create: create, resize: resize, step: step, poke: poke, night: night, draw: draw, mount: mount };
 });

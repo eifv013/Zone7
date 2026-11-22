@@ -3644,3 +3644,13 @@ test('구조대: 남는 물자로 생존자를 데려오고, 보낼수록 값이
 test('우비 음영: 줄 수와 칸 수는 그대로다', () => {
   const S = require('../src/scene.js'); assert.equal(S.SHADE.on, true);
 });
+
+// 4.9.2 고운 그림: 캔버스가 없는 곳(시험 · 게임 화면의 한 칸 그림)에서는 예전처럼 그린다
+test('4.9.2: 고운 그림은 캔버스가 없으면 쓰지 않고 예전 그림으로 그린다', function () {
+  var S = require('../src/scene.js'), calls = 0;
+  var ctx = { fillRect: function () { calls++; }, save: function () {}, restore: function () {}, translate: function () {}, scale: function () {} };
+  assert.ok(S.HI && S.HI.on, '켜져 있다');
+  assert.strictEqual(S.drawHero(ctx, 0, 0, 3, {}), true);
+  assert.ok(calls > 50, '예전 그림(칸마다 fillRect)으로 그렸다');
+  assert.strictEqual(S.hiBlit(ctx, 0, 0, 3, 14, 18, 1, function () {}), false, '캔버스가 없으면 false');
+});
