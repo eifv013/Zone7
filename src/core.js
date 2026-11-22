@@ -2896,9 +2896,9 @@
   ];
   var DAILY_POOL = MISSION_POOL.map(function (m) { return { key: m.key, need: m.need[0], text: missionText(m, 0), can: m.can }; });      // 예전 이름(오늘의 임무)
   var MISSION_PER = {
-    day: { field: 'daily', idx: 0, name: '오늘', treats: 10, bonus: { tickets: 1 } },
-    week: { field: 'weekly', idx: 1, name: '이번 주', treats: 30, bonus: { tickets: 1, petTix: 1 } },
-    month: { field: 'monthly', idx: 2, name: '이번 달', treats: 100, bonus: { tickets: 5, petTix: 3 } }
+    day: { field: 'daily', idx: 0, name: '일일', treats: 10, bonus: { tickets: 1 } },
+    week: { field: 'weekly', idx: 1, name: '주간', treats: 30, bonus: { tickets: 1, petTix: 1 } },
+    month: { field: 'monthly', idx: 2, name: '월간', treats: 100, bonus: { tickets: 5, petTix: 3 } }
   };
   var MISSION_PERS = ['day', 'week', 'month'];
   var DAILY_COUNT = 3, DAILY_TREATS = 10, DAILY_ALL_TICKETS = 1, DRIP_SECONDS = 600, DRIP_MAX = 12;

@@ -1897,7 +1897,7 @@
     var n = new Date(), end = per === 'week' ? new Date(n.getFullYear(), n.getMonth(), n.getDate() + (7 - (n.getDay() + 6) % 7)) : new Date(n.getFullYear(), n.getMonth() + 1, 1);
     var d = Math.ceil((end - n) / 864e5); return d <= 1 ? untilMidnight() + ' 남음' : d + '일 남음';
   }
-  /** 4.9.6 임무 창(5.0.6 오늘 · 이번 주 · 이번 달). 창이 닫혀 있으면 단추 · 상황 칸 줄만 갱신된다. */
+  /** 4.9.6 임무 창(5.0.6 일일 · 주간 · 월간). 창이 닫혀 있으면 단추 · 상황 칸 줄만 갱신된다. */
   function renderDaily(di) {
     var today = todayStr(), ms = mainState(), infos = C.MISSION_PERS.map(function (p) { return p === 'day' ? di : C.missionInfo(ms, p, today); });
     var anyCan = infos.some(function (x) { return x.can; });

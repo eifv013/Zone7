@@ -441,7 +441,7 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .attend-days li.now { border: 2px solid var(--hazard); color: var(--ink); }
 .pet-pick-shard { margin-top: 6px; } .pet-pick-shard button[hidden] { display: none; }      /* 4.9.8 조각으로 데려오기 */
 .daily-head { margin: 4px 0 0; } .daily-head small { color: #b9b8ab; font-weight: 500; }      /* 4.9.6 오늘의 임무 */
-.mission-scroll { max-height: min(62vh, 560px); overflow-y: auto; margin: 6px -4px 0; padding: 0 4px; }      /* 5.0.6 오늘 · 이번 주 · 이번 달 */
+.mission-scroll { max-height: min(62vh, 560px); overflow-y: auto; margin: 6px -4px 0; padding: 0 4px; }      /* 5.0.6 일일 · 주간 · 월간 임무 */
 .mission-sec + .mission-sec { margin-top: 14px; } .mission-h { display: flex; justify-content: space-between; align-items: baseline; } .mission-h b { color: var(--hazard); font-size: 14px; } .mission-h small { color: #b9b8ab; font-size: 12px; }
 .daily-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
 .daily-list li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.05); font-size: 13px; }
@@ -1540,7 +1540,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 5.0.6</div>
+  <div class="boot-ver">7구역 알파 5.0.7</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -2047,7 +2047,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 5.0.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.0.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2163,9 +2163,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <div class="story-card feedback-card attend-card">
     <div class="zmap-head"><div class="label" id="h-daily">임무</div><button type="button" class="feedback-close" id="daily-close">닫기</button></div>
     <div class="mission-scroll">
-      <div class="mission-sec"><div class="mission-h"><b>오늘</b><small id="day-left"></small></div><div class="daily-head"><small id="daily-drip"></small></div><ul class="daily-list" id="daily-list"></ul></div>
-      <div class="mission-sec"><div class="mission-h"><b>이번 주</b><small id="week-left"></small></div><div class="daily-head"><small id="week-gift"></small></div><ul class="daily-list" id="week-list"></ul></div>
-      <div class="mission-sec"><div class="mission-h"><b>이번 달</b><small id="month-left"></small></div><div class="daily-head"><small id="month-gift"></small></div><ul class="daily-list" id="month-list"></ul></div>
+      <div class="mission-sec"><div class="mission-h"><b>일일 임무</b><small id="day-left"></small></div><div class="daily-head"><small id="daily-drip"></small></div><ul class="daily-list" id="daily-list"></ul></div>
+      <div class="mission-sec"><div class="mission-h"><b>주간 임무</b><small id="week-left"></small></div><div class="daily-head"><small id="week-gift"></small></div><ul class="daily-list" id="week-list"></ul></div>
+      <div class="mission-sec"><div class="mission-h"><b>월간 임무</b><small id="month-left"></small></div><div class="daily-head"><small id="month-gift"></small></div><ul class="daily-list" id="month-list"></ul></div>
     </div>
     <button type="button" class="attend-btn" id="daily-claim">임무 보상 받기</button>
   </div>
