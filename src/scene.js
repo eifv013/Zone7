@@ -539,28 +539,29 @@
    */
   var LARA_HOODS = {
     none:   {},
-    cat:    { 0: '...y......y...', 1: '...yi....iy...', 2: '...yiyyyyiy...' },
-    bear:   { 0: '...yy....yy...', 1: '..yiiy..yiiy..', 2: '...yyyyyyyy...' },
-    rabbit: { 0: '....yi..iy....', 1: '....yi..iy....', 2: '....yyyyyy....' },
+    cat: { 0: '...Y......Y...', 1: '...Yi....iY...', 2: '...YiyyyyiY...' },      // 4.9.1 귀에 어두운 테두리(Y)를 둘러 후드와 갈라 보이게
+    bear: { 0: '...YY....YY...', 1: '..YiiY..YiiY..', 2: '...YyyyyyyY...' },
+    rabbit: { 0: '....Yi..iY....', 1: '....Yi..iY....', 2: '....YyyyyY....' },
     horn:   { 0: '..w........w..', 1: '...ww....ww...', 2: '....wyyyyw....' },
-    pompom: { 0: '......ww......', 1: '.....wwww.....', 2: '....wwwwww....' },      // 털모자: 흰 방울과 흰 단
+    pompom: { 0: '...gg....gg...', 1: '..gwwg..gwwg..', 2: '..gwegyygweg..' },      // 4.9.1 개구리 눈(털방울 모자 대신): 후드 위로 툭 튀어나온 두 눈
     dino:   { 0: '.....g...g....', 1: '....ggg.ggg...', 2: '....yyyyyy....' },      // 공룡 가시 둘
     fox:    { 0: '..O........O..', 1: '..oo......oo..', 2: '...owyyyywo...' },      // 여우 귀: 주황 귀, 검은 끝, 흰 속
     panda:  { 0: '...nn....nn...', 1: '..nnnn..nnnn..', 2: '...nyyyyyyn...' },
     sprout: { 0: '....gg..gg....', 1: '.....gkkg.....' },      // 새싹: 잎 둘과 줄기
     // 4.8.1 더한 후드: a 회색(상어 지느러미) · G 금빛(왕관) · r 붉은 보석
-    shark:   { 0: '......a.......', 1: '.....aaa......', 2: '....yaaaay....' },      // 상어 지느러미(세 줄로 크게)
-    crown:   { 0: '....G.GG.G....', 1: '....GGrrGG....' },      // 왕관(가운데 붉은 보석)
     antenna: { 0: '...oo....oo...', 1: '....n....n....' },      // 더듬이(끝에 주황 방울)
-    beret:   { 1: '....rrrrr.....', 2: '...rrrrrrr....', 0: '.......r......' },      // 4.8.1 베레모(빨강, 꼭지 하나)
-    wreath:  { 1: '...g.g..g.g...', 2: '...wiGwiGwi...' },      // 화관(꽃과 잎)
-    phones:  { 1: '...nnnnnnnn...', 4: '.ryyyssssyyyr.', 5: '.ryysessesyyr.' },      // 헤드폰(머리띠와 양쪽 귀)
+    /* 4.9.1 모자 대신 귀 · 뿔(후드에 어울리게. 모자는 안 어울린다고 하셨다). 늘어진 귀는 얼굴 옆 줄(3~6)까지 내려온다 */
+    deer:    { 0: '..k.k....k.k..', 1: '...kk....kk...', 2: '....kyyyyk....' },      // 사슴뿔
+    puppy: { 2: '...kkyyyykk...', 3: '.kkkyyyyyykkk.', 4: '.khyyssssyyhk.', 5: '.hkysessesykh.' },      // 4.9.1 갈색으로 늘어진 강아지 귀(후드 색이면 후드와 섞여 보이지 않았다)
+    dragon:  { 0: '..aw......wa..', 1: '...aa....aa...', 2: '....ayyyya....' },      // 용 뿔(회색에 흰 끝)
+    devil:   { 0: '...r......r...', 1: '...rr....rr...', 2: '....ryyyyr....' },      // 작은 악마 뿔
+    mouse:   { 0: '..yy......yy..', 1: '.yiiy....yiiy.', 2: '.yiiyyyyyyiiy.' },      // 둥근 쥐 귀(크게)
+    bat:     { 0: '.n..........n.', 1: '.nn.n....n.nn.', 2: '..nnnyyyynnn..' },      // 박쥐 날개 귀(수첩 · 마녀의 밤)
+    polar:   { 0: '...ww....ww...', 1: '..wiiw..wiiw..', 2: '...wyyyyyyw...' },      // 북극곰 귀(수첩 · 눈 오는 날)
+    parrot: { 1: '.F..........F.', 2: '.FF.yyyyyy.FF.', 3: '.fFyyyyyyyyFf.', 4: '..fyyssssyyf..' },      // 인어 지느러미 귀(수첩 · 해적의 바다)
+    lop: { 0: '....wi...wwww.', 1: '....wi...iw..w', 2: '....wiyyyiw...' },      // 4.9.1 한쪽이 접힌 토끼 귀(수첩 · 봄 소풍). 양옆으로 늘이면 헤드폰처럼 보였다
+    raccoon: { 0: '..nn......nn..', 1: '..nan....nan..', 2: '...nyyyyyyn...' },      // 4.9.1 너구리 귀(헤드폰 대신)
     // 4.8.3 생존자 수첩 한정 후드(시즌마다 하나)
-    witch:   { 0: '......nn......', 1: '.....nnnG.....', 2: '..nnnnnnnnnn..' },      // 마녀 모자(금빛 띠)
-    snowcap: { 0: '......rr......', 1: '....wwwwww....', 2: '...wrwrwrww...' },      // 빨간 방울 털모자
-    pirate:  { 1: '....rrrrrr....', 2: '...rrwrrrrrr..', 3: '...yyyyyyyyrr.' },      // 해적 두건(옆으로 묶은 끝)
-    straw:   { 1: '....TTTTTT....', 2: '..TTTrrrrTTT..' },      // 밀짚모자(빨간 띠)
-    bandage: { 1: '..........ww..', 2: '....wwwwwww...' }      // 붕대 머리띠(옆으로 끝이 날린다)
   };
 
   /* 가방: 줄 번호 → 오른쪽 네 칸(10~13번 칸)에 덮어 그린다. '.' 은 아래 그림을 그대로 둔다. 색은 c(몸), C(밝은 곳), e(눈) */
@@ -660,7 +661,7 @@
     // 2.8.9: 무늬 색이 우비 색과 비슷하면(흰 우비에 흰 무늬, 노란 우비에 노란 별) 보이지 않았다. 그럴 때는 우비를 어둡게 한 색으로 그린다
     if (pat && pat !== 'none' && colorNear(patCol, coat.j)) patCol = darker(coat.j, 0.55);
     var patCol2 = pat === 'camo' ? lerpColor(coat.j, '#ffffff', 0.35) : pat === 'flower' ? '#ffd95a' : pat === 'clover' ? '#3f8a3f' : patCol;      // 꽃 가운데는 노랑
-    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22', a: '#8a96a6', G: '#ffd95a', r: '#e0392b', T: '#c8a070' };
+    var pal = { y: coat.y, Y: darker(coat.y, 0.72), j: coat.j, J: darker(coat.j, 0.72), s: '#f1c9a0', e: '#17180f', m: '#b8402e', h: '#7a4a2a', k: '#6b4a2b', w: '#f1f0e6', i: '#f0a0b8', p: '#3c4a5a', b: '#b8402e', c: bag.c, C: bag.C, g: '#5cb85c', n: '#3a3a42', o: '#e8762a', O: '#3a2a22', a: '#8a96a6', G: '#ffd95a', r: '#e0392b', T: '#c8a070', F: '#2fb0a0', f: '#a8f0e0' };
     var rows = laraRows(look, pose, step), glowBand = pose === 'search' ? 13 : 11;
     if (SHADE.on && look.shade !== false) rows = shadeRows(rows);      // 4.8.6 우비 음영
     pal.L = lerpColor(coat.j, '#ffffff', 0.28); pal.Q = lerpColor(coat.y, '#ffffff', 0.28); pal.K = darker(coat.j, 0.8); pal.Z = darker(coat.y, 0.8);
@@ -968,26 +969,26 @@
     function px(col, cx, cy, w, h) { g.fillStyle = col; g.fillRect(Math.round(x + cx * scale), Math.round(y + cy * scale), (w || 1) * scale, (h || 1) * scale); }
     // 옷(4.4.6: 15×12칸 그림에 맞춰 자리를 다시 잡았다. 머리 위 B.top · 목 B.neck · 등 B.back · 눈 B.eye)
     var B = (sp.walk ? PET_BOX_WALK : PET_BOX)[kind], tp = B.top + (sp.walk && sp.legs === 'short' ? 1 : 0), nk = B.neck + (sp.walk && sp.legs === 'short' ? 1 : 0), bk = B.back + (sp.walk && sp.legs === 'short' ? 1 : 0);
-    if (outfit === 'scarf') { px('#c0392b', 2, nk, 5, 1); px('#c0392b', 6, nk + 1, 1, 2); px('#8f2a20', 6, nk + 2, 1, 1); }
-    if (outfit === 'bell') { px('#30343c', 2, nk, 5, 1); px('#ffd95a', 4, nk + 1, 1, 1); }
-    if (outfit === 'bandana') { px('#f0b400', 2, nk, 5, 1); px('#f0b400', 3, nk + 1, 3, 1); px('#b88a00', 4, nk + 2, 1, 1); px('#fff4c0', 3, nk, 1, 1); }
-    if (outfit === 'bowtie') { px('#3f7fb5', 3, nk, 1, 1); px('#3f7fb5', 5, nk, 1, 1); px('#27507a', 4, nk, 1, 1); px('#3f7fb5', 3, nk + 1, 1, 1); px('#3f7fb5', 5, nk + 1, 1, 1); }
-    if (outfit === 'ribbon') { px('#ff7fb0', 3, tp, 1, 1); px('#f1f0e6', 4, tp, 1, 1); px('#ff7fb0', 5, tp, 1, 1); }
-    if (outfit === 'flower') { px('#ffffff', 6, tp - 1, 1, 1); px('#ffffff', 5, tp, 1, 1); px('#ffffff', 7, tp, 1, 1); px('#ffffff', 6, tp + 1, 1, 1); px('#ffd95a', 6, tp, 1, 1); }
-    if (outfit === 'goggles') { px('#5a4a3a', 1, B.eye, 7, 1); px('#7ad0f0', 3, B.eye, 1, 1); px('#7ad0f0', 5, B.eye, 1, 1); px('#c8f0ff', 3, B.eye - 1 + 1, 1, 1); }
-    if (outfit === 'coat') { px('#f0b400', 6, bk, 5, 2); px('#b88a00', 6, bk + 2, 5, 1); px('#f1f0e6', 8, bk + 1, 1, 1); }
-    if (outfit === 'sweater') { for (var sy = 0; sy < 3; sy++) px(sy % 2 ? '#f1efe8' : '#c0392b', 3, bk + sy, 8, 1); }
-    if (outfit === 'pack') { px('#5d6b4a', 8, bk - 1, 3, 2); px('#3f4a33', 8, bk + 1, 3, 1); px('#c8a050', 9, bk - 1, 1, 1); }
-    if (outfit === 'hat') { px('#3f7fb5', 3, tp, 3, 1); px('#3f7fb5', 4, tp - 1, 1, 1); px('#f1f0e6', 4, tp - 2, 1, 1); }
-    if (outfit === 'cape') { px('#8a5fc0', 7, bk, 4, 2); px('#6a45a0', 8, bk + 2, 3, 1); px('#8a5fc0', 11, bk + wag, 1, 2); px('#ffd95a', 6, bk, 1, 1); }
-    if (outfit === 'crown') { px('#ffd95a', 3, tp, 3, 1); px('#ffd95a', 3, tp - 1, 1, 1); px('#ffd95a', 5, tp - 1, 1, 1); px('#e0392b', 4, tp, 1, 1); if (Math.floor(t * 2) % 2) px('#ffffff', 4, tp - 2, 1, 1); }
-    // 4.8.1 더한 친구 옷: 선글라스 · 산타 모자 · 나뭇잎
-    if (outfit === 'shades') { px('#17180f', 1, B.eye, 7, 1); px('#17180f', 2, B.eye + 1, 2, 1); px('#17180f', 5, B.eye + 1, 2, 1); px('#6a7a8a', 2, B.eye, 1, 1); }
-    if (outfit === 'santa') { px('#f1f0e6', 3, tp, 4, 1); px('#d8384a', 4, tp - 1, 3, 1); px('#d8384a', 5, tp - 2, 2, 1); px('#ffffff', 7, tp - 2, 1, 1); }      // 흰 단 · 빨간 고깔 · 끝의 흰 방울
-    if (outfit === 'leaf') { px('#5cb85c', 4, tp - 1, 2, 1); px('#3f8a3f', 5, tp, 1, 1); px('#5cb85c', 3, tp - 2, 2, 1); }
-    if (outfit === 'scarf2') { px('#3f7fb5', 2, nk, 5, 1); px('#3f7fb5', 6, nk + 1, 1, 2); px('#f1f0e6', 3, nk, 1, 1); px('#f1f0e6', 5, nk, 1, 1); }      // 4.8.1 파란 줄무늬 목도리
-    if (outfit === 'tiara') { px('#dfe6ea', 3, tp, 3, 1); px('#dfe6ea', 4, tp - 1, 1, 1); px('#8fc3ff', 4, tp, 1, 1); if (Math.floor(t * 2) % 2) px('#ffffff', 4, tp - 2, 1, 1); }      // 티아라(반짝)
-    if (outfit === 'band') { px('#ff7fb0', 2, tp, 5, 1); px('#ffd95a', 6, tp - 1, 1, 1); }      // 머리띠(노란 별)
+    /* 4.9.1 친구 옷을 다시 그렸다(한두 칸 점이라 무엇인지 알아볼 수 없었다): 칸 수를 늘리고 밝은 면 · 그림자 두 빛깔을 넣었다 */
+    if (outfit === 'scarf') { px('#d8384a', 2, nk, 6, 1); px('#a82030', 2, nk + 1, 5, 1); px('#d8384a', 6, nk + 1, 2, 2); px('#ffd0d0', 3, nk, 1, 1); px('#f1f0e6', 6, nk + 3, 1, 1); px('#f1f0e6', 7, nk + 3, 1, 1); }      // 목도리(끝에 술)
+    if (outfit === 'bell') { px('#c0392b', 2, nk, 6, 1); px('#ffd95a', 4, nk + 1, 2, 2); px('#fff4b0', 4, nk + 1, 1, 1); px('#b88a00', 5, nk + 2, 1, 1); }      // 빨간 목줄 + 큰 금방울
+    if (outfit === 'bandana') { px('#f0b400', 2, nk, 6, 1); px('#f0b400', 3, nk + 1, 4, 1); px('#f0b400', 4, nk + 2, 2, 1); px('#b88a00', 5, nk + 2, 1, 1); px('#fff4c0', 3, nk, 1, 1); px('#c06a00', 4, nk + 1, 1, 1); }      // 세모 반다나(점무늬)
+    if (outfit === 'bowtie') { px('#3f7fb5', 2, nk, 2, 2); px('#3f7fb5', 5, nk, 2, 2); px('#27507a', 4, nk, 1, 2); px('#8fc3ff', 2, nk, 1, 1); px('#8fc3ff', 5, nk, 1, 1); }      // 큰 나비넥타이
+    if (outfit === 'ribbon') { px('#ff7fb0', 2, tp - 1, 2, 2); px('#ff7fb0', 5, tp - 1, 2, 2); px('#d84a80', 4, tp - 1, 1, 2); px('#ffd0e0', 2, tp - 1, 1, 1); px('#ffd0e0', 5, tp - 1, 1, 1); }      // 머리 위 큰 리본
+    if (outfit === 'flower') { px('#ffffff', 5, tp - 2, 1, 1); px('#ffffff', 4, tp - 1, 1, 1); px('#ffffff', 6, tp - 1, 1, 1); px('#ffffff', 5, tp, 1, 1); px('#ffd95a', 5, tp - 1, 1, 1); px('#5cb85c', 6, tp, 1, 1); }      // 귀 옆 꽃(잎 하나)
+    if (outfit === 'goggles') { px('#5a4a3a', 0, B.eye, 9, 1); px('#30343c', 2, B.eye - 1, 3, 3); px('#30343c', 5, B.eye - 1, 3, 3); px('#7ad0f0', 3, B.eye, 1, 1); px('#7ad0f0', 6, B.eye, 1, 1); px('#e8f8ff', 3, B.eye - 1 + 1, 1, 1); }      // 비행 고글(띠 + 두 알)
+    if (outfit === 'coat') { px('#f0b400', 6, bk, 6, 3); px('#c88a00', 6, bk + 3, 6, 1); px('#fff4b0', 6, bk, 6, 1); px('#c88a00', 8, bk + 1, 1, 2); px('#f1f0e6', 10, bk + 1, 1, 1); }      // 노란 우비(라라와 짝)
+    if (outfit === 'sweater') { for (var sy = 0; sy < 3; sy++) px(sy % 2 ? '#f1efe8' : '#c0392b', 3, bk + sy, 9, 1); px('#8a2a20', 3, bk + 3, 9, 1); }      // 줄무늬 스웨터(밑단)
+    if (outfit === 'pack') { px('#5d6b4a', 8, bk - 2, 4, 3); px('#3f4a33', 8, bk + 1, 4, 1); px('#c8a050', 9, bk - 1, 2, 1); px('#8a9a6a', 8, bk - 2, 4, 1); px('#3f4a33', 6, bk - 1, 2, 1); }      // 배낭(덮개 · 고리 · 끈)
+    if (outfit === 'hat') { px('#3f7fb5', 3, tp, 4, 1); px('#3f7fb5', 4, tp - 1, 2, 1); px('#3f7fb5', 4, tp - 2, 1, 1); px('#ffd95a', 4, tp - 1, 1, 1); px('#f1f0e6', 4, tp - 3, 1, 1); }      // 고깔모자(별 · 방울)
+    if (outfit === 'cape') { px('#8a5fc0', 6, bk, 6, 2); px('#6a45a0', 7, bk + 2, 5, 1); px('#8a5fc0', 12, bk + wag, 1, 3); px('#ffd95a', 5, bk, 1, 1); px('#b490e0', 6, bk, 6, 1); }      // 망토(금 단추)
+    if (outfit === 'crown') { px('#ffd95a', 2, tp, 5, 1); px('#ffd95a', 2, tp - 1, 1, 1); px('#ffd95a', 4, tp - 1, 1, 1); px('#ffd95a', 6, tp - 1, 1, 1); px('#e0392b', 3, tp, 1, 1); px('#5aa8f0', 5, tp, 1, 1); px('#c8a000', 2, tp + 1 - 1, 5, 0); if (Math.floor(t * 2) % 2) px('#ffffff', 4, tp - 2, 1, 1); }      // 왕관(보석 둘, 반짝)
+    if (outfit === 'shades') { px('#17180f', 0, B.eye, 9, 1); px('#17180f', 2, B.eye + 1, 2, 1); px('#17180f', 5, B.eye + 1, 2, 1); px('#6a7a8a', 2, B.eye, 1, 1); px('#6a7a8a', 5, B.eye, 1, 1); }      // 선글라스(두 알)
+    if (outfit === 'santa') { px('#f1f0e6', 2, tp, 5, 1); px('#d8384a', 3, tp - 1, 4, 1); px('#d8384a', 4, tp - 2, 3, 1); px('#a82030', 6, tp - 2, 1, 1); px('#ffffff', 7, tp - 2, 1, 1); }      // 산타 모자(흰 단 · 방울)
+    if (outfit === 'leaf') { px('#5cb85c', 4, tp - 1, 3, 1); px('#5cb85c', 5, tp - 2, 3, 1); px('#3f8a3f', 4, tp, 1, 1); px('#9ad87a', 5, tp - 2, 1, 1); }      // 큰 나뭇잎(줄기)
+    if (outfit === 'scarf2') { px('#3f7fb5', 2, nk, 6, 1); px('#27507a', 2, nk + 1, 5, 1); px('#3f7fb5', 6, nk + 1, 2, 2); px('#f1f0e6', 3, nk, 1, 1); px('#f1f0e6', 5, nk, 1, 1); px('#f1f0e6', 6, nk + 2, 1, 1); }      // 파란 줄무늬 목도리
+    if (outfit === 'tiara') { px('#dfe6ea', 2, tp, 5, 1); px('#dfe6ea', 4, tp - 1, 1, 1); px('#dfe6ea', 2, tp - 1, 1, 1); px('#dfe6ea', 6, tp - 1, 1, 1); px('#8fc3ff', 4, tp, 1, 1); px('#ff8fb8', 2, tp, 1, 1); px('#ff8fb8', 6, tp, 1, 1); if (Math.floor(t * 2) % 2) px('#ffffff', 4, tp - 2, 1, 1); }      // 티아라(보석 셋)
+    if (outfit === 'band') { px('#ff7fb0', 1, tp, 7, 1); px('#ffd95a', 5, tp - 1, 1, 1); px('#ffd95a', 4, tp - 2 + 1, 3, 0); px('#ffd95a', 6, tp - 1, 1, 1); px('#ffd95a', 5, tp - 2, 1, 1); }      // 머리띠(노란 별)
     if (outfit === 'halo') { var hy = tp - 2 - (Math.floor(t * 2) % 2); px('#ffe680', 3, hy, 3, 1); px('#fff8c8', 4, hy, 1, 1); }
     if (outfit === 'wings') {      // 4.5.0 다시 그렸다: 깃털 끝이 셋으로 갈라진 날개가 등에서 위로 펴지고, 접었다 폈다 한다
       var wy = bk - 1, up = wag;
