@@ -1891,23 +1891,41 @@
   /** 4.7.1 오늘 자정(기기 시각)까지 남은 시간 '3시간 12분'. */
   function untilMidnight() { var n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1), s = Math.max(0, Math.floor((m - n) / 1000)), h = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60); return (h ? h + '시간 ' : '') + mm + '분'; }
   function attendText(w) { var a = []; if (w.tickets) a.push(IC.ticket + w.tickets); if (w.treats) a.push(IC.treat + w.treats); return a.join(' · '); }
-  /** 4.9.6 오늘의 임무 목록(출석 창 아래). 창이 닫혀 있으면 단추 점만 갱신된다. */
+  /** 5.0.6 기간이 끝날 때까지 남은 시간(하루: 시간 · 분, 한 주 · 한 달: 날) */
+  function periodLeft(per) {
+    if (per === 'day') return untilMidnight() + ' 남음';
+    var n = new Date(), end = per === 'week' ? new Date(n.getFullYear(), n.getMonth(), n.getDate() + (7 - (n.getDay() + 6) % 7)) : new Date(n.getFullYear(), n.getMonth() + 1, 1);
+    var d = Math.ceil((end - n) / 864e5); return d <= 1 ? untilMidnight() + ' 남음' : d + '일 남음';
+  }
+  /** 4.9.6 임무 창(5.0.6 오늘 · 이번 주 · 이번 달). 창이 닫혀 있으면 단추 · 상황 칸 줄만 갱신된다. */
   function renderDaily(di) {
-    var box = $('daily-list'); if (!box || $('daily-veil').hidden) return;
-    var key = JSON.stringify(di.list) + di.allGot;
-    if (box.getAttribute('data-key') !== key) {
+    var today = todayStr(), ms = mainState(), infos = C.MISSION_PERS.map(function (p) { return p === 'day' ? di : C.missionInfo(ms, p, today); });
+    var anyCan = infos.some(function (x) { return x.can; });
+    var dop = $('daily-open'); if (dop) dop.classList.toggle('can', anyCan);
+    var sum = infos.map(function (x) { return x.name + ' ' + x.list.filter(function (m) { return m.done; }).length + '/' + x.list.length; }).join(' · ');
+    Array.prototype.forEach.call(document.querySelectorAll('.mission-goal'), function (row) { setText(row.querySelector('.mission-sum'), anyCan ? '받을 보상이 있어요!' : sum); row.querySelector('.mission-go').classList.toggle('can', anyCan); });
+    if ($('daily-veil').hidden) return;
+    var ids = { day: 'daily-list', week: 'week-list', month: 'month-list' };
+    infos.forEach(function (info) {
+      var box = $(ids[info.per]); if (!box) return;
+      var key = JSON.stringify(info.list) + info.allGot;
+      if (box.getAttribute('data-key') === key) return;
       box.setAttribute('data-key', key);
       while (box.firstChild) box.removeChild(box.firstChild);
-      di.list.forEach(function (x) {
+      info.list.forEach(function (x) {
         var li = el('li', x.got ? 'got' : x.done ? 'done' : '');
-        li.appendChild(el('span', '', x.text)); li.appendChild(el('b', '', x.got ? '받음' : x.have + ' / ' + x.need));
+        li.appendChild(el('span', '', x.text)); li.appendChild(el('b', '', x.got ? '받음' : x.key === 'play' ? minText(x.have) + ' / ' + minText(x.need) : x.have + ' / ' + x.need));      // 지키기는 분 · 시간으로
         var bar = el('span', 'bar'), fill = el('i', ''); fill.style.width = Math.round(x.have / x.need * 100) + '%'; bar.appendChild(fill); li.appendChild(bar);
         box.appendChild(li);
       });
-    }
-    setText($('daily-drip'), '하나마다 ' + IC.treat + di.treats + ' · 셋 다 하면 ' + IC.ticket + di.tickets + ' · 켜 두면 10분마다 ' + IC.treat + '1 (오늘 ' + di.drip + ' / ' + di.dripMax + ')');
-    $('daily-claim').disabled = !di.can;
-    setText($('daily-claim'), di.can ? '임무 보상 받기' : di.allGot ? '오늘 임무 끝 · 다음까지 ' + untilMidnight() : '임무를 하면 받을 수 있어요');
+    });
+    function minText(n) { return n >= 60 ? Math.floor(n / 60) + '시간' + (n % 60 ? ' ' + n % 60 + '분' : '') : n + '분'; }
+    function gift(x) { return '하나마다 ' + IC.treat + x.treats + ' · 셋 다 하면 ' + IC.ticket + x.tickets + (x.petTix ? ' ' + IC.ptix + x.petTix : ''); }
+    setText($('daily-drip'), gift(di) + ' · 켜 두면 10분마다 ' + IC.treat + '1 (오늘 ' + di.drip + ' / ' + di.dripMax + ')');
+    setText($('week-gift'), gift(infos[1])); setText($('month-gift'), gift(infos[2]));
+    setText($('day-left'), periodLeft('day')); setText($('week-left'), periodLeft('week')); setText($('month-left'), periodLeft('month'));
+    $('daily-claim').disabled = !anyCan;
+    setText($('daily-claim'), anyCan ? '임무 보상 받기' : '임무를 하면 받을 수 있어요');
   }
   /** 4.7.0 출석 칸: 일곱 날, 받은 날은 흐리게 ✓, 오늘 받을 날은 노란 테두리. */
   function renderAttend() {
@@ -1928,7 +1946,7 @@
     var aad = $('attend-ad'); if (aad) { var ast2 = C.adState(state, 'attend', todayStr()); aad.hidden = !ast2.can; setText(aad, (state.noAds ? '' : '광고 보고 ') + '한 번 더 받기'); }      // 4.8.5
     var di = C.dailyInfo(mainState(), todayStr());
     var ao = $('attend-open'); if (ao) { ao.textContent = info.can ? '출석 체크' : '출석 완료'; ao.classList.toggle('can', info.can); }      // 4.8.8 받을 수 있으면 빨간 점(5.0.2 단추가 넷이라 짧게. 남은 시간은 창 안에)
-    var dop = $('daily-open'); if (dop) { var dn = di.list.filter(function (x) { return x.done; }).length; dop.textContent = '임무 ' + dn + '/' + di.list.length; dop.classList.toggle('can', di.can); }      // 5.0.3 임무는 따로 단추(진행 · 받을 것이 있으면 빨간 점)
+    var dop = $('daily-open'); if (dop) { var dn = di.list.filter(function (x) { return x.done; }).length; dop.textContent = '임무 ' + dn + '/' + di.list.length; }      // 5.0.3 임무는 따로 단추(빨간 점은 renderDaily 가 세 기간을 보고)
     renderDaily(di);      // 4.8.8 단추 셋이 한 줄이라 짧게. 받을 수 있으면 노란 점
     setText($('attend-sub'), (info.day + 1) + '일째');
   }
@@ -3860,6 +3878,7 @@
   /* ---------- 그리기 ---------- */
   function render() {
     renderNames();
+    try { renderDaily(C.dailyInfo(mainState(), todayStr())); } catch (e) { /* 임무 줄이 없어도 게임은 돈다 */ }      // 5.0.6 상황 칸의 임무 줄
     syncNative(); syncNativeAttend();
     var m = C.mods(state), per = C.incomePerSec(state);      // 순찰조가 벌어 오는 몫까지 더해서 보여 준다
     setText($('supplies'), IC.supply + fmt(state.supplies));      // 4.7.4 물자 상자 아이콘
@@ -5572,10 +5591,10 @@
     });
     $('attend-open').addEventListener('click', function () { sfx('click'); $('attend-veil').hidden = false; renderAttend(); });
     $('daily-claim').addEventListener('click', function () {      // 4.9.6 오늘의 임무 보상
-      var r = C.dailyClaim(mainState(), todayStr());
+      var r = C.missionClaimAll(mainState(), todayStr());      // 5.0.6 세 기간을 한꺼번에
       if (!r.ok) { renderAttend(); return; }
-      var got = IC.treat + r.treats + (r.tickets ? ' · ' + IC.ticket + r.tickets : '');
-      log('오늘의 임무 보상을 받았다.', 'good'); toast('임무 보상 · ' + got); sfx('buy');
+      var got = IC.treat + r.treats + (r.tickets ? ' · ' + IC.ticket + r.tickets : '') + (r.petTix ? ' · ' + IC.ptix + r.petTix : '');
+      log('임무 보상을 받았다.', 'good'); toast('임무 보상 · ' + got); sfx('buy');
       Store.save(); renderAttend(); render();
     });
     $('attend-ad').addEventListener('click', function () { watchAd('attend'); });
@@ -5592,6 +5611,7 @@
     $('attend-close').addEventListener('click', function () { $('attend-veil').hidden = true; });
     $('daily-open').addEventListener('click', function () { sfx('click'); $('daily-veil').hidden = false; renderAttend(); });      // 5.0.3 오늘의 임무 창
     $('daily-close').addEventListener('click', function () { $('daily-veil').hidden = true; });
+    Array.prototype.forEach.call(document.querySelectorAll('.mission-go'), function (b) { b.addEventListener('click', function () { sfx('click'); $('daily-veil').hidden = false; renderAttend(); }); });      // 5.0.6 상황 칸에서 바로
     // 4.7.1 받을 수 있는 날에는 하루에 한 번 저절로 뜬다(다른 창이 떠 있으면 닫힌 뒤에)
     var attendShown = '';
     setInterval(function () {

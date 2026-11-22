@@ -3788,3 +3788,23 @@ test('5.0.1: 광고 보고 간식은 하루 정해진 번수만, 다음 날 다�
   assert.strictEqual(C.deserialize(C.serialize(s)).ad.treat, C.AD_TREAT_DAILY, '저장해도 남는다');
   assert.ok(C.adReward(s, 'treat', '2027-02-02').ok, '다음 날 다시');
 });
+
+test('5.0.6: 이번 주 · 이번 달 임무 — 같은 행동이 세 기간에 함께 쌓이고, 기간이 바뀌면 새로', function () {
+  var s = C.createState(0);
+  assert.strictEqual(C.periodStart('week', '2026-11-26'), '2026-11-23', '한 주는 월요일부터(목요일 → 월요일)');
+  assert.strictEqual(C.periodStart('week', '2026-11-23'), '2026-11-23');
+  assert.strictEqual(C.periodStart('week', '2026-11-29'), '2026-11-23', '일요일은 그 주');
+  assert.strictEqual(C.periodStart('month', '2026-11-26'), '2026-11-01');
+  var day = '2026-11-26', w = C.missionInfo(s, 'week', day), m = C.missionInfo(s, 'month', day);
+  assert.strictEqual(w.list.length, 3); assert.strictEqual(m.list.length, 3);
+  assert.ok(w.list[0].need > C.dailyInfo(s, day).list.filter(function (x) { return x.key === w.list[0].key; }).concat([{ need: 0 }])[0].need, '한 주 목표가 더 크다');
+  C.dailySync(s, day); s.supplies = 1e15; C.buyBuilding(s, C.BUILDINGS[0].id, 7);
+  assert.strictEqual(s.daily.n.build, 7); assert.strictEqual(s.weekly.n.build, 7); assert.strictEqual(s.monthly.n.build, 7);
+  w.list.forEach(function (x) { s.weekly.n[x.key] = x.need; });
+  var t0 = s.treats, k0 = s.tickets, p0 = s.petTix || 0, r = C.missionClaimAll(s, day);
+  assert.ok(r.ok); assert.strictEqual(s.treats - t0 >= 90, true); assert.strictEqual(s.tickets - k0, 1); assert.strictEqual(s.petTix - p0, 1, '한 주를 다 하면 데려오기권');
+  var back = C.deserialize(C.serialize(s)); assert.strictEqual(C.missionInfo(back, 'week', day).allGot, true, '저장해도 남는다');
+  assert.strictEqual(C.missionInfo(s, 'week', '2026-11-29').allGot, true, '같은 주(일요일)');
+  assert.strictEqual(C.missionInfo(s, 'week', '2026-11-30').allGot, false, '다음 주 월요일은 새로');
+  assert.strictEqual(C.missionInfo(s, 'month', '2026-11-30').start, '2026-11-01');
+});

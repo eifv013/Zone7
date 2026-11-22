@@ -441,6 +441,8 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .attend-days li.now { border: 2px solid var(--hazard); color: var(--ink); }
 .pet-pick-shard { margin-top: 6px; } .pet-pick-shard button[hidden] { display: none; }      /* 4.9.8 조각으로 데려오기 */
 .daily-head { margin: 4px 0 0; } .daily-head small { color: #b9b8ab; font-weight: 500; }      /* 4.9.6 오늘의 임무 */
+.mission-scroll { max-height: min(62vh, 560px); overflow-y: auto; margin: 6px -4px 0; padding: 0 4px; }      /* 5.0.6 오늘 · 이번 주 · 이번 달 */
+.mission-sec + .mission-sec { margin-top: 14px; } .mission-h { display: flex; justify-content: space-between; align-items: baseline; } .mission-h b { color: var(--hazard); font-size: 14px; } .mission-h small { color: #b9b8ab; font-size: 12px; }
 .daily-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
 .daily-list li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.05); font-size: 13px; }
 .daily-list li .bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; } .daily-list li .bar i { display: block; height: 100%; background: var(--hazard); }
@@ -1166,7 +1168,7 @@ canvas.labcv.ward-shake { animation: jam-shake .12s steps(2) infinite; }
 
 /* 다음 할 일, 살 수 있음 표시, 알림 쪽지, 버전 */
 .goal { display: flex; gap: 10px; align-items: baseline; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 14px; font-weight: 500; }
-.goal .label { flex: none; }
+.goal .label { flex: none; } .mission-goal .mission-sum { flex: 1; min-width: 0; } .mission-go.can { position: relative; } .mission-go.can::after { content: ''; position: absolute; top: -4px; right: -4px; width: 8px; height: 8px; border-radius: 50%; background: #e0392b; }      /* 5.0.6 상황 칸의 임무 줄 */
 .avail::after { content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 5px; background: var(--safe); vertical-align: 1px; }
 
 .toasts { position: fixed; right: 16px; bottom: 16px; z-index: 15; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
@@ -1538,7 +1540,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 5.0.5</div>
+  <div class="boot-ver">7구역 알파 5.0.6</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -1621,6 +1623,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="label">최근 무전</div>
       <p id="story-latest">아직 조용해요.</p>
       <div class="goal"><span class="label">다음 할 일</span><span id="goal"></span><button type="button" class="goal-go" id="goal-go" hidden>바로 가기</button></div>
+      <div class="goal mission-goal"><span class="label">임무</span><span class="mission-sum"></span><button type="button" class="goal-go mission-go">보기</button></div>
     </div>
   </section>
   <div class="scene-wrap"><canvas class="scene" id="scene" width="256" height="80" role="img" aria-label="거점과 방벽 바깥을 그린 도트 화면"></canvas><span class="danger-tag" id="danger-tag" hidden></span><span class="tag" id="tag-hero" aria-hidden="true" hidden><b id="tag-hero-name"></b><i id="tag-pet-name"></i></span></div>
@@ -1652,6 +1655,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="label" id="m-zone-trait"></div>
       <p class="m-story" id="m-story"></p>
       <div class="goal"><span class="label">다음 할 일</span><span id="m-goal"></span><button type="button" class="goal-go" id="m-goal-go" hidden>바로 가기</button></div>
+      <div class="goal mission-goal"><span class="label">임무</span><span class="mission-sum"></span><button type="button" class="goal-go mission-go">보기</button></div>
     </section>
     <section class="panel" id="night" aria-labelledby="h-night">
       <div class="panel-head">
@@ -2043,7 +2047,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <textarea id="save-code" spellcheck="false" placeholder="다른 기기로 옮기거나 백업할 때 쓰는 코드가 여기에 나타납니다. 불러올 코드를 붙여 넣고 불러오기를 누르세요."></textarea>
     <p class="save-msg" id="save-msg" role="status"></p>
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 되돌릴 수 없어요.</p></div>
-    <p class="ver">7구역 알파 5.0.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.0.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2157,9 +2161,12 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </div>
 <div class="story-veil" id="daily-veil" role="dialog" aria-modal="true" aria-labelledby="h-daily" hidden>
   <div class="story-card feedback-card attend-card">
-    <div class="zmap-head"><div class="label" id="h-daily">오늘의 임무</div><button type="button" class="feedback-close" id="daily-close">닫기</button></div>
-    <p class="label daily-head"><small id="daily-drip"></small></p>
-    <ul class="daily-list" id="daily-list"></ul>
+    <div class="zmap-head"><div class="label" id="h-daily">임무</div><button type="button" class="feedback-close" id="daily-close">닫기</button></div>
+    <div class="mission-scroll">
+      <div class="mission-sec"><div class="mission-h"><b>오늘</b><small id="day-left"></small></div><div class="daily-head"><small id="daily-drip"></small></div><ul class="daily-list" id="daily-list"></ul></div>
+      <div class="mission-sec"><div class="mission-h"><b>이번 주</b><small id="week-left"></small></div><div class="daily-head"><small id="week-gift"></small></div><ul class="daily-list" id="week-list"></ul></div>
+      <div class="mission-sec"><div class="mission-h"><b>이번 달</b><small id="month-left"></small></div><div class="daily-head"><small id="month-gift"></small></div><ul class="daily-list" id="month-list"></ul></div>
+    </div>
     <button type="button" class="attend-btn" id="daily-claim">임무 보상 받기</button>
   </div>
 </div>

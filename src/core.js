@@ -748,6 +748,7 @@
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
       treats: 0,             // 간식: 친구를 키우는 재화(철수해도 남는다)
       petLv: {},             // 친구마다의 레벨 { 품종: 레벨 }
+      weekly: null, monthly: null,      // 5.0.6 이번 주 · 이번 달 임무(daily 와 같은 꼴)
       daily: null,           // 4.9.6 오늘의 임무 { day, n:{키:횟수}, got:{키:true}, all, drip, play }
       petShards: 0,          // 4.9.8 친구 조각
       petTix: 0,             // 5.0.1 데려오기권
@@ -871,6 +872,7 @@
     var rk = raw.kennel && typeof raw.kennel === 'object' && !Array.isArray(raw.kennel) ? raw.kennel : {};
     PET_BREEDS.forEach(function (b) { if (Object.prototype.hasOwnProperty.call(rk, b.id)) s.kennel[b.id] = cleanName(rk[b.id], b.name); });
     s.daily = cleanDaily(raw.daily);      // 4.9.6 오늘의 임무
+    s.weekly = cleanPeriod(raw.weekly); s.monthly = cleanPeriod(raw.monthly);      // 5.0.6
     s.petShards = clamp(Math.floor(safeCount(raw.petShards)), 0, 1e6);      // 4.9.8
     s.petTix = clamp(Math.floor(safeCount(raw.petTix)), 0, 1e6);      // 5.0.1
     var pf = raw.petFree; s.petFree = pf && typeof pf === 'object' && typeof pf.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(pf.day) ? { day: pf.day, dog: pf.dog === true, cat: pf.cat === true } : null;
@@ -2875,70 +2877,105 @@
   }
   /** 4.9.6 친구의 별(1~5). 함께 있지 않으면 0. */
   /*
-   * 4.9.6 오늘의 임무 + 꾸준한 간식.
+   * 4.9.6 오늘의 임무 + 꾸준한 간식. 5.0.6 이번 주 · 이번 달 임무도 같은 틀로.
    *   왜: 간식이 출석 · 원정 별 · 수첩에 몰려 있어서, 평소에 하는 일로는 거의 모이지 않았다(뽑기를 꾸준히 못 한다).
-   *   임무: 날마다 DAILY_POOL 에서 세 개(날짜로 정해져 누구나 같은 날 같은 임무). 하나마다 간식 DAILY_TREATS, 셋 다 하면 뽑기권 1장 더.
+   *   임무: 기간(하루 · 한 주 · 한 달)마다 MISSION_POOL 에서 셋(기간 첫날로 정해져 누구나 같은 기간에 같은 임무).
+   *     하나마다 간식, 셋 다 받으면 덤(하루: 뽑기권 1 · 한 주: 뽑기권 1 + 데려오기권 1 · 한 달: 뽑기권 5 + 데려오기권 3).
+   *     같은 행동(밤 막기 · 시설 · 주문 · 뽑기 · 간식 · 원정 · 켜 두기)이 세 기간에 함께 쌓인다.
    *   꾸준한 간식: 게임을 켜 두고 노는 동안 DRIP_SECONDS 마다 간식 1개, 하루 DRIP_MAX 개까지(꺼 둔 시간은 세지 않는다).
-   *   횟수는 하루가 바뀌면(dailySync) 비운다. 날짜는 기기 날짜(출석과 같은 규칙: 거꾸로 돌리면 새로 주지 않는다).
+   *   날짜는 기기 날짜(출석과 같은 규칙: 거꾸로 돌리면 새로 주지 않는다). 한 주는 월요일부터.
    */
-  var DAILY_POOL = [
-    { key: 'night', need: 5, text: '밤 5번 막기' },
-    { key: 'build', need: 20, text: '시설 20번 짓기' },
-    { key: 'job', need: 3, text: '주문 · 계약 · 인양 3번 받기', can: function (st) { return zoneOpen(st, 1); } },      // 단골 주문은 2구역부터
-    { key: 'pull', need: 1, text: '뽑기 기계 1번 돌리기' },
-    { key: 'feed', need: 1, text: '친구에게 간식 1번 주기', can: function (st) { return !!st.pet; } },
-    { key: 'stage', need: 1, text: '원정 1번 다녀오기', can: function (st) { return zoneOpen(st, STAGE_OPEN_ZONE); } },
-    { key: 'play', need: 20, text: '20분 동안 지키기' }
+  var MISSION_POOL = [
+    { key: 'night', need: [5, 30, 120], text: '밤 {n}번 막기' },
+    { key: 'build', need: [20, 150, 600], text: '시설 {n}번 짓기' },
+    { key: 'job', need: [3, 15, 60], text: '주문 · 계약 · 인양 {n}번 받기', can: function (st) { return zoneOpen(st, 1); } },      // 단골 주문은 2구역부터
+    { key: 'pull', need: [1, 5, 20], text: '뽑기 기계 {n}번 돌리기' },
+    { key: 'feed', need: [1, 5, 20], text: '친구에게 간식 {n}번 주기', can: function (st) { return !!st.pet; } },
+    { key: 'stage', need: [1, 5, 15], text: '원정 {n}번 다녀오기', can: function (st) { return zoneOpen(st, STAGE_OPEN_ZONE); } },
+    { key: 'play', need: [20, 180, 600], text: '{n} 동안 지키기', minutes: true }
   ];
+  var DAILY_POOL = MISSION_POOL.map(function (m) { return { key: m.key, need: m.need[0], text: missionText(m, 0), can: m.can }; });      // 예전 이름(오늘의 임무)
+  var MISSION_PER = {
+    day: { field: 'daily', idx: 0, name: '오늘', treats: 10, bonus: { tickets: 1 } },
+    week: { field: 'weekly', idx: 1, name: '이번 주', treats: 30, bonus: { tickets: 1, petTix: 1 } },
+    month: { field: 'monthly', idx: 2, name: '이번 달', treats: 100, bonus: { tickets: 5, petTix: 3 } }
+  };
+  var MISSION_PERS = ['day', 'week', 'month'];
   var DAILY_COUNT = 3, DAILY_TREATS = 10, DAILY_ALL_TICKETS = 1, DRIP_SECONDS = 600, DRIP_MAX = 12;
-  function cleanDaily(raw) {
-    if (!raw || typeof raw !== 'object' || typeof raw.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.day)) return null;
-    var d = { day: raw.day, keys: Array.isArray(raw.keys) ? raw.keys.filter(function (k) { return DAILY_POOL.some(function (m) { return m.key === k; }); }).slice(0, DAILY_COUNT) : [], n: {}, got: {}, all: !!raw.all, drip: clamp(Math.floor(safeCount(raw.drip)), 0, DRIP_MAX), play: clamp(safeNum(raw.play, 0), 0, 86400) };
-    DAILY_POOL.forEach(function (m) { var v = raw.n && raw.n[m.key]; if (typeof v === 'number' && v > 0) d.n[m.key] = Math.min(1e6, Math.floor(v)); if (raw.got && raw.got[m.key] === true) d.got[m.key] = true; });
+  function missionText(m, idx) { var n = m.need[idx]; return m.text.replace('{n}', m.minutes ? (n >= 60 && n % 60 === 0 ? n / 60 + '시간' : n + '분') : String(n)); }
+  function isDay(v) { return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v); }
+  /** 기간의 첫날(날짜 글자). 하루는 그날, 한 주는 그 주 월요일, 한 달은 1일. */
+  function periodStart(per, today) {
+    if (per === 'month') return today.slice(0, 8) + '01';
+    if (per === 'week') { var t = Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, +today.slice(8, 10)), dow = (new Date(t).getUTCDay() + 6) % 7; return new Date(t - dow * 864e5).toISOString().slice(0, 10); }
+    return today;
+  }
+  function cleanPeriod(raw) {
+    if (!raw || typeof raw !== 'object' || !isDay(raw.day)) return null;
+    var d = { day: raw.day, keys: Array.isArray(raw.keys) ? raw.keys.filter(function (k) { return !!findKey(k); }).slice(0, DAILY_COUNT) : [], n: {}, got: {}, all: !!raw.all, drip: clamp(Math.floor(safeCount(raw.drip)), 0, DRIP_MAX), play: clamp(safeNum(raw.play, 0), 0, 86400 * 31) };
+    MISSION_POOL.forEach(function (m) { var v = raw.n && raw.n[m.key]; if (typeof v === 'number' && v > 0) d.n[m.key] = Math.min(1e7, Math.floor(v)); if (raw.got && raw.got[m.key] === true) d.got[m.key] = true; });
     return d;
   }
-  /** 날짜로 정하는 오늘의 임무 셋. 아직 열리지 않은 일(원정 · 단골 주문 · 친구)은 빼고 고른다. 하루가 시작될 때 한 번 정해 저장한다. */
-  function dailyPicks(day, state) {
-    var h = 0; for (var i = 0; i < day.length; i++) h = (h * 31 + day.charCodeAt(i)) >>> 0;
-    var pool = DAILY_POOL.filter(function (m) { return !state || !m.can || m.can(state); }), out = [];
+  var cleanDaily = cleanPeriod;
+  /** 기간 첫날로 정하는 임무 셋. 아직 열리지 않은 일(원정 · 단골 주문 · 친구)은 빼고 고른다. 기간이 시작될 때 한 번 정해 저장한다. */
+  function missionPicks(per, start, state) {
+    var h = per === 'day' ? 0 : per === 'week' ? 7 : 31;
+    for (var i = 0; i < start.length; i++) h = (h * 31 + start.charCodeAt(i)) >>> 0;
+    var pool = MISSION_POOL.filter(function (m) { return !state || !m.can || m.can(state); }), out = [];
     while (out.length < DAILY_COUNT && pool.length) { h = (h * 1103515245 + 12345) >>> 0; out.push(pool.splice(h % pool.length, 1)[0]); }
     return out;
   }
-  /** 하루가 바뀌었으면 임무를 새로. 날짜가 거꾸로면 그대로 둔다. */
-  function dailySync(state, today) {
-    if (typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return state.daily;
-    if (!state.daily || today > state.daily.day) state.daily = { day: today, keys: dailyPicks(today, state).map(function (m) { return m.key; }), n: {}, got: {}, all: false, drip: 0, play: 0 };
-    if (!state.daily.keys || !state.daily.keys.length) state.daily.keys = dailyPicks(state.daily.day, state).map(function (m) { return m.key; });
-    return state.daily;
+  function dailyPicks(day, state) { return missionPicks('day', day, state).map(function (m) { return { key: m.key, need: m.need[0], text: missionText(m, 0) }; }); }
+  /** 기간이 바뀌었으면 임무를 새로. 날짜가 거꾸로면 그대로 둔다. */
+  function missionSync(state, per, today) {
+    var P = MISSION_PER[per]; if (!P) return null;
+    if (!isDay(today)) return state[P.field] || null;
+    var start = periodStart(per, today), d = state[P.field];
+    if (!d || start > d.day) d = state[P.field] = { day: start, keys: missionPicks(per, start, state).map(function (m) { return m.key; }), n: {}, got: {}, all: false, drip: 0, play: 0 };
+    if (!d.keys || !d.keys.length) d.keys = missionPicks(per, d.day, state).map(function (m) { return m.key; });
+    return d;
   }
-  function findKey(k) { for (var i = 0; i < DAILY_POOL.length; i++) if (DAILY_POOL[i].key === k) return DAILY_POOL[i]; return null; }
-  function dailyBump(state, key, n) { if (!state.daily) return; var d = state.daily; d.n[key] = Math.min(1e6, (d.n[key] || 0) + (n > 0 ? Math.floor(n) : 1)); }
-  /** 켜 두고 노는 시간을 센다: 꾸준한 간식과 '지키기' 임무. 돌려주는 값: 이번에 얻은 간식 수. */
+  function dailySync(state, today) { MISSION_PERS.forEach(function (p) { missionSync(state, p, today); }); return state.daily; }
+  function findKey(k) { for (var i = 0; i < MISSION_POOL.length; i++) if (MISSION_POOL[i].key === k) return MISSION_POOL[i]; return null; }
+  /** 행동 횟수를 세 기간에 함께 더한다. */
+  function dailyBump(state, key, n) {
+    MISSION_PERS.forEach(function (p) { var d = state[MISSION_PER[p].field]; if (d && d.n) d.n[key] = Math.min(1e7, (d.n[key] || 0) + (n > 0 ? Math.floor(n) : 1)); });
+  }
+  /** 켜 두고 노는 시간을 센다: 꾸준한 간식과 '지키기' 임무(세 기간). 돌려주는 값: 이번에 얻은 간식 수. */
   function dailyPlay(state, dt, today) {
     var d = dailySync(state, today); if (!d || !(dt > 0)) return 0;
     dt = Math.min(dt, 5);      // 화면이 멈췄다 돌아와도 한꺼번에 세지 않는다
-    var before = Math.floor(d.play / DRIP_SECONDS); d.play = Math.min(86400, d.play + dt);
-    d.n.play = Math.floor(d.play / 60);
+    var before = Math.floor(d.play / DRIP_SECONDS);
+    MISSION_PERS.forEach(function (p) { var q = state[MISSION_PER[p].field]; if (!q) return; q.play = Math.min(86400 * 31, (q.play || 0) + dt); q.n.play = Math.floor(q.play / 60); });
     var gain = Math.min(DRIP_MAX - d.drip, Math.floor(d.play / DRIP_SECONDS) - before);
     if (gain > 0) { d.drip += gain; state.treats = Math.min(1e9, (state.treats || 0) + gain); return gain; }
     return 0;
   }
-  /** 오늘의 임무 보기: [{ key, text, need, have, done, got }], 모두 했는지 · 보너스 받았는지. */
-  function dailyInfo(state, today) {
-    var d = dailySync(state, today) || { n: {}, got: {}, all: false, drip: 0 };
-    var list = (d.keys || []).map(function (k) { return findKey(k); }).filter(Boolean).map(function (m) { var have = Math.min(m.need, d.n[m.key] || 0); return { key: m.key, text: m.text, need: m.need, have: have, done: have >= m.need, got: !!d.got[m.key] }; });
+  /** 기간의 임무 보기: [{ key, text, need, have, done, got }], 모두 했는지 · 덤 받았는지 · 기간 이름 · 보상. */
+  function missionInfo(state, per, today) {
+    var P = MISSION_PER[per], d = missionSync(state, per, today) || { n: {}, got: {}, all: false, drip: 0, keys: [] };
+    var list = (d.keys || []).map(function (k) { return findKey(k); }).filter(Boolean).map(function (m) { var need = m.need[P.idx], have = Math.min(need, d.n[m.key] || 0); return { key: m.key, text: missionText(m, P.idx), need: need, have: have, done: have >= need, got: !!d.got[m.key] }; });
     var allDone = list.length > 0 && list.every(function (x) { return x.got; });
-    return { list: list, can: list.some(function (x) { return x.done && !x.got; }) || (allDone && !d.all), allDone: allDone, allGot: d.all, drip: d.drip, dripMax: DRIP_MAX, treats: DAILY_TREATS, tickets: DAILY_ALL_TICKETS };
+    return { per: per, name: P.name, start: d.day, list: list, can: list.some(function (x) { return x.done && !x.got; }) || (allDone && !d.all), allDone: allDone, allGot: d.all, drip: d.drip || 0, dripMax: DRIP_MAX, treats: P.treats, tickets: P.bonus.tickets || 0, petTix: P.bonus.petTix || 0 };
   }
-  /** 다 한 임무의 간식을 받는다(셋 다 받으면 뽑기권도). */
-  function dailyClaim(state, today) {
-    var info = dailyInfo(state, today), d = state.daily, t = 0, k = 0;
+  function dailyInfo(state, today) { return missionInfo(state, 'day', today); }
+  /** 기간의 다 한 임무 보상을 받는다(셋 다 받으면 덤도). */
+  function missionClaim(state, per, today) {
+    var P = MISSION_PER[per]; if (!P) return fail('unknown');
+    var info = missionInfo(state, per, today), d = state[P.field], t = 0, k = 0, x = 0;
     if (!d) return fail('day');
-    info.list.forEach(function (x) { if (x.done && !x.got) { d.got[x.key] = true; t += DAILY_TREATS; } });
-    if (info.list.every(function (x) { return d.got[x.key]; }) && !d.all) { d.all = true; k = DAILY_ALL_TICKETS; }
-    if (!t && !k) return fail('none');
-    state.treats = Math.min(1e9, (state.treats || 0) + t); state.tickets = (state.tickets || 0) + k;
-    return { ok: true, treats: t, tickets: k };
+    info.list.forEach(function (m) { if (m.done && !m.got) { d.got[m.key] = true; t += P.treats; } });
+    if (info.list.length && info.list.every(function (m) { return d.got[m.key]; }) && !d.all) { d.all = true; k = P.bonus.tickets || 0; x = P.bonus.petTix || 0; }
+    if (!t && !k && !x) return fail('none');
+    state.treats = Math.min(1e9, (state.treats || 0) + t); state.tickets = (state.tickets || 0) + k; state.petTix = (state.petTix || 0) + x;
+    return { ok: true, treats: t, tickets: k, petTix: x };
+  }
+  function dailyClaim(state, today) { return missionClaim(state, 'day', today); }
+  /** 세 기간의 보상을 한꺼번에 받는다. */
+  function missionClaimAll(state, today) {
+    var sum = { ok: false, treats: 0, tickets: 0, petTix: 0 };
+    MISSION_PERS.forEach(function (p) { var r = missionClaim(state, p, today); if (r.ok) { sum.ok = true; sum.treats += r.treats; sum.tickets += r.tickets; sum.petTix += r.petTix; } });
+    return sum.ok ? sum : fail('none');
   }
   function petStar(state, breedId) { if (!state.kennel || !state.kennel[breedId]) return 0; var n = state.petStar && state.petStar[breedId]; return typeof n === 'number' && n >= 2 ? Math.min(PET_STAR_MAX, Math.floor(n)) : 1; }
   /** 5.0.1 오늘 그 종류(kind)를 무료로 데려올 수 있나. 날짜를 거꾸로 돌리면 안 된다. */
@@ -5455,7 +5492,7 @@
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
-    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, PET_SHARD_GAIN: PET_SHARD_GAIN, PET_SHARD_PULL: PET_SHARD_PULL, PET_SHARD_DUP: PET_SHARD_DUP, AD_TREATS: AD_TREATS, AD_TREAT_DAILY: AD_TREAT_DAILY, PET_STAR_UP: PET_STAR_UP, petFreeReady: petFreeReady, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect, cosRank: cosRank,
+    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, PET_SHARD_GAIN: PET_SHARD_GAIN, PET_SHARD_PULL: PET_SHARD_PULL, PET_SHARD_DUP: PET_SHARD_DUP, AD_TREATS: AD_TREATS, AD_TREAT_DAILY: AD_TREAT_DAILY, PET_STAR_UP: PET_STAR_UP, petFreeReady: petFreeReady, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, MISSION_PERS: MISSION_PERS, missionInfo: missionInfo, missionClaim: missionClaim, missionClaimAll: missionClaimAll, periodStart: periodStart, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect, cosRank: cosRank,
     cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, petOwnBonus: petOwnBonus, petSkillText: petSkillText, partyOf: partyOf, PET_SKILLS: PET_SKILLS, PET_OWN: PET_OWN, breedDesc: breedDesc, petInfo: petInfo,
     MOM_CHAPTER: MOM_CHAPTER, MOM_PAGES: MOM_PAGES, momRead: momRead, afterEnding: afterEnding,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
