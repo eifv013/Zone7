@@ -3734,14 +3734,12 @@ test('4.9.6: 켜 두고 노는 동안 10분마다 간식 1개, 하루 최대치�
   assert.ok(C.buyBuilding(n, C.BUILDINGS[0].id, 3).ok); assert.strictEqual(n.daily.n.build, 3);
 });
 
-test('4.9.8: 친구 조각으로 고른 아이를 데려오거나 별을 올린다', function () {
-  var s = C.createState(0), rare = C.PET_BREEDS.filter(function (b) { return b.rarity === 'rare' && b.kind === 'cat'; })[0];
-  assert.strictEqual(C.petShardTrade(s, rare.id).ok, false, '조각이 모자라면 안 된다');
-  s.petShards = 1000;
-  var r = C.petShardTrade(s, rare.id); assert.ok(r.ok && r.isNew); assert.ok(s.kennel[rare.id]); assert.strictEqual(s.pet.breed, rare.id, '데리고 다닌다');
-  assert.strictEqual(s.petShards, 1000 - C.PET_SHARD_COST.rare);
-  for (var k = 2; k <= C.PET_STAR_MAX; k++) assert.strictEqual(C.petShardTrade(s, rare.id).star, k);
-  assert.strictEqual(C.petShardTrade(s, rare.id).reason, 'max', '5성이면 더 못 올린다');
-  assert.strictEqual(C.petShardTrade(s, 'nope').ok, false);
+test('4.9.8: 친구 조각으로 데려오기를 한 번 더 한다(항체 샘플은 들지 않는다)', function () {
+  var s = C.createState(0); s.antibodies = 0; s.antibodyTotal = 1e6;
+  assert.strictEqual(C.adoptPet(s, 'cat', function () { return 0.5; }, true).reason, 'shards', '조각이 모자라면 안 된다');
+  s.petShards = 25;
+  var r = C.adoptPet(s, 'cat', function () { return 0.5; }, true);
+  assert.ok(r.ok && r.byShards); assert.strictEqual(s.petShards, 25 - C.PET_SHARD_PULL); assert.strictEqual(s.antibodies, 0, '샘플은 그대로');
   assert.strictEqual(C.deserialize(C.serialize(s)).petShards, s.petShards, '저장해도 남는다');
 });
+

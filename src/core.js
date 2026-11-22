@@ -130,8 +130,8 @@
   var PET_PULL_SHARE = 0.05;       // 다시 데려오기 값: 지금까지 얻은 항체 샘플 총량의 이 비율(판이 커져도 값이 헐해지지 않게)
   /* 4.9.6 겹치면 별: 처음 만나면 별 1개, 같은 아이가 또 나오면 별 +1(최대 5). 별 하나마다 장착 효과 +25%(5성이면 2배). 5성 뒤에 또 나오면 예전처럼 절반 환불 */
   var PET_STAR_MAX = 5, PET_STAR_STEP = 0.25;
-  /* 4.9.8 5성 뒤에 또 나오면 환불 대신 친구 조각. 조각으로 원하는 아이를 골라 데려오거나 별을 올린다(뽑기 운에 덜 매이게) */
-  var PET_SHARD_GAIN = { common: 2, fine: 3, rare: 5 }, PET_SHARD_COST = { common: 10, fine: 20, rare: 40 };
+  /* 4.9.8 5성 뒤에 또 나오면 환불 대신 친구 조각. 조각 PET_SHARD_PULL 개로 데려오기를 한 번 더 한다(항체 샘플 대신 조각으로 내는 데려오기) */
+  var PET_SHARD_GAIN = { common: 2, fine: 3, rare: 5 }, PET_SHARD_PULL = 10;
   var PET_DUP_REFUND = 0.5;        // 이미 함께 있는 아이가 또 나왔을 때 돌려받는 비율
   var PET_BREEDS = [
     // 4.4.6: 강아지 24 · 고양이 24(등급마다 여덟). 4.4.4 의 36종에 12종을 더했다. 그림은 scene.js 의 PET_SPEC(품종 id)로 그린다. body · patch 는 작은 표시(얼굴 칸 등)에 쓰는 대표 색이다
@@ -2830,10 +2830,12 @@
    *   새 아이면 일행에 들어오고 바로 데리고 다닌다. 이미 함께 있는 아이가 또 나오면 값의 일부를 돌려받는다.
    * 돌려주는 값: { ok, breed, rarity, dup, cost, refund }
    */
-  function adoptPet(state, kind, rng) {
+  function adoptPet(state, kind, rng, byShards) {
     if (!PET_KINDS[kind]) return fail('unknown');
-    var cost = petPullCost(state);
+    var cost = byShards ? 0 : petPullCost(state);      // 4.9.8 조각으로 데려오면 항체 샘플은 들지 않는다
+    if (byShards && !((state.petShards || 0) >= PET_SHARD_PULL)) return fail('shards');
     if (cost > state.antibodies) return fail('antibodies');
+    if (byShards) state.petShards -= PET_SHARD_PULL;
     rng = typeof rng === 'function' ? rng : Math.random;
     var rarity = rollRarity(rng());
     var pool = PET_BREEDS.filter(function (b) { return b.kind === kind && b.rarity === rarity.id; });
@@ -2844,7 +2846,7 @@
     if (shards) state.petShards = Math.min(1e6, (state.petShards || 0) + shards);
     if (starUp) { if (!state.petStar || typeof state.petStar !== 'object') state.petStar = {}; state.petStar[breed.id] = star + 1; }
     if (!dup) { state.kennel[breed.id] = breed.name; state.pet = { kind: kind, breed: breed.id, name: breed.name }; partyOf(state)[kind] = breed.id; syncPetWear(state); }      // 새 아이는 바로 그 종류 칸에 장착한다
-    return { ok: true, breed: breed, rarity: rarity, dup: dup, cost: cost, refund: refund, starUp: starUp, star: petStar(state, breed.id), shards: shards };
+    return { ok: true, breed: breed, rarity: rarity, dup: dup, cost: cost, refund: refund, starUp: starUp, star: petStar(state, breed.id), shards: shards, byShards: !!byShards };
   }
   /** 4.9.6 친구의 별(1~5). 함께 있지 않으면 0. */
   /*
@@ -2914,20 +2916,6 @@
     return { ok: true, treats: t, tickets: k };
   }
   function petStar(state, breedId) { if (!state.kennel || !state.kennel[breedId]) return 0; var n = state.petStar && state.petStar[breedId]; return typeof n === 'number' && n >= 2 ? Math.min(PET_STAR_MAX, Math.floor(n)) : 1; }
-  /** 4.9.8 조각으로 고른 아이를 데려오거나(없으면) 별을 올린다(있으면). 값은 등급마다. */
-  function petShardCost(breedId) { var b = findById(PET_BREEDS, breedId); return b ? PET_SHARD_COST[b.rarity] || Infinity : Infinity; }
-  function petShardTrade(state, breedId) {
-    var b = findById(PET_BREEDS, breedId);
-    if (!b) return fail('unknown');
-    var have = !!state.kennel[b.id], star = petStar(state, b.id);
-    if (have && star >= PET_STAR_MAX) return fail('max');
-    var cost = petShardCost(b.id);
-    if (!((state.petShards || 0) >= cost)) return fail('shards');
-    state.petShards -= cost;
-    if (!have) { state.kennel[b.id] = b.name; state.pet = { kind: b.kind, breed: b.id, name: b.name }; partyOf(state)[b.kind] = b.id; syncPetWear(state); }      // 새 아이는 데려오기처럼 바로 데리고 다닌다
-    else { if (!state.petStar || typeof state.petStar !== 'object') state.petStar = {}; state.petStar[b.id] = star + 1; }
-    return { ok: true, breed: b, isNew: !have, star: petStar(state, b.id), cost: cost };
-  }
   function petStarMult(state, breedId) { var n = petStar(state, breedId); return n > 1 ? 1 + PET_STAR_STEP * (n - 1) : 1; }
   /** 함께 있는 친구 가운데 누구를 데리고 다닐지 고른다. */
   function choosePet(state, breedId) {
@@ -5429,7 +5417,7 @@
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
-    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, PET_SHARD_GAIN: PET_SHARD_GAIN, PET_SHARD_COST: PET_SHARD_COST, petShardCost: petShardCost, petShardTrade: petShardTrade, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect, cosRank: cosRank,
+    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, PET_SHARD_GAIN: PET_SHARD_GAIN, PET_SHARD_PULL: PET_SHARD_PULL, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect, cosRank: cosRank,
     cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, petOwnBonus: petOwnBonus, petSkillText: petSkillText, partyOf: partyOf, PET_SKILLS: PET_SKILLS, PET_OWN: PET_OWN, breedDesc: breedDesc, petInfo: petInfo,
     MOM_CHAPTER: MOM_CHAPTER, MOM_PAGES: MOM_PAGES, momRead: momRead, afterEnding: afterEnding,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,

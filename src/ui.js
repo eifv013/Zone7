@@ -2680,7 +2680,7 @@
   var REG_PIX = ['..hhh...', '.hhhhh..', '.hsssh..', '..sss...', '.ccccc..', 'scccccs.', '.ccccc..', '.ccccc..', '.dd.dd..', '.dd.dd..'];      // 단골의 모습(머리 h, 살 s, 옷 c, 바지 d)
   function renderDex() {
     if (dexTab === 'pet') dexTab = 'dog';
-    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.petStar) + '|' + (state.petShards || 0) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + JSON.stringify(state.records) + '|' + JSON.stringify(state.passers) + '|' + (state.pet ? state.pet.breed : '') + '|' + JSON.stringify(state.party) + '|' + state.zone;
+    var key = dexTab + '|' + JSON.stringify(state.kennel) + '|' + JSON.stringify(state.petLv) + '|' + JSON.stringify(state.petStar) + '|' + JSON.stringify(state.defenses) + '|' + JSON.stringify(state.zdex) + '|' + JSON.stringify(state.regulars) + '|' + JSON.stringify(state.clients) + '|' + JSON.stringify(state.cargos) + '|' + JSON.stringify(state.records) + '|' + JSON.stringify(state.passers) + '|' + (state.pet ? state.pet.breed : '') + '|' + JSON.stringify(state.party) + '|' + state.zone;
     if (key === dexShown) return;
     dexShown = key;
     var tabs = $('dex-tabs'), box = $('dex');
@@ -2701,32 +2701,18 @@
       c.appendChild(frame); c.appendChild(body); box.appendChild(c);
       return body;
     }
-    /** 4.9.8 도감 카드 아래 '조각으로 데려오기 · 별 올리기' 단추 */
-    function shardBtn(body, b) {
-      var have = !!state.kennel[b.id], star = C.petStar(state, b.id), cost = C.petShardCost(b.id);
-      if (have && star >= C.PET_STAR_MAX) return;
-      var btn = el('button', 'dex-shard' + ((state.petShards || 0) >= cost ? ' can' : ''), (have ? '별 올리기' : '조각으로 데려오기') + ' · 조각 ' + cost); btn.type = 'button';
-      btn.addEventListener('click', function () {
-        var r = C.petShardTrade(state, b.id);
-        if (!r.ok) { toast(r.reason === 'shards' ? '친구 조각이 모자라요 (' + (state.petShards || 0) + ' / ' + cost + ')' : '더 올릴 수 없어요'); sfx('tab'); buzz([30, 30, 30]); return; }
-        log(r.isNew ? r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 조각으로 일행이 됐다.' : r.breed.name + ' 별이 ' + r.star + '개가 됐다.', 'good');
-        toast(r.isNew ? r.breed.name + ' 데려왔어요!' : r.breed.name + ' ' + starText(r.star)); sfx('goal'); Store.save(); dexShown = ''; renderDex(); render();
-      });
-      body.appendChild(btn);
-    }
     if (dexTab === 'dog' || dexTab === 'cat') {
       // 등급 순(기본 → 고급 → 희귀)으로 늘어놓는다
       var order = { common: 0, fine: 1, rare: 2 };
-      box.appendChild(el('p', 'dex-shards', '친구 조각 ' + (state.petShards || 0) + '개 · 별 5개가 된 아이를 또 만나면 생겨요. 조각으로 원하는 아이를 데려오거나 별을 올려요.'));      // 4.9.8
       C.PET_BREEDS.filter(function (b) { return b.kind === dexTab; }).sort(function (x, y) { return order[x.rarity] - order[y.rarity]; }).forEach(function (b) {
         var got = !!state.kennel[b.id], kind = C.PET_KINDS[b.kind], rar = null;
         C.PET_RARITIES.forEach(function (r) { if (r.id === b.rarity) rar = r; });
         var art = el('i', 'dex-pet'), rname = rar ? rar.name : '';
         art.style.background = (got ? petIcon(b) : petShadow(b.kind)) + ' center / contain no-repeat';      // 4.4.6: 만난 친구는 품종 그림, 못 만난 친구는 종류마다 같은 그림자(품종이 드러나지 않는다)
-        if (!got) { shardBtn(card(art, '???', rname + ' 등급', '데려오기나 친구 조각으로 만나요.', true, 'r-' + b.rarity), b); return; }
+        if (!got) { card(art, '???', rname + ' 등급', '데려오기에서 만날 수 있어요.', true, 'r-' + b.rarity); return; }
         var lv = C.petLevel(state, b.id), with_ = C.partyOf(state)[b.kind] === b.id;
         var ee = C.equipEffect(state, b.id), bonus = Math.round((ee ? ee.bonus : 0) * 100);      // 4.9.6 레벨 · 별까지 반영한 값(식을 한 곳에서만)
-        shardBtn(card(art, state.kennel[b.id] + (with_ ? ' · 함께' : ''), starText(C.petStar(state, b.id)) + ' · ' + rname + ' · ' + b.name + ' · Lv ' + lv + ' / ' + C.PET_LEVEL_MAX, '장착 ' + kind.label + ' +' + bonus + '% · 특기 ' + C.petSkillText(b.id), false, 'r-' + b.rarity), b);
+        card(art, state.kennel[b.id] + (with_ ? ' · 함께' : ''), starText(C.petStar(state, b.id)) + ' · ' + rname + ' · ' + b.name + ' · Lv ' + lv + ' / ' + C.PET_LEVEL_MAX, '장착 ' + kind.label + ' +' + bonus + '% · 특기 ' + C.petSkillText(b.id), false, 'r-' + b.rarity);
       });
     } else if (dexTab === 'zombie') {
       C.ZOMBIE_KINDS.forEach(function (z) {
@@ -4632,7 +4618,7 @@
     try { if (!(window.Sound && window.Sound.sample && window.Sound.sample(r.breed.kind === 'cat' ? 'cat' : 'dog'))) sfx('gopen' + ({ common: 0, fine: 1, rare: 2 }[r.rarity.id] || 0)); } catch (e) { /* 소리는 없어도 된다 */ }      // 4.5.6 고양이 · 강아지가 나타날 때 녹음한 울음소리(없으면 뽑기 소리)
     if (r.rarity.id === 'rare') buzz([30, 40, 30]);
     setText($('bf-msg'), r.starUp ? r.breed.name + ' 별 ' + r.star + '개로 강화!' : r.dup ? r.breed.name + (C.hasBatchim(r.breed.name) ? '은' : '는') + ' 이미 별 ' + C.PET_STAR_MAX + '개예요' : r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 친구가 됐어요!');
-    setText($('bf-sub'), r.rarity.name + ' · ' + kind.name + '\n' + (r.starUp ? starText(r.star) + ' · 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100 * (r.star - 1)) + '%' : r.dup ? '친구 조각 ' + r.shards + '개를 얻었어요 · 도감에서 원하는 아이와 바꿔요' : '장착 ' + C.breedDesc(r.breed).split(' · ').pop() + (sk ? ' · 특기 ' + sk : '')));
+    setText($('bf-sub'), r.rarity.name + ' · ' + kind.name + '\n' + (r.starUp ? starText(r.star) + ' · 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100 * (r.star - 1)) + '%' : r.dup ? '친구 조각 ' + r.shards + '개를 얻었어요 · 조각 ' + C.PET_SHARD_PULL + '개로 한 번 더 데려와요' : '장착 ' + C.breedDesc(r.breed).split(' · ').pop() + (sk ? ' · 특기 ' + sk : '')));
     setText($('bf-act'), '좋아요');
     $('bf-skip').hidden = true;
   }
@@ -4698,8 +4684,10 @@
       var short = cost > state.antibodies;      // 4.7.5 모자라면 값 옆에 '샘플 부족!'을 붉게 적는다
       setText(b.lastChild, cost ? IC.antibody + fmt(cost) + (short ? ' · 샘플 부족!' : '') : '첫 친구는 그냥 와요');
       b.lastChild.classList.toggle('short', short); b.disabled = short;
+      var sb = $('adopt-' + kind + '-shard');      // 4.9.8 조각 데려오기: 조각이 있을 때만 보인다
+      if (sb) { var sh = state.petShards || 0; sb.hidden = !(sh > 0); setText(sb.firstChild, k.name + ' · 조각으로'); setText(sb.lastChild, '조각 ' + sh + ' / ' + C.PET_SHARD_PULL); sb.disabled = sh < C.PET_SHARD_PULL; }
     });
-    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 별 +1(최대 ' + C.PET_STAR_MAX + '개, 별마다 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100) + '%) · 5성 뒤엔 친구 조각');
+    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 별 +1(최대 ' + C.PET_STAR_MAX + '개, 별마다 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100) + '%) · 5성 뒤엔 친구 조각(' + C.PET_SHARD_PULL + '개로 한 번 더 데려오기)');
     if (!p) return;
     setText($('pet-name'), p.name);
     var plv = C.petLevel(state, p.breed.id), feed = C.petFeedCost(state);
@@ -5280,16 +5268,22 @@
     ['dog', 'cat'].forEach(function (kind) {
       var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
       b.appendChild(el('span', '', k.name)); b.appendChild(el('small', '', k.what));
-      b.addEventListener('click', function () {
-        var r = C.adoptPet(state, kind);
+      b.addEventListener('click', function () { adopt(kind, false); });
+      var sb = $('adopt-' + kind + '-shard');      // 4.9.8 친구 조각으로 데려오기
+      if (sb) { sb.appendChild(el('span', '', '')); sb.appendChild(el('small', '', '')); sb.addEventListener('click', function () { adopt(kind, true); }); }
+    });
+    function adopt(kind, byShards) {
+      var k = C.PET_KINDS[kind];
+      (function () {
+        var r = C.adoptPet(state, kind, undefined, byShards);
         if (!r.ok) return;
         if (!r.dup) log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
         else if (r.starUp) log(r.breed.name + ' 별이 ' + r.star + '개가 됐다. 장착 효과가 더 커졌다.', 'good');      // 4.9.6
         $('pet-input').value = '';
         Store.save(); render();
         bfOpen(r);      // 4.5.3 결과는 이미 정해져 저장됐다. 연출은 보여 주기만 한다(닫거나 건너뛰어도 잃는 것이 없다)
-      });
-    });
+      })();
+    }
     var renamer = function (inputId, change, done) {
       var go = function () {
         var r = change($(inputId).value);
