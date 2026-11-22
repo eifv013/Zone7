@@ -216,7 +216,8 @@
     if (!show) return;
     var pet = C.petInfo(state);
     setText($('tag-hero-name'), state.heroName || C.HERO_DEFAULT);
-    setText($('tag-pet-name'), pet ? ' · ' + pet.name : '');
+    var other = pet && C.partyOf(state)[pet.kind === 'dog' ? 'cat' : 'dog'], otherName = other && state.kennel ? state.kennel[other] : '';      // 4.9.5 같이 다니는 다른 아이 이름도
+    setText($('tag-pet-name'), (pet ? ' · ' + pet.name : '') + (otherName ? ' · ' + otherName : ''));
   }
   /*
    * 앱 알림(안드로이드 앱에서만): 앱이 Zone7Native 라는 통로를 내어 준다. 브라우저에는 없으므로 그때는 설정 줄을 숨긴다.
@@ -2048,6 +2049,11 @@
         tb.addEventListener('click', function () { if (cosTab !== slot) { seeCosTab(cosTab); lookPick = ''; } cosTab = slot; sfx('tab'); renderShop(); });      // 4.7.6 칸을 떠날 때 그 칸의 NEW 를 지운다
         $('cos-tabs').appendChild(tb); rows.shopTabs[slot] = tb;
         var head = el('div', 'label', SLOT_NAME[slot]); head.setAttribute('data-slot', slot); $('wardrobe').appendChild(head);
+        if (slot === 'pet') {      // 4.9.5 누구에게 입힐지: 강아지 · 고양이가 옷을 따로 입는다
+          var pk = el('div', 'pet-kind'); pk.setAttribute('data-slot', slot); pk.setAttribute('role', 'tablist');
+          ['dog', 'cat'].forEach(function (k) { var kb = el('button', '', ''); kb.type = 'button'; kb.setAttribute('role', 'tab'); kb.setAttribute('data-kind', k); kb.addEventListener('click', function () { if (petTab === k) return; petTab = k; lookPick = ''; sfx('tab'); renderShop(); }); pk.appendChild(kb); });
+          $('wardrobe').appendChild(pk);
+        }
         var grid = el('div', 'cos-grid'); grid.setAttribute('data-slot', slot); $('wardrobe').appendChild(grid);
         C.COSMETICS.filter(function (c) { return c.slot === slot; }).map(function (c, i) { return { c: c, i: i }; }).sort(function (a, b) { return (a.c.base ? -1 : a.c.reward ? 9 : a.c.rarity) - (b.c.base ? -1 : b.c.reward ? 9 : b.c.rarity) || a.i - b.i; }).map(function (x) { return x.c; }).forEach(function (c) {      // 4.7.1 등급 순서(기본 → 일반 → 희귀 → 전설 → 기념)
           var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub'), nw = el('i', 'cos-new', 'NEW');
@@ -2064,7 +2070,7 @@
         if (C.ownsCosmetic(state, c.id)) { wearPick(c); return; }      // 4.7.6 가진 외형은 이 단추가 '장착하기'
         confirmBox(c.name, '조각 ' + C.SHARDS_COST[c.rarity] + '개로 ' + c.name + (C.hasBatchim(c.name) ? '을' : '를') + ' 얻어요.', '그만둔다', '얻는다', function () {
           var r = C.craftCosmetic(state, c.id);
-          if (r.ok) { C.wearCosmetic(state, c.id); lookPick = ''; log(r.name + (C.hasBatchim(r.name) ? '을' : '를') + ' 얻었다.', 'good'); sfx('goal'); Store.save(); renderShop(); }
+          if (r.ok) { C.wearCosmetic(state, c.id, c.slot === 'pet' ? petTab : undefined); lookPick = ''; log(r.name + (C.hasBatchim(r.name) ? '을' : '를') + ' 얻었다.', 'good'); sfx('goal'); Store.save(); renderShop(); }
         });
       });
     }
@@ -2074,20 +2080,26 @@
       var tb = rows.shopTabs[slot]; tb.setAttribute('aria-selected', String(slot === cosTab));
       tb.classList.toggle('has-new', C.COSMETICS.some(function (c) { return c.slot === slot && state.cosNew && state.cosNew[c.id]; }));
     });
-    var worn = C.cosmeticLook(state);
+    if (petTab !== 'dog' && petTab !== 'cat') petTab = C.mainPetKind(state);
+    Array.prototype.forEach.call(document.querySelectorAll('.pet-kind button'), function (kb) {      // 4.9.5 강아지 · 고양이 고르기(이름이 있으면 이름도)
+      var k = kb.getAttribute('data-kind'), bid = C.partyOf(state)[k], nm = bid && state.kennel ? state.kennel[bid] : '';
+      setText(kb, (k === 'dog' ? '강아지' : '고양이') + (nm ? ' · ' + nm : '')); kb.setAttribute('aria-selected', String(k === petTab));
+    });
+    var worn = C.cosmeticLook(state), petOn = C.petWearing(state, petTab);
+    worn.pet = (C.COSMETICS.filter(function (x) { return x.id === petOn; })[0] || { look: 'none' }).look;      // 미리 보기의 친구는 고른 종류의 아이
     C.COSMETICS.forEach(function (c) {
-      var r = rows.shop[c.id], own = C.ownsCosmetic(state, c.id), on = state.wear[c.slot] === c.id, cost = C.SHARDS_COST[c.rarity];
+      var r = rows.shop[c.id], own = C.ownsCosmetic(state, c.id), on = cosOn(c), cost = C.SHARDS_COST[c.rarity];
       r.btn.className = 'cos r' + c.rarity + (own ? ' own' : ' not') + (on ? ' on' : '') + (lookPick === c.id ? ' pick' : '');
       var how = c.reward ? (C.FLAG_REWARDS.filter(function (f) { return f.id === c.id; })[0] || { text: '' }).text : C.RARITIES[c.rarity] + ' · 조각 ' + cost;
       setText(r.sub, on ? '입는 중' : own && lookPick === c.id ? '한 번 더 누르면 장착' : own ? (c.base ? '기본' : C.RARITIES[c.rarity] + ' · 가짐') : '없음 · ' + how);      // 4.7.1 가진 것과 없는 것을 글로도 나눈다
       r.nw.hidden = !(state.cosNew && state.cosNew[c.id]);
       // 작은 그림: 지금 입은 모습에 이 외형 하나만 바꿔 입힌 라라(깃발은 깃대)
-      var key = JSON.stringify(worn) + c.id + (c.slot === 'pet' ? JSON.stringify(petLook()) : '');
+      var key = JSON.stringify(worn) + c.id + (c.slot === 'pet' ? petTab + JSON.stringify(petLook(petTab)) : '');
       if (r.key !== key) { r.key = key; drawThumb(r.cv, c, worn); }
     });
     // 미리 보기: 지금 입은 모습. 아직 없는 외형을 눌렀으면 그것을 입혀서 보여 준다
     var pc = lookPick ? C.COSMETICS.filter(function (x) { return x.id === lookPick; })[0] : null;
-    if (pc && state.wear[pc.slot] === pc.id) { pc = null; lookPick = ''; }      // 이미 입은 것은 미리 볼 것이 없다
+    if (pc && cosOn(pc)) { pc = null; lookPick = ''; }      // 이미 입은 것은 미리 볼 것이 없다
     lookNow = lookWith(worn, pc);
     drawLookScene($('look-pic'), lookNow, lookFrame);
     if (!lookTimer) lookTimer = setInterval(function () {      // 미리 보기의 라라는 제자리걸음을 하고 깃발은 펄럭인다(상점을 보고 있을 때만 그린다)
@@ -2127,12 +2139,17 @@
   function lookWith(worn, c) { var o = {}; for (var k in worn) if (Object.prototype.hasOwnProperty.call(worn, k)) o[k] = worn[k]; if (c) o[c.slot] = c.look; return o; }
   function shade(hex, k) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; function c(v) { return Math.max(0, Math.min(255, Math.round(v * k))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
   /** 옷장에 그릴 친구: 지금 데리고 있는 친구. 없으면 기본 누렁이(옷이 어떻게 보이는지는 알 수 있게). */
-  function petLook() { var p = C.petInfo(mainState()); return p ? { kind: p.kind, id: p.breed.id, body: p.breed.body, patch: p.breed.patch } : { kind: 'dog', id: 'nureong', body: '#b8864a', patch: '#e6d2a8' }; }
+  function petLook(kind) {
+    var ms = mainState();
+    if (kind === 'dog' || kind === 'cat') { var bid = C.partyOf(ms)[kind]; return bid ? { kind: kind, id: bid } : { kind: kind };      // 4.9.5 그 종류에 데리고 있는 아이(없으면 그 종류의 기본 그림)
+    }
+    var p = C.petInfo(ms); return p ? { kind: p.kind, id: p.breed.id, body: p.breed.body, patch: p.breed.patch } : { kind: 'dog', id: 'nureong', body: '#b8864a', patch: '#e6d2a8' };
+  }
   function drawThumb(cv, c, worn) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (c.slot === 'flag') { ctx.fillStyle = '#cfcebf'; ctx.fillRect(6, 6, 2, 30); if (window.Scene && window.Scene.drawFlag) window.Scene.drawFlag(ctx, c.look, 8, 6, 3, 0, 0); return; }
-    if (c.slot === 'pet') { if (window.Scene && window.Scene.paintPet) window.Scene.paintPet(ctx, Math.floor((cv.width - 30) / 2), cv.height - 26, 2, false, petLook(), c.look, 0); return; }      // 친구 옷: 데리고 있는 친구(없으면 누렁이)에게 입혀 보인다
+    if (c.slot === 'pet') { if (window.Scene && window.Scene.paintPet) window.Scene.paintPet(ctx, Math.floor((cv.width - 30) / 2), cv.height - 26, 2, false, petLook(petTab || undefined), c.look, 0); return; }      // 친구 옷: 데리고 있는 친구(없으면 누렁이)에게 입혀 보인다
     var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
     if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
     if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 0.65, look.fx === 'glow' ? 1 : 0);
@@ -2161,7 +2178,7 @@
     var step = Math.floor(t * 4) % 2, S = window.Scene;
     r('rgba(0,0,0,.25)', 78, G, 30, 2);
     if (S && S.drawHero) S.drawHero(ctx, 70, G - S.LARA_H * 3 - (step ? 1 : 0), 3, look, step, t, night ? 1 : 0);
-    if (S && S.paintPet) S.paintPet(ctx, 114, G - S.PET_H * 3, 3, false, petLook(), look.pet || 'none', t);      // 친구는 라라 곁에
+    if (S && S.paintPet) S.paintPet(ctx, 114, G - S.PET_H * 3, 3, false, petLook(petTab || undefined), look.pet || 'none', t);      // 친구는 라라 곁에
   }
   /*
    * 4.7.6 외형 누르기를 두 번으로 나눴다.
@@ -2170,10 +2187,13 @@
    *   없는 외형: 전처럼 미리 보기만(다시 누르면 원래대로).
    *   NEW 는 누를 때 지우지 않고, 그 칸(탭)을 떠나거나 상점을 나갈 때 지운다(화면으로 다 본 다음에).
    */
-  function wearPick(c) { lookPick = ''; if (C.wearCosmetic(state, c.id).ok) { sfx('goal'); Store.save(); applyLaraArt(); renderShop(); } }
+  var petTab = '';      // 4.9.5 친구 옷 칸에서 옷을 입힐 아이의 종류('dog' | 'cat')
+  /** 이 외형을 지금 입고 있나(친구 옷은 고른 종류의 아이가). */
+  function cosOn(c) { return c.slot === 'pet' ? C.petWearing(state, petTab || C.mainPetKind(state)) === c.id : state.wear[c.slot] === c.id; }
+  function wearPick(c) { lookPick = ''; if (C.wearCosmetic(state, c.id, c.slot === 'pet' ? petTab : undefined).ok) { sfx('goal'); Store.save(); applyLaraArt(); renderShop(); } }
   function clickCosmetic(c) {
     if (C.ownsCosmetic(state, c.id)) {
-      if (state.wear[c.slot] === c.id) { lookPick = ''; renderShop(); return; }
+      if (cosOn(c)) { lookPick = ''; renderShop(); return; }
       if (lookPick === c.id) { wearPick(c); return; }
       lookPick = c.id; sfx('tab'); renderShop(); return;
     }

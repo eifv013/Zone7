@@ -2529,7 +2529,7 @@ test('2.0.0 외형: 후드·무늬·가방·효과가 뽑기에 있고 깃발은
   // 입기
   const s = C.createState(0); s.cosmetics['hood-cat'] = s.cosmetics['pat-stripe'] = s.cosmetics['bag-teddy'] = s.cosmetics['fx-glow'] = true;
   ['hood-cat', 'pat-stripe', 'bag-teddy', 'fx-glow'].forEach(id => assert.ok(C.wearCosmetic(s, id).ok));
-  assert.deepEqual(C.cosmeticLook(s), { coat: { y: '#f0b400', j: '#f0b400' }, hood: 'cat', pat: 'stripe', bag: 'teddy', fx: 'glow', pet: 'none', flag: '#f0b400', legend: 0 });      // 4.9.0 legend: 입은 전설 수(효과 칸 빼고)
+  assert.deepEqual(C.cosmeticLook(s), { coat: { y: '#f0b400', j: '#f0b400' }, hood: 'cat', pat: 'stripe', bag: 'teddy', fx: 'glow', pet: 'none', pet2: 'none', flag: '#f0b400', legend: 0 });      // 4.9.0 legend: 입은 전설 수(효과 칸 빼고)
   assert.deepEqual(C.cosmeticLook(C.deserialize(C.serialize(s), 0)), C.cosmeticLook(s));
   // 깃발: 조건을 채우면 받는다
   const f = C.createState(0); assert.deepEqual(C.grantFlags(f), []);
@@ -3668,4 +3668,23 @@ test('4.9.3: 하루 무료 뽑기는 하루 한 번, 뽑기권을 쓰지 않고,
   assert.strictEqual(back.freePullDay, '2026-11-23');
   assert.strictEqual(C.freePullReady(back, '2026-11-24'), true, '다음 날은 다시 된다');
   back.freePullDay = '<script>'; assert.strictEqual(C.deserialize(JSON.stringify(back)).freePullDay, '', '이상한 값은 버린다');
+});
+
+test('4.9.5: 강아지와 고양이는 친구 옷을 따로 입고, 데리고 다니는 아이를 바꾸면 그 아이의 옷이 된다', function () {
+  var s = C.createState(0); s.antibodies = 1e12;
+  C.adoptPet(s, 'dog', function () { return 0.5; }); var dogId = s.pet.breed;
+  C.adoptPet(s, 'cat', function () { return 0.5; });      // 고양이를 데리고 다닌다
+  s.cosmetics['pet-scarf'] = true; s.cosmetics['pet-bell'] = true;
+  assert.ok(C.wearCosmetic(s, 'pet-scarf', 'dog').ok);
+  assert.ok(C.wearCosmetic(s, 'pet-bell', 'cat').ok);
+  assert.strictEqual(s.wear.pet, 'pet-bell', '데리고 다니는 고양이의 옷');
+  var L = C.cosmeticLook(s); assert.strictEqual(L.pet, 'bell'); assert.strictEqual(L.pet2, 'scarf', '같이 다니는 강아지의 옷');
+  C.choosePet(s, dogId);
+  assert.strictEqual(s.wear.pet, 'pet-scarf', '강아지를 데리고 다니면 강아지 옷');
+  var back = C.deserialize(C.serialize(s));
+  assert.deepStrictEqual(back.petWear, { dog: 'pet-scarf', cat: 'pet-bell' }, '저장해도 남는다');
+  assert.strictEqual(C.wearCosmetic(s, 'pet-cape', 'cat').ok, false, '없는 옷은 못 입는다');
+  // 예전 저장(petWear 없음): 입던 옷은 데리고 다니던 아이 종류가 입는다
+  var raw = JSON.parse(C.serialize(s)); delete raw.petWear; raw.wear.pet = 'pet-bell';
+  var old = C.deserialize(JSON.stringify(raw)); assert.strictEqual(old.petWear.dog, 'pet-bell'); assert.strictEqual(old.petWear.cat, 'pet-none');
 });

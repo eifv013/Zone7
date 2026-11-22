@@ -1011,7 +1011,8 @@
    *   그림의 바깥 가장자리 칸을 조금 어둡게 해 테두리처럼 보이게 한 다음, 원래 크기로 키워 붙인다.
    *   게임 화면(한 칸 = 한 점)에서는 쪼갤 수 없어 예전 그대로 그린다. 캔버스가 없는 곳(시험)도 예전 그대로.
    */
-  var HI = { on: true, edge: 0.72, keep: ['#17180f', '#b8402e'] };      // keep: 눈 · 입 · 장화 색은 번지지 않게(입이 뾰족해 보였다)
+  /* 4.9.5 라라는 고운 그림을 껐다(둥글어져 예전 그림이 낫다고 하셨다). 친구에게만 쓴다 */
+  var HI = { on: true, lara: false, edge: 0.72, keep: ['#17180f', '#b8402e'] };      // keep: 눈 · 입 · 장화 색은 번지지 않게(입이 뾰족해 보였다)
   function hiOk(ctx, scale) { return HI.on && scale >= 2 && typeof document !== 'undefined' && !!(ctx && ctx.drawImage); }
   /** 한 칸 크기 그림(w×h, 둘레 pad 칸)을 고운 그림으로 ctx 의 (x, y) 에 scale 배로 붙인다. 실패하면 false(부른 쪽이 예전대로 그린다). */
   function hiBlit(ctx, x, y, scale, w, h, pad, paint) {
@@ -1045,7 +1046,7 @@
   function drawHero(ctx, x, y, scale, look, step, t, dark) {
     if (!ctx) return false;
     var pose = step === undefined ? 'stand' : 'walk';
-    if (!(hiOk(ctx, scale) && hiBlit(ctx, x, y, scale, LARA_W, LARA_H, 1, function (g, px0, py0) { paintLara(g, px0, py0, 1, false, look, pose, step); }))) paintLara(ctx, x, y, scale || 1, false, look, pose, step);      // 4.9.2 크게 그릴 때는 고운 그림
+    if (!(HI.lara && hiOk(ctx, scale) && hiBlit(ctx, x, y, scale, LARA_W, LARA_H, 1, function (g, px0, py0) { paintLara(g, px0, py0, 1, false, look, pose, step); }))) paintLara(ctx, x, y, scale || 1, false, look, pose, step);      // 4.9.2 크게 그릴 때는 고운 그림
     paintLaraFx(ctx, x, y, scale || 1, false, look, t || 0, step === undefined ? 'stand' : 'walk', step, dark);
     return true;
   }
@@ -1730,7 +1731,7 @@
       // 4.4.6 함께 장착한 다른 친구는 라라 앞에서 걷는다(옷은 데리고 다니는 아이만 입는다). 발은 반 박자 어긋나게
       // 4.6.2 밤에 거점에 서 있을 때는 라라 앞이 모닥불 자리라 불 위에 앉아 보였다. 그때는 둘 다 라라 뒤에 앉는다(다른 친구는 한 걸음 더 뒤)
       var night2 = false; try { night2 = !moving && skyAt(view.t).dark > 0.35; } catch (e) { night2 = false; }
-      if (view.pet2) paintPet(ctx, night2 ? (f > 0 ? Math.round(h.x) - 12 - 2 * pw : Math.round(h.x) + 12 + pw) : (f > 0 ? Math.round(h.x) + 12 : Math.round(h.x) - 12 - pw), GROUND - PET_H, 1, f > 0, as(view.pet2, 1 - step), 'none', t + 0.3);
+      if (view.pet2) paintPet(ctx, night2 ? (f > 0 ? Math.round(h.x) - 12 - 2 * pw : Math.round(h.x) + 12 + pw) : (f > 0 ? Math.round(h.x) + 12 : Math.round(h.x) - 12 - pw), GROUND - PET_H, 1, f > 0, as(view.pet2, 1 - step), (view.look && view.look.pet2) || 'none', t + 0.3);      // 4.9.5 다른 아이도 자기 옷을
     }
     if (u.drone) {
       var qx = Math.round(h.x) + Math.round(Math.sin(t * 1.3) * 6) - 2, qy = GROUND - 24 + Math.round(Math.sin(t * 2.1) * 2);
