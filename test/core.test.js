@@ -1120,7 +1120,7 @@ test('동물 친구: 다시 데려오기는 항체 샘플이 들고, 판이 커�
   assert.equal(C.petPullCost(s), Math.ceil(1000 * C.PET_PULL_SHARE));
 });
 
-test('동물 친구: 이미 함께 있는 아이가 또 나오면 별이 오르고(4.9.6), 5성 뒤에는 값의 일부를 돌려받는다', () => {
+test('동물 친구: 이미 함께 있는 아이가 또 나오면 별이 오르고(4.9.6), 5성 뒤에는 친구 조각을 받는다(4.9.8)', () => {
   const s = fresh(); s.antibodyTotal = 400; s.antibodies = 1e6;
   C.adoptPet(s, 'dog', () => 0);
   C.renamePet(s, '초코');
@@ -1129,13 +1129,11 @@ test('동물 친구: 이미 함께 있는 아이가 또 나오면 별이 오르�
   for (let k = 2; k <= C.PET_STAR_MAX; k++) { const u = C.adoptPet(s, 'dog', () => 0); assert.equal(u.starUp, true); assert.equal(u.refund, 0, '별이 오를 때는 환불 없다'); assert.equal(C.petStar(s, id), k); }
   assert.ok(Math.abs(C.equipEffect(s, id).bonus - e1 * (1 + C.PET_STAR_STEP * 4)) < 1e-9, '5성은 장착 효과 2배');
   assert.equal(C.deserialize(C.serialize(s)).petStar[id], 5, '저장해도 남는다');
-  const active = s.pet.breed, cost = C.petPullCost(s), before = s.antibodies;
+  const cost = C.petPullCost(s), before = s.antibodies, sh = s.petShards;
   const r = C.adoptPet(s, 'dog', () => 0);
   assert.equal(r.starUp, false); assert.equal(C.petStar(s, id), 5, '5성이 끝');
-  assert.equal(r.dup, true);
-  assert.equal(r.refund, Math.floor(cost * C.PET_DUP_REFUND));
-  assert.equal(s.antibodies, before - cost + r.refund);
-  assert.equal(s.pet.breed, active); assert.equal(s.pet.name, '초코', '이름은 그대로다');
+  assert.equal(r.refund, 0); assert.equal(s.antibodies, before - cost, '4.9.8 환불 대신');
+  assert.equal(s.petShards - sh, C.PET_SHARD_GAIN[r.breed.rarity], '친구 조각');
   assert.equal(C.kennelCount(s), 1);
 });
 
@@ -3734,4 +3732,16 @@ test('4.9.6: 켜 두고 노는 동안 10분마다 간식 1개, 하루 최대치�
   assert.strictEqual(C.dailyPlay(s, 1e9, day), 0, '큰 dt 도 한꺼번에 세지 않는다');
   var n = C.createState(0); C.dailySync(n, day); n.supplies = 1e12;
   assert.ok(C.buyBuilding(n, C.BUILDINGS[0].id, 3).ok); assert.strictEqual(n.daily.n.build, 3);
+});
+
+test('4.9.8: 친구 조각으로 고른 아이를 데려오거나 별을 올린다', function () {
+  var s = C.createState(0), rare = C.PET_BREEDS.filter(function (b) { return b.rarity === 'rare' && b.kind === 'cat'; })[0];
+  assert.strictEqual(C.petShardTrade(s, rare.id).ok, false, '조각이 모자라면 안 된다');
+  s.petShards = 1000;
+  var r = C.petShardTrade(s, rare.id); assert.ok(r.ok && r.isNew); assert.ok(s.kennel[rare.id]); assert.strictEqual(s.pet.breed, rare.id, '데리고 다닌다');
+  assert.strictEqual(s.petShards, 1000 - C.PET_SHARD_COST.rare);
+  for (var k = 2; k <= C.PET_STAR_MAX; k++) assert.strictEqual(C.petShardTrade(s, rare.id).star, k);
+  assert.strictEqual(C.petShardTrade(s, rare.id).reason, 'max', '5성이면 더 못 올린다');
+  assert.strictEqual(C.petShardTrade(s, 'nope').ok, false);
+  assert.strictEqual(C.deserialize(C.serialize(s)).petShards, s.petShards, '저장해도 남는다');
 });
