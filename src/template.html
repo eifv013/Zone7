@@ -403,7 +403,7 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .stage-reward { margin-left: auto; padding: 4px 10px; border: 1px solid #b98c00; border-radius: 6px; background: transparent; color: #f0c040; font: 600 12px/1.45 var(--font-body); text-align: right; white-space: pre-line; cursor: pointer; min-height: 0; }      /* 4.7.5 누르면 별과 보상 설명 */      /* 4.7.2 원정 보상: 오른쪽 모서리 */
 #gacha-pull.can, .gacha-acts button.can { position: relative; } #gacha-pull.can::after, .gacha-acts button.can::after { content: ''; position: absolute; top: 6px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #e0392b; }      /* 4.9.3 오늘 무료 뽑기가 남았다 */
 .pet-kind { display: flex; gap: 6px; margin: 4px 0 8px; } .pet-kind[hidden] { display: none; } #wardrobe .pet-kind button { flex: 1; padding: 7px 4px; font-size: 12.5px; background: transparent !important; color: #b9b8ab !important; border: 1px solid #6d6d60 !important; } #wardrobe .pet-kind button[aria-selected="true"] { color: #141412 !important; background: var(--hazard) !important; border-color: var(--hazard) !important; font-weight: 700; }      /* 4.9.5 친구 옷을 누구에게 */
-.shop-top { display: flex; gap: 8px; } .attend-open.can { position: relative; } .attend-open.can::after { content: ''; position: absolute; top: 6px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #e0392b; } .shop-top .attend-open { flex: 1 1 0; min-width: 0; } .store-open { flex: 0 0 34% !important; border-color: #f0b400 !important; color: #f0b400 !important; }
+.shop-top { display: flex; gap: 8px; } .attend-open.can { position: relative; } .attend-open.can::after { content: ''; position: absolute; top: 6px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #e0392b; } .shop-top .attend-open { flex: 1 1 0; min-width: 0; white-space: nowrap; } .store-open { flex: 0 0 34% !important; border-color: #f0b400 !important; color: #f0b400 !important; }
 .store-card { max-height: 86vh; overflow-y: auto; }
 .store-list h4 { margin: 12px 0 6px; font: 700 12px/1.3 var(--font-body); color: #f0b400; }
 .store-row { display: flex; gap: 10px; align-items: center; border: 1px solid #3a3a30; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
@@ -440,7 +440,7 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .attend-days li.done { opacity: .45; } .attend-days li.done::after { content: '✓'; display: block; color: var(--good, #4caf50); }
 .attend-days li.now { border: 2px solid var(--hazard); color: var(--ink); }
 .pet-pick-shard { margin-top: 6px; } .pet-pick-shard button[hidden] { display: none; }      /* 4.9.8 조각으로 데려오기 */
-.daily-head { margin-top: 14px; } .daily-head small { color: #b9b8ab; font-weight: 500; margin-left: 6px; }      /* 4.9.6 오늘의 임무 */
+.daily-head { margin: 4px 0 0; } .daily-head small { color: #b9b8ab; font-weight: 500; }      /* 4.9.6 오늘의 임무 */
 .daily-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
 .daily-list li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.05); font-size: 13px; }
 .daily-list li .bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; } .daily-list li .bar i { display: block; height: 100%; background: var(--hazard); }
@@ -1943,7 +1943,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <div class="col" data-view="shop">
     <!-- 4.7.1 상점에는 출석 체크 단추 한 줄만. 누르면 출석 창이 뜬다(게임을 켤 때 하루 한 번 저절로도 뜬다) -->
     <!-- 4.8.0 출석 체크 옆에 보급소(상품 창) -->
-    <div class="shop-top"><button type="button" class="attend-open" id="attend-open">출석 체크</button><button type="button" class="attend-open store-open" id="store-open">보급소</button><button type="button" class="attend-open store-open" id="pass-open">수첩</button></div>
+    <div class="shop-top"><button type="button" class="attend-open" id="attend-open">출석 체크</button><button type="button" class="attend-open" id="daily-open">오늘 임무</button><button type="button" class="attend-open store-open" id="store-open">보급소</button><button type="button" class="attend-open store-open" id="pass-open">수첩</button></div>
     <!-- 4.5.1 상점은 아래 탭 하나(4.4.8 에는 일행 탭 안). 입은 모습(look)은 위에 붙어 있어 옷장을 내려도 보인다 -->
     <section class="panel hub-pane story-card shop-card" aria-labelledby="h-shop" id="shop-panel">
       <!-- 4.5.2 칸 사이를 좁혔다: 제목 줄에 가진 것, 단추 둘, 보장 · 확률 한 줄 -->
@@ -2149,11 +2149,16 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 <!-- 4.7.1 출석 창: 서른 날. 받을 수 있는 날에는 게임을 켤 때 하루 한 번 뜬다 -->
 <div class="story-veil" id="attend-veil" role="dialog" aria-modal="true" aria-labelledby="h-attend" hidden>
   <div class="story-card feedback-card attend-card">
-    <div class="zmap-head"><div class="label" id="h-attend">출석 · 오늘의 임무 · <span id="attend-sub"></span></div><button type="button" class="feedback-close" id="attend-close">닫기</button></div>
+    <div class="zmap-head"><div class="label" id="h-attend">출석 체크 · <span id="attend-sub"></span></div><button type="button" class="feedback-close" id="attend-close">닫기</button></div>
     <ol class="attend-days" id="attend-days"></ol>
     <button type="button" class="attend-btn" id="attend-claim">오늘 받기</button>
     <button type="button" class="attend-open" id="attend-ad" hidden>광고 보고 한 번 더 받기</button>
-    <div class="label daily-head">오늘의 임무 <small id="daily-drip"></small></div>
+  </div>
+</div>
+<div class="story-veil" id="daily-veil" role="dialog" aria-modal="true" aria-labelledby="h-daily" hidden>
+  <div class="story-card feedback-card attend-card">
+    <div class="zmap-head"><div class="label" id="h-daily">오늘의 임무</div><button type="button" class="feedback-close" id="daily-close">닫기</button></div>
+    <p class="label daily-head"><small id="daily-drip"></small></p>
     <ul class="daily-list" id="daily-list"></ul>
     <button type="button" class="attend-btn" id="daily-claim">임무 보상 받기</button>
   </div>

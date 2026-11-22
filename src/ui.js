@@ -1893,7 +1893,7 @@
   function attendText(w) { var a = []; if (w.tickets) a.push(IC.ticket + w.tickets); if (w.treats) a.push(IC.treat + w.treats); return a.join(' · '); }
   /** 4.9.6 오늘의 임무 목록(출석 창 아래). 창이 닫혀 있으면 단추 점만 갱신된다. */
   function renderDaily(di) {
-    var box = $('daily-list'); if (!box || $('attend-veil').hidden) return;
+    var box = $('daily-list'); if (!box || $('daily-veil').hidden) return;
     var key = JSON.stringify(di.list) + di.allGot;
     if (box.getAttribute('data-key') !== key) {
       box.setAttribute('data-key', key);
@@ -1927,7 +1927,8 @@
     setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '다음 출석까지 ' + untilMidnight());
     var aad = $('attend-ad'); if (aad) { var ast2 = C.adState(state, 'attend', todayStr()); aad.hidden = !ast2.can; setText(aad, (state.noAds ? '' : '광고 보고 ') + '한 번 더 받기'); }      // 4.8.5
     var di = C.dailyInfo(mainState(), todayStr());
-    var ao = $('attend-open'); if (ao) { var dn = di.list.filter(function (x) { return x.done; }).length; ao.textContent = info.can ? '출석 체크' : di.can ? '임무 보상 받기' : dn < di.list.length ? '오늘 임무 ' + dn + '/' + di.list.length : '출석 · 임무 끝';      /* 5.0.2 출석을 받은 뒤에는 임무가 보이게(남은 시간 대신 임무 진행) */ ao.classList.toggle('can', info.can || di.can); }      // 4.9.6 임무 보상이 있어도 빨간 점
+    var ao = $('attend-open'); if (ao) { ao.textContent = info.can ? '출석 체크' : '출석 완료'; ao.classList.toggle('can', info.can); }      // 4.8.8 받을 수 있으면 빨간 점(5.0.2 단추가 넷이라 짧게. 남은 시간은 창 안에)
+    var dop = $('daily-open'); if (dop) { var dn = di.list.filter(function (x) { return x.done; }).length; dop.textContent = '임무 ' + dn + '/' + di.list.length; dop.classList.toggle('can', di.can); }      // 5.0.3 임무는 따로 단추(진행 · 받을 것이 있으면 빨간 점)
     renderDaily(di);      // 4.8.8 단추 셋이 한 줄이라 짧게. 받을 수 있으면 노란 점
     setText($('attend-sub'), (info.day + 1) + '일째');
   }
@@ -5567,7 +5568,7 @@
       log('출석 ' + (r.day + 1) + '일째 보상을 받았다: ' + attendText(r.reward) + '.', 'good');
       toast('출석 ' + (r.day + 1) + '일째 · ' + attendText(r.reward)); sfx('buy');
       Store.save(); renderAttend(); render();
-      try { $('daily-list').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* 못 옮겨도 창은 열려 있다 */ }      // 5.0.2 닫지 않고 아래 오늘의 임무를 보여 준다(출석만 받고 임무를 모르고 지나가지 않게)
+      setTimeout(function () { $('attend-veil').hidden = true; }, 700);      // 받은 것을 잠깐 보여 주고 닫는다(5.0.3 임무는 따로 창)
     });
     $('attend-open').addEventListener('click', function () { sfx('click'); $('attend-veil').hidden = false; renderAttend(); });
     $('daily-claim').addEventListener('click', function () {      // 4.9.6 오늘의 임무 보상
@@ -5589,6 +5590,8 @@
       if (r.reason === 'treats') toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, C.PASS_PRICE - Math.floor(state.treats || 0))) + ' 더 필요해요');
     });
     $('attend-close').addEventListener('click', function () { $('attend-veil').hidden = true; });
+    $('daily-open').addEventListener('click', function () { sfx('click'); $('daily-veil').hidden = false; renderAttend(); });      // 5.0.3 오늘의 임무 창
+    $('daily-close').addEventListener('click', function () { $('daily-veil').hidden = true; });
     // 4.7.1 받을 수 있는 날에는 하루에 한 번 저절로 뜬다(다른 창이 떠 있으면 닫힌 뒤에)
     var attendShown = '';
     setInterval(function () {

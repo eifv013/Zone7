@@ -177,15 +177,16 @@ def run_case(browser, name, size, state, mode):
         if '친구가 됐어요' not in text('bf-msg'): problems.append('친구 만들기가 끝나지 않았다: ' + text('bf-msg'))
         tap('#bf-act'); page.wait_for_timeout(200)
         if page.locator('#bf-veil').is_visible(): problems.append('친구 만들기 창이 닫히지 않았다')
-        # 4.7.1 출석: 상점의 '출석 체크' 단추로 창을 열고 받는다(5.0.2 받은 뒤에는 창이 남아 오늘의 임무를 보여 준다)
+        # 4.7.1 출석: 상점의 '출석 체크' 단추로 창을 열고, 받으면 닫힌다
         page.evaluate("document.querySelector('#mnav-shop').click()"); page.wait_for_timeout(200)
         if not tap('#attend-open'): problems.append('출석 체크 단추가 없다')
         elif page.locator('#attend-days li').count() != 30: problems.append('출석 칸이 서른이 아니다: %d' % page.locator('#attend-days li').count())
         else:
             tap('#attend-claim'); page.wait_for_timeout(900)
-            if not page.locator('#daily-list li').count(): problems.append('출석 창에 오늘의 임무가 없다')      # 5.0.2 받은 뒤에도 창을 열어 두고 임무를 보여 준다
-            page.evaluate("document.getElementById('attend-close').click()"); page.wait_for_timeout(200)
-            if page.locator('#attend-veil').is_visible(): problems.append('출석 창이 닫히지 않는다')
+            if page.locator('#attend-veil').is_visible(): problems.append('출석을 받았는데 창이 닫히지 않았다')
+        if not tap('#daily-open'): problems.append('오늘 임무 단추가 없다')      # 5.0.3 임무는 따로 창
+        elif page.locator('#daily-list li').count() != 3: problems.append('오늘의 임무가 셋이 아니다')
+        else: page.evaluate("document.getElementById('daily-close').click()"); page.wait_for_timeout(200)
         tap('#mnav-exped'); tap('[data-view=exped] [data-grow-set=party]')      # 일행으로 돌아간다(아래 이름 바꾸기 검사)
         if not page.locator('#pet-card').is_visible() or '친구 1 /' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))
         if not page.query_selector('#adopt-dog .ic-antibody') and '오늘 무료' not in text('adopt-dog'): problems.append('다시 데려오기 값(또는 5.0.1 오늘 무료)이 보이지 않는다: ' + text('adopt-dog'))
