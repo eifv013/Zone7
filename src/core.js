@@ -132,6 +132,16 @@
   var PET_STAR_MAX = 5, PET_STAR_STEP = 0.25;
   /* 4.9.8 5성 뒤에 또 나오면 환불 대신 친구 조각. 조각 PET_SHARD_PULL 개로 데려오기를 한 번 더 한다(항체 샘플 대신 조각으로 내는 데려오기) */
   var PET_SHARD_GAIN = { common: 2, fine: 3, rare: 5 }, PET_SHARD_PULL = 10;
+  /*
+   * 5.0.1 방치형에 맞춘 데려오기 밸런스.
+   *   왜: 데려오기 값은 모은 항체 샘플의 5% 라 오래 할수록 하루에 데려오는 횟수가 줄었다(오래 한 사람일수록 별이 안 오른다).
+   *   - 날마다 강아지 · 고양이 한 번씩 무료(기기 날짜, 출석과 같은 규칙)
+   *   - 데려오기권(보급소에서 간식으로): 값 없이 한 번
+   *   - 겹치면 별과 함께 조각도 조금(PET_SHARD_DUP). 5성 뒤에는 PET_SHARD_GAIN
+   *   - 희귀는 겹치면 별 +2(희귀를 또 만나기가 매우 어렵다)
+   *   목표(무과금 · 매일): 기본 5성 1~2달 · 고급 4~5달 · 희귀 8~10달. 시험이 계산으로 지킨다.
+   */
+  var PET_SHARD_DUP = { common: 1, fine: 1, rare: 2 }, PET_STAR_UP = { common: 1, fine: 1, rare: 2 }, PET_TIX_TREATS = 80;
   var PET_DUP_REFUND = 0.5;        // 이미 함께 있는 아이가 또 나왔을 때 돌려받는 비율
   var PET_BREEDS = [
     // 4.4.6: 강아지 24 · 고양이 24(등급마다 여덟). 4.4.4 의 36종에 12종을 더했다. 그림은 scene.js 의 PET_SPEC(품종 id)로 그린다. body · patch 는 작은 표시(얼굴 칸 등)에 쓰는 대표 색이다
@@ -740,6 +750,8 @@
       petLv: {},             // 친구마다의 레벨 { 품종: 레벨 }
       daily: null,           // 4.9.6 오늘의 임무 { day, n:{키:횟수}, got:{키:true}, all, drip, play }
       petShards: 0,          // 4.9.8 친구 조각
+      petTix: 0,             // 5.0.1 데려오기권
+      petFree: null,         // 5.0.1 오늘 무료 데려오기를 쓴 기록 { day, dog, cat }
       petStar: {},           // 4.9.6 친구마다의 별 { 품종: 2~5 } (없으면 1성)
       party: { dog: null, cat: null },   // 4.4.6 장착한 친구(강아지 칸 · 고양이 칸의 품종 id). pet 은 그 가운데 라라 곁을 걷고 간식을 받는 아이
       kennel: {},            // 함께 있는 친구들 { 품종: 이름 }. 한 번 데려온 아이는 계속 남고, 누구를 데리고 다닐지 고른다
@@ -778,7 +790,7 @@
       skipDay: { day: '', n: 0 }, retreatBoost: false, freePullDay: '',
       pass: { season: -1, stamps: 0, premium: false, free: 0, prem: 0 },      // 4.8.2 생존자 수첩(시즌 30일): 도장 · 유료 줄 · 받은 칸 수
       starter: false,      // 4.8.2 첫 보급 상자를 샀는지(한 번만)
-      ad: { day: '', skip: false, attend: false }, adRetreat: false, noAds: false,
+      ad: { day: '', skip: false, attend: false, treat: 0 }, adRetreat: false, noAds: false,
       collect: 0,      // 4.8.6 외형 수집 보상을 몇 단계까지 받았는지
       rescueSent: 0,      // 4.8.7 이번 회차에 구조대를 보낸 횟수(값이 오른다)      // 4.8.5 광고 보상(하루 한 번씩) · 이번 철수 광고 보너스 · 광고 제거      // 4.8.0 시간 건너뛰기 하루 횟수 · 다음 철수 보급
       // 4.7.0 출석: 마지막으로 받은 날(YYYY-MM-DD, 기기의 날짜)과 받은 횟수
@@ -860,6 +872,8 @@
     PET_BREEDS.forEach(function (b) { if (Object.prototype.hasOwnProperty.call(rk, b.id)) s.kennel[b.id] = cleanName(rk[b.id], b.name); });
     s.daily = cleanDaily(raw.daily);      // 4.9.6 오늘의 임무
     s.petShards = clamp(Math.floor(safeCount(raw.petShards)), 0, 1e6);      // 4.9.8
+    s.petTix = clamp(Math.floor(safeCount(raw.petTix)), 0, 1e6);      // 5.0.1
+    var pf = raw.petFree; s.petFree = pf && typeof pf === 'object' && typeof pf.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(pf.day) ? { day: pf.day, dog: pf.dog === true, cat: pf.cat === true } : null;
     s.petStar = {};      // 4.9.6 함께 있는 아이만, 2~5 사이만 남긴다
     var rs = raw.petStar && typeof raw.petStar === 'object' && !Array.isArray(raw.petStar) ? raw.petStar : {};
     PET_BREEDS.forEach(function (b) { var n = clamp(Math.floor(safeCount(rs[b.id])), 0, PET_STAR_MAX); if (n >= 2 && s.kennel[b.id]) s.petStar[b.id] = n; });
@@ -954,7 +968,7 @@
     s.pass = { season: Number.isInteger(rp.season) && rp.season >= -1 ? rp.season : -1, stamps: clamp(safeCount(rp.stamps), 0, PASS_TIERS * PASS_STEP * 10), premium: rp.premium === true, free: clamp(safeCount(rp.free), 0, PASS_TIERS), prem: clamp(safeCount(rp.prem), 0, PASS_TIERS) };
     s.starter = raw.starter === true;
     var rad = raw.ad && typeof raw.ad === 'object' ? raw.ad : {};
-    s.ad = { day: typeof rad.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rad.day) ? rad.day : '', skip: rad.skip === true, attend: rad.attend === true };
+    s.ad = { day: typeof rad.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rad.day) ? rad.day : '', skip: rad.skip === true, attend: rad.attend === true, treat: clamp(Math.floor(safeCount(rad.treat)), 0, AD_TREAT_DAILY) };      // 5.0.1 treat: 오늘 광고로 간식을 받은 횟수
     s.adRetreat = raw.adRetreat === true; s.noAds = raw.noAds === true;
     s.collect = clamp(safeCount(raw.collect), 0, COLLECT_TIERS.length);
     s.rescueSent = s.zone >= 6 ? clamp(safeCount(raw.rescueSent), 0, 1e6) : 0;
@@ -2830,23 +2844,34 @@
    *   새 아이면 일행에 들어오고 바로 데리고 다닌다. 이미 함께 있는 아이가 또 나오면 값의 일부를 돌려받는다.
    * 돌려주는 값: { ok, breed, rarity, dup, cost, refund }
    */
-  function adoptPet(state, kind, rng, byShards) {
+  /*
+   * 데려오기. pay: 없으면 항체 샘플, 'shards'(조각 PET_SHARD_PULL) · 'tix'(데려오기권 1) · 'free'(오늘 무료, today 필요).
+   *   예전 부르기(adoptPet(state, kind, rng, true))는 조각으로 본다.
+   */
+  function adoptPet(state, kind, rng, pay, today) {
     if (!PET_KINDS[kind]) return fail('unknown');
-    var cost = byShards ? 0 : petPullCost(state);      // 4.9.8 조각으로 데려오면 항체 샘플은 들지 않는다
-    if (byShards && !((state.petShards || 0) >= PET_SHARD_PULL)) return fail('shards');
+    if (pay === true) pay = 'shards';
+    var cost = pay ? 0 : petPullCost(state);      // 조각 · 데려오기권 · 무료는 항체 샘플이 들지 않는다
+    if (pay === 'shards' && !((state.petShards || 0) >= PET_SHARD_PULL)) return fail('shards');
+    if (pay === 'tix' && !((state.petTix || 0) >= 1)) return fail('tix');
+    if (pay === 'free' && !petFreeReady(state, kind, today)) return fail('free');
+    if (pay && pay !== 'shards' && pay !== 'tix' && pay !== 'free') return fail('unknown');
     if (cost > state.antibodies) return fail('antibodies');
-    if (byShards) state.petShards -= PET_SHARD_PULL;
+    if (pay === 'shards') state.petShards -= PET_SHARD_PULL;
+    if (pay === 'tix') state.petTix -= 1;
+    if (pay === 'free') { if (!state.petFree || state.petFree.day !== today) state.petFree = { day: today, dog: false, cat: false }; state.petFree[kind] = true; }
+    var byShards = pay === 'shards';
     rng = typeof rng === 'function' ? rng : Math.random;
     var rarity = rollRarity(rng());
     var pool = PET_BREEDS.filter(function (b) { return b.kind === kind && b.rarity === rarity.id; });
     var breed = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(safeNum(rng(), 0) * pool.length)))];
     var dup = !!state.kennel[breed.id], star = petStar(state, breed.id), starUp = dup && star < PET_STAR_MAX;
-    var refund = 0, shards = dup && !starUp ? PET_SHARD_GAIN[breed.rarity] || 1 : 0;      // 4.9.8 5성 뒤에는 환불 대신 친구 조각
+    var refund = 0, shards = !dup ? 0 : starUp ? PET_SHARD_DUP[breed.rarity] || 1 : PET_SHARD_GAIN[breed.rarity] || 1;      // 5.0.1 겹치면 늘 조각(5성 뒤에는 더 많이)
     state.antibodies -= cost;
     if (shards) state.petShards = Math.min(1e6, (state.petShards || 0) + shards);
-    if (starUp) { if (!state.petStar || typeof state.petStar !== 'object') state.petStar = {}; state.petStar[breed.id] = star + 1; }
+    if (starUp) { if (!state.petStar || typeof state.petStar !== 'object') state.petStar = {}; state.petStar[breed.id] = Math.min(PET_STAR_MAX, star + (PET_STAR_UP[breed.rarity] || 1)); }      // 5.0.1 희귀는 +2
     if (!dup) { state.kennel[breed.id] = breed.name; state.pet = { kind: kind, breed: breed.id, name: breed.name }; partyOf(state)[kind] = breed.id; syncPetWear(state); }      // 새 아이는 바로 그 종류 칸에 장착한다
-    return { ok: true, breed: breed, rarity: rarity, dup: dup, cost: cost, refund: refund, starUp: starUp, star: petStar(state, breed.id), shards: shards, byShards: !!byShards };
+    return { ok: true, breed: breed, rarity: rarity, dup: dup, cost: cost, refund: refund, starUp: starUp, star: petStar(state, breed.id), shards: shards, byShards: byShards, pay: pay || 'antibody' };
   }
   /** 4.9.6 친구의 별(1~5). 함께 있지 않으면 0. */
   /*
@@ -2916,6 +2941,13 @@
     return { ok: true, treats: t, tickets: k };
   }
   function petStar(state, breedId) { if (!state.kennel || !state.kennel[breedId]) return 0; var n = state.petStar && state.petStar[breedId]; return typeof n === 'number' && n >= 2 ? Math.min(PET_STAR_MAX, Math.floor(n)) : 1; }
+  /** 5.0.1 오늘 그 종류(kind)를 무료로 데려올 수 있나. 날짜를 거꾸로 돌리면 안 된다. */
+  function petFreeReady(state, kind, today) {
+    if (!PET_KINDS[kind] || typeof today !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return false;
+    var f = state.petFree; if (!f) return true;
+    if (today < f.day) return false;
+    return today > f.day || !f[kind];
+  }
   function petStarMult(state, breedId) { var n = petStar(state, breedId); return n > 1 ? 1 + PET_STAR_STEP * (n - 1) : 1; }
   /** 함께 있는 친구 가운데 누구를 데리고 다닐지 고른다. */
   function choosePet(state, breedId) {
@@ -3898,6 +3930,7 @@
     { id: 'boost', kind: 'cons', treats: 100, name: '철수 보급', desc: '다음 철수 때 항체 샘플 1.25배', icon: 'antibody' },
     { id: 'tix11', kind: 'cons', treats: 400, name: '뽑기권 11장 묶음', desc: '10장 값에 1장 더', icon: 'ticket' },
     { id: 'shards', kind: 'cons', treats: 80, name: '조각 상자', desc: '조각 10개', icon: 'shard' },
+    { id: 'pettix', kind: 'cons', treats: PET_TIX_TREATS, name: '데려오기권', desc: '동물 친구를 한 번 데려와요(항체 샘플 없이)', icon: 'ptix' },      // 5.0.1
     { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 150개', icon: 'treat' },
     { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 900개', icon: 'treat' },
     { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 2,000개', icon: 'treat' },
@@ -3929,6 +3962,7 @@
     else if (id === 'boost') state.retreatBoost = true;
     else if (id === 'tix11') state.tickets = (state.tickets || 0) + 11;
     else if (id === 'shards') state.shards = (state.shards || 0) + 10;
+    else if (id === 'pettix') state.petTix = (state.petTix || 0) + 1;      // 5.0.1
     return r;
   }
   function buyContract(state) { if (state.pact) return fail('done'); state.pact = true; return { ok: true }; }      /* 'contract' 는 3구역 납품 의뢰가 쓰는 이름이라 pact 로 둔다 */
@@ -4005,13 +4039,16 @@
    *   retreat 이번 철수에 한 번: 항체 샘플 AD_RETREAT 배
    */
   var AD_RETREAT = 1.1;
-  function adOf(state, today) { var a = state.ad && typeof state.ad === 'object' ? state.ad : (state.ad = { day: '', skip: false, attend: false }); if (a.day !== today) { a.day = today; a.skip = false; a.attend = false; } return a; }
+  function adOf(state, today) { var a = state.ad && typeof state.ad === 'object' ? state.ad : (state.ad = { day: '', skip: false, attend: false, treat: 0 }); if (a.day !== today) { a.day = today; a.skip = false; a.attend = false; a.treat = 0; } return a; }
+  /* 5.0.1 광고 보고 간식: 한 번에 AD_TREATS 개, 하루 AD_TREAT_DAILY 번(광고 제거를 샀으면 단추만 누르면 된다) */
+  var AD_TREATS = 15, AD_TREAT_DAILY = 3;
   /** 광고 보상을 받을 수 있나: { can, reason }. */
   function adState(state, kind, today) {
     var a = adOf(state, today);
     if (kind === 'skip') return a.skip ? { can: false, reason: 'daily' } : incomePerSec(state) > 0 ? { can: true } : { can: false, reason: 'none' };
     if (kind === 'attend') { var at = state.attend || {}; return a.attend ? { can: false, reason: 'daily' } : at.last !== today ? { can: false, reason: 'notyet' } : { can: true }; }
     if (kind === 'retreat') return state.adRetreat ? { can: false, reason: 'ready' } : { can: true };
+    if (kind === 'treat') return (a.treat || 0) >= AD_TREAT_DAILY ? { can: false, reason: 'daily', left: 0 } : { can: true, left: AD_TREAT_DAILY - (a.treat || 0) };
     return { can: false, reason: 'unknown' };
   }
   /** 광고를 다 본 뒤(또는 광고 제거) 보상을 준다. */
@@ -4021,6 +4058,7 @@
     if (kind === 'skip') { a.skip = true; r.gain = timeSkip(state).gain; }
     else if (kind === 'attend') { a.attend = true; var cnt = (state.attend && state.attend.count || 1) - 1, w = ATTEND_REWARDS[cnt % ATTEND_REWARDS.length]; state.treats = (state.treats || 0) + (w.treats || 0); state.tickets = (state.tickets || 0) + (w.tickets || 0); r.reward = w; }
     else if (kind === 'retreat') state.adRetreat = true;
+    else if (kind === 'treat') { a.treat = (a.treat || 0) + 1; state.treats = Math.min(1e9, (state.treats || 0) + AD_TREATS); r.treats = AD_TREATS; }
     return r;
   }
   /*
@@ -5417,7 +5455,7 @@
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
-    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, PET_SHARD_GAIN: PET_SHARD_GAIN, PET_SHARD_PULL: PET_SHARD_PULL, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect, cosRank: cosRank,
+    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, PET_SHARD_GAIN: PET_SHARD_GAIN, PET_SHARD_PULL: PET_SHARD_PULL, PET_SHARD_DUP: PET_SHARD_DUP, AD_TREATS: AD_TREATS, AD_TREAT_DAILY: AD_TREAT_DAILY, PET_STAR_UP: PET_STAR_UP, petFreeReady: petFreeReady, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect, cosRank: cosRank,
     cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, petOwnBonus: petOwnBonus, petSkillText: petSkillText, partyOf: partyOf, PET_SKILLS: PET_SKILLS, PET_OWN: PET_OWN, breedDesc: breedDesc, petInfo: petInfo,
     MOM_CHAPTER: MOM_CHAPTER, MOM_PAGES: MOM_PAGES, momRead: momRead, afterEnding: afterEnding,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,

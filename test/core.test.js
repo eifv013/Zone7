@@ -3743,3 +3743,48 @@ test('4.9.8: 친구 조각으로 데려오기를 한 번 더 한다(항체 샘�
   assert.strictEqual(C.deserialize(C.serialize(s)).petShards, s.petShards, '저장해도 남는다');
 });
 
+
+test('5.0.1: 오늘 무료 데려오기(종류마다 하루 한 번) · 데려오기권 · 겹치면 조각 · 희귀는 별 +2', function () {
+  var s = C.createState(0), day = '2027-01-05';
+  C.adoptPet(s, 'dog', function () { return 0.5; });      // 첫 친구
+  s.antibodies = 0; s.antibodyTotal = 1e6;
+  assert.ok(C.adoptPet(s, 'dog', function () { return 0.5; }, 'free', day).ok, '무료는 샘플이 없어도 된다');
+  assert.strictEqual(C.adoptPet(s, 'dog', function () { return 0.5; }, 'free', day).reason, 'free', '하루 한 번');
+  assert.ok(C.adoptPet(s, 'cat', function () { return 0.5; }, 'free', day).ok, '고양이는 따로');
+  assert.strictEqual(C.petFreeReady(s, 'dog', '2027-01-04'), false, '날짜를 거꾸로 돌려도 안 된다');
+  assert.strictEqual(C.petFreeReady(s, 'dog', '2027-01-06'), true);
+  assert.strictEqual(C.adoptPet(s, 'dog', null, 'tix').reason, 'tix');
+  s.treats = 1000; assert.ok(C.buyShop(s, 'pettix', day).ok); assert.strictEqual(s.petTix, 1);
+  assert.ok(C.adoptPet(s, 'dog', function () { return 0.5; }, 'tix').ok); assert.strictEqual(s.petTix, 0);
+  var back = C.deserialize(C.serialize(s)); assert.deepStrictEqual(back.petFree, s.petFree);
+  // 희귀 겹침: 별 +2, 조각 PET_SHARD_DUP.rare
+  var r = C.createState(0), rare = function () { return 0.999; };
+  r.antibodies = 1e9; r.antibodyTotal = 10;
+  var a = C.adoptPet(r, 'dog', rare); assert.strictEqual(a.breed.rarity, 'rare');
+  var b = C.adoptPet(r, 'dog', rare); assert.strictEqual(b.star, 3); assert.strictEqual(b.shards, C.PET_SHARD_DUP.rare);
+});
+
+test('5.0.1: 방치형 밸런스 — 무과금 · 날마다 무료만으로 기본 5성은 1~3달, 희귀 5성은 1년 남짓', function () {
+  function run(seed) {
+    var x = seed * 7919 + 13, rng = function () { x = (x * 1103515245 + 12345) % 2147483648; return x / 2147483648; };
+    var s = C.createState(0), res = {}; s.antibodies = 0; C.adoptPet(s, 'dog', rng);
+    var dogs = C.PET_BREEDS.filter(function (b) { return b.kind === 'dog'; });
+    for (var d = 1; d <= 900; d++) {
+      var day = new Date(Date.UTC(2027, 0, 1) + d * 864e5).toISOString().slice(0, 10);
+      C.adoptPet(s, 'dog', rng, 'free', day); while (s.petShards >= C.PET_SHARD_PULL) C.adoptPet(s, 'dog', rng, 'shards');
+      dogs.forEach(function (b) { if (!res[b.id] && C.petStar(s, b.id) >= C.PET_STAR_MAX) res[b.id] = d; });
+    }
+    function med(r) { var a = dogs.filter(function (b) { return b.rarity === r; }).map(function (b) { return res[b.id] || 9999; }).sort(function (p, q) { return p - q; }); return a[Math.floor(a.length / 2)]; }
+    return { common: med('common'), rare: med('rare') };
+  }
+  [1, 2].forEach(function (sd) { var m = run(sd); assert.ok(m.common >= 30 && m.common <= 100, '기본 ' + m.common + '일'); assert.ok(m.rare >= 180 && m.rare <= 500, '희귀 ' + m.rare + '일'); });
+});
+
+test('5.0.1: 광고 보고 간식은 하루 정해진 번수만, 다음 날 다시', function () {
+  var s = C.createState(0), day = '2027-02-01', t0 = s.treats;
+  for (var i = 0; i < C.AD_TREAT_DAILY; i++) assert.ok(C.adReward(s, 'treat', day).ok);
+  assert.strictEqual(C.adReward(s, 'treat', day).ok, false, '하루 한도');
+  assert.strictEqual(s.treats - t0, C.AD_TREATS * C.AD_TREAT_DAILY);
+  assert.strictEqual(C.deserialize(C.serialize(s)).ad.treat, C.AD_TREAT_DAILY, '저장해도 남는다');
+  assert.ok(C.adReward(s, 'treat', '2027-02-02').ok, '다음 날 다시');
+});

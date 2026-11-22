@@ -186,7 +186,7 @@ def run_case(browser, name, size, state, mode):
             if page.locator('#attend-veil').is_visible(): problems.append('출석을 받았는데 창이 닫히지 않았다')
         tap('#mnav-exped'); tap('[data-view=exped] [data-grow-set=party]')      # 일행으로 돌아간다(아래 이름 바꾸기 검사)
         if not page.locator('#pet-card').is_visible() or '친구 1 /' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))
-        if not page.query_selector('#adopt-dog .ic-antibody'): problems.append('다시 데려오기 값이 보이지 않는다: ' + text('adopt-dog'))
+        if not page.query_selector('#adopt-dog .ic-antibody') and '오늘 무료' not in text('adopt-dog'): problems.append('다시 데려오기 값(또는 5.0.1 오늘 무료)이 보이지 않는다: ' + text('adopt-dog'))
         page.fill('#hero-input', '김씨'); page.click('#hero-rename'); page.wait_for_timeout(150)
         if page.get_attribute('#hero-input', 'placeholder') != '김씨': problems.append('주인공 이름이 바뀌지 않았다')
         page.fill('#pet-input', '나비'); page.click('#pet-rename'); page.wait_for_timeout(150)

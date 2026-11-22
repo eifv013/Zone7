@@ -710,6 +710,7 @@
     antibody: { name: '항체 샘플', pal: { c: '#d8453a', C: '#a83028', g: '#cfe6f0', G: '#8fb0bc', l: '#7fd8a0', L: '#4aa870', w: '#ffffff' }, g: ['.....cccc.....', '.....CCCC.....', '......gG......', '......gG......', '.....gggG.....', '....gwlllG....', '...gwllllLG...', '...gllllllLG..', '...glllllLLG..', '....gLLLLLG...', '.....GGGGG....', '..............'] },
     treat:    { name: '간식', pal: { t: '#ecd09a', T: '#c89a5a', w: '#fff4dc' }, g: ['..............', '..............', '.ww........ww.', 'wttw......wttw', 'wtttttttttttTw', '.ttttttttttTT.', '.tttttttttTTT.', 'wttTTTTTTTTTTw', 'tTTt......tTTT', '.TT........TT.', '..............', '..............'] },
     ticket:   { name: '뽑기권', pal: { w: '#fff2a0', y: '#f0b400', Y: '#c88a00', d: '#a85a00', s: '#c86a00' }, g: ['..............', 'wwwwwwwwwwwwww', 'yyyyyyyyydyyyY', 'yyyysyyyyyyyyY', '.yysssyyydyyy.', '..yysyyyyyyy..', '.yyyyyyyydyyy.', 'yyyyyyyyyyyyyY', 'yyyyyyyyydyyyY', 'YYYYYYYYYYYYYY', '..............', '..............'] },
+    ptix:     { name: '데려오기권', pal: { w: '#ffe4c0', y: '#f0a050', Y: '#b86a28', d: '#7a3e18', s: '#7a3e18' }, g: ['..............', 'wwwwwwwwwwwwww', 'yyyyyyyyydyyyY', 'yyyysyyyyyyyyY', '.yysssyyydyyy.', '..yysyyyyyyy..', '.yyyyyyyydyyy.', 'yyyyyyyyyyyyyY', 'yyyyyyyyydyyyY', 'YYYYYYYYYYYYYY', '..............', '..............'] },      // 5.0.1 데려오기권: 뽑기권 모양에 친구 조각 빛깔
     shard:    { name: '조각', pal: { p: '#b48aff', P: '#7a52c8', w: '#e8d8ff' }, g: ['..............', '......pp......', '.....wppP.....', '....wpppPP....', '...wppppPP....', '...ppppppPP...', '..pppppppPP...', '..ppppppPPP...', '...pppppPP....', '....ppPPP.....', '.....PPP......', '..............'] },
     pshard:   { name: '친구 조각', pal: { c: '#c07a30', w: '#ffd8a8', O: '#7a3e18' }, g: ['....cccccc....', '..cwwwwwwwwc..', '.cwwwOwwOwwwc.', '.cwOwOwwOwOwc.', 'cwwOwwwwwwOwwc', 'cwwwwwOOwwwwwc', 'cwwwwOOOOwwwwc', 'cwwwOOOOOOwwwc', '.cwwOOOOOOwwc.', '.cwwwOOwOOwwc.', '..cwwwwwwwwc..', '....cccccc....'] },      // 4.9.9 친구 조각: 발바닥 무늬 동전(작게 보여도 알아보게 바탕 위에 발바닥)
     serum:    { name: '혈청', pal: { H: '#b4b8c0', g: '#e8f6ff', G: '#a8c0cc', y: '#f0b400', Y: '#c88a00', n: '#d0d4dc' }, g: ['..............', '..............', '.H............', '.HgggggggG....', 'HHgyyyyyyGHnnn', '.HgYYYYYYG....', '.HGGGGGGGG....', '.H............', '..............', '..............', '..............', '..............'] },
@@ -1941,7 +1942,7 @@
     if (!box.firstChild) STORE_GROUP.forEach(function (g) {
       box.appendChild(el('h4', '', g[1]));
       if (g[0] === 'ad') {      // 4.8.5 광고 보상 두 줄(출석 한 번 더는 출석 창에)
-        [['skip', 'supply', '시간 건너뛰기', '현재 수입 2시간치 물자, 하루 1번'], ['retreat', 'antibody', '철수 응원', '다음 철수 때 항체 샘플 1.1배']].forEach(function (a) {
+        [['treat', 'treat', '간식 한 봉지', '간식 ' + C.AD_TREATS + '개, 하루 ' + C.AD_TREAT_DAILY + '번'], ['skip', 'supply', '시간 건너뛰기', '현재 수입 2시간치 물자, 하루 1번'], ['retreat', 'antibody', '철수 응원', '다음 철수 때 항체 샘플 1.1배']]      /* 5.0.1 광고 간식을 맨 위에 */.forEach(function (a) {
           var arow = el('div', 'store-row'); arow.setAttribute('data-ad', a[0]); arow.appendChild(el('i', 'ic ic-' + a[1]));
           var at = el('div', 't'); at.appendChild(el('b', '', a[2])); at.appendChild(el('small', '', a[3])); arow.appendChild(at);
           var ab = el('button', 'ad'); ab.type = 'button'; arow.appendChild(ab); ab.addEventListener('click', function () { watchAd(a[0]); });
@@ -1972,7 +1973,7 @@
     });
     Array.prototype.forEach.call(box.querySelectorAll('.store-row'), function (row) {
       var adk = row.getAttribute('data-ad');
-      if (adk) { var ast = C.adState(state, adk, todayStr()), abt = row.lastChild; abt.disabled = !ast.can; setText(abt, ast.can ? (state.noAds ? '바로 받기' : '광고 보기') : ast.reason === 'daily' ? '오늘 다 봤어요' : ast.reason === 'ready' ? '준비됨' : '아직'); return; }
+      if (adk) { var ast = C.adState(state, adk, todayStr()), abt = row.lastChild; abt.disabled = !ast.can; setText(abt, ast.can ? (state.noAds ? '바로 받기' : '광고 보기') + (ast.left != null ? ' · ' + ast.left + '번' : '') : ast.reason === 'daily' ? '오늘 다 봤어요' : ast.reason === 'ready' ? '준비됨' : '아직'); return; }
       if (row.getAttribute('data-id') === 'starter') { var sb1 = row.lastChild; sb1.className = state.starter ? 'own' : ''; setText(sb1, state.starter ? '보유' : IC.treat + C.STARTER.treats); sb1.classList.toggle('short', !state.starter && !(state.treats >= C.STARTER.treats)); return; }
       var it = C.shopItem(row.getAttribute('data-id')), st = C.shopState(state, it.id, todayStr()), b = row.lastChild;
       b.className = st.owned ? 'own' : it.kind === 'paid' ? 'paid' : '';
@@ -2027,6 +2028,7 @@
   function giveAd(kind) {
     var r = C.adReward(state, kind, todayStr()); if (!r.ok) return;
     sfx('goal');
+    if (kind === 'treat') { toast('간식 한 봉지 · ' + IC.treat + '+' + r.treats); Store.save(); renderShop(); renderStore(); render(); return; }      // 5.0.1
     toast(kind === 'skip' ? '시간 건너뛰기 · ' + IC.supply + '+' + fmt(r.gain) : kind === 'attend' ? '출석 보상을 한 번 더 받았어요 · ' + attendText(r.reward) : '다음 철수 때 항체 샘플 1.1배');
     Store.save(); renderShop(); render();
   }
@@ -4682,10 +4684,14 @@
     ['dog', 'cat'].forEach(function (kind) {
       var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
       setText(b.firstChild, k.name + (have ? ' 데려오기' : ' 맞이하기'));
-      var short = cost > state.antibodies;      // 4.7.5 모자라면 값 옆에 '샘플 부족!'을 붉게 적는다
-      setText(b.lastChild, cost ? IC.antibody + fmt(cost) + (short ? ' · 샘플 부족!' : '') : '첫 친구는 그냥 와요');
+      var free = have && C.petFreeReady(state, kind, todayStr());      // 5.0.1 오늘 무료
+      var short = !free && cost > state.antibodies;      // 4.7.5 모자라면 값 옆에 '샘플 부족!'을 붉게 적는다
+      setText(b.lastChild, free ? '오늘 무료 1번' : cost ? IC.antibody + fmt(cost) + (short ? ' · 샘플 부족!' : '') : '첫 친구는 그냥 와요');
+      b.classList.toggle('can', !!free);
       b.lastChild.classList.toggle('short', short); b.disabled = short;
       var sb = $('adopt-' + kind + '-shard');      // 4.9.8 조각 데려오기: 조각이 있을 때만 보인다
+      var tb = $('adopt-' + kind + '-tix');      // 5.0.1 데려오기권: 있을 때만
+      if (tb) { var tx = state.petTix || 0; tb.hidden = !(tx > 0); setText(tb.firstChild, k.name + ' · 데려오기권'); setText(tb.lastChild, IC.ptix + tx); }
       if (sb) { var sh = state.petShards || 0; sb.hidden = !(sh > 0); setText(sb.firstChild, k.name + ' · 조각으로'); setText(sb.lastChild, IC.pshard + sh + ' / ' + C.PET_SHARD_PULL); sb.disabled = sh < C.PET_SHARD_PULL; }
     });
     setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 별 +1(최대 ' + C.PET_STAR_MAX + '개, 별마다 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100) + '%) · 5성 뒤엔 친구 조각 ' + IC.pshard + '(' + C.PET_SHARD_PULL + '개로 한 번 더 데려오기)');
@@ -5269,14 +5275,16 @@
     ['dog', 'cat'].forEach(function (kind) {
       var b = $('adopt-' + kind), k = C.PET_KINDS[kind];
       b.appendChild(el('span', '', k.name)); b.appendChild(el('small', '', k.what));
-      b.addEventListener('click', function () { adopt(kind, false); });
+      b.addEventListener('click', function () { adopt(kind, C.petFreeReady(state, kind, todayStr()) ? 'free' : undefined); });      // 5.0.1 오늘 무료가 남았으면 무료로
       var sb = $('adopt-' + kind + '-shard');      // 4.9.8 친구 조각으로 데려오기
-      if (sb) { sb.appendChild(el('span', '', '')); sb.appendChild(el('small', '', '')); sb.addEventListener('click', function () { adopt(kind, true); }); }
+      if (sb) { sb.appendChild(el('span', '', '')); sb.appendChild(el('small', '', '')); sb.addEventListener('click', function () { adopt(kind, 'shards'); }); }
+      var tb = $('adopt-' + kind + '-tix');      // 5.0.1 데려오기권으로
+      if (tb) { tb.appendChild(el('span', '', '')); tb.appendChild(el('small', '', '')); tb.addEventListener('click', function () { adopt(kind, 'tix'); }); }
     });
-    function adopt(kind, byShards) {
+    function adopt(kind, pay) {
       var k = C.PET_KINDS[kind];
       (function () {
-        var r = C.adoptPet(state, kind, undefined, byShards);
+        var r = C.adoptPet(state, kind, undefined, pay, todayStr());
         if (!r.ok) return;
         if (!r.dup) log(r.rarity.name + ' 등급 ' + k.name + ' ' + r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 일행이 됐다. ' + C.breedDesc(r.breed) + '.', 'good');
         else if (r.starUp) log(r.breed.name + ' 별이 ' + r.star + '개가 됐다. 장착 효과가 더 커졌다.', 'good');      // 4.9.6
