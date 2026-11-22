@@ -2022,8 +2022,9 @@
     C.collectCheck(state).forEach(function (t) { var gv = t.give; notice('외형 ' + t.n + '개를 모았어요!' + (gv.treats ? ' · ' + IC.treat + '+' + gv.treats : '') + (gv.tickets ? ' · ' + IC.ticket + '+' + gv.tickets : '') + (gv.cos ? '\n한정 외형 수집가 우비를 받았어요.' : '')); Store.save(); });
     var ci = C.collectInfo(state), cn = ci.next;
     setText($('shop-pity'), '전설 보장까지 ' + C.gachaPityLeft(state) + '번\n모은 외형 ' + ci.have + (cn ? ' · ' + cn.n + '개에 ' + (cn.give.cos ? '한정 우비' : (cn.give.treats ? IC.treat + cn.give.treats : '') + (cn.give.treats && cn.give.tickets ? ' ' : '') + (cn.give.tickets ? IC.ticket + cn.give.tickets : '')) : ' · 수집 보상을 다 받았어요'));      // 4.5.2 겹치면 조각이 된다는 말은 확률 보기 안으로 옮겼다
+    $('gacha-pull').classList.toggle('can', C.freePullReady(state, todayStr()));      // 4.9.3 무료 뽑기가 남았으면 빨간 점
     $('gacha-pull').disabled = false;      // 4.4.1: 뽑기권이 없어도 기계는 열어 볼 수 있다(단추가 꺼진다)
-    setText($('gacha-pull'), '뽑기 기계');
+    setText($('gacha-pull'), C.freePullReady(state, todayStr()) ? '뽑기 기계 · 무료 1회' : '뽑기 기계');
     $('ticket-buy').classList.toggle('short', !(state.treats >= C.TICKET_TREATS));      // 4.7.6 모자라도 눌린다(누르면 모자라다고 알려 준다). 모자란 동안은 흐리게만
     setText($('ticket-buy'), '뽑기권 사기 · ' + IC.treat + C.TICKET_TREATS);
     setText($('odds-toggle'), oddsOpen ? '확률 접기' : '확률 보기');
@@ -2287,7 +2288,8 @@
     var m = gMany();
     /* 4.7.5 1회 단추는 뽑기권이 없어도 눌린다: 누르면 모자라다고 알려 준다(전에는 그냥 꺼져 있어 왜 안 되는지 몰랐다).
        오른쪽(가진 만큼 뽑기)은 2장 이상일 때만 켜진다. 모자라면 꺼진 채 '최대 뽑기'로만 적는다 */
-    gActs([['1회 · ' + IC.ticket + '1', function () { if ((state.tickets || 0) < 1) { gShort(); return; } gStart(1); }, false, 'y'], [m >= 2 ? m + '회 · ' + IC.ticket + m : '최대 뽑기', function () { gStart(gMany()); }, m < 2, '']]);
+    var free = C.freePullReady(state, todayStr());      // 4.9.3 하루 무료 1회: 있으면 1회 단추가 '무료 1회'로 바뀐다
+    gActs([[free ? '오늘 무료 1회' : '1회 · ' + IC.ticket + '1', function () { if (C.freePullReady(state, todayStr())) { gStart('free'); return; } if ((state.tickets || 0) < 1) { gShort(); return; } gStart(1); }, false, 'y' + (free ? ' can' : '')], [m >= 2 ? m + '회 · ' + IC.ticket + m : '최대 뽑기', function () { gStart(gMany()); }, m < 2, '']]);
     gMsg(IC.ticket + fmt(t) + ' · 전설 보장까지 ' + C.gachaPityLeft(state) + '번');
   }
   /** 4.7.1 오른쪽 단추: 가진 뽑기권만큼 한 번에(10장까지). */
@@ -2309,7 +2311,8 @@
   }
   function gClose() { $('gacha-veil').hidden = true; if (gst.raf) cancelAnimationFrame(gst.raf); gst.raf = 0; Store.save(); renderShop(); }
   function gStart(n) {
-    var r = n === 1 ? C.pullGacha(state) : C.pullGachaMany(state, n); if (!r.ok) return;
+    var free = n === 'free'; if (free) n = 1;
+    var r = free ? C.pullGachaFree(state, todayStr()) : n === 1 ? C.pullGacha(state) : C.pullGachaMany(state, n); if (!r.ok) return;
     var list = n === 1 ? [r] : r.list;
     list.forEach(function (x) { log('뽑기: ' + C.RARITIES[x.rarity] + ' · ' + x.name + (x.dup ? ' (이미 있어서 조각 ' + x.shards + '개)' : '') + '.', x.rarity ? 'good' : ''); });
     gst = { mode: 'turn', at: gNow(), n: n, items: list.map(function (x) { return { r: x, open: 0, openAt: 0 }; }), taps: 0, tapAt: 0, raf: gst.raf };

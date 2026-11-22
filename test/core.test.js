@@ -3654,3 +3654,18 @@ test('4.9.2: 고운 그림은 캔버스가 없으면 쓰지 않고 예전 그림
   assert.ok(calls > 50, '예전 그림(칸마다 fillRect)으로 그렸다');
   assert.strictEqual(S.hiBlit(ctx, 0, 0, 3, 14, 18, 1, function () {}), false, '캔버스가 없으면 false');
 });
+
+test('4.9.3: 하루 무료 뽑기는 하루 한 번, 뽑기권을 쓰지 않고, 저장해도 남는다', function () {
+  var s = C.createState(0); s.tickets = 0;
+  assert.strictEqual(C.freePullReady(s, '2026-11-23'), true);
+  assert.strictEqual(C.freePullReady(s, '어제'), false, '날짜 꼴이 아니면 안 된다');
+  var r = C.pullGachaFree(s, '2026-11-23', function () { return 0.5; });
+  assert.ok(r.ok && r.free); assert.strictEqual(s.tickets, 0, '뽑기권은 그대로');
+  assert.strictEqual(s.gachaPulls, 1); assert.strictEqual(s.gachaPity, r.rarity === 2 ? 0 : 1, '보장 횟수도 센다');
+  assert.strictEqual(C.pullGachaFree(s, '2026-11-23').ok, false, '같은 날 두 번은 안 된다');
+  assert.strictEqual(C.pullGachaFree(s, '2026-11-22').ok, false, '날짜를 거꾸로 돌려도 안 된다');
+  var back = C.deserialize(C.serialize(s));
+  assert.strictEqual(back.freePullDay, '2026-11-23');
+  assert.strictEqual(C.freePullReady(back, '2026-11-24'), true, '다음 날은 다시 된다');
+  back.freePullDay = '<script>'; assert.strictEqual(C.deserialize(JSON.stringify(back)).freePullDay, '', '이상한 값은 버린다');
+});
