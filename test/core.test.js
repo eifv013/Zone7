@@ -3802,9 +3802,20 @@ test('5.0.6: 이번 주 · 이번 달 임무 — 같은 행동이 세 기간에 
   assert.strictEqual(s.daily.n.build, 7); assert.strictEqual(s.weekly.n.build, 7); assert.strictEqual(s.monthly.n.build, 7);
   w.list.forEach(function (x) { s.weekly.n[x.key] = x.need; });
   var t0 = s.treats, k0 = s.tickets, p0 = s.petTix || 0, r = C.missionClaimAll(s, day);
-  assert.ok(r.ok); assert.strictEqual(s.treats - t0 >= 90, true); assert.strictEqual(s.tickets - k0, 1); assert.strictEqual(s.petTix - p0, 1, '한 주를 다 하면 데려오기권');
+  assert.ok(r.ok); assert.strictEqual(s.treats - t0 >= 60, true); assert.strictEqual(s.tickets - k0, 1); assert.strictEqual(s.petTix - p0, 1, '한 주를 다 하면 데려오기권');
   var back = C.deserialize(C.serialize(s)); assert.strictEqual(C.missionInfo(back, 'week', day).allGot, true, '저장해도 남는다');
   assert.strictEqual(C.missionInfo(s, 'week', '2026-11-29').allGot, true, '같은 주(일요일)');
   assert.strictEqual(C.missionInfo(s, 'week', '2026-11-30').allGot, false, '다음 주 월요일은 새로');
   assert.strictEqual(C.missionInfo(s, 'month', '2026-11-30').start, '2026-11-01');
+});
+
+test('5.0.9: 임무 목표는 기간이 길수록 크고(주간 ≥ 일일 × 5, 월간 ≥ 주간 × 3), 밤 임무는 몇 분 만에 끝나지 않는다', function () {
+  C.DAILY_POOL.forEach(function () {});
+  var s = C.createState(0), day = '2026-11-23';
+  ['night', 'build', 'job', 'pull', 'feed', 'stage', 'play'].forEach(function (k) {
+    s.daily = { day: day, keys: [k], n: {}, got: {}, all: false, drip: 0, play: 0 }; s.weekly = { day: '2026-11-23', keys: [k], n: {}, got: {}, all: false, play: 0 }; s.monthly = { day: '2026-11-01', keys: [k], n: {}, got: {}, all: false, play: 0 };
+    var d = C.missionInfo(s, 'day', day).list[0].need, w = C.missionInfo(s, 'week', day).list[0].need, m = C.missionInfo(s, 'month', day).list[0].need;
+    assert.ok(w >= d * 5 && m >= w * 3, k + ': ' + d + ' / ' + w + ' / ' + m);
+  });
+  s.daily.keys = ['night']; assert.ok(C.missionInfo(s, 'day', day).list[0].need >= 15, '밤은 1분에 한 번 오니 일일 목표가 너무 작으면 안 된다');
 });

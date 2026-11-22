@@ -2886,19 +2886,21 @@
    *   날짜는 기기 날짜(출석과 같은 규칙: 거꾸로 돌리면 새로 주지 않는다). 한 주는 월요일부터.
    */
   var MISSION_POOL = [
-    { key: 'night', need: [5, 30, 120], text: '밤 {n}번 막기' },
-    { key: 'build', need: [20, 150, 600], text: '시설 {n}번 짓기' },
-    { key: 'job', need: [3, 15, 60], text: '주문 · 계약 · 인양 {n}번 받기', can: function (st) { return zoneOpen(st, 1); } },      // 단골 주문은 2구역부터
-    { key: 'pull', need: [1, 5, 20], text: '뽑기 기계 {n}번 돌리기' },
-    { key: 'feed', need: [1, 5, 20], text: '친구에게 간식 {n}번 주기', can: function (st) { return !!st.pet; } },
+    /* 5.0.9 기준(접속해 있는 한 시간에): 밤 30~60번(게임 하루 = 60초) · 시설 100번 넘게 · 주문류 10~15번.
+       일일은 하루 30분~1시간, 주간은 한 주에 4~5일, 월간은 한 달에 20일쯤 놀면 채우도록. 예전 값은 밤이 너무 쉬웠다(일일 5번 = 5분) */
+    { key: 'night', need: [20, 150, 600], text: '밤 {n}번 막기' },
+    { key: 'build', need: [30, 300, 1200], text: '시설 {n}번 짓기' },
+    { key: 'job', need: [5, 30, 120], text: '주문 · 계약 · 인양 {n}번 받기', can: function (st) { return zoneOpen(st, 1); } },      // 단골 주문은 2구역부터
+    { key: 'pull', need: [1, 7, 25], text: '뽑기 기계 {n}번 돌리기' },      // 하루 무료 1번이 있다
+    { key: 'feed', need: [1, 5, 15], text: '친구에게 간식 {n}번 주기', can: function (st) { return !!st.pet && petLevel(st, st.pet.breed) < PET_LEVEL_MAX; } },      // 다 자란 아이에게는 못 준다
     { key: 'stage', need: [1, 5, 15], text: '원정 {n}번 다녀오기', can: function (st) { return zoneOpen(st, STAGE_OPEN_ZONE); } },
-    { key: 'play', need: [20, 180, 600], text: '{n} 동안 지키기', minutes: true }
+    { key: 'play', need: [30, 300, 1200], text: '{n} 동안 지키기', minutes: true }
   ];
   var DAILY_POOL = MISSION_POOL.map(function (m) { return { key: m.key, need: m.need[0], text: missionText(m, 0), can: m.can }; });      // 예전 이름(오늘의 임무)
   var MISSION_PER = {
     day: { field: 'daily', idx: 0, name: '일일', treats: 10, bonus: { tickets: 1 } },
-    week: { field: 'weekly', idx: 1, name: '주간', treats: 30, bonus: { tickets: 1, petTix: 1 } },
-    month: { field: 'monthly', idx: 2, name: '월간', treats: 100, bonus: { tickets: 5, petTix: 3 } }
+    week: { field: 'weekly', idx: 1, name: '주간', treats: 20, bonus: { tickets: 1, petTix: 1 } },      // 5.0.9 한 주 덤 값어치 ≈ 간식 180
+    month: { field: 'monthly', idx: 2, name: '월간', treats: 50, bonus: { tickets: 3, petTix: 2 } }      // 5.0.9 한 달 덤 값어치 ≈ 간식 430(뽑기권 40 · 데려오기권 80으로 쳐서)
   };
   var MISSION_PERS = ['day', 'week', 'month'];
   var DAILY_COUNT = 3, DAILY_TREATS = 10, DAILY_ALL_TICKETS = 1, DRIP_SECONDS = 600, DRIP_MAX = 12;
