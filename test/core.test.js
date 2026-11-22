@@ -3697,7 +3697,7 @@ test('4.9.5: 강아지와 고양이는 친구 옷을 따로 입고, 데리고 �
 
 test('4.9.6: 외형과 친구 품종은 늘 등급 순서로 정리돼 있다(새로 넣어도 손으로 맞출 필요 없게)', function () {
   C.COS_SLOTS.forEach(function (slot) {
-    var r = C.COSMETICS.filter(function (c) { return c.slot === slot; }).map(function (c) { return c.base ? -1 : c.reward ? 9 : c.rarity; });
+    var r = C.COSMETICS.filter(function (c) { return c.slot === slot; }).map(function (c) { return c.base ? -1 : c.rarity; });      // 4.9.7 한정도 제 등급대로
     for (var i = 1; i < r.length; i++) assert.ok(r[i - 1] <= r[i], slot + ' 칸의 순서가 등급대로가 아니다: ' + r.join(''));
   });
   var slots = C.COSMETICS.map(function (c) { return C.COS_SLOTS.indexOf(c.slot); });

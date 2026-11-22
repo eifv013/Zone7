@@ -2077,7 +2077,7 @@
           $('wardrobe').appendChild(pk);
         }
         var grid = el('div', 'cos-grid'); grid.setAttribute('data-slot', slot); $('wardrobe').appendChild(grid);
-        C.COSMETICS.filter(function (c) { return c.slot === slot; }).map(function (c, i) { return { c: c, i: i }; }).sort(function (a, b) { return (a.c.base ? -1 : a.c.reward ? 9 : a.c.rarity) - (b.c.base ? -1 : b.c.reward ? 9 : b.c.rarity) || a.i - b.i; }).map(function (x) { return x.c; }).forEach(function (c) {      // 4.7.1 등급 순서(기본 → 일반 → 희귀 → 전설 → 기념)
+        C.COSMETICS.filter(function (c) { return c.slot === slot; }).map(function (c, i) { return { c: c, i: i }; }).sort(function (a, b) { return C.cosRank(a.c) - C.cosRank(b.c) || a.i - b.i; })      /* 4.9.7 core 와 같은 순서(한정도 제 등급 자리) */.map(function (x) { return x.c; }).forEach(function (c) {      // 4.7.1 등급 순서(기본 → 일반 → 희귀 → 전설 → 기념)
           var b = el('button', 'cos'), cv = document.createElement('canvas'), name = el('b', '', c.name), sub = el('span', 'cos-sub'), nw = el('i', 'cos-new', 'NEW');
           b.type = 'button'; cv.className = 'cos-pic'; cv.width = 28; cv.height = 40;
           b.appendChild(cv); b.appendChild(name); b.appendChild(sub); b.appendChild(nw);
