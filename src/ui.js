@@ -711,6 +711,7 @@
     treat:    { name: '간식', pal: { t: '#ecd09a', T: '#c89a5a', w: '#fff4dc' }, g: ['..............', '..............', '.ww........ww.', 'wttw......wttw', 'wtttttttttttTw', '.ttttttttttTT.', '.tttttttttTTT.', 'wttTTTTTTTTTTw', 'tTTt......tTTT', '.TT........TT.', '..............', '..............'] },
     ticket:   { name: '뽑기권', pal: { w: '#fff2a0', y: '#f0b400', Y: '#c88a00', d: '#a85a00', s: '#c86a00' }, g: ['..............', 'wwwwwwwwwwwwww', 'yyyyyyyyydyyyY', 'yyyysyyyyyyyyY', '.yysssyyydyyy.', '..yysyyyyyyy..', '.yyyyyyyydyyy.', 'yyyyyyyyyyyyyY', 'yyyyyyyyydyyyY', 'YYYYYYYYYYYYYY', '..............', '..............'] },
     shard:    { name: '조각', pal: { p: '#b48aff', P: '#7a52c8', w: '#e8d8ff' }, g: ['..............', '......pp......', '.....wppP.....', '....wpppPP....', '...wppppPP....', '...ppppppPP...', '..pppppppPP...', '..ppppppPPP...', '...pppppPP....', '....ppPPP.....', '.....PPP......', '..............'] },
+    pshard:   { name: '친구 조각', pal: { c: '#c07a30', w: '#ffd8a8', O: '#7a3e18' }, g: ['....cccccc....', '..cwwwwwwwwc..', '.cwwwOwwOwwwc.', '.cwOwOwwOwOwc.', 'cwwOwwwwwwOwwc', 'cwwwwwOOwwwwwc', 'cwwwwOOOOwwwwc', 'cwwwOOOOOOwwwc', '.cwwOOOOOOwwc.', '.cwwwOOwOOwwc.', '..cwwwwwwwwc..', '....cccccc....'] },      // 4.9.9 친구 조각: 발바닥 무늬 동전(작게 보여도 알아보게 바탕 위에 발바닥)
     serum:    { name: '혈청', pal: { H: '#b4b8c0', g: '#e8f6ff', G: '#a8c0cc', y: '#f0b400', Y: '#c88a00', n: '#d0d4dc' }, g: ['..............', '..............', '.H............', '.HgggggggG....', 'HHgyyyyyyGHnnn', '.HgYYYYYYG....', '.HGGGGGGGG....', '.H............', '..............', '..............', '..............', '..............'] },
     people:   { name: '생존자', pal: { s: '#e6c9a0', h: '#4a3428', c: '#3f7f8a', C: '#2c5a62', r: '#d8644e', R: '#a84030', q: '#6b4a3a' }, g: ['..............', '..hh.....qq...', '.hhhh...qqqq..', '.hssh...qssq..', '.hssh...ssss..', '..ss.....ss...', '.cccc...rrrr..', 'ccccCC.rrrrRR.', 'sccCCs.srrRRs.', '.ccCC...rrRR..', '.cc.C...rr.R..', '..............'] }
   };
@@ -4618,7 +4619,7 @@
     try { if (!(window.Sound && window.Sound.sample && window.Sound.sample(r.breed.kind === 'cat' ? 'cat' : 'dog'))) sfx('gopen' + ({ common: 0, fine: 1, rare: 2 }[r.rarity.id] || 0)); } catch (e) { /* 소리는 없어도 된다 */ }      // 4.5.6 고양이 · 강아지가 나타날 때 녹음한 울음소리(없으면 뽑기 소리)
     if (r.rarity.id === 'rare') buzz([30, 40, 30]);
     setText($('bf-msg'), r.starUp ? r.breed.name + ' 별 ' + r.star + '개로 강화!' : r.dup ? r.breed.name + (C.hasBatchim(r.breed.name) ? '은' : '는') + ' 이미 별 ' + C.PET_STAR_MAX + '개예요' : r.breed.name + (C.hasBatchim(r.breed.name) ? '이' : '가') + ' 친구가 됐어요!');
-    setText($('bf-sub'), r.rarity.name + ' · ' + kind.name + '\n' + (r.starUp ? starText(r.star) + ' · 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100 * (r.star - 1)) + '%' : r.dup ? '친구 조각 ' + r.shards + '개를 얻었어요 · 조각 ' + C.PET_SHARD_PULL + '개로 한 번 더 데려와요' : '장착 ' + C.breedDesc(r.breed).split(' · ').pop() + (sk ? ' · 특기 ' + sk : '')));
+    setText($('bf-sub'), r.rarity.name + ' · ' + kind.name + '\n' + (r.starUp ? starText(r.star) + ' · 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100 * (r.star - 1)) + '%' : r.dup ? '친구 조각 ' + IC.pshard + r.shards + ' 얻었어요 · ' + IC.pshard + C.PET_SHARD_PULL + '개로 한 번 더 데려와요' : '장착 ' + C.breedDesc(r.breed).split(' · ').pop() + (sk ? ' · 특기 ' + sk : '')));
     setText($('bf-act'), '좋아요');
     $('bf-skip').hidden = true;
   }
@@ -4685,9 +4686,9 @@
       setText(b.lastChild, cost ? IC.antibody + fmt(cost) + (short ? ' · 샘플 부족!' : '') : '첫 친구는 그냥 와요');
       b.lastChild.classList.toggle('short', short); b.disabled = short;
       var sb = $('adopt-' + kind + '-shard');      // 4.9.8 조각 데려오기: 조각이 있을 때만 보인다
-      if (sb) { var sh = state.petShards || 0; sb.hidden = !(sh > 0); setText(sb.firstChild, k.name + ' · 조각으로'); setText(sb.lastChild, '조각 ' + sh + ' / ' + C.PET_SHARD_PULL); sb.disabled = sh < C.PET_SHARD_PULL; }
+      if (sb) { var sh = state.petShards || 0; sb.hidden = !(sh > 0); setText(sb.firstChild, k.name + ' · 조각으로'); setText(sb.lastChild, IC.pshard + sh + ' / ' + C.PET_SHARD_PULL); sb.disabled = sh < C.PET_SHARD_PULL; }
     });
-    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 별 +1(최대 ' + C.PET_STAR_MAX + '개, 별마다 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100) + '%) · 5성 뒤엔 친구 조각(' + C.PET_SHARD_PULL + '개로 한 번 더 데려오기)');
+    setText($('pet-odds'), C.PET_RARITIES.map(function (r) { return r.name + ' ' + r.weight + '%'; }).join(' · ') + ' · 겹치면 별 +1(최대 ' + C.PET_STAR_MAX + '개, 별마다 장착 효과 +' + Math.round(C.PET_STAR_STEP * 100) + '%) · 5성 뒤엔 친구 조각 ' + IC.pshard + '(' + C.PET_SHARD_PULL + '개로 한 번 더 데려오기)');
     if (!p) return;
     setText($('pet-name'), p.name);
     var plv = C.petLevel(state, p.breed.id), feed = C.petFeedCost(state);
