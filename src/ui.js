@@ -2370,18 +2370,27 @@
       return;
     }
     if (m === 'burst') {
-      var b = Math.min(1, e / 0.75), rb = it0.r.rarity, eb = 1 - Math.pow(1 - b, 2);
+      var rb = it0.r.rarity, b = Math.min(1, e / (rb === 2 ? 1.3 : 0.75)), eb = 1 - Math.pow(1 - b, 2);
+      /* 4.9.4 전설은 터지는 순간을 길게: 화면이 흔들리고 금빛이 두 번 번쩍인다(뽑은 맛) */
+      var shk = rb === 2 && b < 0.5 ? Math.round(Math.sin(e * 70) * 3 * (1 - b * 2)) : 0; if (shk) g.setTransform(1, 0, 0, 1, shk, 0);
       gMachine(R, now, -0.5, 0, 1, 0.85); gHalo(R, 90, 96, 40 + Math.round(eb * 50), rb, 0.9 * (1 - b * 0.4)); gRays(R, 90, 96, rb, 40 + eb * 60, b * 1.2, 1 - b * 0.3);
       for (var a = 0; a < 72; a++) { var an = a / 72 * Math.PI * 2, rr = 14 + eb * 60; if (a % 2) R(90 + Math.cos(an) * rr, 96 + Math.sin(an) * rr * 0.9, 1, 1, 'rgba(255,240,200,' + (0.9 * (1 - b)).toFixed(2) + ')'); }      // 퍼지는 빛의 고리
       gSphere(R, 90, 96, 30, rb, { half: -1, rot: -0.9 * eb, dx: -Math.round(30 * eb), dy: -Math.round(34 * eb) }); gSphere(R, 90, 96, 30, rb, { half: 1, rot: 0.6 * eb, dx: Math.round(22 * eb), dy: Math.round(30 * eb) });
       for (var i = 0; i < 46; i++) { var aa = gRand(i) * 6.28, d = (20 + gRand(i + 9) * 62) * eb, s = i % 5 ? 1 : 2; R(90 + Math.cos(aa) * d, 96 + Math.sin(aa) * d - b * 10, s, s, i % 4 ? G_RAY[rb] : '#ffffff'); }
       if (b < 0.35) R(0, 0, GW, GH, 'rgba(255,248,225,' + (0.6 * (1 - b / 0.35)).toFixed(2) + ')');
+      if (rb === 2 && b > 0.55 && b < 0.75) R(0, 0, GW, GH, 'rgba(255,217,90,' + (0.55 * (1 - Math.abs(b - 0.65) / 0.1)).toFixed(2) + ')');      // 두 번째 금빛
+      if (shk) g.setTransform(1, 0, 0, 1, 0, 0);
       if (b >= 1) { it0.open = 1; gReveal(); }
       return;
     }
     if (m === 'reveal') {
       var rv = it0.r.rarity, ev = Math.min(1, e / 0.5); R(0, 0, GW, GH, 'rgba(8,8,12,.7)'); gHalo(R, 90, 110, 60 + rv * 6, rv, 0.35 + rv * 0.1); if (rv) gRays(R, 90, 110, rv, 92, now / 2500, 0.45);
-      gPedestal(R, 90, 168, rv); var tc = gThumb(it0.r.id), k = 2, hh = Math.round(48 * k * (0.6 + 0.4 * ev)); g.drawImage(tc, 90 - 32 * k / 2, 168 - hh, 32 * k, hh);
+      if (rv === 2) for (var cf = 0; cf < 26; cf++) { var cy = ((now / 1000 * (18 + gRand(cf) * 22) + gRand(cf + 3) * GH) % (GH + 10)) - 5, cx = 8 + gRand(cf + 7) * 164 + Math.sin(now / 500 + cf) * 4; R(cx, cy, cf % 3 ? 2 : 1, cf % 3 ? 1 : 2, cf % 4 ? '#ffd95a' : '#fff8c8'); }      // 4.9.4 전설: 금빛 종이 가루가 내린다
+      gPedestal(R, 90, 168, rv);
+      /* 4.9.4 튀어나오듯 커졌다가 자리 잡는다(조금 넘쳤다 돌아오는 곡선). 전설은 더 크게 */
+      var pop = ev < 1 ? 1 + 0.18 * Math.sin(ev * Math.PI) - 0.18 * (1 - ev) : 1, tc = gThumb(it0.r.id), k = (rv === 2 ? 2.5 : 2) * pop, ww = Math.round(32 * k), hh = Math.round(48 * k);
+      g.drawImage(tc, Math.round(90 - ww / 2), 168 - hh, ww, hh);
+      gBanner(g, rv, !it0.r.dup, now, ev);
       for (var sp = 0; sp < (rv === 2 ? 7 : rv ? 4 : 2); sp++) { var tw = (now / 400 + sp * 0.37) % 1; if (tw < 0.6) gSpark(R, 20 + Math.round(gRand(sp) * 140), 18 + Math.round(gRand(sp + 4) * 120), G_RAY[rv], tw < 0.3 ? 2 : 1); }
       return;
     }
@@ -2398,6 +2407,18 @@
       });
       if (m === 'fly' && e > 0.08 * 9 + 0.5) { gst.mode = 'grid'; gst.at = now; gMsg('캡슐을 눌러서 열어요'); gActs([['모두 열기', gOpenAll, false, 'y'], ['건너뛰기', gSkip, false, '']]); }
     }
+  }
+  /** 4.9.4 등급 띠: 위쪽에 등급 이름을 크게(희귀 파랑 · 전설 금빛, 전설은 글자가 반짝인다). 새 외형이면 NEW 도장. */
+  function gBanner(g, rv, isNew, now, ev) {
+    try {
+      var name = C.RARITIES[rv], col = rv === 2 ? (Math.floor(now / 180) % 2 ? '#fff8c8' : '#ffd95a') : rv ? '#8fc3ff' : '#d8d6cc', y = 30 - Math.round((1 - ev) * 12);
+      g.save(); g.globalAlpha = Math.min(1, ev * 1.5); g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '700 ' + (rv === 2 ? 20 : 16) + "px 'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif";
+      if (rv) { g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(30, y - 13, 120, 26); g.fillStyle = col; g.fillRect(30, y - 13, 120, 2); g.fillRect(30, y + 11, 120, 2); }
+      g.lineWidth = 3; g.strokeStyle = '#16110f'; g.strokeText((rv === 2 ? '★ ' : '') + name + (rv === 2 ? ' ★' : ''), 90, y); g.fillStyle = col; g.fillText((rv === 2 ? '★ ' : '') + name + (rv === 2 ? ' ★' : ''), 90, y);
+      if (isNew) { g.font = "700 11px 'IBM Plex Sans KR', sans-serif"; g.translate(150, 62); g.rotate(-0.25); g.fillStyle = '#e0392b'; g.fillRect(-17, -8, 34, 16); g.fillStyle = '#ffffff'; g.fillText('NEW', 0, 1); }
+      g.restore();
+    } catch (e) { /* 글자를 못 그려도 뽑기는 된다 */ }
   }
   function gLoop() { if ($('gacha-veil').hidden) { gst.raf = 0; return; } gDraw(); gst.raf = requestAnimationFrame(gLoop); }
   function doPull() {
