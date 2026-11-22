@@ -184,8 +184,10 @@ def run_case(browser, name, size, state, mode):
         else:
             tap('#attend-claim'); page.wait_for_timeout(900)
             if page.locator('#attend-veil').is_visible(): problems.append('출석을 받았는데 창이 닫히지 않았다')
-        if not tap('#daily-open'): problems.append('오늘 임무 단추가 없다')      # 5.0.3 임무는 따로 창
-        elif page.locator('#daily-list li').count() != 3: problems.append('오늘의 임무가 셋이 아니다')
+        page.evaluate("document.querySelector('[data-mview-set=base]') && document.querySelector('[data-mview-set=base]').click()"); page.wait_for_timeout(200)
+        if not page.evaluate("(()=>{const b=[...document.querySelectorAll('.mission-bar')].find(x=>x.offsetParent); if(b){b.click(); return true} return false})()"): problems.append('상황 칸에 보이는 임무 막대가 없다')      # 5.0.8 임무는 상황 칸에서(상점 단추는 뺐다)
+        page.wait_for_timeout(300)
+        if page.locator('#daily-list li').count() != 3: problems.append('오늘의 임무가 셋이 아니다')
         else: page.evaluate("document.getElementById('daily-close').click()"); page.wait_for_timeout(200)
         tap('#mnav-exped'); tap('[data-view=exped] [data-grow-set=party]')      # 일행으로 돌아간다(아래 이름 바꾸기 검사)
         if not page.locator('#pet-card').is_visible() or '친구 1 /' not in text('pet-kind'): problems.append('친구 칸이 바뀌지 않았다: ' + text('pet-kind'))

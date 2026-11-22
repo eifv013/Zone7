@@ -1891,6 +1891,7 @@
   /** 4.7.1 오늘 자정(기기 시각)까지 남은 시간 '3시간 12분'. */
   function untilMidnight() { var n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1), s = Math.max(0, Math.floor((m - n) / 1000)), h = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60); return (h ? h + '시간 ' : '') + mm + '분'; }
   function attendText(w) { var a = []; if (w.tickets) a.push(IC.ticket + w.tickets); if (w.treats) a.push(IC.treat + w.treats); return a.join(' · '); }
+  var missionSeen = {};      // 5.0.8 임무별로 '아직 안 함'을 본 적이 있는지(켜자마자 이미 한 임무로 알림이 쏟아지지 않게)
   /** 5.0.6 기간이 끝날 때까지 남은 시간(하루: 시간 · 분, 한 주 · 한 달: 날) */
   function periodLeft(per) {
     if (per === 'day') return untilMidnight() + ' 남음';
@@ -1901,9 +1902,25 @@
   function renderDaily(di) {
     var today = todayStr(), ms = mainState(), infos = C.MISSION_PERS.map(function (p) { return p === 'day' ? di : C.missionInfo(ms, p, today); });
     var anyCan = infos.some(function (x) { return x.can; });
-    var dop = $('daily-open'); if (dop) dop.classList.toggle('can', anyCan);
-    var sum = infos.map(function (x) { return x.name + ' ' + x.list.filter(function (m) { return m.done; }).length + '/' + x.list.length; }).join(' · ');
-    Array.prototype.forEach.call(document.querySelectorAll('.mission-goal'), function (row) { setText(row.querySelector('.mission-sum'), anyCan ? '받을 보상이 있어요!' : sum); row.querySelector('.mission-go').classList.toggle('can', anyCan); });
+    /* 5.0.8 상황 칸 임무 막대: 기간마다 칸 셋(한 것 노랑 · 받은 것 초록). 바뀔 때만 다시 그린다 */
+    var barKey = JSON.stringify(infos.map(function (x) { return x.list.map(function (m) { return (m.got ? 2 : m.done ? 1 : 0); }); })) + anyCan;
+    Array.prototype.forEach.call(document.querySelectorAll('.mission-bar'), function (bar) {
+      if (bar.getAttribute('data-key') === barKey) return;
+      bar.setAttribute('data-key', barKey); bar.classList.toggle('can', anyCan);
+      var sum = bar.querySelector('.mission-sum'); while (sum.firstChild) sum.removeChild(sum.firstChild);
+      infos.forEach(function (x) {
+        var mp = el('span', 'mp'); mp.appendChild(el('b', '', x.name));
+        x.list.forEach(function (m) { mp.appendChild(el('i', 'pip' + (m.got ? ' got' : m.done ? ' on' : ''))); });
+        sum.appendChild(mp);
+      });
+      setText(bar.querySelector('.mission-cta'), anyCan ? '보상 받기' : '보기');
+    });
+    /* 5.0.8 임무를 다 하면 바로 알려 준다(기간 · 임무마다 한 번) */
+    infos.forEach(function (x) { x.list.forEach(function (m) {
+      var k = x.per + x.start + m.key;
+      if (m.done && !m.got && missionSeen[k] === false) toast(x.name + ' 임무 완료 · ' + m.text);
+      missionSeen[k] = m.done;
+    }); });
     if ($('daily-veil').hidden) return;
     var ids = { day: 'daily-list', week: 'week-list', month: 'month-list' };
     infos.forEach(function (info) {
@@ -1945,8 +1962,8 @@
     setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '다음 출석까지 ' + untilMidnight());
     var aad = $('attend-ad'); if (aad) { var ast2 = C.adState(state, 'attend', todayStr()); aad.hidden = !ast2.can; setText(aad, (state.noAds ? '' : '광고 보고 ') + '한 번 더 받기'); }      // 4.8.5
     var di = C.dailyInfo(mainState(), todayStr());
-    var ao = $('attend-open'); if (ao) { ao.textContent = info.can ? '출석 체크' : '출석 완료'; ao.classList.toggle('can', info.can); }      // 4.8.8 받을 수 있으면 빨간 점(5.0.2 단추가 넷이라 짧게. 남은 시간은 창 안에)
-    var dop = $('daily-open'); if (dop) { var dn = di.list.filter(function (x) { return x.done; }).length; dop.textContent = '임무 ' + dn + '/' + di.list.length; }      // 5.0.3 임무는 따로 단추(빨간 점은 renderDaily 가 세 기간을 보고)
+    var ao = $('attend-open'); if (ao) { ao.textContent = info.can ? '출석 체크' : '출석 ' + untilMidnight(); ao.classList.toggle('can', info.can); }      // 4.8.8 받을 수 있으면 빨간 점(5.0.2 단추가 넷이라 짧게. 남은 시간은 창 안에)
+
     renderDaily(di);      // 4.8.8 단추 셋이 한 줄이라 짧게. 받을 수 있으면 노란 점
     setText($('attend-sub'), (info.day + 1) + '일째');
   }
@@ -5609,7 +5626,6 @@
       if (r.reason === 'treats') toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, C.PASS_PRICE - Math.floor(state.treats || 0))) + ' 더 필요해요');
     });
     $('attend-close').addEventListener('click', function () { $('attend-veil').hidden = true; });
-    $('daily-open').addEventListener('click', function () { sfx('click'); $('daily-veil').hidden = false; renderAttend(); });      // 5.0.3 오늘의 임무 창
     $('daily-close').addEventListener('click', function () { $('daily-veil').hidden = true; });
     Array.prototype.forEach.call(document.querySelectorAll('.mission-go'), function (b) { b.addEventListener('click', function () { sfx('click'); $('daily-veil').hidden = false; renderAttend(); }); });      // 5.0.6 상황 칸에서 바로
     // 4.7.1 받을 수 있는 날에는 하루에 한 번 저절로 뜬다(다른 창이 떠 있으면 닫힌 뒤에)
