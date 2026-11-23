@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-5.1.5 도트 글꼴(갈무리, SIL OFL 1.1)을 게임에 넣을 만큼만 잘라 assets/fonts/ 에 둔다.
+5.1.5 글꼴(SIL OFL 1.1)을 게임에 넣을 만큼만 잘라 assets/fonts/ 에 둔다. 5.2.1 부터 갈무리 대신 주아(jua.woff)를 쓴다: 같은 방법으로 Jua-Regular.ttf 를 잘라 jua.woff 로.
   왜: 통째로 넣으면 글꼴 하나가 500KB 가 넘는다. 게임 글자(src 전체) + 자주 쓰는 한글 2,350자(KS X 1001, 이름 짓기용) + 영문 · 숫자 · 기호만 남긴다.
   쓰는 법: python3 tools/fontsubset.py <갈무리 압축을 푼 폴더>
   남는 것: galmuri11.woff · galmuri11-bold.woff · galmuri-mono11.woff(숫자 · 영문만) · OFL.txt

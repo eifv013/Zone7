@@ -55,13 +55,14 @@ try {
   const artRe = /--art-boy: url\("data:image\/svg\+xml,[^"]*"\);/;
   if (!artRe.test(tpl)) throw new Error('template.html 에 --art-boy 의 처음 값이 없습니다.');
   const tplArt = tpl.replace(artRe, () => `--art-boy: url("data:image/svg+xml,${artSvg}");`);
-  /* 5.1.5 도트 글꼴(갈무리 · SIL OFL 1.1): assets/fonts 에 있으면 파일 안에 담는다(인터넷 없이도 같은 글꼴). 없으면 예전 글꼴로 */
+  /* 5.1.5 글꼴(SIL OFL 1.1): assets/fonts 에 있으면 파일 안에 담는다(인터넷 없이도 같은 글꼴). 없으면 예전 글꼴로 */
   const fontDir = path.join(__dirname, 'assets', 'fonts');
   const fontFace = (fam, file, weight) => {
     const f = path.join(fontDir, file);
     return fs.existsSync(f) ? `@font-face { font-family: '${fam}'; font-weight: ${weight}; font-style: normal; font-display: swap; src: url(data:font/woff;base64,${fs.readFileSync(f).toString('base64')}) format('woff'); }\n` : '';
   };
-  const fonts = fontFace('Galmuri11', 'galmuri11.woff', 400) + fontFace('Galmuri11', 'galmuri11-bold.woff', 700) + fontFace('GalmuriMono11', 'galmuri-mono11.woff', 400) + fontFace('Black Han Sans', 'blackhansans.woff', 400);      // 5.2.0 로고 글꼴도 담는다(인터넷 없이도 로고가 같게. '7구역' 등 몇 글자만)
+  // 5.2.1 갈무리(도트 글꼴)는 큰 글씨 · 굵은 글씨가 뭉개져 어울리지 않았다 → 제목 · 단추 · 숫자는 주아(둥근 글꼴), 본문은 예전 글꼴
+  const fonts = fontFace('Jua', 'jua.woff', 400) + fontFace('Black Han Sans', 'blackhansans.woff', 400);      // 5.2.0 로고 글꼴도 담는다(인터넷 없이도 로고가 같게. '7구역' 등 몇 글자만)
   const tplFont = tplArt.replace('/*__FONTS__*/', () => fonts);
   const html = tplFont.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)}; window.ZONE7_BGM_CREDIT = ${JSON.stringify(bgmCredit)}; window.ZONE7_SFX = ${JSON.stringify(sfx)};`)
     .replace('/*__BOOT__*/', () => read('boot.js'))
