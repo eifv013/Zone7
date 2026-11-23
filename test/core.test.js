@@ -3855,3 +3855,14 @@ test('5.1.1: 저장했다 불러오면 그동안 붙인 값이 하나도 빠지�
   })(s, back, 's');
   assert.deepStrictEqual(miss, []);
 });
+
+test('5.1.2: 7구역의 다음 할 일은 혈청 단계를 알려 주고(예전: 더 나아갈 곳이 없어요), 엔딩 뒤에는 위험 단계를 알려 준다', function () {
+  var s = C.createState(0); s.zone = 6; s.bestZone = 6;
+  var sg = C.serumGuide(s);
+  assert.ok(sg && /^serum|^final/.test(sg.id), '7구역 혈청 안내: ' + JSON.stringify(sg));
+  s.serumStage = 3; assert.strictEqual(C.serumGuide(s), null, '혈청을 다 만들면 안내 없음');
+  var e = C.createState(0); e.ended = 1; e.bestDanger = 2; e.dangerNext = 0; e.clicks = 10; e.supplies = 100; C.BUILDINGS.forEach(function (b) { e.buildings[b.id] = 5000; }); e.siege = true;
+  e.zone = 6; e.bestZone = 6; e.serumStage = 3;
+  var ge = C.guide(e);
+  assert.ok(['danger', 'goal'].indexOf(ge.id) >= 0, '엔딩 뒤: ' + ge.id + ' ' + ge.text);
+});

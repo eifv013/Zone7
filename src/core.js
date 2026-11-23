@@ -5404,6 +5404,17 @@
   }
 
   /* ---------- 안내 ---------- */
+  /** 5.1.2 7구역 혈청 안내(혈청을 다 만들었거나 7구역이 아니면 null). 막힌 것을 차례로: 정착지 건물 → 밤 단계 · 건물 단계 합 → 최후의 밤 → 물자 */
+  function serumGuide(state) {
+    function g(id, text, view) { return { id: id, text: text, view: view || null }; }
+    if (!(zoneOpen(state, 6) && state.zone === 6 && (state.serumStage || 0) < SERUM_COSTS.length)) return null;
+      var sg = serumGate(state), st = (state.serumStage || 0) + 1, need = serumNeeds(state), cost = serumCost(state);
+    if (need) return g('serum-build', '혈청 ' + st + '단계 준비: 정착지에 ' + need.name + (hasBatchim(need.name) ? '을' : '를') + ' 지어 주세요.', 'zone');
+    if (sg && !sg.base) return g('serum-gate', '혈청 ' + st + '단계 조건: ' + [sg.nightNow < sg.night ? '밤 단계 ' + sg.nightNow + ' / ' + sg.night : '', sg.lvNow < sg.lvSum ? '정착지 건물 단계 합 ' + sg.lvNow + ' / ' + sg.lvSum : ''].filter(Boolean).join(' · ') + '. 습격을 막으면 밤 단계가 올라요.', 'zone');
+    if (sg && sg.final && !sg.finalHeld) return g('final', canFinal(state) ? '최후의 밤을 맞을 수 있어요. 7구역 정착지에서 시작해요.' : '최후의 밤 준비 중이에요. 습격이 끝나면 맞을 수 있어요.', 'zone');
+    return g('serum', state.supplies >= cost ? '혈청 ' + st + '단계를 만들 수 있어요.' : '혈청 ' + st + '단계: 물자 ' + formatNumber(state.supplies) + ' / ' + formatNumber(cost), 'zone');
+    }
+
   /** 화면의 '다음 할 일'에 보일 한 줄 { id, text, view }. view 는 그 일을 하는 화면('zone', 'wall', 'trait'). */
   function guide(state) {
     function g(id, text, view) { return { id: id, text: text, view: view || null }; }
@@ -5417,9 +5428,17 @@
     if (!state.siege && defensePower(state) < nightStrength(state)) return g('defend', '방어력이 모자라요. 방벽을 보강해 주세요.', 'wall');
     if (state.antibodies > 0 && TRAITS.some(function (t) { return traitCost(state, t.id) <= state.antibodies; })) return g('trait', '쓸 수 있는 항체 샘플이 있어요. 특성을 찍어 보세요.', 'trait');
     var open = goals(state, state.zone).filter(function (x) { return !x.done; })[0];
+    if (open && open.id === 'z7c') { var sv = serumGuide(state); if (sv) return sv; }      // 5.1.2 혈청 목표는 막힌 것을 자세히
     if (open) return g('goal', (state.zone + 1) + '구역 목표: ' + open.text + ' (' + formatNumber(open.value) + ' / ' + formatNumber(open.need) + ')', 'zone');
     var n = nextZone(state);
     if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + (n.enough ? '의 문을 열 수 있어요.' : '의 문은 이번 회차 누적 물자 ' + formatNumber(n.cost) + '에 열려요.'), 'zone');
+    /*
+     * 5.1.2 7구역: 예전에는 문을 다 열면 '더 나아갈 곳이 없어요'라고만 해서, 7구역의 진짜 목표(혈청 세 단계와 최후의 밤)를 알려 주지 않았다.
+     *   혈청 단계마다 막힌 것을 차례로 알려 준다: 정착지 건물 → 밤 단계 · 건물 단계 합 → 최후의 밤 → 물자.
+     *   엔딩을 본 뒤에는 위험 단계를 알려 준다.
+     */
+    var sv2 = serumGuide(state); if (sv2) return sv2;
+    if ((state.ended || 0) >= 1 && dangerMax(state) > (state.dangerNext || 0)) return g('danger', '엔딩을 봤어요. 철수할 때 위험 단계를 올리면 더 어려운 대신 영구 생산과 뽑기권이 늘어요(다음 위험 단계 ' + dangerMax(state) + '까지).');
     return g('retreat', '현재는 더 나아갈 곳이 없어요. 철수해서 항체 샘플을 챙기고, 더 강하게 다시 시작해 보세요.');
   }
 
@@ -5540,7 +5559,7 @@
     answerSignal: answerSignal, drawPerks: drawPerks, choosePerk: choosePerk,
     antibodiesOnRetreat: antibodiesOnRetreat, canRetreat: canRetreat, retreat: retreat, startSupplies: startSupplies,
     traitCost: traitCost, buyTrait: buyTrait, traitsSpent: traitsSpent, resetTraits: resetTraits,
-    tick: tick, offlineRate: offlineRate, applyOffline: applyOffline, guide: guide, stats: stats, formatDuration: formatDuration,
+    tick: tick, offlineRate: offlineRate, applyOffline: applyOffline, guide: guide, serumGuide: serumGuide, stats: stats, formatDuration: formatDuration,
     zoneLabel: zoneLabel, serialize: serialize, deserialize: deserialize, formatNumber: formatNumber
   };
 });
