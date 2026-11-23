@@ -107,8 +107,8 @@ body:not(.font-settled) #boot .boot-title { color: transparent; }
 @media (prefers-reduced-motion: reduce) { #boot #boot-bar { animation: none; } }
 #boot #boot-text { margin: 12px 0 0; min-height: 1.5em; font: 600 13px/1.5 var(--font-mono); }
 #boot #boot-tip { margin: 36px 0 0; max-width: 300px; min-height: 3em; font: 400 13px/1.6 var(--font-body); color: #9a9a8c; }
-#boot .boot-brand { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 0 14px; }
-#boot .boot-brand small { font: 600 10px/1.2 "IBM Plex Sans KR", system-ui, sans-serif; letter-spacing: .3em; color: #a3acba; }   /* 수사 3팀 로딩 화면과 똑같이 */
+#boot .boot-brand { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0 0 6px; }
+#boot .boot-brand small { font: 600 8px/1.2 "IBM Plex Sans KR", system-ui, sans-serif; letter-spacing: .32em; color: #a3acba; }   /* 수사 3팀 로딩 화면과 똑같이 */
 #boot .boot-logo { width: min(28vw, 108px); height: auto; display: block; }
 
 /* 머리띠 */
@@ -2395,7 +2395,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.1.6 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.1.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2635,7 +2635,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
 </nav>
 
 <script>
-window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.1.6"; window.ZONE7_BGM = {}; window.ZONE7_BGM_CREDIT = ""; window.ZONE7_SFX = {};
+window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.1.7"; window.ZONE7_BGM = {}; window.ZONE7_BGM_CREDIT = ""; window.ZONE7_SFX = {};
 </script>
 <script>
 /*
@@ -2654,6 +2654,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.1.6"; window.ZONE7_BGM = {}; 
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 5.1.7', date: '2026-11-23', at: '2026-11-23 23:59:00', title: '시작 화면 정리',
+      items: [
+        '시작 화면 아래 제작사 로고를 조금 더 작고 아래로 옮겼어요.'
+      ] },
     { ver: '알파 5.1.6', date: '2026-11-23', at: '2026-11-23 23:58:00', title: '시작 화면 정리',
       items: [
         '시작 화면 아래 버전 글씨를 뺐어요. 버전은 설정 맨 아래와 패치노트에서 볼 수 있어요.'
