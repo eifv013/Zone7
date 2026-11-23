@@ -61,7 +61,7 @@ try {
     const f = path.join(fontDir, file);
     return fs.existsSync(f) ? `@font-face { font-family: '${fam}'; font-weight: ${weight}; font-style: normal; font-display: swap; src: url(data:font/woff;base64,${fs.readFileSync(f).toString('base64')}) format('woff'); }\n` : '';
   };
-  const fonts = fontFace('Galmuri11', 'galmuri11.woff', 400) + fontFace('Galmuri11', 'galmuri11-bold.woff', 700) + fontFace('GalmuriMono11', 'galmuri-mono11.woff', 400);
+  const fonts = fontFace('Galmuri11', 'galmuri11.woff', 400) + fontFace('Galmuri11', 'galmuri11-bold.woff', 700) + fontFace('GalmuriMono11', 'galmuri-mono11.woff', 400) + fontFace('Black Han Sans', 'blackhansans.woff', 400);      // 5.2.0 로고 글꼴도 담는다(인터넷 없이도 로고가 같게. '7구역' 등 몇 글자만)
   const tplFont = tplArt.replace('/*__FONTS__*/', () => fonts);
   const html = tplFont.replace('/*__VERSION__*/', () => `window.ZONE7_VERSION = ${JSON.stringify(version)}; window.ZONE7_BGM = ${JSON.stringify(bgm)}; window.ZONE7_BGM_CREDIT = ${JSON.stringify(bgmCredit)}; window.ZONE7_SFX = ${JSON.stringify(sfx)};`)
     .replace('/*__BOOT__*/', () => read('boot.js'))
