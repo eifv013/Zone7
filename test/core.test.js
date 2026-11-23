@@ -3876,3 +3876,44 @@ test('5.2.2: 프리미엄 수첩을 산 시즌에는 출석 보상이 두 배', 
   assert.strictEqual((r2.reward.treats || 0), (r1.reward.treats || 0) * 2); assert.strictEqual((r2.reward.tickets || 0), (r1.reward.tickets || 0) * 2);
   assert.strictEqual(b.treats - t0, r2.reward.treats); assert.strictEqual(b.tickets - k0, r2.reward.tickets);
 });
+
+test('5.2.3: 결제 상품은 간식으로 못 사고, grantPaid 가 한도를 지키며 물건을 준다', function () {
+  var s = C.createState(0), d = '2026-11-24', next = '2026-12-31';      // 12-31 은 다음 수첩 시즌(30일 단위)
+  assert.notStrictEqual(C.passSeasonOf(d), C.passSeasonOf(next));
+  ['pack-new', 'pack-pet', 'pack-big', 'pack-day', 'pass', 'passplus'].forEach(function (id) { assert.equal(C.buyShop(s, id, d).reason, 'paid', id); });
+  // 새내기: 계정에 한 번
+  var t0 = s.treats || 0; assert.ok(C.grantPaid(s, 'pack-new', d).ok);
+  assert.strictEqual(s.treats - t0, 500); assert.strictEqual(s.petTix, 1);
+  assert.equal(C.grantPaid(s, 'pack-new', next).reason, 'once');
+  // 동물 친구: 시즌마다 한 번
+  assert.ok(C.grantPaid(s, 'pack-pet', d).ok); assert.strictEqual(s.petTix, 4); assert.strictEqual(s.petShards, 10);
+  assert.equal(C.grantPaid(s, 'pack-pet', d).reason, 'season');
+  assert.ok(C.grantPaid(s, 'pack-pet', next).ok, '다음 시즌에는 다시');
+  // 알 수 없는 상품 · 간식 상품은 결제로 못 받는다
+  assert.equal(C.grantPaid(s, 'nope', d).reason, 'unknown'); assert.equal(C.grantPaid(s, 'pact', d).reason, 'unknown');
+  // 산 기록은 저장 · 철수에도 남는다
+  var back = C.deserialize(C.serialize(s)); assert.equal(C.grantPaid(back, 'pack-new', next).reason, 'once');
+  var r = C.retreat ? C.retreat(back) : null; if (r && r.ok !== false && r.state) assert.equal(C.grantPaid(r.state, 'pack-new', next).reason, 'once');
+});
+
+test('5.2.3: 수첩 결제는 프리미엄을 열고(이미 있으면 못 산다), +10칸은 도장 100개를 더한다', function () {
+  var s = C.createState(0), d = '2026-11-24';
+  assert.ok(C.grantPaid(s, 'passplus', d).ok);
+  var info = C.passInfo(s, d); assert.ok(info.premium); assert.strictEqual(info.tier, C.PASS_PLUS_TIERS);
+  assert.equal(C.grantPaid(s, 'pass', d).reason, 'owned');
+  var b = C.createState(0); b.treats = 1e6; assert.ok(C.buyPassPremium(b, d).ok); assert.strictEqual(1e6 - b.treats, C.PASS_PRICE);
+  assert.equal(C.grantPaid(b, 'pass', d).reason, 'owned', '간식으로 연 사람은 결제로 또 못 산다');
+});
+
+test('5.2.3: 매일 간식은 30일 동안 하루 한 번, 끝나야 다시 산다', function () {
+  var s = C.createState(0), day = function (k) { return new Date(Date.UTC(2026, 10, 24 + k)).toISOString().slice(0, 10); };
+  var t0 = s.treats || 0; assert.ok(C.grantPaid(s, 'pack-day', day(0)).ok); assert.strictEqual(s.treats - t0, 200);
+  assert.equal(C.claimDayCard(s, day(0)).reason, 'done', '산 날 몫은 바로 준 200 에 들었다');
+  assert.equal(C.grantPaid(s, 'pack-day', day(3)).reason, 'active');
+  var got = 0; for (var k = 1; k < 40; k++) { var r = C.claimDayCard(s, day(k)); if (r.ok) got += r.treats; assert.ok(!C.claimDayCard(s, day(k)).ok, '하루 두 번은 없다'); }
+  assert.strictEqual(got, (C.DAYCARD_DAYS - 1) * C.DAYCARD_TREATS);
+  assert.strictEqual(C.dayCard(s, day(30)).left, 0); assert.ok(C.grantPaid(s, 'pack-day', day(30)).ok, '끝나면 다시');
+  var back = C.deserialize(C.serialize(s)); assert.deepStrictEqual(back.dayCard, s.dayCard);
+  var bad = C.deserialize(JSON.stringify(Object.assign(JSON.parse(C.serialize(s)), { dayCard: { start: 'x' }, buys: { evil: { n: 5 }, 'pack-new': { n: -3, season: 'a' } } })));
+  assert.strictEqual(bad.dayCard, null); assert.ok(!bad.buys.evil); assert.deepStrictEqual(bad.buys['pack-new'], { n: 0, season: -1 });
+});

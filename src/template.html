@@ -414,7 +414,8 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .store-row .t { flex: 1; min-width: 0; } .store-row .t b { display: block; font-size: 14px; line-height: 1.3; } .store-row .t small { display: block; color: #a8a290; font-size: 12px; line-height: 1.35; margin-top: 2px; }
 .story-card .store-row button { flex: none; width: 108px; min-width: 108px; padding: 8px 6px; font-size: 13px; white-space: nowrap; text-align: center; }      /* 5.1.3 단추 폭을 하나로(오른쪽 줄이 맞게) */
 .story-card .store-row button.own { background: transparent; color: #7fd8a0; border: 1px solid #4aa870; }
-.story-card .store-row button.paid { background: transparent; color: #a8a290; border: 1px dashed #6d6d60; }
+.story-card button.paid { background: #2f6b3c; color: #f4f0dc; border: 0; box-shadow: 0 3px 0 #173a1e, inset 0 1px 0 rgba(255,255,255,.25); }      /* 5.2.3 결제 단추는 초록(간식 단추 노랑 · 광고 테두리와 갈린다) */
+.story-card button.paid:active { transform: translateY(2px); box-shadow: 0 1px 0 #173a1e; }
 .story-card .store-row button .ic { width: 16px; height: 14px; vertical-align: -2px; }
 .store-row.nope { animation: jam-shake .3s steps(2) 1; }
 .store-note { margin-top: 8px; }
@@ -429,6 +430,9 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .pass-grid .c.prem { background: rgba(240, 180, 0, .06); } .pass-grid .c .ic { width: 14px; height: 12px; vertical-align: -2px; margin: 0; }
 .pass-grid .n { grid-column: 1 / -1; color: #6d6d60; font-size: 10px; text-align: left; margin-top: 4px; }
 #pass-stamps, #pass-how, #store-veil .store-note { min-height: 0; }      /* 이야기 창 글의 최소 높이를 쓰지 않는다 */
+.store-row b .lim { display: inline-block; white-space: nowrap; font-style: normal; font-size: 11px; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: #3a3a2c; color: var(--hazard); vertical-align: 1px; }
+.pass-buyrow button, .store-row button { white-space: nowrap; }
+.pass-buyrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; } .pass-buyrow[hidden] { display: none; } .pass-buyrow span { flex: 1; color: var(--hazard); font-family: var(--font-head); } .pass-buyrow button { flex: 0 0 108px; }      /* 5.2.3 결제 · 간식 두 길 */
 .pass-acts { display: flex; gap: 8px; margin-top: 12px; } .pass-acts button { flex: 1; }
 .pass-acts button:disabled { background: transparent; color: #8a887c; border: 1px solid #4a4a40; box-shadow: none; }      /* 5.1.3 받을 것이 없으면 꺼진 모양(노란 단추가 눌리는 것처럼 보였다) */
 #pass-how { white-space: pre-line; }
@@ -1565,7 +1569,7 @@ h1, h2, h3, h4, button, .num, b, strong, .pill, .scavenge, .attend-open, .missio
 .story-card button:not(:disabled):not(.paid):not(.ad):not(.own):not(.feedback-close):active, .attend-open:not(:disabled):active, .goal-go:active, .pet-pick button:not(:disabled):active, .fortify:not(:disabled):active, .surge:not(:disabled):active {
   transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--hazard) 55%, #000);
 }
-.story-card .store-row button.paid, .story-card .store-row button.ad, .story-card .store-row button.own { border-width: 2px; }
+.story-card .store-row button.ad, .story-card .store-row button.own { border-width: 2px; }
 .story-card button:disabled { box-shadow: none; }
 .mission-bar .mission-cta { border-radius: 8px; box-shadow: 0 2px 0 color-mix(in srgb, var(--hazard) 55%, #000); }
 .mission-bar.can .mission-cta { box-shadow: 0 2px 0 #8a1f1f; }
@@ -2095,7 +2099,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.2.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.2.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2231,7 +2235,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="pass-bar"><i id="pass-fill"></i></div>
     <p class="label" id="pass-stamps"></p>
     <div class="pass-grid" id="pass-grid"></div>
-    <div class="pass-acts"><button type="button" id="pass-claim">받기</button><button type="button" id="pass-buy">프리미엄 열기</button></div>
+    <div class="pass-acts"><button type="button" id="pass-claim">받기</button></div>
+    <div class="pass-buyrow" id="pass-buyrow"><span>프리미엄 열기</span><button type="button" class="paid" id="pass-buy">₩</button><button type="button" id="pass-buy-treat">간식</button></div>
     <p class="label store-note" id="pass-how"></p>
   </div>
 </div>

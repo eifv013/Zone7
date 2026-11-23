@@ -1995,7 +1995,9 @@
    * 4.8.0 보급소 창: 영구(한 번만) · 보급품(여러 번) · 결제(준비 중) 세 묶음. 단추에는 값 · 보유 · 오늘 다 씀 · 준비됨 · 준비 중.
    * 간식이 모자라면 눌렀을 때 알려 주고 그 줄을 흔든다(뽑기권 사기와 같은 모양).
    */
-  var STORE_GROUP = [['ad', '광고 보고 받기'], ['starter', '처음 한 번'], ['perm', '영구 · 한 번만'], ['cons', '보급품 · 여러 번'], ['paid', '결제 · 준비 중']];
+  var STORE_GROUP = [['ad', '광고 보고 받기'], ['starter', '처음 한 번'], ['pack', '패키지'], ['pass', '생존자 수첩'], ['perm', '영구 · 한 번만'], ['cons', '보급품 · 여러 번'], ['paid', '간식 충전']];      // 5.2.3 패키지 · 수첩 묶음
+  var LIMIT_TEXT = { once: '1번만', season: '시즌 1번' };
+  function won(n) { return '₩' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
   function renderStore() {
     var box = $('store-list'); if (!box || $('store-veil').hidden) return;
     setText($('store-treats'), IC.treat + fmt(state.treats || 0));
@@ -2025,7 +2027,7 @@
       C.SHOP_ITEMS.filter(function (it) { return it.kind === g[0]; }).forEach(function (it) {
         var row = el('div', 'store-row'); row.setAttribute('data-id', it.id);
         row.appendChild(el('i', 'ic ic-' + it.icon));
-        var t = el('div', 't'); t.appendChild(el('b', '', it.name)); t.appendChild(el('small', '', it.desc)); row.appendChild(t);
+        var t = el('div', 't'), tb = el('b', '', it.name); if (it.limit) tb.appendChild(el('em', 'lim', LIMIT_TEXT[it.limit])); t.appendChild(tb); t.appendChild(el('small', '', it.desc)); row.appendChild(t);      /* 5.2.3 한도는 이름 옆 작은 꼬리표로(설명이 세 줄로 늘어나서) */
         var b = el('button', ''); b.type = 'button'; row.appendChild(b);
         b.addEventListener('click', function () { storeBuy(it, row); });
         box.appendChild(row);
@@ -2035,14 +2037,23 @@
       var adk = row.getAttribute('data-ad');
       if (adk) { var ast = C.adState(state, adk, todayStr()), abt = row.lastChild; abt.disabled = !ast.can; setText(abt, ast.can ? (state.noAds ? '바로 받기' : '광고 보기') + (ast.left != null ? ' · ' + ast.left + '번' : '') : ast.reason === 'daily' ? '오늘 다 봤어요' : ast.reason === 'ready' ? '준비됨' : ast.reason === 'none' ? '수입이 없어요' : '아직'); return; }
       if (row.getAttribute('data-id') === 'starter') { var sb1 = row.lastChild; sb1.className = state.starter ? 'own' : ''; setText(sb1, state.starter ? '보유' : IC.treat + C.STARTER.treats); sb1.classList.toggle('short', !state.starter && !(state.treats >= C.STARTER.treats)); return; }
-      var it = C.shopItem(row.getAttribute('data-id')), st = C.shopState(state, it.id, todayStr()), b = row.lastChild;
-      b.className = st.owned ? 'own' : it.kind === 'paid' ? 'paid' : '';
-      setText(b, it.kind === 'paid' ? '₩' + String(it.won).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : st.owned ? '보유' : st.reason === 'daily' ? '오늘 다 씀' : st.reason === 'ready' ? '준비됨' : IC.treat + it.treats + (st.left != null ? ' (' + st.left + '번)' : ''));
+      var it = C.shopItem(row.getAttribute('data-id')), b = row.lastChild;
+      if (C.isPaid(it)) {      // 5.2.3 결제 상품: 값 · 산 것 · 매일 간식 받기
+        var ps = C.paidState(state, it.id, todayStr()), dc = it.id === 'pack-day' ? C.dayCard(state, todayStr()) : null;
+        if (dc && dc.ready) { b.className = ''; setText(b, '오늘 받기 · ' + IC.treat + C.DAYCARD_TREATS); return; }
+        b.className = ps.can ? 'paid' : 'own';
+        setText(b, ps.can ? won(it.won) : ps.reason === 'active' ? dc.left + '일 남음' : ps.reason === 'season' ? '이번 시즌 삼' : ps.reason === 'once' ? '샀어요' : '보유');
+        return;
+      }
+      var st = C.shopState(state, it.id, todayStr());
+      b.className = st.owned ? 'own' : '';
+      setText(b, st.owned ? '보유' : st.reason === 'daily' ? '오늘 다 씀' : st.reason === 'ready' ? '준비됨' : IC.treat + it.treats + (st.left != null ? ' (' + st.left + '번)' : ''));
       b.classList.toggle('short', st.reason === 'treats');
     });
   }
   function storeBuy(it, row) {
-    if (it.kind === 'paid') { toast('결제는 준비 중이에요'); return; }
+    if (it.id === 'pack-day') { var dr = C.claimDayCard(state, todayStr()); if (dr.ok) { sfx('buy'); toast('매일 간식 · ' + IC.treat + dr.treats + ' · 남은 ' + dr.left + '일'); Store.save(); renderStore(); render(); return; } }
+    if (C.isPaid(it)) { var ps = C.paidState(state, it.id, todayStr()); toast(ps.can ? '결제는 준비 중이에요' : ps.reason === 'season' ? '이번 시즌에는 이미 샀어요' : ps.reason === 'once' ? '한 번만 살 수 있어요' : ps.reason === 'active' ? '매일 간식이 끝나면 다시 살 수 있어요 · 오늘 몫은 받았어요' : '이미 있어요'); return; }
     var r = C.buyShop(state, it.id, todayStr());
     if (r.ok) {
       sfx('buy'); buzz(20);
@@ -2076,9 +2087,10 @@
     }
     $('pass-claim').disabled = !(info.canFree || info.canPrem);
     setText($('pass-claim'), info.canFree || info.canPrem ? '보상 받기' : '받을 보상 없음');
-    $('pass-buy').hidden = info.premium; setText($('pass-buy'), '프리미엄 열기  ' + IC.treat + C.PASS_PRICE);
+    $('pass-buyrow').hidden = info.premium; setText($('pass-buy'), won(C.shopItem('pass').won)); setText($('pass-buy-treat'), IC.treat + fmt(C.PASS_PRICE));      // 5.2.3 결제 또는 간식
+    $('pass-buy-treat').classList.toggle('short', !((state.treats || 0) >= C.PASS_PRICE));
     var st = C.PASS_STAMPS;
-    setText($('pass-how'), '도장 얻는 법: 출석 ' + st.attend + '개, 원정 새 별 ' + st.star + '개, 밤 단계 이정표 ' + st.night + '개, 혈청 단계 ' + st.serum + '개, 철수 ' + st.retreat + '개\n프리미엄 10, 15, 20칸에는 이번 수첩 한정 우비, 깃발, 후드가 있어요. 수첩은 30일마다 바뀌어요.');      // 5.1.3 어순 · 낱말을 고쳤다
+    setText($('pass-how'), '도장 얻는 법: 출석 ' + st.attend + '개, 원정 새 별 ' + st.star + '개, 밤 단계 이정표 ' + st.night + '개, 혈청 단계 ' + st.serum + '개, 철수 ' + st.retreat + '개\n프리미엄 10, 15, 20칸에는 이번 수첩 한정 우비, 깃발, 후드가 있어요. 프리미엄이면 출석 보상도 두 배예요. 수첩은 30일마다 바뀌어요.');      // 5.1.3 어순 · 낱말을 고쳤다
   }
   /*
    * 4.8.5 광고: 광고 제거면 바로 보상. 앱이 광고를 붙여 window.ZONE7_AD(kind, done) 을 주면 그것을 부르고,
@@ -5661,9 +5673,10 @@
     $('pass-open').addEventListener('click', function () { sfx('click'); $('pass-veil').hidden = false; renderPass(); });
     $('pass-close').addEventListener('click', function () { $('pass-veil').hidden = true; });
     $('pass-claim').addEventListener('click', function () { var r = C.passClaim(state, todayStr()); if (!r.ok) return; sfx('goal'); toast('수첩 보상 ' + r.got.length + '칸을 받았어요'); Store.save(); renderShop(); });
-    $('pass-buy').addEventListener('click', function () {
+    $('pass-buy').addEventListener('click', function () { toast('결제는 준비 중이에요 · 간식으로도 열 수 있어요'); });      // 5.2.3 결제를 붙이면 여기서 C.grantPaid(state, 'pass', 날짜)
+    $('pass-buy-treat').addEventListener('click', function () {
       var r = C.buyPassPremium(state, todayStr());
-      if (r.ok) { sfx('buy'); toast('유료 줄을 열었어요'); Store.save(); renderShop(); return; }
+      if (r.ok) { sfx('buy'); toast('프리미엄 수첩을 열었어요'); Store.save(); renderShop(); return; }
       if (r.reason === 'treats') toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, C.PASS_PRICE - Math.floor(state.treats || 0))) + ' 더 필요해요');
     });
     $('attend-close').addEventListener('click', function () { $('attend-veil').hidden = true; });
