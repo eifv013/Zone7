@@ -3886,7 +3886,7 @@ test('5.2.3: 결제 상품은 간식으로 못 사고, grantPaid 가 한도를 �
   assert.strictEqual(s.treats - t0, 500); assert.strictEqual(s.petTix, 1);
   assert.equal(C.grantPaid(s, 'pack-new', next).reason, 'once');
   // 동물 친구: 시즌마다 한 번
-  assert.ok(C.grantPaid(s, 'pack-pet', d).ok); assert.strictEqual(s.petTix, 4); assert.strictEqual(s.petShards, 10);
+  assert.ok(C.grantPaid(s, 'pack-pet', d).ok); assert.strictEqual(s.petTix, 9); assert.strictEqual(s.petShards, 20);
   assert.equal(C.grantPaid(s, 'pack-pet', d).reason, 'season');
   assert.ok(C.grantPaid(s, 'pack-pet', next).ok, '다음 시즌에는 다시');
   // 알 수 없는 상품 · 간식 상품은 결제로 못 받는다
@@ -3925,7 +3925,7 @@ test('5.2.4: 간식 충전은 간식만, 비쌀수록 1원에 드는 간식이 �
   assert.equal(C.shopItem('tixpay').kind, 'pack'); assert.equal(C.shopItem('noads').kind, 'noads');
   var s = C.createState(0), d = '2026-11-24', t0 = s.treats || 0, k0 = s.tickets || 0;
   assert.ok(C.grantPaid(s, 'treat6', d).ok); assert.strictEqual(s.treats - t0, 25000);
-  assert.ok(C.grantPaid(s, 'tixpay', d).ok); assert.strictEqual(s.tickets - k0, 11);
+  assert.ok(C.grantPaid(s, 'tixpay', d).ok); assert.strictEqual(s.tickets - k0, C.TIXPAY);
   assert.ok(C.grantPaid(s, 'noads', d).ok); assert.ok(s.noAds); assert.equal(C.grantPaid(s, 'noads', d).reason, 'owned');
   assert.equal(C.buyShop(s, 'noads', d).reason, 'paid');
 });
@@ -3936,4 +3936,26 @@ test('5.2.4: 첫 결제 상자는 계정에 한 번(간식으로 사는 첫 보�
   var t0 = s.treats, k0 = s.tickets; assert.ok(C.grantPaid(s, 'first', d).ok);
   assert.strictEqual(s.treats - t0, 300); assert.strictEqual(s.tickets - k0, 10); assert.strictEqual(s.petTix, 2);
   assert.equal(C.grantPaid(s, 'first', '2027-03-01').reason, 'once'); assert.equal(C.buyShop(s, 'first', d).reason, 'paid');
+});
+
+test('5.2.5: 결제 패키지는 같은 돈으로 간식을 사는 것보다 1.5배 이상 든다(간식으로 환산)', function () {
+  var tix = 40, pet = C.shopItem('pettix').treats, shard10 = pet;
+  function worth(it) {
+    if (it.id === 'tixpay') return C.TIXPAY * tix;
+    if (it.id === 'pack-day') return C.shopItem('pack-day').give.treats + (C.DAYCARD_DAYS - 1) * C.DAYCARD_TREATS;
+    var g = it.give || {}; return (g.treats || 0) + (g.tickets || 0) * tix + (g.petTix || 0) * pet + (g.petShards || 0) / 10 * shard10;
+  }
+  var base = C.PAID_TREATS.treat2 / 5500;      // 간식 상자 값
+  C.SHOP_ITEMS.filter(function (it) { return it.kind === 'pack' || it.kind === 'first'; }).forEach(function (it) {
+    var r = worth(it) / it.won / base; assert.ok(r >= 1.5, it.id + ' ' + r.toFixed(2) + '배');
+  });
+});
+
+test('5.2.5: 프리미엄 줄에는 데려오기권이 있고, 받으면 실제로 들어온다 · 플러스는 덤을 준다', function () {
+  var s = C.createState(0), d = '2026-11-24';
+  assert.ok(C.grantPaid(s, 'passplus', d).ok);
+  assert.strictEqual(s.petTix, C.shopItem('passplus').give.petTix);
+  var before = s.petTix, r = C.passClaim(s, d); assert.ok(r.ok);
+  var want = 0; for (var i = 1; i <= C.PASS_PLUS_TIERS; i++) want += C.passReward('prem', i, C.passSeasonOf(d)).petTix || 0;
+  assert.ok(want > 0); assert.strictEqual(s.petTix - before, want);
 });

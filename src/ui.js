@@ -2025,8 +2025,16 @@
         });
         box.appendChild(srow); storeRows('first'); return;      // 5.2.4 간식 상자 + 결제 상자
       }
+      if (g[0] === 'pass') {      // 5.2.5 수첩 두 줄 대신 띠 하나 → 팝업
+        var pb = el('button', 'pass-banner'); pb.type = 'button'; pb.id = 'store-pass';
+        var pcv = document.createElement('canvas'); pcv.width = 28; pcv.height = 40; pb.appendChild(pcv);
+        var pt = el('div', 'pb-t'); pt.appendChild(el('small', 'pb-s', '')); pt.appendChild(el('b', '', '프리미엄 수첩')); pt.appendChild(el('span', 'pb-d', '')); pb.appendChild(pt);
+        pb.appendChild(el('div', 'pb-go', '보기')); pb.addEventListener('click', function () { sfx('click'); openPassBuy(); });
+        box.appendChild(pb); return;
+      }
       storeRows(g[0]);
     });
+    renderPassBanner();
     function storeRows(kind) {
       C.SHOP_ITEMS.filter(function (it) { return it.kind === kind; }).forEach(function (it) {
         var row = el('div', 'store-row'); row.setAttribute('data-id', it.id);
@@ -2071,30 +2079,93 @@
   /*
    * 4.8.2 생존자 수첩 창: 도장 막대, 스무 칸(무료 · 유료 두 줄, 다섯 칸씩 네 줄), 받기 · 유료 줄 열기.
    */
-  function passCell(r) { return r.cos ? '외형' : r.tickets ? IC.ticket + r.tickets : IC.treat + r.treats; }
+  function passCell(r) { return r.cos ? '외형' : r.tickets ? IC.ticket + r.tickets : r.petTix ? IC.ptix + r.petTix : IC.treat + r.treats; }
+  /* 5.2.5 수첩 프리미엄: 한정 외형 그림 · 두 상품(프리미엄 · 플러스)의 내용. 숫자는 core 표에서 센다(값을 바꿔도 맞게) */
+  function passPremTotals(season) {
+    var t = 0, k = 0, p = 0, cos = [];
+    for (var i = 1; i <= C.PASS_TIERS; i++) { var r = C.passReward('prem', i, season); t += r.treats || 0; k += r.tickets || 0; p += r.petTix || 0; if (r.cos) cos.push(r.cos); }
+    return { treats: t, tickets: k, petTix: p, cos: cos };
+  }
+  function drawPassPics(box, season) {
+    var key = season + ':' + JSON.stringify(C.cosmeticLook(state));
+    if (box.getAttribute('data-key') === key) return;
+    box.setAttribute('data-key', key); while (box.firstChild) box.removeChild(box.firstChild);
+    var worn = C.cosmeticLook(state);
+    passPremTotals(season).cos.forEach(function (id) {
+      var c = C.COSMETICS.filter(function (x) { return x.id === id; })[0]; if (!c) return;
+      var it = el('div', ''), cv = document.createElement('canvas'); cv.width = 28; cv.height = 40;
+      it.appendChild(cv); it.appendChild(el('small', '', c.name)); it.appendChild(el('em', '', ({ coat: '우비', flag: '깃발', hood: '후드' })[c.slot] || '외형'));
+      box.appendChild(it); try { drawThumb(cv, c, worn); } catch (e) { /* 그림이 없어도 이름은 보인다 */ }
+    });
+  }
+  function passDaysLeft(info) { return Math.max(0, Math.ceil((info.endsAt - Date.now()) / 86400000)); }
+  function renderPassBanner() {
+    var pb = $('store-pass'); if (!pb) return;
+    var info = C.passInfo(state, todayStr()), set = C.passSet(info.season);
+    pb.className = 'pass-banner' + (info.premium ? ' own' : '');
+    pb.querySelector('.pb-s').textContent = set.name + ' · 남은 ' + passDaysLeft(info) + '일';      // textContent: ' · '로 줄이 나뉘지 않게
+    pb.querySelector('.pb-d').textContent = ( info.premium ? '프리미엄 사용 중, 출석 보상 두 배' : '한정 외형 3벌, 출석 보상 두 배');
+    setText(pb.querySelector('.pb-go'), info.premium ? '사용 중' : '보기');
+    var c = C.COSMETICS.filter(function (x) { return x.id === set.coat; })[0], cv = pb.querySelector('canvas');
+    if (c && cv.getAttribute('data-k') !== set.coat) { cv.setAttribute('data-k', set.coat); try { drawThumb(cv, c, C.cosmeticLook(state)); } catch (e) { /* 그림 없음 */ } }
+  }
+  function renderPassOffer(info) { drawPassPics($('po-pics'), info.season); }
+  function openPassBuy() {
+    var info = C.passInfo(state, todayStr());
+    if (info.premium) { $('pass-veil').hidden = false; renderPass(); return; }      // 이미 있으면 수첩 창으로
+    $('pbuy-veil').hidden = false; renderPassBuy();
+  }
+  function renderPassBuy() {
+    if (!$('pbuy-veil') || $('pbuy-veil').hidden) return;
+    var info = C.passInfo(state, todayStr()), set = C.passSet(info.season), tot = passPremTotals(info.season), plus = C.shopItem('passplus');
+    $('pbuy-sub').textContent = set.name + ' · 남은 ' + passDaysLeft(info) + '일';
+    drawPassPics($('pbuy-pics'), info.season);
+    function fill(ul, lines) { while (ul.firstChild) ul.removeChild(ul.firstChild); lines.forEach(function (l) { var li = el('li', l[0]); setText(li, l[1]); ul.appendChild(li); }); }
+    fill($('pbuy-a').querySelector('ul'), [
+      ['', '한정 외형 ' + tot.cos.length + '벌'],
+      ['', '프리미엄 줄 20칸'],
+      ['', '간식 ' + fmt(tot.treats) + ', 뽑기권 ' + tot.tickets + '장, 데려오기권 ' + tot.petTix + '장'],
+      ['', '출석 보상 두 배'],
+      ['', '지난 칸도 바로 받기']
+    ]);
+    fill($('pbuy-b').querySelector('ul'), [
+      ['all', '프리미엄 전부'],
+      ['more', '바로 ' + C.PASS_PLUS_TIERS + '칸 앞으로'],
+      ['more', '간식 ' + fmt(plus.give.treats)], ['more', '뽑기권 ' + plus.give.tickets + '장'], ['more', '데려오기권 ' + plus.give.petTix + '장']
+    ]);
+    $('pbuy-a-btn').textContent = won(C.shopItem('pass').won); $('pbuy-b-btn').textContent = won(plus.won);
+    setText($('pass-buy-treat'), '간식 ' + fmt(C.PASS_PRICE) + '개로 프리미엄 열기');
+  }
   function renderPass() {
     if (!$('pass-veil') || $('pass-veil').hidden) return;
     var info = C.passInfo(state, todayStr()), days = Math.max(0, Math.ceil((info.endsAt - Date.now()) / 86400000));
     setText($('pass-sub'), C.passSet(info.season).name + ' · 남은 ' + days + '일');
     $('pass-fill').style.width = Math.min(100, info.stamps / (C.PASS_TIERS * C.PASS_STEP) * 100).toFixed(1) + '%';
-    $('pass-stamps').textContent = info.tier + ' / ' + C.PASS_TIERS + '칸 · 도장 ' + fmt(info.stamps) + '개' + (info.toNext ? ' · 다음 칸까지 ' + info.toNext + '개' : '');      // 5.1.3 칸 → 도장 → 다음 칸 순서로(textContent 라 ' · '로 줄이 나뉘지 않는다)
-    var g = $('pass-grid'); while (g.firstChild) g.removeChild(g.firstChild);
-    for (var b = 0; b < C.PASS_TIERS; b += 5) {
-      g.appendChild(el('div', 'n', (b + 1) + '~' + (b + 5) + '칸'));
+    $('pass-tier').textContent = info.tier;
+    $('pass-stamps').textContent = info.toNext ? '다음 칸까지 도장 ' + info.toNext + '개' : '20칸을 모두 채웠어요';      // 5.2.5 칸 수는 동그라미에, 여기는 다음 칸까지만
+    setText($('pass-ph'), info.premium ? '프리미엄' : '프리미엄 🔒');
+    /* 5.2.5 한 줄에 한 칸. 외형은 이름으로(예전엔 '외형' 두 글자라 무엇인지 몰랐다) */
+    var g = $('pass-grid'), cur = null; while (g.firstChild) g.removeChild(g.firstChild);
+    for (var i = 1; i <= C.PASS_TIERS; i++) {
+      var row = el('div', 'pass-row' + (i <= info.tier ? ' on' : '') + (i === Math.min(C.PASS_TIERS, info.tier + 1) ? ' cur' : ''));
+      row.appendChild(el('div', 'no', String(i)));
       ['free', 'prem'].forEach(function (tr) {
-        g.appendChild(el('div', 'h' + (tr === 'prem' ? ' ph' : ''), tr === 'free' ? '무료' : '프리미엄'));      // 5.1.3 '유료' → '프리미엄'
-        for (var i = b + 1; i <= b + 5; i++) {
-          var got = tr === 'free' ? i <= info.free : i <= info.prem, reach = i <= info.tier, open = tr === 'free' || info.premium;
-          g.appendChild(el('div', 'c' + (tr === 'prem' ? ' prem' : '') + (got ? ' got' : reach && open ? ' can' : !open ? ' lock' : ''), (got ? '✓ ' : '') + passCell(C.passReward(tr, i, info.season))));
-        }
+        var r = C.passReward(tr, i, info.season), got = tr === 'free' ? i <= info.free : i <= info.prem, open = tr === 'free' || info.premium;
+        var cell = el('div', 'rw' + (tr === 'prem' ? ' prem' : '') + (r.cos ? ' big' : '') + (got ? ' got' : i <= info.tier && open ? ' can' : !open ? ' lock' : ''));
+        if (r.cos) { var cd = null; C.COSMETICS.forEach(function (c) { if (c.id === r.cos) cd = c; }); cell.textContent = cd ? cd.name : '한정 외형'; }
+        else setText(cell, passCell(r));
+        row.appendChild(cell);
       });
+      if (i === Math.min(C.PASS_TIERS, info.tier + 1)) cur = row;
+      g.appendChild(row);
     }
+    if (cur) g.scrollTop = Math.max(0, cur.offsetTop - g.offsetTop - g.clientHeight / 2 + 20);
     $('pass-claim').disabled = !(info.canFree || info.canPrem);
     setText($('pass-claim'), info.canFree || info.canPrem ? '보상 받기' : '받을 보상 없음');
-    $('pass-buyrow').hidden = info.premium; setText($('pass-buy'), won(C.shopItem('pass').won)); setText($('pass-buy-treat'), IC.treat + fmt(C.PASS_PRICE));      // 5.2.3 결제 또는 간식
-    $('pass-buy-treat').classList.toggle('short', !((state.treats || 0) >= C.PASS_PRICE));
+    $('pass-buyrow').hidden = info.premium;
+    if (!info.premium) renderPassOffer(info);      // 5.2.5 프리미엄 판매 칸
     var st = C.PASS_STAMPS;
-    setText($('pass-how'), '도장 얻는 법: 출석 ' + st.attend + '개, 원정 새 별 ' + st.star + '개, 밤 단계 이정표 ' + st.night + '개, 혈청 단계 ' + st.serum + '개, 철수 ' + st.retreat + '개\n프리미엄 10, 15, 20칸에는 이번 수첩 한정 우비, 깃발, 후드가 있어요. 프리미엄이면 출석 보상도 두 배예요. 수첩은 30일마다 바뀌어요.');      // 5.1.3 어순 · 낱말을 고쳤다
+    $('pass-how').textContent = '도장: 출석 ' + st.attend + ', 원정 새 별 ' + st.star + ', 밤 이정표 ' + st.night + ', 혈청 단계 ' + st.serum + ', 철수 ' + st.retreat + '\n수첩은 30일마다 바뀌어요.';      // 5.2.5 짧게(외형은 칸에 이름이 보인다)      // 5.1.3 어순 · 낱말을 고쳤다
   }
   /*
    * 4.8.5 광고: 광고 제거면 바로 보상. 앱이 광고를 붙여 window.ZONE7_AD(kind, done) 을 주면 그것을 부르고,
@@ -5677,10 +5748,13 @@
     $('pass-open').addEventListener('click', function () { sfx('click'); $('pass-veil').hidden = false; renderPass(); });
     $('pass-close').addEventListener('click', function () { $('pass-veil').hidden = true; });
     $('pass-claim').addEventListener('click', function () { var r = C.passClaim(state, todayStr()); if (!r.ok) return; sfx('goal'); toast('수첩 보상 ' + r.got.length + '칸을 받았어요'); Store.save(); renderShop(); });
-    $('pass-buy').addEventListener('click', function () { toast('결제는 준비 중이에요 · 간식으로도 열 수 있어요'); });      // 5.2.3 결제를 붙이면 여기서 C.grantPaid(state, 'pass', 날짜)
+    $('pass-buy').addEventListener('click', function () { sfx('click'); openPassBuy(); });      // 5.2.5 수첩 창 → 결제 팝업
+    $('pbuy-close').addEventListener('click', function () { $('pbuy-veil').hidden = true; });
+    $('pbuy-a-btn').addEventListener('click', function () { toast('결제는 준비 중이에요'); });      // 결제를 붙이면 C.grantPaid(state, 'pass', 날짜)
+    $('pbuy-b-btn').addEventListener('click', function () { toast('결제는 준비 중이에요'); });      // 결제를 붙이면 C.grantPaid(state, 'passplus', 날짜)
     $('pass-buy-treat').addEventListener('click', function () {
       var r = C.buyPassPremium(state, todayStr());
-      if (r.ok) { sfx('buy'); toast('프리미엄 수첩을 열었어요'); Store.save(); renderShop(); return; }
+      if (r.ok) { sfx('buy'); toast('프리미엄 수첩을 열었어요'); $('pbuy-veil').hidden = true; Store.save(); renderShop(); renderStore(); renderPass(); return; }
       if (r.reason === 'treats') toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, C.PASS_PRICE - Math.floor(state.treats || 0))) + ' 더 필요해요');
     });
     $('attend-close').addEventListener('click', function () { $('attend-veil').hidden = true; });

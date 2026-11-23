@@ -432,6 +432,69 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 #pass-stamps, #pass-how, #store-veil .store-note { min-height: 0; }      /* 이야기 창 글의 최소 높이를 쓰지 않는다 */
 .store-row b .lim { display: inline-block; white-space: nowrap; font-style: normal; font-size: 11px; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: #3a3a2c; color: var(--hazard); vertical-align: 1px; }
 .pass-buyrow button, .store-row button { white-space: nowrap; }
+/* 5.2.5 수첩 창: 네 덩이 격자 → 한 줄에 한 칸(칸 번호 · 무료 · 프리미엄)으로 세로로 내린다. 지금 칸이 가운데 오게 스크롤 */
+.pass-top { display: flex; align-items: center; gap: 12px; margin: 10px 0 12px; }
+.pass-tier { flex: none; width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--hazard); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.pass-tier b { font-size: 26px; color: var(--hazard); } .pass-tier small { font-size: 11px; color: #a8a290; margin-top: 2px; }
+.pass-prog { flex: 1; min-width: 0; } .pass-prog p { margin: 6px 0 0; font-size: 14px; color: #e6e5db; }
+.pass-top .pass-bar { height: 14px; border-radius: 7px; margin: 0; border-color: #5a5a4c; background: #24241c; }
+.pass-cols, .pass-row { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 8px; align-items: center; }
+.pass-cols { font-size: 13px; color: #a8a290; padding: 0 2px 6px; border-bottom: 1px solid #3a3a30; } .pass-cols span { text-align: center; } .pass-cols .ph { color: var(--hazard); }
+.pass-list { max-height: min(46vh, 420px); overflow-y: auto; padding: 6px 2px; overscroll-behavior: contain; }
+.pass-row { margin-bottom: 6px; }
+.pass-row .no { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #4a4a40; color: #8a887c; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.pass-row.on .no { background: var(--hazard); border-color: var(--hazard); color: var(--on-hazard); }
+.pass-row.cur .no { box-shadow: 0 0 0 3px rgba(240,180,0,.3); }
+.pass-row .rw { height: 40px; border-radius: 10px; border: 2px solid #3a3a30; background: #20201a; color: #e6e5db; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 4px; position: relative; }
+.pass-row .rw .ic { width: 18px; height: 15px; margin: 0; }
+.pass-row .rw.prem { background: #2a2614; border-color: #4a4224; }
+.pass-row .rw.big { font-size: 13px; color: var(--hazard); border-color: var(--hazard); }
+.pass-row .rw.can { border-color: var(--hazard); box-shadow: 0 0 0 2px rgba(240,180,0,.25) inset; }
+.pass-row .rw.got { opacity: .4; } .pass-row .rw.got::after { content: '✓'; position: absolute; right: 6px; top: 2px; font-size: 12px; color: #8fd08f; }
+.pass-row .rw.lock::after { content: '🔒'; position: absolute; right: 4px; top: 1px; font-size: 10px; opacity: .8; }
+.pass-how { margin: 10px 0 0; font-size: 12.5px; line-height: 1.55; color: #a8a290; white-space: pre-line; }
+/* 5.2.5 프리미엄 판매 칸: 한 줄에 단추 두 개 늘어놓던 것을 → 무엇을 받는지(한정 외형 그림 · 보상 합계 · 출석 두 배) 보여 주는 금테 판 하나로 */
+.pass-offer { margin-top: 14px; padding: 14px; border-radius: 14px; border: 2px solid var(--hazard); background: linear-gradient(180deg, #2e2812 0%, #1c1b13 70%); box-shadow: 0 0 0 4px rgba(240,180,0,.08); }
+.pass-offer[hidden] { display: none; }
+.po-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; } .po-head b { font-size: 20px; color: var(--hazard); } .po-head span { font-size: 12.5px; color: #a8a290; }
+.po-pics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 10px; }
+.po-pics div { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 6px; border-radius: 10px; background: rgba(0,0,0,.3); border: 1px solid #4a4224; }
+.po-pics canvas { width: 42px; height: 60px; image-rendering: pixelated; } .po-pics small { font-size: 12px; color: #e6e5db; text-align: center; line-height: 1.25; } .po-pics em { font-style: normal; font-size: 10.5px; color: #a8a290; }
+.po-list { list-style: none; margin: 0 0 12px; padding: 0; font-size: 14px; color: #e6e5db; line-height: 1.6; }
+.po-list li::before { content: '✓'; color: var(--hazard); margin-right: 8px; }
+.po-list b { color: var(--hazard); font-weight: 400; }
+.story-card .pass-offer button { width: 100%; white-space: nowrap; }
+.story-card .pass-offer .po-main { padding: 14px; font-size: 18px; }
+.po-alt { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.story-card .po-alt button { padding: 9px 4px; font-size: 13.5px; }
+.story-card .po-alt .po-plus { background: transparent; color: #8fd08f; border: 2px solid #2f6b3c; }
+.story-card .po-alt .po-treat.short { opacity: .75; }
+/* 5.2.5 보급소의 수첩 띠 · 프리미엄 결제 팝업(왼쪽 프리미엄 · 오른쪽 플러스, 무엇을 더 주는지 한눈에) */
+.story-card .pass-banner { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; margin: 2px 0 8px; border-radius: 14px; border: 2px solid var(--hazard); background: linear-gradient(120deg, #3a2f0c 0%, #1e1c12 55%, #2b2410 100%); color: #f4f0dc; text-align: left; cursor: pointer; position: relative; overflow: hidden; }
+.pass-banner::before { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(90deg, transparent, rgba(255,230,140,.18), transparent); transform: skewX(-20deg); animation: pbshine 3.2s ease-in-out infinite; pointer-events: none; }
+@keyframes pbshine { 0%, 55% { left: -60%; } 100% { left: 130%; } }
+@media (prefers-reduced-motion: reduce) { .pass-banner::before { animation: none; display: none; } }
+.pass-banner canvas { flex: none; width: 42px; height: 60px; image-rendering: pixelated; }
+.pass-banner .pb-t { flex: 1; min-width: 0; } .pass-banner .pb-t small { display: block; font-size: 12px; color: #d8c27a; } .pass-banner .pb-t b { display: block; font-size: 20px; color: var(--hazard); line-height: 1.2; } .pass-banner .pb-t span { display: block; font-size: 12.5px; color: #cfcab4; margin-top: 2px; }
+.pass-banner .pb-go { flex: none; padding: 8px 12px; border-radius: 10px; background: var(--hazard); color: var(--on-hazard); font-family: var(--font-head); font-size: 14px; box-shadow: 0 3px 0 color-mix(in srgb, var(--hazard) 55%, #000); }
+.pass-banner.own .pb-go { background: transparent; color: #8fd08f; box-shadow: none; border: 2px solid #2f6b3c; }
+.story-card .pbuy-top .feedback-close { flex: none; background: transparent; color: #e6e5db; border: 2px solid #e6e5db; padding: 5px 14px; }
+.pbuy-card { max-width: 420px; width: 100%; max-height: 92vh; overflow-y: auto; border: 2px solid var(--hazard); background: linear-gradient(180deg, #2e2610 0%, #17180f 40%); }
+.pbuy-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; } .pbuy-top small { color: #d8c27a; font-size: 12.5px; } .pbuy-top h3 { margin: 2px 0 0; font-size: 22px; color: var(--hazard); }
+.pbuy-pics { margin: 14px 0 12px; }
+.pbuy-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: stretch; }
+.pbuy-col { position: relative; display: flex; flex-direction: column; padding: 12px 10px 10px; border-radius: 14px; border: 2px solid #4a4224; background: rgba(0,0,0,.28); }
+.pbuy-col.plus { border-color: var(--hazard); background: linear-gradient(180deg, rgba(240,180,0,.16), rgba(0,0,0,.25)); box-shadow: 0 0 0 3px rgba(240,180,0,.12); }
+.pbuy-col .pc-name { font-family: var(--font-head); font-size: 17px; color: #f4f0dc; margin-bottom: 8px; } .pbuy-col.plus .pc-name { color: var(--hazard); }
+.pc-rib { position: absolute; top: -11px; right: 10px; padding: 2px 8px; border-radius: 8px; background: var(--hazard); color: var(--on-hazard); font-style: normal; font-size: 11.5px; font-family: var(--font-head); }
+.pbuy-col ul { list-style: none; margin: 0 0 10px; padding: 0; flex: 1; font-size: 13px; line-height: 1.45; color: #e6e5db; }
+.pbuy-col li { display: flex; gap: 6px; margin-bottom: 5px; } .pbuy-col li::before { content: '✓'; color: var(--hazard); flex: none; }
+.pbuy-col li.more { color: var(--hazard); } .pbuy-col li.more::before { content: '+'; }
+.pbuy-col li.all { color: #a8a290; } .pbuy-col li.all::before { content: '='; color: #a8a290; }
+.story-card .pbuy-col button { width: 100%; padding: 12px 4px; font-size: 17px; }
+.story-card .pbuy-col.plus button { background: var(--hazard); color: var(--on-hazard); box-shadow: 0 3px 0 color-mix(in srgb, var(--hazard) 55%, #000); }
+.story-card .pbuy-treat { display: block; width: 100%; margin-top: 12px; padding: 8px; background: transparent; color: #a8a290; border: 0; box-shadow: none !important; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.story-card .pass-offer .po-main { background: var(--hazard); color: var(--on-hazard); }
 .pass-buyrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; } .pass-buyrow[hidden] { display: none; } .pass-buyrow span { flex: 1; color: var(--hazard); font-family: var(--font-head); } .pass-buyrow button { flex: 0 0 108px; }      /* 5.2.3 결제 · 간식 두 길 */
 .pass-acts { display: flex; gap: 8px; margin-top: 12px; } .pass-acts button { flex: 1; }
 .pass-acts button:disabled { background: transparent; color: #8a887c; border: 1px solid #4a4a40; box-shadow: none; }      /* 5.1.3 받을 것이 없으면 꺼진 모양(노란 단추가 눌리는 것처럼 보였다) */
@@ -1551,10 +1614,12 @@ body { font-size: 15.5px; line-height: 1.55; }
 
 /* 5.2.1 글꼴: 제목 · 단추 · 숫자는 주아(둥근 글꼴), 본문은 예전 글꼴(IBM Plex). 갈무리(도트 글꼴)는 큰 글씨 · 굵은 글씨가 뭉개져 어울리지 않았다.
  *   주아는 굵기가 하나뿐이라 굵게 흉내 내지 않는다(font-synthesis: none). 로고(7구역) · 첫 화면은 예전 글꼴 그대로. */
-:root { --font-head: 'Jua', 'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif; --font-mono: 'Jua', 'IBM Plex Mono', ui-monospace, monospace; }
+:root { --font-head: 'Jua', 'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif; --font-mono: 'Jua', 'IBM Plex Mono', ui-monospace, monospace; --font-body: 'Jua', 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+/* 5.2.5 본문도 주아(예전 본문 글꼴은 주아 옆에서 얇아 보였다). 굵기가 하나라 어디서도 굵게 흉내 내지 않는다 */
+body, body * { font-synthesis: none; }
 h1, h2, h3, h4, button, .num, b, strong, .pill, .scavenge, .attend-open, .mission-cta, .boss-tag, .tag, .label b { font-family: var(--font-head); font-weight: 400 !important; font-synthesis: none; }
 #boot, #boot *, .mast h1, .mast-sub { font-synthesis: weight; }
-#boot, .mast h1, .mast-sub { --font-head: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; --font-mono: 'IBM Plex Mono', ui-monospace, monospace; }
+#boot, .mast h1, .mast-sub { --font-body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; --font-head: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; --font-mono: 'IBM Plex Mono', ui-monospace, monospace; }
 #boot button, #boot b { font-family: 'IBM Plex Sans KR', sans-serif; }
 .mast h1 { font-family: var(--font-display) !important; }
 /* ====== 5.2.2 둥근 모양으로 되돌림 + 단추 다듬기 ======
@@ -1574,6 +1639,30 @@ h1, h2, h3, h4, button, .num, b, strong, .pill, .scavenge, .attend-open, .missio
 .mission-bar .mission-cta { border-radius: 8px; box-shadow: 0 2px 0 color-mix(in srgb, var(--hazard) 55%, #000); }
 .mission-bar.can .mission-cta { box-shadow: 0 2px 0 #8a1f1f; }
 #attend-ad { opacity: 1; background: transparent; border: 2px dashed var(--edge); color: var(--ink-soft); box-shadow: none; } #attend-ad.prem-on { border: 2px solid var(--hazard); color: var(--hazard); }
+
+/* ====== 5.2.5 모든 단추에 턱(입체) ======
+ * 5.2.2 에서는 창 안 단추만 손봐서 성장 · 구역 · 설정의 단추(간식 주기 · 이름 바꾸기 · 친구 칸 · 강아지 이름표 …)가 납작했다.
+ * 이제 단추는 기본으로 아래 턱이 있고 누르면 내려간다. 빼는 것: 아래 탭 · 칸 고르기(묶음은 따로) · 잠긴 점선 · 수색 칸 · 패치노트 머리.
+ * 노란 단추는 짙은 노랑 턱, 나머지는 검은 반투명 턱(밝은 판 · 어두운 판 어디서나 보인다).
+ */
+button:not(.mnav button):not(.mboard button):not(.tabbar button):not(.qty button):not(.panes button):not(.grow-seg button):not(.subtabs button):not(.tile):not(.note-head):not(.chal):not(.lab-reroll):not(#attend-ad):not(.cos-tabs button):not(:disabled) {
+  --lip: rgba(0, 0, 0, .38); box-shadow: 0 3px 0 var(--lip); transition: transform .05s, box-shadow .05s;
+}
+button:not(.mnav button):not(.mboard button):not(.tabbar button):not(.qty button):not(.panes button):not(.grow-seg button):not(.subtabs button):not(.tile):not(.note-head):not(.chal):not(.lab-reroll):not(#attend-ad):not(.cos-tabs button):not(:disabled):active {
+  transform: translateY(2px); box-shadow: 0 1px 0 var(--lip);
+}
+.order-fill:not(:disabled):not(.alt), .perk-open, .pet-feed:not(:disabled), #update-now, #ad-done:not(:disabled) { --lip: color-mix(in srgb, var(--hazard) 55%, #000); }
+/* 모서리가 각진 단추를 둥글게 */
+.danger-pick button, .kennel button, .pet-slots button, #stage-quit, .signal, .trait-reset, #notice-close, #update-now, #hub-open, #rebalance, .notice button, .pet-rename button, .camp-grid button { border-radius: 10px; }
+.danger-pick button { border-radius: 8px; }
+.pet-feed { border-radius: 12px; padding: 12px; font-size: 16px; }
+.pet-feed:disabled { box-shadow: none; }
+#restore-bak, #restore-undo { padding: 8px 12px; background: transparent; color: inherit; border: 1px solid var(--edge); border-radius: 10px; cursor: pointer; }
+/* 칸 고르기 묶음(×1 · ×10 · 최대, 운영 · 개조 · 목표, 일행 · 시설, 설정 켬/끔): 홈 안에 고른 칸이 볼록 솟는다 */
+.qty, .panes, .grow-seg { padding: 3px; gap: 3px; border: 0 !important; border-radius: 12px !important; background: rgba(0, 0, 0, .12); box-shadow: inset 0 2px 0 rgba(0, 0, 0, .12); }
+.qty button + button, .panes button + button, .grow-seg button + button { border-left: 0 !important; }
+.qty button, .panes button, .grow-seg button { border-radius: 9px !important; }
+.qty button[aria-pressed="true"], .panes button[aria-pressed="true"], .grow-seg button[aria-pressed="true"] { box-shadow: 0 3px 0 rgba(0, 0, 0, .38); }
 </style>
 </head>
 <body data-mview="base">
@@ -2099,7 +2188,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.2.4 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.2.5 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2229,15 +2318,30 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <p class="label store-note">간식은 임무, 출석, 광고, 원정 별로 모여요. 결제 상품은 준비 중이에요.</p>
   </div>
 </div>
+<div class="story-veil pbuy-veil" id="pbuy-veil" role="dialog" aria-modal="true" aria-labelledby="pbuy-title" hidden>
+  <div class="story-card feedback-card pbuy-card">
+    <div class="pbuy-top"><div><small id="pbuy-sub"></small><h3 id="pbuy-title">생존자 수첩 프리미엄</h3></div><button type="button" class="feedback-close" id="pbuy-close">닫기</button></div>
+    <div class="po-pics pbuy-pics" id="pbuy-pics"></div>
+    <div class="pbuy-cols">
+      <div class="pbuy-col" id="pbuy-a"><div class="pc-name">프리미엄</div><ul></ul><button type="button" class="paid" id="pbuy-a-btn">₩</button></div>
+      <div class="pbuy-col plus" id="pbuy-b"><i class="pc-rib">더 많이</i><div class="pc-name">프리미엄 플러스</div><ul></ul><button type="button" class="paid" id="pbuy-b-btn">₩</button></div>
+    </div>
+    <button type="button" class="pbuy-treat" id="pass-buy-treat">간식으로 프리미엄 열기</button>
+  </div>
+</div>
 <div class="story-veil" id="pass-veil" role="dialog" aria-modal="true" aria-labelledby="h-pass" hidden>
   <div class="story-card feedback-card store-card">
     <div class="zmap-head"><div class="label" id="h-pass">생존자 수첩 · <span id="pass-sub"></span></div><button type="button" class="feedback-close" id="pass-close">닫기</button></div>
-    <div class="pass-bar"><i id="pass-fill"></i></div>
-    <p class="label" id="pass-stamps"></p>
-    <div class="pass-grid" id="pass-grid"></div>
+    <div class="pass-top"><div class="pass-tier"><b id="pass-tier">0</b><small>/ 20칸</small></div><div class="pass-prog"><div class="pass-bar"><i id="pass-fill"></i></div><p id="pass-stamps"></p></div></div>
+    <div class="pass-cols"><span></span><span>무료</span><span class="ph" id="pass-ph">프리미엄</span></div>
+    <div class="pass-list" id="pass-grid"></div>
     <div class="pass-acts"><button type="button" id="pass-claim">받기</button></div>
-    <div class="pass-buyrow" id="pass-buyrow"><span>프리미엄 열기</span><button type="button" class="paid" id="pass-buy">₩</button><button type="button" id="pass-buy-treat">간식</button></div>
-    <p class="label store-note" id="pass-how"></p>
+    <div class="pass-offer" id="pass-buyrow">
+      <div class="po-head"><b>프리미엄 수첩</b><span>이번 시즌 한정</span></div>
+      <div class="po-pics" id="po-pics"></div>
+      <button type="button" class="po-main" id="pass-buy">프리미엄 보기</button>
+    </div>
+    <p class="pass-how" id="pass-how"></p>
   </div>
 </div>
 <div class="story-veil" id="ad-veil" role="dialog" aria-modal="true" aria-labelledby="h-ad" hidden>

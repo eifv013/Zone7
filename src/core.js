@@ -4016,14 +4016,20 @@
     /* 5.2.4 첫 결제 상자: 처음 결제의 문턱(₩1,100 에 간식 한 줌 일곱 배쯤). 간식으로 사는 첫 보급 상자와 나란히 둔다 */
     { id: 'first', kind: 'first', won: 1100, limit: 'once', name: '첫 결제 상자', desc: '간식 300, 뽑기권 10장, 데려오기권 2장', icon: 'supply', give: { treats: 300, tickets: 10, petTix: 2 } },
     { id: 'pack-new', kind: 'pack', won: 3300, limit: 'once', name: '새내기 꾸러미', desc: '간식 500, 뽑기권 10장, 데려오기권 1장', icon: 'treat', give: { treats: 500, tickets: 10, petTix: 1 } },
-    { id: 'pack-pet', kind: 'pack', won: 5500, limit: 'season', name: '동물 친구 꾸러미', desc: '데려오기권 3장, 친구 조각 10개, 간식 300', icon: 'ptix', give: { petTix: 3, petShards: 10, treats: 300 } },
-    { id: 'pack-big', kind: 'pack', won: 11000, limit: 'season', name: '생존 보급 꾸러미', desc: '간식 1,500, 뽑기권 15장, 데려오기권 2장', icon: 'supply', give: { treats: 1500, tickets: 15, petTix: 2 } },
+    { id: 'pack-pet', kind: 'pack', won: 5500, limit: 'season', name: '동물 친구 꾸러미', desc: '데려오기권 8장, 친구 조각 20개, 간식 600', icon: 'ptix', give: { petTix: 8, petShards: 20, treats: 600 } },
+    { id: 'pack-big', kind: 'pack', won: 11000, limit: 'season', name: '생존 보급 꾸러미', desc: '간식 2,000, 뽑기권 25장, 데려오기권 4장', icon: 'supply', give: { treats: 2000, tickets: 25, petTix: 4 } },
     { id: 'pack-day', kind: 'pack', won: 4400, name: '매일 간식 30일', desc: '바로 간식 200, 30일 동안 매일 간식 40', icon: 'treat', give: { treats: 200 } },
-    { id: 'tixpay', kind: 'pack', won: 3300, name: '뽑기권 꾸러미', desc: '뽑기권 11장', icon: 'ticket' },
-    { id: 'pass', kind: 'pass', won: 5500, limit: 'season', name: '프리미엄 수첩', desc: '이번 시즌 프리미엄 줄, 출석 보상 두 배', icon: 'ticket' },
-    { id: 'passplus', kind: 'pass', won: 11000, limit: 'season', name: '프리미엄 + 10칸', desc: '프리미엄 줄을 열고 바로 10칸 앞으로', icon: 'ticket' }
+    { id: 'tixpay', kind: 'pack', won: 3300, name: '뽑기권 꾸러미', desc: '뽑기권 22장', icon: 'ticket' },
+    { id: 'pass', kind: 'pass', won: 5500, limit: 'season', name: '프리미엄', desc: '이번 시즌 프리미엄 줄, 출석 보상 두 배', icon: 'ticket' },
+    { id: 'passplus', kind: 'pass', won: 11000, limit: 'season', name: '프리미엄 플러스', desc: '프리미엄 전부, 바로 10칸, 간식 800, 뽑기권 15장, 데려오기권 3장', icon: 'ticket', give: { treats: 800, tickets: 15, petTix: 3 } }      /* 5.2.5 더 내는 ₩5,500 만큼 간식 상자의 1.8배쯤(10칸은 덤) */
   ];
   var PAID_TREATS = { treat1: 150, treat2: 900, treat3: 2000, treat4: 6500, treat5: 11500, treat6: 25000 };
+  /*
+   * 5.2.5 값 맞추기(간식으로 환산). 뽑기권 1장 = 간식 40(TICKET_TREATS), 데려오기권 = 간식 80, 친구 조각 10개 = 데려오기 1번 = 간식 80.
+   *   간식 충전은 1원에 0.14(₩1,100) ~ 0.23(₩110,000)개. 패키지는 '간식 상자(₩5,500 = 900개, 0.16)'보다 1.5배 이상 들어야 살 이유가 있다.
+   *   예전 값(동물 친구 620개어치 · 생존 보급 2,260개어치 · 뽑기권 11장 440개어치)은 같은 돈으로 간식을 사는 것보다 못했다 → 올렸다.
+   */
+  var TIXPAY = 22;
   var DAYCARD_DAYS = 30, DAYCARD_TREATS = 40, PASS_PLUS_TIERS = 10;
   /** 결제 상품인가(간식으로는 못 산다). */
   function isPaid(it) { return !!it && (it.kind === 'paid' || it.kind === 'pack' || it.kind === 'pass' || it.kind === 'noads' || it.kind === 'first'); }
@@ -4050,11 +4056,10 @@
     var bs = buysOf(state), b = bs[id] || { n: 0, season: -1 }, sn = passSeasonOf(dateStr);
     bs[id] = { n: (b.season === sn || it.limit !== 'season' ? b.n : 0) + 1, season: sn };
     if (id === 'noads') state.noAds = true;
-    else if (id === 'tixpay') state.tickets = (state.tickets || 0) + 11;
+    else if (id === 'tixpay') state.tickets = (state.tickets || 0) + TIXPAY;
     else if (it.kind === 'paid') state.treats = (state.treats || 0) + PAID_TREATS[id];
     if (it.give) {
       giveReward(state, it.give);
-      if (it.give.petTix) state.petTix = (state.petTix || 0) + it.give.petTix;
       if (it.give.petShards) state.petShards = Math.min(1e6, (state.petShards || 0) + it.give.petShards);
     }
     if (id === 'pack-day') state.dayCard = { start: dayNo(dateStr), got: dayNo(dateStr) };      // 산 날 몫은 바로 준 200 에 들어 있다
@@ -4134,7 +4139,8 @@
   function passSet(season) { var n = PASS_SETS.length, k = ((season % n) + n) % n; return { name: PASS_SETS[k], coat: 'coat-s' + k, flag: 'flag-s' + k, hood: 'hood-s' + k }; }
   function passReward(track, i, season) {
     var set = passSet(season > 0 ? season : 0);
-    if (track === 'prem') { if (i === 10) return { cos: set.coat }; if (i === 15) return { cos: set.flag }; if (i === PASS_TIERS) return { cos: set.hood }; return i % 5 === 0 ? { tickets: 3 } : { treats: 30 }; }
+    /* 5.2.5 프리미엄 줄을 두껍게: 간식 30 → 50, 다섯째 칸 뽑기권 3 → 5, 3 · 8 · 13 · 18칸에 데려오기권(예전엔 무료 줄의 세 배 간식뿐이라 살 맛이 안 났다) */
+    if (track === 'prem') { if (i === 10) return { cos: set.coat }; if (i === 15) return { cos: set.flag }; if (i === PASS_TIERS) return { cos: set.hood }; if (i % 5 === 0) return { tickets: 5 }; if (i % 5 === 3) return { petTix: 1 }; return { treats: 50 }; }
     return i % 5 === 0 ? { tickets: 1 } : { treats: 10 };
   }
   function passInfo(state, dateStr) {
@@ -4146,6 +4152,7 @@
     if (r.treats) state.treats = (state.treats || 0) + r.treats;
     if (r.tickets) state.tickets = (state.tickets || 0) + r.tickets;
     if (r.shards) state.shards = (state.shards || 0) + r.shards;
+    if (r.petTix) state.petTix = (state.petTix || 0) + r.petTix;      // 5.2.5 수첩 · 패키지의 데려오기권
     if (r.cos) { state.cosmetics = state.cosmetics || {}; if (!state.cosmetics[r.cos]) { state.cosmetics[r.cos] = true; state.cosNew = state.cosNew || {}; state.cosNew[r.cos] = true; } else state.shards = (state.shards || 0) + SHARDS_COST[2]; }      // 이미 있으면 조각으로
   }
   /** 받을 수 있는 칸을 모두 받는다(두 줄 함께). 받은 보상 목록을 돌려준다. */
@@ -5616,7 +5623,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    BAL: BAL, rescueOffer: rescueOffer, sendRescue: sendRescue, RESCUE_GROW: RESCUE_GROW, COLLECT_TIERS: COLLECT_TIERS, collectCount: collectCount, collectInfo: collectInfo, collectCheck: collectCheck, AD_RETREAT: AD_RETREAT, adState: adState, adReward: adReward, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passSet: passSet, PASS_SETS: PASS_SETS, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, isPaid: isPaid, paidState: paidState, grantPaid: grantPaid, dayCard: dayCard, claimDayCard: claimDayCard, DAYCARD_DAYS: DAYCARD_DAYS, DAYCARD_TREATS: DAYCARD_TREATS, PASS_PLUS_TIERS: PASS_PLUS_TIERS, PAID_TREATS: PAID_TREATS, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    BAL: BAL, rescueOffer: rescueOffer, sendRescue: sendRescue, RESCUE_GROW: RESCUE_GROW, COLLECT_TIERS: COLLECT_TIERS, collectCount: collectCount, collectInfo: collectInfo, collectCheck: collectCheck, AD_RETREAT: AD_RETREAT, adState: adState, adReward: adReward, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passSet: passSet, PASS_SETS: PASS_SETS, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, isPaid: isPaid, paidState: paidState, grantPaid: grantPaid, dayCard: dayCard, claimDayCard: claimDayCard, DAYCARD_DAYS: DAYCARD_DAYS, DAYCARD_TREATS: DAYCARD_TREATS, PASS_PLUS_TIERS: PASS_PLUS_TIERS, PAID_TREATS: PAID_TREATS, TIXPAY: TIXPAY, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
