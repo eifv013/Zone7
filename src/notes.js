@@ -14,7 +14,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
-    { ver: '알파 5.1.7', date: '2026-11-23', at: '2026-11-23 23:59:00', title: '시작 화면 정리',
+    { ver: '알파 5.1.8', date: '2026-11-24', at: '2026-11-24 00:00:00', title: '시작 화면 정리',
       items: [
         '시작 화면 아래 제작사 로고를 조금 더 작고 아래로 옮겼어요.'
       ] },
