@@ -103,6 +103,19 @@
   var PATCH_NOTES = window.PatchNotes || [];
 
   /* ---------- 저장소 ---------- */
+  /*
+   * 5.1.1 저장 지키기.
+   *   왜: 저장이 깨지면 새 거점으로 시작했고, 그 새 거점이 곧바로 자동 저장되어 깨진 저장(= 몇 주의 기록)을 덮어썼다.
+   *       저장 코드를 잘못 붙여 넣거나 '처음부터 다시'를 잘못 눌러도 되돌릴 길이 없었다.
+   *   - BAK_KEY: 10분마다 그때의 저장을 한 벌 더 둔다. 저장 코드 불러오기 · 처음부터 다시 직전에도 둔다(되돌리기).
+   *   - 저장을 못 읽으면: 깨진 글은 BROKEN_KEY 에 따로 두고(덮어쓰지 않게) 백업에서 되살린다.
+   *   - 설정의 '백업에서 되살리기'로 언제든 백업으로 돌아갈 수 있다(두 번 눌러야 한다).
+   */
+  var BAK_KEY = 'zone7-save-v2-bak', UNDO_KEY = 'zone7-save-v2-undo', BROKEN_KEY = 'zone7-save-v2-broken', BAK_EVERY = 600000;      // UNDO: 불러오기 · 처음부터 다시 직전(10분 백업이 덮어쓰지 않는 따로 칸)
+  function readBak() { try { var b = JSON.parse(localStorage.getItem(BAK_KEY) || 'null'); return b && typeof b.text === 'string' && typeof b.at === 'number' ? b : null; } catch (e) { return null; } }
+  function readUndo() { try { var b = JSON.parse(localStorage.getItem(UNDO_KEY) || 'null'); return b && typeof b.text === 'string' && typeof b.at === 'number' ? b : null; } catch (e) { return null; } }
+  function writeUndo(text) { try { if (text) localStorage.setItem(UNDO_KEY, JSON.stringify({ at: Date.now(), text: text })); return true; } catch (e) { return false; } }
+  function writeBak(text) { try { if (text) localStorage.setItem(BAK_KEY, JSON.stringify({ at: Date.now(), text: text })); return true; } catch (e) { return false; } }
   var STAGE_KEY = 'zone7-stage-v1';      // 하던 원정 판(3.0.1). 본 게임 저장과 따로 둔다
   /** 적어 둔 원정 판이 있으면 그 판으로 돌아간다. 본 게임(state)을 다 읽고 자리 비움 정산까지 끝난 뒤에 부른다. */
   function resumeStage(now) {
@@ -126,14 +139,25 @@
       var raw;
       try { raw = localStorage.getItem(SAVE_KEY); }
       catch (e) { return { state: null, error: '이 브라우저에서는 자동 저장을 쓸 수 없습니다. 저장 코드를 복사해 두세요.' }; }
-      if (!raw) return { state: null, error: null };
+      if (!raw) {
+        var b0 = readBak();      // 5.1.1 저장이 통째로 사라졌는데 백업이 있으면 되살린다
+        if (b0) { try { return { state: C.deserialize(b0.text, Date.now()), error: '저장이 비어 있어 ' + agoText(b0.at) + ' 백업으로 되살렸어요.' }; } catch (e0) { /* 백업도 못 읽으면 새로 */ } }
+        return { state: null, error: null };
+      }
       try { return { state: C.deserialize(raw, Date.now()), error: null }; }
-      catch (e) { return { state: null, error: '저장 데이터가 손상되어 새 거점에서 시작합니다.' }; }
+      catch (e) {
+        try { localStorage.setItem(BROKEN_KEY, raw); } catch (e1) { /* 못 두어도 아래로 */ }      // 깨진 저장은 따로 남긴다(새 거점이 덮어쓰지 않게)
+        var b = readBak();
+        if (b) { try { return { state: C.deserialize(b.text, Date.now()), error: '저장이 손상되어 ' + agoText(b.at) + ' 백업으로 되살렸어요.' }; } catch (e2) { /* 백업도 깨졌다 */ } }
+        return { state: null, error: '저장 데이터가 손상되어 새 거점에서 시작합니다. 손상된 저장은 따로 남겨 두었어요.' };
+      }
     },
     save: function () {
       try {
         if (!home) state.lastSeen = Date.now();      // 스테이지 중에는 본 게임의 '마지막으로 본 때'를 건드리지 않는다(들어간 때로 남는다)
-        localStorage.setItem(SAVE_KEY, C.serialize(mainState()));
+        var text = C.serialize(mainState());
+        localStorage.setItem(SAVE_KEY, text);
+        var bk = readBak(); if (!bk || Date.now() - bk.at >= BAK_EVERY || Date.now() < bk.at) writeBak(text);      // 5.1.1 10분마다 백업(기기 시계가 거꾸로 가도 새로 둔다)
         // 3.0.1: 원정 중이면 원정 판도 따로 적어 둔다. 전에는 원정 판을 어디에도 적지 않아서, 도중에 업데이트되거나 창이 닫히면 원정이 처음(0)으로 돌아갔다
         try { if (home && state.stage && !state.stage.hard) localStorage.setItem(STAGE_KEY, JSON.stringify({ stage: state.stage, text: C.serialize(state) })); else localStorage.removeItem(STAGE_KEY); } catch (e2) { /* 원정만 못 이어 갈 뿐이다 */ }
         return true;
@@ -5216,6 +5240,24 @@
     var raw = atob(code);
     try { return decodeURIComponent(escape(raw)); } catch (e) { return raw; }
   }
+  /** 5.1.1 '3분 전' · '2시간 전' · '어제' 같은 말 */
+  function agoText(at) { var m = Math.max(0, Math.round((Date.now() - at) / 60000)); return m < 1 ? '방금' : m < 60 ? m + '분 전' : m < 1440 ? Math.floor(m / 60) + '시간 전' : Math.floor(m / 1440) + '일 전'; }
+  /** 5.1.1 설정의 되살리기 줄: 백업 · 되돌리기가 있을 때만 보인다 */
+  function renderBak() {
+    var b = readBak(), u = readUndo();
+    if ($('bak-row')) { $('bak-row').hidden = !b; if (b) setText($('bak-info'), agoText(b.at) + ' 백업(10분마다 저장돼요)으로 돌아가요.'); }
+    if ($('undo-row')) { $('undo-row').hidden = !u; if (u) setText($('undo-info'), agoText(u.at) + ', 불러오기 · 처음부터 다시 직전의 기록으로 돌아가요.'); }
+  }
+  /** 백업 글로 되살린다. 지금 기록은 되돌리기 칸에 둔다(되살리기도 되돌릴 수 있게). */
+  function restoreFrom(b, what) {
+    if (!b) return;
+    if (home) { saveMsg('원정 중에는 되살릴 수 없어요. 거점으로 돌아온 뒤에 하세요.', true); return; }
+    var next; try { next = C.deserialize(b.text, Date.now()); } catch (e) { saveMsg('되살릴 기록을 읽을 수 없어요: ' + e.message, true); return; }
+    var cur = C.serialize(mainState());
+    state = next; Store.save(); writeUndo(cur);
+    saveMsg(what, false); log('기록을 되살렸다.', 'good');
+    Cloud.flush(); renderBak(); render();
+  }
   function saveMsg(text, bad) {
     var m = $('save-msg');
     m.textContent = text;
@@ -5741,10 +5783,13 @@
       if (!text) { saveMsg('불러올 저장 코드를 아래 칸에 붙여 넣으세요.', true); return; }
       try {
         var json;
-        try { json = decodeSave(text); } catch (e) { throw new Error('저장 코드 형식이 아닙니다. 처음부터 끝까지 복사했는지 확인하세요.'); }
-        state = C.deserialize(json, Date.now());
+        try { json = decodeSave(text.replace(/\s+/g, '')); } catch (e) { throw new Error('저장 코드 형식이 아닙니다. 처음부터 끝까지 복사했는지 확인하세요.'); }      // 5.1.1 메신저가 넣은 줄바꿈 · 띄어쓰기는 지운다
+        var next = C.deserialize(json, Date.now());      // 먼저 읽어 본다(못 읽으면 지금 기록은 그대로)
+        if (home) throw new Error('원정 중에는 불러올 수 없어요. 거점으로 돌아온 뒤에 불러오세요.');
+        writeUndo(C.serialize(mainState()));      // 5.1.1 지금 하던 기록을 따로 둔다(잘못 불러왔으면 '되돌리기')
+        state = next;
         Store.save();
-        saveMsg('불러왔습니다.', false);
+        saveMsg('불러왔습니다. 전에 하던 기록은 따로 두었어요(아래 되돌리기).', false); renderBak();
         log('기록을 복원했다.', 'good');
         Cloud.flush();
         render();
@@ -5752,13 +5797,18 @@
     });
 
     twoStep($('reset'), '한 번 더 누르면 모든 기록이 사라진다', function () {
-      Store.clear();
+      writeUndo(C.serialize(mainState()));      // 5.1.1 잘못 눌렀을 때 되돌릴 수 있게 지우기 직전 기록을 따로 둔다
+      Store.clear(); try { localStorage.removeItem(BAK_KEY); } catch (e) { /* 없어도 된다 */ }
+      renderBak();
       state = C.createState(Date.now());
       $('log').textContent = '';
       log('모든 기록을 지우고 처음부터 다시 시작한다.');
       Cloud.flush(); // 계정 저장도 새 게임으로 덮어쓴다
       render();
     });
+    twoStep($('restore-bak'), '한 번 더 누르면 백업으로 돌아간다', function () { restoreFrom(readBak(), '백업으로 되살렸어요. 방금 전 기록은 되돌리기에 두었어요.'); });      // 5.1.1
+    twoStep($('restore-undo'), '한 번 더 누르면 되돌린다', function () { restoreFrom(readUndo(), '되돌렸어요.'); });
+    renderBak(); setInterval(renderBak, 30000);
 
     // 탭을 닫거나 숨길 때 마지막 순간을 저장한다.
     document.addEventListener('visibilitychange', function () {

@@ -3837,3 +3837,21 @@ test('5.0.10: 원정이 열렸으면 일일 · 주간 · 월간에 원정 임무
   assert.deepStrictEqual(ex, [['stage'], ['stagewin'], ['stagestep']]);
   var n = C.createState(0); assert.ok(C.missionInfo(n, 'day', '2026-11-25').list.every(function (x) { return !/^stage/.test(x.key); }), '원정이 닫혀 있으면 안 나온다');
 });
+
+test('5.1.1: 저장했다 불러오면 그동안 붙인 값이 하나도 빠지지 않는다(친구 옷 · 별 · 조각 · 데려오기권 · 무료 기록 · 세 기간 임무 · 광고)', function () {
+  var day = '2026-11-23', s = C.createState(Date.now() - 5000);
+  s.antibodies = 1e9; s.antibodyTotal = 1e5; s.treats = 5000; s.supplies = 1e15;
+  C.adoptPet(s, 'dog', function () { return 0.5; }); C.adoptPet(s, 'cat', function () { return 0.5; }); C.adoptPet(s, 'cat', function () { return 0.5; }, 'free', day);
+  s.cosmetics['pet-scarf'] = true; C.wearCosmetic(s, 'pet-scarf', 'dog');
+  C.buyShop(s, 'pettix', day); C.adReward(s, 'treat', day); C.pullGachaFree(s, day, function () { return 0.3; });
+  C.dailySync(s, day); C.buyBuilding(s, C.BUILDINGS[0].id, 3); C.dailyPlay(s, 4, day); s.petShards = 7; C.feedPet(s);
+  for (var i = 0; i < 120; i++) C.tick(s, 1);
+  var back = C.deserialize(C.serialize(s)), miss = [];
+  (function walk(a, b, p) {
+    if (a && typeof a === 'object') { Object.keys(a).forEach(function (k) { walk(a[k], b ? b[k] : undefined, p + '.' + k); }); return; }
+    if (a === 0 && b === undefined) return;      // 0 은 비워 둬도 같다
+    if (typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a))) return;
+    if (a !== b) miss.push(p + ': ' + JSON.stringify(a) + ' → ' + JSON.stringify(b));
+  })(s, back, 's');
+  assert.deepStrictEqual(miss, []);
+});
