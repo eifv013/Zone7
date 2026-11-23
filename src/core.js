@@ -1296,7 +1296,13 @@
   function settleLv(state, id) { return settleHas(state, id) ? clamp(Math.floor(safeNum(state.settleLv && state.settleLv[id], 1)) || 1, 1, LV_MAX7) : 0; }
   function settleBroken(state, id) { return !!(state.camp && state.camp.broken && state.camp.broken[id]); }
   function levelCost(def, lv) { return Math.min(1e15, def.cost * Math.pow(LV_GROW, clamp(lv, 1, LV_MAX7) - 1)); }
-  function levelNeed(state, def, lv) { return Math.max(1, Math.ceil(levelCost(def, lv) * (lv > 1 ? mods(state).lvcost : 1))); }      // 설계도는 2단계부터 듣는다(1단계는 혈청의 문턱이라 값을 건드리지 않는다)
+  /*
+   * 5.1.3 위험 단계마다 7구역 정착지 건물 단계 값(생존자)이 DANGER_LV 배.
+   *   왜: 재 보니 위험 단계가 오를수록 오히려 빨리 끝났다(무과금 하루 1시간: 1단계 29일 · 5단계 21일 · 10단계 14일). 다 키운 사람은 문을 금방 열고,
+   *   7구역에서 막히는 것은 혈청 문턱의 '건물 단계 합'(생존자로 올린다)인데 그 값이 위험 단계와 상관없었다. 방치형 · 과금 게임이라 단계가 오를수록 길어져야 한다.
+   */
+  var DANGER_LV = 1.16;
+  function levelNeed(state, def, lv) { return Math.max(1, Math.ceil(levelCost(def, lv) * (lv > 1 ? mods(state).lvcost : 1) * Math.pow(DANGER_LV, dangerOf(state)))); }      // 설계도는 2단계부터 듣는다(1단계는 혈청의 문턱이라 값을 건드리지 않는다)
   function levelPow(lv) { return lv >= 1 ? 1 + LV_POW * Math.log(lv) / Math.LN2 : 0; }
   /** 이 자리에 더 놓아야 하는 사람 수: 부서졌으면 고치는 데, 아니면 다음 단계에. 다 자랐으면 0. */
   function settleNeed(state, id) {
@@ -1399,14 +1405,15 @@
    */
   var SERUM_GATE = [{ night: 10, lvSum: 27 }, { night: 20, lvSum: 45 }, { night: 30, lvSum: 63, final: true }];      // 4.7.8 건물 단계 합을 올렸다(생존자가 금방 불어나서 전 값은 바로 찼다)
   var FINAL_SECONDS = 60, FINAL_LV = 45;
-  function finalLv(state) { return Math.max(FINAL_LV, (state.camp && state.camp.nightLv) || 0); }
+  var DANGER_GATE_NIGHT = 1;      // 5.1.3 위험 단계마다 혈청 문턱의 밤 단계 · 최후의 밤 단계가 이만큼 오른다(값으로 살 수 없는 손의 시간: 단계가 오를수록 끝이 늦어지게)
+  function finalLv(state) { return Math.max(FINAL_LV + DANGER_GATE_NIGHT * dangerOf(state), (state.camp && state.camp.nightLv) || 0); }
   function settleLvSum(state) { var n = 0; SETTLE.forEach(function (d) { n += settleLv(state, d.id); }); return n; }
   /** 다음 혈청 단계의 문턱과 현재 값. 다 끝났으면 null. */
   function serumGate(state) {
     var stage = (state.serumStage || 0) + 1, g = SERUM_GATE[stage - 1];
     if (!g) return null;
-    var night = state.nightLvBest || 0, lv = settleLvSum(state), base = night >= g.night && lv >= g.lvSum;
-    return { stage: stage, night: g.night, nightNow: night, lvSum: g.lvSum, lvNow: lv, final: !!g.final, finalHeld: !!state.finalHeld, base: base, ok: base && (!g.final || !!state.finalHeld) };
+    var gn = g.night + DANGER_GATE_NIGHT * dangerOf(state), night = state.nightLvBest || 0, lv = settleLvSum(state), base = night >= gn && lv >= g.lvSum;
+    return { stage: stage, night: gn, nightNow: night, lvSum: g.lvSum, lvNow: lv, final: !!g.final, finalHeld: !!state.finalHeld, base: base, ok: base && (!g.final || !!state.finalHeld) };
   }
   /** 최후의 밤을 맞을 수 있는가: 마지막 단계의 문턱(밤 · 단계)과 건물이 다 갖춰졌고, 아직 막지 못했고, 습격 중이 아닐 때. */
   function canFinal(state) {
@@ -3978,19 +3985,19 @@
    */
   var REST_CAP = 8 * 3600, NIGHT_RATE = 0.75, RETREAT_BOOST = 1.25, SKIP_DAILY = 3;
   var SHOP_ITEMS = [
-    { id: 'pact', kind: 'perm', treats: 1500, name: '보급 계약', desc: '모든 생산 1.5배, 철수해도 남아요', icon: 'supply' },
-    { id: 'rest', kind: 'perm', treats: 800, name: '긴 휴식', desc: '꺼 둔 시간을 8시간까지 쳐 줘요(기본 4시간)', icon: 'people' },
-    { id: 'night', kind: 'perm', treats: 800, name: '야간 근무', desc: '꺼 둔 동안 효율 75%(기본 50%)', icon: 'serum' },
-    { id: 'skip', kind: 'cons', treats: 50, name: '시간 건너뛰기', desc: '현재 수입 2시간치 물자를 바로, 하루 3번', icon: 'supply' },
-    { id: 'boost', kind: 'cons', treats: 100, name: '철수 보급', desc: '다음 철수 때 항체 샘플 1.25배', icon: 'antibody' },
-    { id: 'tix11', kind: 'cons', treats: 400, name: '뽑기권 11장 묶음', desc: '10장 값에 1장 더', icon: 'ticket' },
+    { id: 'pact', kind: 'perm', treats: 1500, name: '보급 계약', desc: '모든 생산 ×1.5, 철수해도 유지', icon: 'supply' },
+    { id: 'rest', kind: 'perm', treats: 800, name: '긴 휴식', desc: '자리 비움 최대 8시간(기본 4시간)', icon: 'people' },
+    { id: 'night', kind: 'perm', treats: 800, name: '야간 근무', desc: '자리 비움 효율 75%(기본 50%)', icon: 'serum' },
+    { id: 'skip', kind: 'cons', treats: 50, name: '시간 건너뛰기', desc: '물자 2시간치, 하루 3번', icon: 'supply' },
+    { id: 'boost', kind: 'cons', treats: 100, name: '철수 보급', desc: '다음 철수 항체 샘플 ×1.25', icon: 'antibody' },
+    { id: 'tix11', kind: 'cons', treats: 400, name: '뽑기권 11장 묶음', desc: '10장 값에 11장', icon: 'ticket' },
     { id: 'shards', kind: 'cons', treats: 80, name: '조각 상자', desc: '조각 10개', icon: 'shard' },
-    { id: 'pettix', kind: 'cons', treats: PET_TIX_TREATS, name: '데려오기권', desc: '동물 친구를 한 번 데려와요(항체 샘플 없이)', icon: 'ptix' },      // 5.0.1
+    { id: 'pettix', kind: 'cons', treats: PET_TIX_TREATS, name: '데려오기권', desc: '동물 친구 1번 데려오기', icon: 'ptix' },      // 5.0.1
     { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 150개', icon: 'treat' },
     { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 900개', icon: 'treat' },
     { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 2,000개', icon: 'treat' },
     { id: 'tixpay', kind: 'paid', won: 3300, name: '뽑기권 꾸러미', desc: '뽑기권 11장', icon: 'ticket' },
-    { id: 'noads', kind: 'paid', won: 5500, name: '광고 제거', desc: '광고 없이 광고 보상을 바로 받아요', icon: 'people' }
+    { id: 'noads', kind: 'paid', won: 5500, name: '광고 제거', desc: '광고 없이 보상을 바로', icon: 'people' }
   ];
   function shopItem(id) { for (var i = 0; i < SHOP_ITEMS.length; i++) if (SHOP_ITEMS[i].id === id) return SHOP_ITEMS[i]; return null; }
   /** 상품의 현재 형편: { owned, left(오늘 남은 횟수), can, reason }. today 는 'YYYY-MM-DD'. */
@@ -4237,12 +4244,19 @@
    *   기록      : 가장 빨리 끝낸 시간(전체, 단계별), 끝을 본 가장 높은 단계, 최근 끝 10번(endLog).
    */
   var DANGER_MAX = 20, DANGER_HORDE = 1.2, DANGER_COST = 2.2, DANGER_ANTIBODY = 0.3, DANGER_TICKETS = 2;
-  var DANGER_PROD = 1.35;      // 끝을 본 가장 높은 위험 단계마다 전체 생산이 이만큼 곱해진다(영구). 이것이 다음 단계를 넘을 힘이 된다
+  /*
+   * 5.1.3 다시 맞춤(무과금 하루 1시간, 한 회차로 끝까지): 방치형 · 과금 게임이라 단계가 오를수록 길어져야 하는데 거꾸로였다.
+   *   전: 1단계 29일 · 5단계 21일 · 10단계 14일(다 키운 사람) · 20단계 72일(6구역 → 7구역 문이 53일짜리 벽).
+   *   후: 5단계 17일(중간쯤 키운 사람) · 10단계 18일 · 15단계 21일 · 20단계 34일(다 키운 사람. 덜 키웠으면 더 길다).
+   *   바꾼 것: 영구 생산 1.35 → 1.25(단계를 깰수록 빨라지는 힘을 줄였다), 10단계 뒤 문 값 1.93 → 1.55(20단계의 벽을 없앴다),
+   *           위험 단계마다 7구역 건물 단계 값 ×1.16(DANGER_LV), 혈청 문턱 · 최후의 밤 단계 +1(DANGER_GATE_NIGHT).
+   */
+  var DANGER_PROD = 1.25;      // 끝을 본 가장 높은 위험 단계마다 전체 생산이 이만큼 곱해진다(영구). 이것이 다음 단계를 넘을 힘이 된다
   var RESCUE_TIERS = [1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13], RESCUE_BONUS = 0.02;
   function dangerOf(state) { return clamp(Math.floor(state.danger || 0), 0, DANGER_MAX); }
   function dangerMax(state) { return (state.ended || 0) >= 1 ? Math.min(DANGER_MAX, (state.bestDanger || 0) + 1) : 0; }
   function dangerHorde(n) { return Math.pow(DANGER_HORDE, n); }
-  var DANGER_COST_LATE = 1.93, DANGER_COST_KNEE = 10;
+  var DANGER_COST_LATE = 1.55, DANGER_COST_KNEE = 10;      // 5.1.3 1.93 → 1.55: 20단계에서 6구역 → 7구역 문이 53일짜리 벽이었다
   function dangerCost(n) { return Math.pow(DANGER_COST, Math.min(n, DANGER_COST_KNEE)) * Math.pow(DANGER_COST_LATE, Math.max(0, n - DANGER_COST_KNEE)); }
   var DANGER_SERUM = 1.6;
   function dangerSerum(n) { return Math.pow(DANGER_SERUM, n); }

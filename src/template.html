@@ -406,10 +406,10 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .shop-top { display: flex; gap: 8px; } .attend-open.can { position: relative; } .attend-open.can::after { content: ''; position: absolute; top: 6px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #e0392b; } .shop-top .attend-open { flex: 1 1 0; min-width: 0; white-space: nowrap; } .store-open { flex: 0 0 34% !important; border-color: #f0b400 !important; color: #f0b400 !important; }
 .store-card { max-height: 86vh; overflow-y: auto; }
 .store-list h4 { margin: 12px 0 6px; font: 700 12px/1.3 var(--font-body); color: #f0b400; }
-.store-row { display: flex; gap: 10px; align-items: center; border: 1px solid #3a3a30; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
-.store-row > .ic { width: 32px; height: 28px; margin: 0; } .store-row .t .ic { width: 14px; height: 12px; vertical-align: -2px; }
-.store-row .t { flex: 1; min-width: 0; } .store-row .t b { display: block; font-size: 14px; } .store-row .t small { color: #a8a290; font-size: 12px; }
-.story-card .store-row button { flex: none; min-width: 74px; padding: 8px 10px; font-size: 13px; white-space: nowrap; }
+.store-row { display: flex; gap: 10px; align-items: center; border: 1px solid #3a3a30; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; min-height: 56px; }
+.store-row > .ic { flex: none; width: 32px; height: 28px; margin: 0; } .store-row .t .ic { width: 14px; height: 12px; vertical-align: -2px; }
+.store-row .t { flex: 1; min-width: 0; } .store-row .t b { display: block; font-size: 14px; line-height: 1.3; } .store-row .t small { display: block; color: #a8a290; font-size: 12px; line-height: 1.35; margin-top: 2px; }
+.story-card .store-row button { flex: none; width: 96px; min-width: 96px; padding: 8px 6px; font-size: 13px; white-space: nowrap; text-align: center; }      /* 5.1.3 단추 폭을 하나로(오른쪽 줄이 맞게) */
 .story-card .store-row button.own { background: transparent; color: #7fd8a0; border: 1px solid #4aa870; }
 .story-card .store-row button.paid { background: transparent; color: #a8a290; border: 1px dashed #6d6d60; }
 .story-card .store-row button .ic { width: 16px; height: 14px; vertical-align: -2px; }
@@ -419,14 +419,17 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .story-card .store-row button.ad { background: transparent; color: #f0b400; border: 1px solid #b98c00; }
 .shop-top .store-open { flex: 0 0 22% !important; }
 .pass-bar { height: 10px; border: 1px solid #6d6d60; border-radius: 5px; overflow: hidden; margin: 6px 0; } .pass-bar i { display: block; height: 100%; background: #f0b400; }
-.pass-grid { display: grid; grid-template-columns: 34px repeat(5, minmax(0, 1fr)); gap: 4px; font-size: 11px; text-align: center; }
-.pass-grid .h { color: #a8a290; text-align: left; align-self: center; font-size: 11px; }
-.pass-grid .c { border: 1px solid #3a3a30; border-radius: 6px; padding: 3px 1px; color: #a8a290; white-space: pre; line-height: 1.35; }
+.pass-grid { display: grid; grid-template-columns: 48px repeat(5, minmax(0, 1fr)); gap: 4px; font-size: 11px; text-align: center; align-items: center; }
+.pass-grid .h { color: #a8a290; text-align: left; align-self: center; font-size: 11px; } .pass-grid .h.ph { color: #f0b400; font-weight: 700; font-size: 10.5px; letter-spacing: -.3px; }
+.pass-grid .c { border: 1px solid #3a3a30; border-radius: 6px; padding: 5px 1px; color: #a8a290; white-space: pre; line-height: 1.35; min-height: 28px; display: flex; align-items: center; justify-content: center; gap: 2px; }
 .pass-grid .c.got { opacity: .45; } .pass-grid .c.can { border-color: #f0b400; color: #f0b400; } .pass-grid .c.lock { opacity: .7; border-style: dashed; }
 .pass-grid .c.prem { background: rgba(240, 180, 0, .06); } .pass-grid .c .ic { width: 14px; height: 12px; vertical-align: -2px; margin: 0; }
 .pass-grid .n { grid-column: 1 / -1; color: #6d6d60; font-size: 10px; text-align: left; margin-top: 4px; }
 #pass-stamps, #pass-how, #store-veil .store-note { min-height: 0; }      /* 이야기 창 글의 최소 높이를 쓰지 않는다 */
-.pass-acts { display: flex; gap: 8px; margin-top: 10px; } .pass-acts button { flex: 1; }
+.pass-acts { display: flex; gap: 8px; margin-top: 12px; } .pass-acts button { flex: 1; }
+.pass-acts button:disabled { background: transparent; color: #8a887c; border: 1px solid #4a4a40; box-shadow: none; }      /* 5.1.3 받을 것이 없으면 꺼진 모양(노란 단추가 눌리는 것처럼 보였다) */
+#pass-how { white-space: pre-line; }
+.story-card.store-card p::after, .story-card.attend-card p::after { content: none; }      /* 5.1.3 상점 · 수첩 · 임무 창 글 끝의 깜빡이는 커서를 없앴다(이야기 창에만) */
 .attend-open { width: 100%; padding: 10px; border: 1px solid var(--ink); border-radius: 8px; background: transparent; color: var(--ink); font: 700 15px/1.3 var(--font-body); cursor: pointer; flex: none; }
 .attend-card { max-width: 440px; gap: 8px; }
 .attend-days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }      /* 4.7.3 일곱 칸: 한 줄이 한 주라 7·14·21·28일째가 오른쪽 끝에 나란히 선다 */
@@ -1552,7 +1555,7 @@ body { font-size: 15.5px; line-height: 1.55; }
     <p id="boot-text">신호를 잡는 중…</p>
     <p id="boot-tip"></p>
   </div>
-  <div class="boot-ver">7구역 알파 5.1.2</div>
+  <div class="boot-ver">7구역 알파 5.1.3</div>
   <div class="boot-tape"></div>
 </div>
 <script>
@@ -2061,7 +2064,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.1.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.1.3 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
@@ -2188,7 +2191,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
   <div class="story-card feedback-card store-card">
     <div class="zmap-head"><div class="label" id="h-store">보급소 · <span id="store-treats"></span></div><button type="button" class="feedback-close" id="store-close">닫기</button></div>
     <div class="store-list" id="store-list"></div>
-    <p class="label store-note">간식은 출석 · 원정 별 · 밤 단계 이정표 · 혈청 단계로 모여요. 결제 상품은 준비 중이에요.</p>
+    <p class="label store-note">간식은 임무, 출석, 광고, 원정 별로 모여요. 결제 상품은 준비 중이에요.</p>
   </div>
 </div>
 <div class="story-veil" id="pass-veil" role="dialog" aria-modal="true" aria-labelledby="h-pass" hidden>
@@ -2197,7 +2200,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="pass-bar"><i id="pass-fill"></i></div>
     <p class="label" id="pass-stamps"></p>
     <div class="pass-grid" id="pass-grid"></div>
-    <div class="pass-acts"><button type="button" id="pass-claim">받기</button><button type="button" id="pass-buy">유료 줄 열기</button></div>
+    <div class="pass-acts"><button type="button" id="pass-claim">받기</button><button type="button" id="pass-buy">프리미엄 열기</button></div>
     <p class="label store-note" id="pass-how"></p>
   </div>
 </div>

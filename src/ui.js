@@ -2002,7 +2002,7 @@
     if (!box.firstChild) STORE_GROUP.forEach(function (g) {
       box.appendChild(el('h4', '', g[1]));
       if (g[0] === 'ad') {      // 4.8.5 광고 보상 두 줄(출석 한 번 더는 출석 창에)
-        [['treat', 'treat', '간식 한 봉지', '간식 ' + C.AD_TREATS + '개, 하루 ' + C.AD_TREAT_DAILY + '번'], ['skip', 'supply', '시간 건너뛰기', '현재 수입 2시간치 물자, 하루 1번'], ['retreat', 'antibody', '철수 응원', '다음 철수 때 항체 샘플 1.1배']]      /* 5.0.1 광고 간식을 맨 위에 */.forEach(function (a) {
+        [['treat', 'treat', '간식 한 봉지', '간식 ' + C.AD_TREATS + '개, 하루 ' + C.AD_TREAT_DAILY + '번'], ['skip', 'supply', '시간 건너뛰기', '물자 2시간치, 하루 1번'], ['retreat', 'antibody', '철수 응원', '다음 철수 항체 샘플 ×1.1']]      /* 5.0.1 광고 간식을 맨 위에 */.forEach(function (a) {
           var arow = el('div', 'store-row'); arow.setAttribute('data-ad', a[0]); arow.appendChild(el('i', 'ic ic-' + a[1]));
           var at = el('div', 't'); at.appendChild(el('b', '', a[2])); at.appendChild(el('small', '', a[3])); arow.appendChild(at);
           var ab = el('button', 'ad'); ab.type = 'button'; arow.appendChild(ab); ab.addEventListener('click', function () { watchAd(a[0]); });
@@ -2013,7 +2013,7 @@
       if (g[0] === 'starter') {      // 4.8.2 첫 보급 상자(한 번만): 뽑기권 · 조각 · 한정 외형
         var srow = el('div', 'store-row'); srow.setAttribute('data-id', 'starter');
         srow.appendChild(el('i', 'ic ic-ticket'));
-        var st0 = el('div', 't'); st0.appendChild(el('b', '', '첫 보급 상자')); st0.appendChild(el('small', '', IC.ticket + C.STARTER.give.tickets + ', ' + IC.shard + C.STARTER.give.shards + ', 한정 외형 보급 우비')); srow.appendChild(st0);
+        var st0 = el('div', 't'); st0.appendChild(el('b', '', '첫 보급 상자')); st0.appendChild(el('small', '', IC.ticket + C.STARTER.give.tickets + '  ' + IC.shard + C.STARTER.give.shards + '  한정 보급 우비')); srow.appendChild(st0);
         var sb0 = el('button', ''); sb0.type = 'button'; srow.appendChild(sb0);
         sb0.addEventListener('click', function () {
           var r = C.buyStarter(state);
@@ -2033,7 +2033,7 @@
     });
     Array.prototype.forEach.call(box.querySelectorAll('.store-row'), function (row) {
       var adk = row.getAttribute('data-ad');
-      if (adk) { var ast = C.adState(state, adk, todayStr()), abt = row.lastChild; abt.disabled = !ast.can; setText(abt, ast.can ? (state.noAds ? '바로 받기' : '광고 보기') + (ast.left != null ? ' · ' + ast.left + '번' : '') : ast.reason === 'daily' ? '오늘 다 봤어요' : ast.reason === 'ready' ? '준비됨' : '아직'); return; }
+      if (adk) { var ast = C.adState(state, adk, todayStr()), abt = row.lastChild; abt.disabled = !ast.can; setText(abt, ast.can ? (state.noAds ? '바로 받기' : '광고 보기') + (ast.left != null ? ' · ' + ast.left + '번' : '') : ast.reason === 'daily' ? '오늘 다 봤어요' : ast.reason === 'ready' ? '준비됨' : ast.reason === 'none' ? '수입이 없어요' : '아직'); return; }
       if (row.getAttribute('data-id') === 'starter') { var sb1 = row.lastChild; sb1.className = state.starter ? 'own' : ''; setText(sb1, state.starter ? '보유' : IC.treat + C.STARTER.treats); sb1.classList.toggle('short', !state.starter && !(state.treats >= C.STARTER.treats)); return; }
       var it = C.shopItem(row.getAttribute('data-id')), st = C.shopState(state, it.id, todayStr()), b = row.lastChild;
       b.className = st.owned ? 'own' : it.kind === 'paid' ? 'paid' : '';
@@ -2062,12 +2062,12 @@
     var info = C.passInfo(state, todayStr()), days = Math.max(0, Math.ceil((info.endsAt - Date.now()) / 86400000));
     setText($('pass-sub'), C.passSet(info.season).name + ' · 남은 ' + days + '일');
     $('pass-fill').style.width = Math.min(100, info.stamps / (C.PASS_TIERS * C.PASS_STEP) * 100).toFixed(1) + '%';
-    $('pass-stamps').textContent = '도장 ' + fmt(info.stamps) + ', ' + info.tier + ' / ' + C.PASS_TIERS + '칸' + (info.toNext ? ', 다음 칸까지 ' + info.toNext : '');      // 한 줄로(fillText 는 ' · ' 마다 줄을 나눈다)
+    $('pass-stamps').textContent = info.tier + ' / ' + C.PASS_TIERS + '칸 · 도장 ' + fmt(info.stamps) + '개' + (info.toNext ? ' · 다음 칸까지 ' + info.toNext + '개' : '');      // 5.1.3 칸 → 도장 → 다음 칸 순서로(textContent 라 ' · '로 줄이 나뉘지 않는다)
     var g = $('pass-grid'); while (g.firstChild) g.removeChild(g.firstChild);
     for (var b = 0; b < C.PASS_TIERS; b += 5) {
       g.appendChild(el('div', 'n', (b + 1) + '~' + (b + 5) + '칸'));
       ['free', 'prem'].forEach(function (tr) {
-        g.appendChild(el('div', 'h', tr === 'free' ? '무료' : '유료'));
+        g.appendChild(el('div', 'h' + (tr === 'prem' ? ' ph' : ''), tr === 'free' ? '무료' : '프리미엄'));      // 5.1.3 '유료' → '프리미엄'
         for (var i = b + 1; i <= b + 5; i++) {
           var got = tr === 'free' ? i <= info.free : i <= info.prem, reach = i <= info.tier, open = tr === 'free' || info.premium;
           g.appendChild(el('div', 'c' + (tr === 'prem' ? ' prem' : '') + (got ? ' got' : reach && open ? ' can' : !open ? ' lock' : ''), (got ? '✓ ' : '') + passCell(C.passReward(tr, i, info.season))));
@@ -2075,10 +2075,10 @@
       });
     }
     $('pass-claim').disabled = !(info.canFree || info.canPrem);
-    setText($('pass-claim'), info.canFree || info.canPrem ? '받기' : '받을 칸이 없어요');
-    $('pass-buy').hidden = info.premium; setText($('pass-buy'), '유료 줄 ' + IC.treat + C.PASS_PRICE);
+    setText($('pass-claim'), info.canFree || info.canPrem ? '보상 받기' : '받을 보상 없음');
+    $('pass-buy').hidden = info.premium; setText($('pass-buy'), '프리미엄 열기  ' + IC.treat + C.PASS_PRICE);
     var st = C.PASS_STAMPS;
-    setText($('pass-how'), '도장은 출석 ' + st.attend + ', 원정의 새 별 ' + st.star + ', 밤 단계 이정표 ' + st.night + ', 혈청 단계 ' + st.serum + ', 철수 ' + st.retreat + '개씩이에요. 유료 줄의 10칸 · 15칸 · 20칸에는 이번 수첩 한정 우비 · 깃발 · 후드가 있어요. 30일마다 새 수첩이 나와요.');
+    setText($('pass-how'), '도장 얻는 법: 출석 ' + st.attend + '개, 원정 새 별 ' + st.star + '개, 밤 단계 이정표 ' + st.night + '개, 혈청 단계 ' + st.serum + '개, 철수 ' + st.retreat + '개\n프리미엄 10 · 15 · 20칸에는 이번 수첩 한정 우비 · 깃발 · 후드가 있어요. 수첩은 30일마다 바뀌어요.');      // 5.1.3 어순 · 낱말을 고쳤다
   }
   /*
    * 4.8.5 광고: 광고 제거면 바로 보상. 앱이 광고를 붙여 window.ZONE7_AD(kind, done) 을 주면 그것을 부르고,
