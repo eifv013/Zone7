@@ -2488,14 +2488,14 @@ test('1.9.0 뽑기: 화면의 확률표와 실제 추첨이 같고, 보장·중�
   // 뽑기권이 없으면 못 뽑는다
   const e = C.createState(0); assert.equal(C.pullGacha(e, rng).reason, 'tickets');
   // 보장: 전설이 한 번도 안 나오는 난수로도 30번째에는 전설
-  const p = C.createState(0); p.tickets = 100; let last = null;
+  const p = C.createState(0), p0 = C.GACHA_PITY + 40; p.tickets = p0; let last = null;
   for (let i = 0; i < C.GACHA_PITY; i++) { assert.equal(C.gachaPityLeft(p), C.GACHA_PITY - i); last = C.pullGacha(p, () => 0); assert.equal(last.rarity === 2, i === C.GACHA_PITY - 1); }
-  assert.ok(last.pity); assert.equal(p.gachaPity, 0); assert.equal(p.tickets, 100 - C.GACHA_PITY);
+  assert.ok(last.pity); assert.equal(p.gachaPity, 0); assert.equal(p.tickets, p0 - C.GACHA_PITY);
   // 중복은 조각으로
   const d = C.createState(0); d.tickets = 2; const a = C.pullGacha(d, () => 0), b = C.pullGacha(d, () => 0);
   assert.equal(a.dup, false); assert.ok(C.ownsCosmetic(d, a.id)); assert.equal(b.id, a.id); assert.equal(b.dup, true); assert.equal(d.shards, C.SHARDS_DUP[a.rarity]);
   // 조각으로 얻기, 입기
-  assert.equal(C.craftCosmetic(d, 'coat-night').reason, 'shards'); d.shards = 50; assert.ok(C.craftCosmetic(d, 'coat-night').ok); assert.equal(d.shards, 0);
+  assert.equal(C.craftCosmetic(d, 'coat-night').reason, 'shards'); d.shards = C.SHARDS_COST[2]; assert.ok(C.craftCosmetic(d, 'coat-night').ok); assert.equal(d.shards, 0);
   assert.equal(C.craftCosmetic(d, 'coat-night').reason, 'owned'); assert.equal(C.wearCosmetic(d, 'flag-pink').reason, 'locked');
   assert.ok(C.wearCosmetic(d, 'coat-night').ok); assert.deepEqual(C.cosmeticLook(d).coat, { y: '#27336e', j: '#4a5fb8' }); assert.equal(C.cosmeticLook(d).flag, '#f0b400');
   assert.deepEqual([C.cosmeticLook(d).hood, C.cosmeticLook(d).pat, C.cosmeticLook(d).bag, C.cosmeticLook(d).fx], ['none', 'none', 'cooler', 'none']);
@@ -3958,4 +3958,24 @@ test('5.2.5: 프리미엄 줄에는 데려오기권이 있고, 받으면 실제�
   var before = s.petTix, r = C.passClaim(s, d); assert.ok(r.ok);
   var want = 0; for (var i = 1; i <= C.PASS_PLUS_TIERS; i++) want += C.passReward('prem', i, C.passSeasonOf(d)).petTix || 0;
   assert.ok(want > 0); assert.strictEqual(s.petTix - before, want);
+});
+
+test('5.2.6: 간식을 사서 전설을 확정하려면 ₩66,000(이보다 적은 돈으로는 닿지 않는다)', function () {
+  // 간식 충전 묶음을 아무렇게나 섞어 살 때, 들인 돈마다 얻는 가장 많은 간식(배낭 문제, 100원 단위)
+  var packs = C.SHOP_ITEMS.filter(function (it) { return it.kind === 'paid' && C.PAID_TREATS[it.id]; });
+  var unit = 100, top = C.PITY_WON / unit, best = [0];
+  for (var w = 1; w <= top; w++) { best[w] = best[w - 1]; packs.forEach(function (it) { var c = it.won / unit; if (c <= w) best[w] = Math.max(best[w], best[w - c] + C.PAID_TREATS[it.id]); }); }
+  // 간식 → 뽑기권: 11장 묶음(간식 400)이 가장 싸고, 남는 간식은 한 장씩(간식 TICKET_TREATS)
+  var bundle = C.shopItem('tix11').treats;
+  function tickets(t) { return Math.floor(t / bundle) * 11 + Math.floor((t % bundle) / C.TICKET_TREATS); }
+  assert.ok(tickets(best[top]) >= C.GACHA_PITY, '₩66,000 이면 닿는다: ' + tickets(best[top]) + '장');
+  assert.ok(tickets(best[top - 1]) < C.GACHA_PITY, '₩65,900 으로는 못 닿는다: ' + tickets(best[top - 1]) + '장');
+  // 확률 합은 1, 전설은 보장보다 훨씬 드물지 않게(평균이 보장의 절반쯤)
+  assert.ok(Math.abs(C.GACHA_ODDS.reduce(function (a, b) { return a + b; }, 0) - 1) < 1e-9);
+  assert.ok(1 / C.GACHA_ODDS[2] < C.GACHA_PITY && 1 / C.GACHA_ODDS[2] > C.GACHA_PITY / 3);
+});
+
+test('5.2.6: 조각으로 전설을 만드는 길도 간식 1만 개가 넘게 든다(₩66,000 기준을 비켜 가지 않게)', function () {
+  var box = C.shopItem('shards'), perShard = box.treats / 10;
+  assert.ok(C.SHARDS_COST[2] * perShard >= 10000, '조각 상자로 전설: 간식 ' + C.SHARDS_COST[2] * perShard);
 });

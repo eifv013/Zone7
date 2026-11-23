@@ -2206,7 +2206,7 @@
       var table = C.gachaTable();
       C.RARITIES.forEach(function (rn, ri) {
         var items = table.filter(function (t) { return t.rarity === ri; });
-        $('odds').appendChild(el('div', 'odds-head', rn + ' · 합계 ' + (C.GACHA_ODDS[ri] * 100).toFixed(0) + '% · 하나에 ' + items[0].pct.toFixed(2) + '%'));
+        $('odds').appendChild(el('div', 'odds-head', rn + ' · 합계 ' + String(Math.round(C.GACHA_ODDS[ri] * 10000) / 100) + '% · 하나에 ' + items[0].pct.toFixed(items[0].pct < 0.1 ? 3 : 2) + '%'));
         $('odds').appendChild(el('div', 'odds-items', items.map(function (t) { return t.name; }).join(', ')));
       });
       $('odds').appendChild(el('div', 'odds-items', C.GACHA_PITY + '번 안에 전설이 한 번은 나와요. 전설이 나오면 다시 세요.'));
@@ -2496,7 +2496,7 @@
     box.appendChild(el('div', 'odds-head', '전설 보장까지 ' + C.gachaPityLeft(state) + '번 · ' + C.GACHA_PITY + '번 안에 전설이 한 번은 나와요'));
     C.RARITIES.forEach(function (rn, ri) {
       var items = table.filter(function (t) { return t.rarity === ri; }); if (!items.length) return;
-      box.appendChild(el('div', 'odds-head', rn + ' · 합계 ' + (C.GACHA_ODDS[ri] * 100).toFixed(0) + '% · ' + items.length + '종'));
+      box.appendChild(el('div', 'odds-head', rn + ' · 합계 ' + String(Math.round(C.GACHA_ODDS[ri] * 10000) / 100) + '% · ' + items.length + '종'));
       items.forEach(function (t) { var own = C.ownsCosmetic(state, t.id), row = el('div', 'gi' + (own ? ' own' : '')); row.appendChild(el('b', '', t.name + (own ? ' · 있음' : ''))); row.appendChild(el('span', 'num', t.pct.toFixed(2) + '%')); box.appendChild(row); });
     });
     box.appendChild(el('div', 'odds-items', '이미 있는 것이 나오면 조각으로 바뀌어요(일반 ' + C.SHARDS_DUP[0] + ' · 희귀 ' + C.SHARDS_DUP[1] + ' · 전설 ' + C.SHARDS_DUP[2] + '개).'));
