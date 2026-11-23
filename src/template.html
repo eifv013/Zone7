@@ -11,6 +11,7 @@
 try { if (localStorage.getItem('zone7-skin') === 'dark') document.documentElement.setAttribute('data-skin', 'dark'); } catch (e) { /* 저장소를 못 쓰면 기본(라이트) */ }
 </script>
 <style>
+/*__FONTS__*/
 /* 민방위 대피 안내문: 콘크리트색 종이, 검은 잉크, 위험 표지 노랑. 기본은 라이트, 사용자가 다크를 고를 수 있다.
    배치: 위험 테이프 머리띠 + D+ 카운터, 아래로 상황판 / 시설 / 방벽·장비·무전 3단. */
 :root {
@@ -411,7 +412,7 @@ canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 .store-row { display: flex; gap: 10px; align-items: center; border: 1px solid #3a3a30; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; min-height: 56px; }
 .store-row > .ic { flex: none; width: 32px; height: 28px; margin: 0; } .store-row .t .ic { width: 14px; height: 12px; vertical-align: -2px; }
 .store-row .t { flex: 1; min-width: 0; } .store-row .t b { display: block; font-size: 14px; line-height: 1.3; } .store-row .t small { display: block; color: #a8a290; font-size: 12px; line-height: 1.35; margin-top: 2px; }
-.story-card .store-row button { flex: none; width: 96px; min-width: 96px; padding: 8px 6px; font-size: 13px; white-space: nowrap; text-align: center; }      /* 5.1.3 단추 폭을 하나로(오른쪽 줄이 맞게) */
+.story-card .store-row button { flex: none; width: 108px; min-width: 108px; padding: 8px 6px; font-size: 13px; white-space: nowrap; text-align: center; }      /* 5.1.3 단추 폭을 하나로(오른쪽 줄이 맞게) */
 .story-card .store-row button.own { background: transparent; color: #7fd8a0; border: 1px solid #4aa870; }
 .story-card .store-row button.paid { background: transparent; color: #a8a290; border: 1px dashed #6d6d60; }
 .story-card .store-row button .ic { width: 16px; height: 14px; vertical-align: -2px; }
@@ -1544,6 +1545,12 @@ body { font-size: 15.5px; line-height: 1.55; }
 .dex-card.locked { border-left-style: dashed; }
 /* ====== 새 얼굴 끝 ====== */
 
+/* 5.1.5 도트 글꼴: 갈무리11(본문 · 제목) · 갈무리 모노11(숫자). 빠진 글자는 예전 글꼴로. 5.1.6 로고 · 첫 화면은 예전 글꼴 */
+:root { --font-body: 'Galmuri11', 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; --font-head: var(--font-body); --font-mono: 'GalmuriMono11', 'Galmuri11', 'IBM Plex Mono', ui-monospace, monospace; }
+body { -webkit-font-smoothing: none; font-smooth: never; }
+/* 로고(7구역) · 첫 화면은 예전 제목 글꼴 그대로(--font-display 는 건드리지 않는다) */
+#boot, #boot * { -webkit-font-smoothing: auto; }
+#boot, .mast h1, .mast-sub { --font-body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; --font-mono: 'IBM Plex Mono', ui-monospace, monospace; -webkit-font-smoothing: auto; }
 /* ====== 5.1.4 도트 감성 ======
  * 둥근 모서리를 걷어 내고(동그란 점 · 빨간 알림 점은 그대로), 모서리가 한 칸씩 깎인 도트 테두리와 각진 입체 단추로 바꾼다.
  * 위의 규칙을 고치지 않고 여기서 덮어쓴다(되돌리기 쉽게: 이 덩어리만 지우면 예전 얼굴). 시안을 보시고 '다 적용'하라고 하셨다.
@@ -2187,6 +2194,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <div class="qty"><button type="button" id="bgm-toggle" aria-pressed="true">음악 켬</button></div></div>
       <div class="set-row"><label class="label" for="bgm-volume">음악 음량</label>
         <div class="vol"><input type="range" id="bgm-volume" min="0" max="100" step="5" value="50"><b class="num" id="bgm-volume-num">50</b></div></div>
+      <div class="set-row"><span class="label">글꼴</span><span class="label">갈무리 · Lee Minseo · SIL Open Font License 1.1</span></div>
       <div class="set-row" id="bgm-credit-row" hidden><span class="label">음악</span><span class="label" id="bgm-credit"></span></div>
       <div class="set-row" id="notify-row" hidden><span class="label">앱 알림 · 하루에 많아야 두 번</span>
         <div class="qty" role="group" aria-label="앱 알림"><button type="button" data-notify="on">켬</button><button type="button" data-notify="off">끔</button></div></div>
@@ -2214,7 +2222,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.1.8 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.1.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

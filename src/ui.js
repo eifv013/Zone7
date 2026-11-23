@@ -2078,7 +2078,7 @@
     setText($('pass-claim'), info.canFree || info.canPrem ? '보상 받기' : '받을 보상 없음');
     $('pass-buy').hidden = info.premium; setText($('pass-buy'), '프리미엄 열기  ' + IC.treat + C.PASS_PRICE);
     var st = C.PASS_STAMPS;
-    setText($('pass-how'), '도장 얻는 법: 출석 ' + st.attend + '개, 원정 새 별 ' + st.star + '개, 밤 단계 이정표 ' + st.night + '개, 혈청 단계 ' + st.serum + '개, 철수 ' + st.retreat + '개\n프리미엄 10 · 15 · 20칸에는 이번 수첩 한정 우비 · 깃발 · 후드가 있어요. 수첩은 30일마다 바뀌어요.');      // 5.1.3 어순 · 낱말을 고쳤다
+    setText($('pass-how'), '도장 얻는 법: 출석 ' + st.attend + '개, 원정 새 별 ' + st.star + '개, 밤 단계 이정표 ' + st.night + '개, 혈청 단계 ' + st.serum + '개, 철수 ' + st.retreat + '개\n프리미엄 10, 15, 20칸에는 이번 수첩 한정 우비, 깃발, 후드가 있어요. 수첩은 30일마다 바뀌어요.');      // 5.1.3 어순 · 낱말을 고쳤다
   }
   /*
    * 4.8.5 광고: 광고 제거면 바로 보상. 앱이 광고를 붙여 window.ZONE7_AD(kind, done) 을 주면 그것을 부르고,
