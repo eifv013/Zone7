@@ -3866,3 +3866,13 @@ test('5.1.2: 7구역의 다음 할 일은 혈청 단계를 알려 주고(예전:
   var ge = C.guide(e);
   assert.ok(['danger', 'goal'].indexOf(ge.id) >= 0, '엔딩 뒤: ' + ge.id + ' ' + ge.text);
 });
+
+test('5.2.2: 프리미엄 수첩을 산 시즌에는 출석 보상이 두 배', function () {
+  var a = C.createState(0), b = C.createState(0), day = '2026-11-24';
+  var r1 = C.claimAttend(a, day);
+  C.passSync(b, day); b.treats = 1e6; assert.ok(C.buyPassPremium(b, day).ok);
+  var t0 = b.treats, k0 = b.tickets, r2 = C.claimAttend(b, day);
+  assert.ok(r2.doubled && !r1.doubled);
+  assert.strictEqual((r2.reward.treats || 0), (r1.reward.treats || 0) * 2); assert.strictEqual((r2.reward.tickets || 0), (r1.reward.tickets || 0) * 2);
+  assert.strictEqual(b.treats - t0, r2.reward.treats); assert.strictEqual(b.tickets - k0, r2.reward.tickets);
+});

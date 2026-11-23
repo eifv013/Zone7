@@ -1984,7 +1984,7 @@
     }
     $('attend-claim').disabled = !info.can;
     setText($('attend-claim'), info.can ? (info.day + 1) + '일째 받기 · ' + attendText(info.reward) : '다음 출석까지 ' + untilMidnight());
-    var aad = $('attend-ad'); if (aad) { var ast2 = C.adState(state, 'attend', todayStr()); aad.hidden = !ast2.can; setText(aad, (state.noAds ? '' : '광고 보고 ') + '한 번 더 받기'); }      // 4.8.5
+    var aad = $('attend-ad'); if (aad) { var prem = C.passInfo(state, todayStr()).premium; aad.hidden = false; aad.disabled = true; setText(aad, prem ? '프리미엄 수첩 · 출석 보상 두 배' : '프리미엄 수첩이 있으면 출석 보상 두 배'); aad.classList.toggle('prem-on', prem); }      // 5.2.2 광고로 한 번 더 받기 대신 프리미엄 수첩 두 배
     var di = C.dailyInfo(mainState(), todayStr());
     var ao = $('attend-open'); if (ao) { ao.textContent = info.can ? '출석 체크' : '출석 ' + untilMidnight(); ao.classList.toggle('can', info.can); }      // 4.8.8 받을 수 있으면 빨간 점(5.0.2 단추가 넷이라 짧게. 남은 시간은 창 안에)
 
@@ -5644,7 +5644,7 @@
       var r = C.claimAttend(state, todayStr());
       if (!r.ok) { renderAttend(); return; }
       log('출석 ' + (r.day + 1) + '일째 보상을 받았다: ' + attendText(r.reward) + '.', 'good');
-      toast('출석 ' + (r.day + 1) + '일째 · ' + attendText(r.reward)); sfx('buy');
+      toast('출석 ' + (r.day + 1) + '일째 · ' + attendText(r.reward) + (r.doubled ? ' · 프리미엄 두 배' : '')); sfx('buy');
       Store.save(); renderAttend(); render();
       setTimeout(function () { $('attend-veil').hidden = true; }, 700);      // 받은 것을 잠깐 보여 주고 닫는다(5.0.3 임무는 따로 창)
     });
@@ -5656,7 +5656,6 @@
       log('임무 보상을 받았다.', 'good'); toast('임무 보상 · ' + got); sfx('buy');
       Store.save(); renderAttend(); render();
     });
-    $('attend-ad').addEventListener('click', function () { watchAd('attend'); });
     $('store-open').addEventListener('click', function () { sfx('click'); $('store-veil').hidden = false; renderStore(); });
     $('store-close').addEventListener('click', function () { $('store-veil').hidden = true; });
     $('pass-open').addEventListener('click', function () { sfx('click'); $('pass-veil').hidden = false; renderPass(); });

@@ -4557,11 +4557,14 @@
   function claimAttend(state, dateStr) {
     var info = attendInfo(state, dateStr);
     if (!info.can) return { ok: false, reason: typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? 'done' : 'date' };
-    var r = info.reward, a = attendOf(state);
-    state.treats = (state.treats || 0) + (r.treats || 0); state.tickets = (state.tickets || 0) + (r.tickets || 0);
+    var a = attendOf(state);
+    passSync(state, dateStr);
+    /* 5.2.2 이번 시즌 프리미엄 수첩을 산 사람은 출석 보상이 두 배(광고로 한 번 더 받기 대신) */
+    var dbl = !!passOf(state).premium, k = dbl ? 2 : 1, r = { treats: (info.reward.treats || 0) * k, tickets: (info.reward.tickets || 0) * k };
+    state.treats = (state.treats || 0) + r.treats; state.tickets = (state.tickets || 0) + r.tickets;
     a.last = dateStr; a.count += 1;
-    passSync(state, dateStr); passStamp(state, PASS_STAMPS.attend);      // 4.8.2 수첩 도장
-    return { ok: true, day: info.day, reward: r };
+    passStamp(state, PASS_STAMPS.attend);      // 4.8.2 수첩 도장
+    return { ok: true, day: info.day, reward: r, doubled: dbl };
   }
   function buyTicket(state) {
     if (!(state.treats >= TICKET_TREATS)) return fail('treats');

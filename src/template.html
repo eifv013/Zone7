@@ -1553,152 +1553,23 @@ h1, h2, h3, h4, button, .num, b, strong, .pill, .scavenge, .attend-open, .missio
 #boot, .mast h1, .mast-sub { --font-head: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; --font-mono: 'IBM Plex Mono', ui-monospace, monospace; }
 #boot button, #boot b { font-family: 'IBM Plex Sans KR', sans-serif; }
 .mast h1 { font-family: var(--font-display) !important; }
-/* ====== 5.1.4 도트 감성 ======
- * 둥근 모서리를 걷어 내고(동그란 점 · 빨간 알림 점은 그대로), 모서리가 한 칸씩 깎인 도트 테두리와 각진 입체 단추로 바꾼다.
- * 위의 규칙을 고치지 않고 여기서 덮어쓴다(되돌리기 쉽게: 이 덩어리만 지우면 예전 얼굴). 시안을 보시고 '다 적용'하라고 하셨다.
- *   도트 테두리: border 대신 네 방향 그림자(왼 · 오른 · 위 · 아래)로 그려서 네 모서리 한 칸이 비게 한다 = 도트로 그린 둥근 모서리.
- *   입체 단추: 안쪽 위 · 왼쪽은 밝게, 아래 · 오른쪽은 어둡게. 누르면 거꾸로(눌린 모양).
+/* ====== 5.2.2 둥근 모양으로 되돌림 + 단추 다듬기 ======
+ * 5.1.4 의 도트 테두리는 둥근 글꼴(주아)과 따로 놀아서 뺐다(둥근 쪽이 낫다고 하셨다). 단추만 손봤다:
+ *   - 노란 단추: 아래에 짙은 턱(그림자)을 달아 눌리는 단추처럼. 누르면 턱만큼 내려간다.
+ *   - 테두리 단추(광고 · 결제 · 보유 · 꺼짐): 두께를 맞추고 모서리를 같은 둥글기로.
  */
-:root { --r: 0px; --r-s: 0px; --pxl: 3px; --pxf: var(--edge); --pxd: #0e0e0a; }
-#bf-cv,
-#gacha-cv,
-#perk #perk-reroll,
-#save-code,
-#traits .row .trait-bar,
-.ach-card,
-.ach-card.done .ach-tier,
-.ad-box,
-.attend-btn,
-.attend-days li,
-.attend-open,
-.auto-def,
-.autobar,
-.boost-btn,
-.boosted,
-.boss-tag,
-.br-level,
-.bridgecv,
-.brief,
-.camp-grid button,
-.chart-line,
-.cos-new,
-.daily-list li,
-.daily-list li .bar,
-.dex-art,
-.dex-card,
-.dex-wall,
-.ending-box,
-.fortify,
-.grow-seg,
-.jam-fix,
-.mast-record,
-.mboard button,
-.mboard-wrap,
-.mission-bar,
-.mission-bar .mission-cta,
-.mission-bar .pip,
-.note-new,
-.order,
-.order-fill,
-.oz-bar,
-.oz-bar i,
-.panel,
-.panes,
-.pass-bar,
-.pass-grid .c,
-.perk-open,
-.perk-r,
-.pet-face,
-.pet-feed,
-.pet-pick button,
-.pet-rename button,
-.pet-rename input,
-.pick-two button,
-.plat-horde .track,
-.plat-horn,
-.plat-pips i,
-.plot-need,
-.qty,
-.recipes button,
-.relocate,
-.reset-row .danger,
-.row,
-.row-bar,
-.row-mile,
-.row:not(:disabled) .row-cost,
-.rt-gain,
-.rt-two > div,
-.save-actions button,
-.scavenge,
-.scene-hub,
-.scene-wrap,
-.serum-steps i,
-.settle-grid button,
-.stage-how span,
-.stage-reward,
-.stats div,
-.stats-list li.bar,
-.store-row,
-.story-card .cos-tabs button,
-.story-card button,
-.story-card button.stage-reward,
-.subtabs button,
-.surge,
-.sync-pick,
-.t7-dial,
-.t7-needle,
-.t7-work,
-.tabbar button,
-.tag,
-.tile,
-.track,
-.trade,
-.trait-maxed span,
-.ward-strip,
-.ward-tally span,
-.zmap-info,
-.zmap-map,
-.zmap-open { border-radius: 0 !important; }
-/* 면(패널 · 줄 · 칸): 도트 테두리 */
-.panel, .brief, .trade, .scene-wrap, .row, .order, .ending-box, .zmap-map, .zmap-info, .ad-box, .mboard-wrap, .auto-def, .rt-gain, .rt-two > div, .t7-dial, .ward-strip, .chart-line, .stats div, .stats-list li.bar, .attend-days li, .daily-list li, .store-row, .mission-bar {
-  border-color: transparent !important;
-  box-shadow: calc(-1 * var(--pxl)) 0 0 0 var(--pxf), var(--pxl) 0 0 0 var(--pxf), 0 calc(-1 * var(--pxl)) 0 0 var(--pxf), 0 var(--pxl) 0 0 var(--pxf) !important;
+.story-card button, .attend-open, .goal-go, .mission-cta, .pet-pick button, .save-actions button, .fortify, .surge, .zmap-open, .sync-pick { border-radius: 10px; }
+.story-card button:not(:disabled):not(.paid):not(.ad):not(.own):not(.feedback-close), .attend-open:not(:disabled), .goal-go, .pet-pick button:not(:disabled), .fortify:not(:disabled), .surge:not(:disabled) {
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--hazard) 55%, #000), inset 0 1px 0 rgba(255,255,255,.35); transition: transform .05s, box-shadow .05s;
 }
-.row { box-shadow: inset 4px 0 0 var(--edge), calc(-1 * var(--pxl)) 0 0 0 var(--pxf), var(--pxl) 0 0 0 var(--pxf), 0 calc(-1 * var(--pxl)) 0 0 var(--pxf), 0 var(--pxl) 0 0 var(--pxf) !important; }
-.order, .mission-bar { --pxf: var(--hazard); }
-.story-card { --pxf: #4f4e40; }      /* 창 안의 줄(상점 · 임무 · 출석)은 어두운 바탕에서도 보이게 */
-.story-card .order, .story-card .mission-bar { --pxf: var(--hazard); }
-.store-row, .daily-list li { margin: var(--pxl) var(--pxl) calc(6px + var(--pxl)); }
-/* 오늘 밤 같은 강조 패널(보라 · 빨강 테두리)은 제 빛깔 그대로 도트로 */
-.panel[style*="border-color"] { --pxf: currentColor; }
-/* 이야기 · 상점 창: 노란 도트 틀 */
-.story-card { border-color: transparent !important; box-shadow: -4px 0 0 0 var(--hazard), 4px 0 0 0 var(--hazard), 0 -4px 0 0 var(--hazard), 0 4px 0 0 var(--hazard), 0 0 0 4px rgba(0,0,0,.35) inset !important; }
-/* 단추: 각진 입체 */
-.story-card button, .attend-open, .goal-go, .feedback-close, .mission-cta, .save-actions button, .pet-pick button, .pet-rename button, .zmap-open, .sync-pick, .fortify, .surge, .relocate, .reset-row .danger, .boost-btn, .recipes button, .jam-fix, .camp-grid button, .settle-grid button, #perk #perk-reroll {
-  border-color: transparent !important;
-  box-shadow: inset -3px -3px 0 0 rgba(0,0,0,.28), inset 3px 3px 0 0 rgba(255,255,255,.28), -3px 0 0 0 var(--pxd), 3px 0 0 0 var(--pxd), 0 -3px 0 0 var(--pxd), 0 3px 0 0 var(--pxd) !important;
+.story-card button:not(:disabled):not(.paid):not(.ad):not(.own):not(.feedback-close):active, .attend-open:not(:disabled):active, .goal-go:active, .pet-pick button:not(:disabled):active, .fortify:not(:disabled):active, .surge:not(:disabled):active {
+  transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--hazard) 55%, #000);
 }
-.story-card button:active:not(:disabled), .attend-open:active, .save-actions button:active, .pet-pick button:active:not(:disabled), .fortify:active, .surge:active, .camp-grid button:active, .settle-grid button:active {
-  box-shadow: inset 3px 3px 0 0 rgba(0,0,0,.3), -3px 0 0 0 var(--pxd), 3px 0 0 0 var(--pxd), 0 -3px 0 0 var(--pxd), 0 3px 0 0 var(--pxd) !important; transform: translateY(1px);
-}
-/* 테두리만 있는 단추(광고 · 결제 · 보유 · 꺼짐)는 제 글자 빛깔로 도트 틀 */
-.story-card .store-row button.paid, .story-card .store-row button.ad, .story-card .store-row button.own, .pass-acts button:disabled, .pet-kind button, .story-card button:disabled {
-  background: transparent !important; box-shadow: -3px 0 0 0 currentColor, 3px 0 0 0 currentColor, 0 -3px 0 0 currentColor, 0 3px 0 0 currentColor !important; transform: none !important;
-}
-.story-card .store-row button.paid, .pass-acts button:disabled, .story-card button:disabled { opacity: .7; }
-/* 가장 큰 단추(잔해 수색): 원래 각진 그림자를 살리고 모서리만 도트로 */
-.scavenge { box-shadow: 4px 4px 0 var(--ink), inset -4px -4px 0 0 rgba(0,0,0,.18), inset 4px 4px 0 0 rgba(255,255,255,.3) !important; }
-.scavenge:active { box-shadow: 1px 1px 0 var(--ink), inset 4px 4px 0 0 rgba(0,0,0,.18) !important; }
-/* 막대: 둥근 끝 대신 칸 무늬(도트 게이지) */
-.row-bar, .track, .autobar, .oz-bar, .pass-bar, .daily-list li .bar, .plat-horde .track { border-radius: 0 !important; }
-.row-bar > *, .track > *, .autobar > *, .oz-bar i, .pass-bar i, .daily-list li .bar i, .order-fill { border-radius: 0 !important; background-image: repeating-linear-gradient(90deg, transparent 0 6px, rgba(0,0,0,.16) 6px 8px) !important; }
-/* 묶음 제목 옆 도트 점선 */
-#store-list h4, .stats-h { display: flex; align-items: center; gap: 8px; }
-#store-list h4::after, .stats-h::after { content: ''; flex: 1; height: 3px; background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 6px); opacity: .5; }
-/* 아래 탭 줄: 위 경계를 도트 점선으로 */
-.mnav { border-top: 0 !important; background-image: repeating-linear-gradient(90deg, var(--edge) 0 3px, transparent 3px 6px); background-size: 100% 3px; background-repeat: no-repeat; }
-/* 알약 모양(태그 · 묶음 단추)도 각지게 */
-.tag, .boss-tag, .row-mile, .cos-new, .scene-hub, .subtabs button, .qty, .panes { border-radius: 0 !important; }
+.story-card .store-row button.paid, .story-card .store-row button.ad, .story-card .store-row button.own { border-width: 2px; }
+.story-card button:disabled { box-shadow: none; }
+.mission-bar .mission-cta { border-radius: 8px; box-shadow: 0 2px 0 color-mix(in srgb, var(--hazard) 55%, #000); }
+.mission-bar.can .mission-cta { box-shadow: 0 2px 0 #8a1f1f; }
+#attend-ad { opacity: 1; background: transparent; border: 2px dashed var(--edge); color: var(--ink-soft); box-shadow: none; } #attend-ad.prem-on { border: 2px solid var(--hazard); color: var(--hazard); }
 </style>
 </head>
 <body data-mview="base">
@@ -2224,7 +2095,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.2.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.2.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 
