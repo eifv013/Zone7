@@ -14,6 +14,10 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   return [
+    { ver: '알파 5.1.6', date: '2026-11-23', at: '2026-11-23 23:58:00', title: '시작 화면 정리',
+      items: [
+        '시작 화면 아래 버전 글씨를 뺐어요. 버전은 설정 맨 아래와 패치노트에서 볼 수 있어요.'
+      ] },
     { ver: '알파 5.1.5', date: '2026-11-23', at: '2026-11-23 23:50:00', title: '제작사 로고',
       items: [
         '시작 화면 아래에 제작사 Loop & Lamp Studio 로고가 들어갔어요.'
