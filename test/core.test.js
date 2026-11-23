@@ -3713,7 +3713,7 @@ test('4.9.6: 오늘의 임무 — 날짜로 정해진 셋, 하면 간식, 셋 �
   var s = C.createState(0), day = '2026-11-23';
   var info = C.dailyInfo(s, day);
   assert.strictEqual(info.list.length, 3);
-  assert.deepStrictEqual(C.dailyPicks(day, s).map(function (m) { return m.key; }), info.list.map(function (x) { return x.key; }), '같은 날은 같은 임무');
+  assert.deepStrictEqual(C.dailyInfo(s, day).list.map(function (x) { return x.key; }), info.list.map(function (x) { return x.key; }), '같은 날은 같은 임무');
   assert.ok(info.list.every(function (x) { return ['job', 'feed', 'stage'].indexOf(x.key) < 0; }), '처음 시작한 사람에게는 아직 못 하는 임무가 나오지 않는다');
   assert.strictEqual(C.dailyClaim(s, day).ok, false, '한 게 없으면 못 받는다');
   info.list.forEach(function (x) { s.daily.n[x.key] = x.need; });
@@ -3810,12 +3810,30 @@ test('5.0.6: 이번 주 · 이번 달 임무 — 같은 행동이 세 기간에 
 });
 
 test('5.0.9: 임무 목표는 기간이 길수록 크고(주간 ≥ 일일 × 5, 월간 ≥ 주간 × 3), 밤 임무는 몇 분 만에 끝나지 않는다', function () {
-  C.DAILY_POOL.forEach(function () {});
-  var s = C.createState(0), day = '2026-11-23';
-  ['night', 'build', 'job', 'pull', 'feed', 'stage', 'play'].forEach(function (k) {
-    s.daily = { day: day, keys: [k], n: {}, got: {}, all: false, drip: 0, play: 0 }; s.weekly = { day: '2026-11-23', keys: [k], n: {}, got: {}, all: false, play: 0 }; s.monthly = { day: '2026-11-01', keys: [k], n: {}, got: {}, all: false, play: 0 };
-    var d = C.missionInfo(s, 'day', day).list[0].need, w = C.missionInfo(s, 'week', day).list[0].need, m = C.missionInfo(s, 'month', day).list[0].need;
-    assert.ok(w >= d * 5 && m >= w * 3, k + ': ' + d + ' / ' + w + ' / ' + m);
+  C.MISSION_POOL.forEach(function (m) {
+    var d = m.need[0], w = m.need[1], mo = m.need[2];
+    if (d != null && w != null) assert.ok(w >= d * 5, m.key + ' 주간 ' + w + ' < 일일 ' + d + ' × 5');
+    if (w != null && mo != null) assert.ok(mo >= w * 3, m.key + ' 월간 ' + mo + ' < 주간 ' + w + ' × 3');
   });
-  s.daily.keys = ['night']; assert.ok(C.missionInfo(s, 'day', day).list[0].need >= 15, '밤은 1분에 한 번 오니 일일 목표가 너무 작으면 안 된다');
+  assert.ok(C.MISSION_POOL.filter(function (m) { return m.key === 'night'; })[0].need[0] >= 15, '밤은 1분에 한 번 오니 일일 목표가 너무 작으면 안 된다');
+});
+
+test('5.0.10: 일일 · 주간 · 월간 임무는 서로 겹치지 않는다(열린 임무가 넉넉하면)', function () {
+  var s = C.createState(0); s.zone = 6; s.bestZone = 6; s.pet = { kind: 'dog', breed: 'jindo', name: '흰둥이' }; s.kennel = { jindo: '흰둥이' };
+  for (var d = 0; d < 120; d++) {
+    var day = new Date(Date.UTC(2026, 10, 1) + d * 864e5).toISOString().slice(0, 10);
+    var keys = C.MISSION_PERS.map(function (p) { return C.missionInfo(s, p, day).list.map(function (x) { return x.key; }); });
+    var all = keys[0].concat(keys[1], keys[2]);
+    assert.strictEqual(all.length, 9, day);
+    assert.strictEqual(all.filter(function (k, i) { return all.indexOf(k) === i; }).length, 9, day + ' 겹침: ' + JSON.stringify(keys));
+  }
+  // 처음 시작한 사람(열린 임무가 적다)도 임무 셋씩은 나온다
+  var n = C.createState(0); C.MISSION_PERS.forEach(function (p) { assert.strictEqual(C.missionInfo(n, p, '2026-11-23').list.length, 3); });
+});
+
+test('5.0.10: 원정이 열렸으면 일일 · 주간 · 월간에 원정 임무가 하나씩 꼭 있고, 셋은 서로 다른 원정 임무다', function () {
+  var s = C.createState(0); s.zone = 6; s.bestZone = 6;
+  var ex = C.MISSION_PERS.map(function (p) { return C.missionInfo(s, p, '2026-11-25').list.filter(function (x) { return /^stage/.test(x.key); }).map(function (x) { return x.key; }); });
+  assert.deepStrictEqual(ex, [['stage'], ['stagewin'], ['stagestep']]);
+  var n = C.createState(0); assert.ok(C.missionInfo(n, 'day', '2026-11-25').list.every(function (x) { return !/^stage/.test(x.key); }), '원정이 닫혀 있으면 안 나온다');
 });
