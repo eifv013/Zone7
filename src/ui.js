@@ -2010,6 +2010,7 @@
           var ab = el('button', 'ad'); ab.type = 'button'; arow.appendChild(ab); ab.addEventListener('click', function () { watchAd(a[0]); });
           box.appendChild(arow);
         });
+        storeRows('noads');      // 5.2.4 광고 제거는 광고 묶음 맨 아래
         return;
       }
       if (g[0] === 'starter') {      // 4.8.2 첫 보급 상자(한 번만): 뽑기권 · 조각 · 한정 외형
@@ -2022,9 +2023,12 @@
           if (r.ok) { sfx('buy'); toast('첫 보급 상자 · 받았어요'); Store.save(); renderShop(); renderStore(); return; }
           if (r.reason === 'treats') { toast('간식이 부족해요 · ' + IC.treat + fmt(Math.max(1, C.STARTER.treats - Math.floor(state.treats || 0))) + ' 더 필요해요'); srow.classList.remove('nope'); void srow.offsetWidth; srow.classList.add('nope'); }
         });
-        box.appendChild(srow); return;
+        box.appendChild(srow); storeRows('first'); return;      // 5.2.4 간식 상자 + 결제 상자
       }
-      C.SHOP_ITEMS.filter(function (it) { return it.kind === g[0]; }).forEach(function (it) {
+      storeRows(g[0]);
+    });
+    function storeRows(kind) {
+      C.SHOP_ITEMS.filter(function (it) { return it.kind === kind; }).forEach(function (it) {
         var row = el('div', 'store-row'); row.setAttribute('data-id', it.id);
         row.appendChild(el('i', 'ic ic-' + it.icon));
         var t = el('div', 't'), tb = el('b', '', it.name); if (it.limit) tb.appendChild(el('em', 'lim', LIMIT_TEXT[it.limit])); t.appendChild(tb); t.appendChild(el('small', '', it.desc)); row.appendChild(t);      /* 5.2.3 한도는 이름 옆 작은 꼬리표로(설명이 세 줄로 늘어나서) */
@@ -2032,7 +2036,7 @@
         b.addEventListener('click', function () { storeBuy(it, row); });
         box.appendChild(row);
       });
-    });
+    }
     Array.prototype.forEach.call(box.querySelectorAll('.store-row'), function (row) {
       var adk = row.getAttribute('data-ad');
       if (adk) { var ast = C.adState(state, adk, todayStr()), abt = row.lastChild; abt.disabled = !ast.can; setText(abt, ast.can ? (state.noAds ? '바로 받기' : '광고 보기') + (ast.left != null ? ' · ' + ast.left + '번' : '') : ast.reason === 'daily' ? '오늘 다 봤어요' : ast.reason === 'ready' ? '준비됨' : ast.reason === 'none' ? '수입이 없어요' : '아직'); return; }

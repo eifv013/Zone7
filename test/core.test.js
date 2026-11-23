@@ -3917,3 +3917,23 @@ test('5.2.3: 매일 간식은 30일 동안 하루 한 번, 끝나야 다시 산�
   var bad = C.deserialize(JSON.stringify(Object.assign(JSON.parse(C.serialize(s)), { dayCard: { start: 'x' }, buys: { evil: { n: 5 }, 'pack-new': { n: -3, season: 'a' } } })));
   assert.strictEqual(bad.dayCard, null); assert.ok(!bad.buys.evil); assert.deepStrictEqual(bad.buys['pack-new'], { n: 0, season: -1 });
 });
+
+test('5.2.4: 간식 충전은 간식만, 비쌀수록 1원에 드는 간식이 많고, 뽑기권 꾸러미 · 광고 제거는 다른 묶음', function () {
+  var paid = C.SHOP_ITEMS.filter(function (it) { return it.kind === 'paid'; });
+  assert.deepStrictEqual(paid.map(function (it) { return it.won; }), [1100, 5500, 11000, 33000, 55000, 110000]);
+  var prev = 0; paid.forEach(function (it) { var per = C.PAID_TREATS[it.id] / it.won; assert.ok(per > prev, it.id + ' 1원당 ' + per); prev = per; });
+  assert.equal(C.shopItem('tixpay').kind, 'pack'); assert.equal(C.shopItem('noads').kind, 'noads');
+  var s = C.createState(0), d = '2026-11-24', t0 = s.treats || 0, k0 = s.tickets || 0;
+  assert.ok(C.grantPaid(s, 'treat6', d).ok); assert.strictEqual(s.treats - t0, 25000);
+  assert.ok(C.grantPaid(s, 'tixpay', d).ok); assert.strictEqual(s.tickets - k0, 11);
+  assert.ok(C.grantPaid(s, 'noads', d).ok); assert.ok(s.noAds); assert.equal(C.grantPaid(s, 'noads', d).reason, 'owned');
+  assert.equal(C.buyShop(s, 'noads', d).reason, 'paid');
+});
+
+test('5.2.4: 첫 결제 상자는 계정에 한 번(간식으로 사는 첫 보급 상자와 따로)', function () {
+  var s = C.createState(0), d = '2026-11-24'; s.treats = 1000;
+  assert.ok(C.buyStarter(s).ok);
+  var t0 = s.treats, k0 = s.tickets; assert.ok(C.grantPaid(s, 'first', d).ok);
+  assert.strictEqual(s.treats - t0, 300); assert.strictEqual(s.tickets - k0, 10); assert.strictEqual(s.petTix, 2);
+  assert.equal(C.grantPaid(s, 'first', '2027-03-01').reason, 'once'); assert.equal(C.buyShop(s, 'first', d).reason, 'paid');
+});
