@@ -647,7 +647,7 @@ test('라인: 목표 셋과 일지, 그리고 철수하면 기계가 사라진�
   s.runEarned = C.RETREAT_MIN * 10; s.pendingPerks = [];
   const r = C.retreat(s, 0);
   assert.ok(r.ok);
-  assert.deepEqual(r.state.machines, { feed: 0, forge: 0, paint: 0 });
+  assert.deepEqual(r.state.machines, { feed: 0, press: 0, weld: 0, forge: 0, paint: 0 });
   assert.equal(r.state.lineEarned, 0);
   assert.equal(r.state.steadySeconds, 0);
   assert.equal(r.state.story['z3-0'], true, '읽은 일지는 남는다');
@@ -658,7 +658,7 @@ test('저장: 기계와 라인 기록을 안전하게 읽고, 문 앞에 있던 
   s.machines.paint = 4; s.lineEarned = 123; s.steadySeconds = 45;
   assert.deepEqual(C.deserialize(C.serialize(s), 0), s);
   const bad = C.sanitizeState({ version: 2, zone: 2, machines: { paint: 1e9, feed: -2, forge: 'x', ghost: 3 }, lineEarned: -1, steadySeconds: NaN, lineV: 3 }, 0);
-  assert.deepEqual(bad.machines, { feed: 0, forge: 0, paint: 500 });
+  assert.deepEqual(bad.machines, { feed: 0, press: 0, weld: 0, forge: 0, paint: 500 });
   assert.equal(bad.lineEarned, 0);
   assert.equal(bad.steadySeconds, 0);
   // 알파 0.6.1 까지: 3구역은 '문 앞'(gate)까지만 갈 수 있었다
@@ -2851,9 +2851,10 @@ test('3구역: 열기 전에는 판도 줄도 없다', () => {
 });
 
 test('3구역 줄 셋: 투입구는 더 자주, 단조기는 한 단계 높게(판의 상자도 오른다), 도장 라인은 값', () => {
-  assert.deepEqual(C.MACHINES.map(d => d.id), ['feed', 'forge', 'paint']);
+  assert.deepEqual(C.MACHINES.map(d => d.id), ['feed', 'press', 'weld', 'paint', 'forge']);
   const s = onBoard([1, 1, 2]); s.supplies = 1e40;
-  near(C.feedSeconds(s), C.FEED_SECONDS); assert.ok(C.buyMachine(s, 'feed', 2).ok); near(C.feedSeconds(s), C.FEED_SECONDS * C.FEED_STEP * C.FEED_STEP);
+  near(C.feedSeconds(s), C.FEED_SECONDS); assert.ok(C.buyMachine(s, 'feed', 2).ok); near(C.feedSeconds(s), C.FEED_SECONDS, '5.3.0 투입구만 올려서는 빨라지지 않는다(프레스 · 용접이 느리다)');
+  assert.ok(C.buyMachine(s, 'press', 2).ok); assert.ok(C.buyMachine(s, 'weld', 2).ok); near(C.feedSeconds(s), C.FEED_SECONDS * C.FEED_STEP * C.FEED_STEP);
   // 도장 라인: 1단계 상자 하나의 값이 (1 + 레벨) × 2배 구간
   const u0 = C.lineInfo(s).unit; near(u0, C.productValue(s)); near(C.lineRate(s), u0 * (1 + 1 + C.BOX_STEP));
   assert.ok(C.buyMachine(s, 'paint', 9).ok); near(C.lineInfo(s).unit, u0 * 10); assert.equal(C.lineInfo(s).nextMilestone, C.LINE_MILESTONES[0]);
@@ -2863,8 +2864,8 @@ test('3구역 줄 셋: 투입구는 더 자주, 단조기는 한 단계 높게(�
   assert.equal(C.spawnLevel(s), 1); assert.ok(C.buyMachine(s, 'forge', 1).ok); assert.equal(C.spawnLevel(s), 2);
   assert.deepEqual(s.board.slice(0, 4), [2, 2, 3, 0]); near(C.lineRate(s), r0 * C.BOX_STEP); assert.equal(s.boxBest, 3); assert.equal(s.contract.level, 4, '의뢰가 찾는 단계도 따라 오른다');
   // 값은 줄마다 다르게 오르고, 끝이 있다
-  const t = inFactory(); near(C.machineCost(t, 'forge', 2), C.MACHINES[1].baseCost * (1 + C.MACHINES[1].growth));
-  t.upgrades.manual = 1; near(C.machineCost(t, 'paint', 1), C.MACHINES[2].baseCost * 0.96);
+  const t = inFactory(), FG = C.MACHINES.find(d => d.id === 'forge'), PT = C.MACHINES.find(d => d.id === 'paint'); near(C.machineCost(t, 'forge', 2), FG.baseCost * (1 + FG.growth));
+  t.upgrades.manual = 1; near(C.machineCost(t, 'paint', 1), PT.baseCost * 0.96);
   t.machines.forge = C.MACHINES[1].max; assert.equal(C.machineCost(t, 'forge', 1), Infinity); t.supplies = 1e300; assert.equal(C.buyMachine(t, 'forge', 1).ok, false);
   assert.equal(C.buyMachine(t, 'ghost', 1).reason, 'unknown'); for (const junk of [0, -1, NaN, 'x']) assert.equal(C.buyMachine(t, 'paint', junk).ok, false);
   assert.ok(C.machineGain(t, 'paint') > 0); near(C.machineGain(inFactory(), 'forge'), C.BOX_STEP - 1); assert.equal(C.machineGain(t, 'forge'), 0);
@@ -2947,10 +2948,11 @@ test('3구역 납품 의뢰: 찾는 단계의 상자를 모아 두었다가 넘�
   assert.equal(C.boardSum(s), 0, '넘긴 상자는 판에서 나간다'); near(C.contractMult(s), 1 + C.CONTRACT_BONUS);
   assert.equal(C.fillContract(s).reason, 'none');
   const g = onBoard([1]); g.contract = { who: 'bike', level: 5, need: 2, have: 0, left: 1 }; ev = []; C.stepContracts(g, 2, 0, half, ev); assert.equal(g.contract, null); assert.ok(ev.some(e => e.type === 'contract-gone'));
-  const a = onBoard([3, 3]); a.upgrades.autoline = 1; a.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; ev = []; C.stepContracts(a, 1, 0, half, ev);
-  const af = ev.find(e => e.type === 'contract-filled'); assert.ok(af && af.auto, '자동 합치기가 있으면 다 모인 의뢰를 알아서 넘긴다'); assert.equal(a.contract, null);
+  const a = onBoard([3, 3]); a.upgrades.autoline = 1; a.upgrades.dispatch = 1; a.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; ev = []; C.stepContracts(a, 1, 0, half, ev);
+  assert.ok(!ev.some(e => e.type === 'contract-filled') && a.contract, '5.3.0 배차원은 잠깐 기다린다(그 사이 손으로 넘길 수 있다)'); C.stepContracts(a, C.dispatchWait(a), 0, half, ev);
+  const af = ev.find(e => e.type === 'contract-filled'); assert.ok(af && af.auto, '배차원이 있으면 다 모인 의뢰를 알아서 넘긴다'); assert.equal(a.contract, null);
   const hand2 = onBoard([3, 3]); hand2.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; near(af.gain, C.contractReward(hand2) * C.AUTO_SHARE, '지금 있는 구역에서는 절반만: 손이 낫다');
-  const past = inStation(); past.board = Array(C.BOARD_MAX).fill(0); past.board[0] = 3; past.board[1] = 3; past.upgrades.autoline = 1; past.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; const full2 = C.contractReward(past); ev = []; C.stepContracts(past, 1, 0, half, ev); near(ev.find(e => e.type === 'contract-filled').gain, full2, '지나온 구역에서는 온전히');
+  const past = inStation(); past.board = Array(C.BOARD_MAX).fill(0); past.board[0] = 3; past.board[1] = 3; past.upgrades.autoline = 1; past.upgrades.dispatch = 1; past.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; const full2 = C.contractReward(past); ev = []; C.stepContracts(past, C.dispatchWait(past), 0, half, ev); near(ev.find(e => e.type === 'contract-filled').gain, full2, '지나온 구역에서는 온전히');
   const off2 = onBoard([3, 3]); off2.upgrades.autoline = 1; C.setAutoEvents(off2, 2, false); off2.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 50 }; C.stepContracts(off2, 1, 0, half, []); assert.ok(off2.contract, '구역 자동을 끄면 손을 기다린다');
   // 자동 합치기 간격: 개조 5레벨 + 특성 자동화로 1초까지
   const sp = onBoard([]); sp.upgrades.autoline = 1; assert.equal(C.autoMergeSeconds(sp), 5); sp.upgrades.autoline = 5; assert.equal(C.autoMergeSeconds(sp), 2); sp.traits.auto = C.ASSIST_MAX; near(C.autoMergeSeconds(sp), 1);
@@ -2960,11 +2962,11 @@ test('3구역 납품 의뢰: 찾는 단계의 상자를 모아 두었다가 넘�
 test('3구역: 저장 · 옛 저장 옮기기 · 자리 비움 · 철수 · 없앤 것', () => {
   const s = onBoard([4, 4, 2]); s.feed = 0.5; s.mergesRun = 7; s.boxBest = 4; s.machines = { feed: 3, forge: 1, paint: 12 }; s.contract = { who: 'bike', level: 4, need: 2, have: 2, left: 33 };
   const back = C.deserialize(C.serialize(s), 0);
-  assert.deepEqual(back.board, s.board); assert.equal(back.feed, 0.5); assert.equal(back.mergesRun, 7); assert.deepEqual(back.machines, s.machines); assert.deepEqual(back.contract, s.contract);
+  assert.deepEqual(back.board, s.board); assert.equal(back.feed, 0.5); assert.equal(back.mergesRun, 7); assert.deepEqual(back.machines, Object.assign({ press: s.machines.feed, weld: s.machines.feed }, s.machines), '5.3.0 옛 저장의 프레스 · 용접은 투입구 레벨로'); assert.deepEqual(back.contract, s.contract);
   const raw = JSON.parse(C.serialize(s)); raw.board = [99, -3, 'x', 2.7, null]; raw.feed = 'x'; raw.machines = { feed: 1e9, forge: -2, paint: 'x', sorter: 5 }; raw.contract = { who: 'bike', need: 300, have: 10, left: 20 };
   const fixed = C.deserialize(JSON.stringify(raw), 0);
   assert.equal(fixed.board.length, C.BOARD_MAX); assert.ok(fixed.board.every(x => Number.isInteger(x) && x >= 0 && x <= C.BOX_MAX)); assert.equal(fixed.feed, 1);
-  assert.deepEqual(fixed.machines, { feed: 30, forge: 0, paint: 0 }); assert.equal(fixed.contract, null, '단계가 없는 옛 의뢰는 버린다');
+  assert.deepEqual(fixed.machines, { feed: 30, press: 30, weld: 30, forge: 0, paint: 0 }); assert.equal(fixed.contract, null, '단계가 없는 옛 의뢰는 버린다');
   // 3.5.0 이전 저장: 옛 기계와 없앤 개조에 쓴 물자만큼 새 줄을 사 준다
   const old = JSON.parse(C.serialize(inFactory())); delete old.lineV; delete old.board; old.machines = { sorter: 40, press: 40, assembler: 40 }; old.upgrades.lube = 6; old.upgrades.belt = 2; old.supplies = 123;
   const moved = C.deserialize(JSON.stringify(old), 0);
@@ -2974,7 +2976,7 @@ test('3구역: 저장 · 옛 저장 옮기기 · 자리 비움 · 철수 · 없�
   const low = JSON.parse(C.serialize(onBoard([1, 2, 9]))); low.machines = { feed: 0, forge: 3, paint: 0 }; assert.deepEqual(C.deserialize(JSON.stringify(low), 0).board.slice(0, 3), [4, 4, 9], '들어오는 단계보다 낮은 상자는 올려 준다');
   const early = JSON.parse(C.serialize(inMarket())); delete early.lineV; delete early.board; assert.equal(C.boardSum(C.deserialize(JSON.stringify(early), 0)), 0);
   const away = onBoard([9]); away.feed = 0; away.defenses.rail = 1e5;
-  const rate = C.lineRate(away); C.applyOffline(away, 3000); near(away.lineEarned, rate * 3000 * C.OFFLINE_RATE); assert.ok(C.boardSum(away) > C.boxWorth(9), '그동안 상자가 들어온다');
+  const rate = C.lineRate(away); C.applyOffline(away, 3000); assert.ok(away.lineEarned >= rate * 3000 * C.OFFLINE_RATE && away.lineEarned < rate * 3000 * C.OFFLINE_RATE * 1.01, '5.3.0 가득 찬 뒤 바로 출하한 몫이 조금 더해진다'); assert.ok(C.boardSum(away) > C.boxWorth(9), '그동안 상자가 들어온다');
   away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(C.boardSum(next), 0); assert.equal(next.mergesRun, 0); assert.equal(next.machines.paint, 0);
   const g = onBoard([1]); for (const f of [C.setRecipe, C.surge, C.repairJam, C.loadTruck, C.rebalanceLine]) assert.equal(f(g, 'x').reason, 'gone');
 });
@@ -4015,4 +4017,39 @@ test('5.2.8: 추천 — 저장을 건드리지 않고, 본전이 가장 짧은 �
   assert.ok(C.defensePower(safe) >= C.nightStrength(safe)); assert.deepStrictEqual(C.recommend(safe, 'wall', wall), []);
   // 모르는 줄 · 빈 목록 · 이상한 자리에도 죽지 않는다
   assert.deepStrictEqual(C.recommend(s, 0, ['nope']), []); assert.deepStrictEqual(C.recommend(s, 0, []), []); assert.deepStrictEqual(C.recommend(s, 99, ids).filter(function (p) { return p.kind === 'goal'; }), []);
+});
+
+test('5.3.0: 3구역 라인 — 가장 느린 기계가 간격을 정하고, 가득 차면 바로 출하하고, 일꾼은 쉬게 할 수 있다', function () {
+  var s = C.createState(0); s.zone = 2; s.bestZone = 2; s.supplies = 1e40;
+  // 가장 느린 곳
+  C.buyMachine(s, 'feed', 5); C.buyMachine(s, 'press', 3); C.buyMachine(s, 'weld', 4);
+  var st = C.lineStations(s); assert.deepStrictEqual(st.map(function (x) { return x.id; }), ['feed', 'press', 'weld']);
+  assert.deepStrictEqual(st.filter(function (x) { return x.slow; }).map(function (x) { return x.id; }), ['press']);
+  assert.ok(Math.abs(C.feedSeconds(s) - C.FEED_SECONDS * Math.pow(C.FEED_STEP, 3)) < 1e-9);
+  assert.ok(C.machineGain(s, 'press') > 0); assert.strictEqual(C.machineGain(s, 'feed'), 0); assert.strictEqual(C.machineGain(s, 'weld'), 0);
+  // 밀어 주기: 가장 느린 곳만
+  assert.equal(C.boostLine(s, 'feed').reason, 'fast'); assert.ok(C.boostLine(s, 'press').ok); assert.equal(C.boostLine(s, 'nope').reason, 'unknown');
+  var a = C.deserialize(C.serialize(s)), b = C.deserialize(C.serialize(s)); b.lineBoost = 0; a.feed = b.feed = 0;
+  C.stepBoard(a, 1, function () { return 0.5; }, []); C.stepBoard(b, 1, function () { return 0.5; }, []);
+  var cnt = function (x) { return x.board.filter(function (v) { return v; }).length + x.feed; }; assert.ok(cnt(a) > cnt(b) * 1.9, '2초 동안 두 배');
+  assert.strictEqual(a.lineBoost, 1);
+  // 가득 차면: 라인이 서지 않고 바로 출하(돈이 들어온다). 선반은 그대로
+  var f = C.deserialize(C.serialize(s)); f.lineBoost = 0; for (var i = 0; i < C.boardSize(f); i++) f.board[i] = i + 1;      // 짝이 없는 가득 찬 선반
+  f.supplies = 0; var m0 = f.supplies, ev = [], sum0 = C.boardSum(f); f.feed = 0; C.stepBoard(f, C.feedSeconds(f) * 3.5, function () { return 0.5; }, ev);
+  assert.strictEqual(C.boardSum(f), sum0); assert.ok(ev.some(function (e) { return e.type === 'box-out'; }));
+  var want = 3 * C.boxRate(f, 1) * C.OVERFLOW_SECONDS; assert.ok(Math.abs((f.supplies - m0) - want) < want * 1e-6, '상자 셋 값');
+  // 일꾼 쉬기: 조립공
+  var w = C.deserialize(C.serialize(s)); w.upgrades.autoline = 1; for (i = 0; i < C.boardSize(w); i++) w.board[i] = 1;
+  assert.ok(C.setWorker(w, 'merge', false).ok); assert.ok(!C.workerOn(w, 'merge')); var before = w.board.slice(); C.stepBoard(w, 30, function () { return 0.5; }, []);
+  assert.deepStrictEqual(w.board, before, '쉬는 조립공은 합치지 않는다');
+  C.setWorker(w, 'merge', true); C.stepBoard(w, 30, function () { return 0.5; }, []); assert.notDeepStrictEqual(w.board, before);
+  assert.equal(C.setWorker(w, 'boss', false).reason, 'unknown');
+  // 배차원 쉬기 · 저장
+  var d = C.deserialize(C.serialize(s)); d.upgrades.dispatch = 3; d.board[0] = d.board[1] = 3; d.contract = { who: 'bike', level: 3, need: 2, have: 0, left: 500 };
+  C.setWorker(d, 'ship', false); ev = []; C.stepContracts(d, 60, 0, function () { return 0.5; }, ev); assert.ok(d.contract && !ev.length, '쉬는 배차원은 넘기지 않는다');
+  var back = C.deserialize(C.serialize(d)); assert.ok(!C.workerOn(back, 'ship')); assert.strictEqual(back.upgrades.dispatch, 3);
+  C.setWorker(d, 'ship', true); C.stepContracts(d, 1, 0, function () { return 0.5; }, ev); C.stepContracts(d, C.dispatchWait(d), 0, function () { return 0.5; }, ev); assert.strictEqual(d.contract, null);
+  // 옛 저장: 조립공이 있었으면 배차원 1
+  var old = JSON.parse(C.serialize(s)); old.upgrades.autoline = 2; delete old.upgrades.dispatch; delete old.machines.press; delete old.machines.weld;
+  var mig = C.deserialize(JSON.stringify(old)); assert.strictEqual(mig.upgrades.dispatch, 1); assert.strictEqual(mig.machines.press, 5); assert.strictEqual(mig.machines.weld, 5);
 });

@@ -1672,6 +1672,18 @@ button.row { position: relative; }
 .row-rec.night { background: #c0392b; }
 button.row.rec { outline: 2px solid #2f6b3c; outline-offset: -2px; }
 button.row.rec.rec-night { outline-color: #c0392b; }
+
+/* ====== 5.3.0 3구역 공장 장면 ====== */
+.mboard-wrap { max-width: 460px; margin-left: auto; margin-right: auto; }      /* PC 에서 장면이 지나치게 커지지 않게 */
+.z3-cv { display: block; width: 100%; height: auto; image-rendering: pixelated; touch-action: manipulation; cursor: pointer; }
+.mboard-wrap #mboard, .mboard-wrap #mboard-top { display: none; }      /* 옛 칸 격자 */
+.z3-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 4px; background: #15161a; }
+.z3-chips span { padding: 4px 0 5px; border-radius: 7px; background: #22242a no-repeat left bottom / 100% 3px; color: #e6e5db; text-align: center; line-height: 1.2; }
+.z3-chips b { display: block; font: 400 12px/1.2 var(--font-head); } .z3-chips small { display: block; font-size: 10px; color: #a8a290; }
+.z3-chips .slow { background-color: #f0b400; color: #17180f; } .z3-chips .slow small { color: #3a2f0c; }
+.z3-workers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; } .z3-workers[hidden] { display: none; }
+.z3-workers button { padding: 10px 4px; border: 0; border-radius: 10px; background: #2f6b3c; color: #f4f0dc; font: 400 14px/1.2 var(--font-head); --lip: #173a1e; }
+.z3-workers button[aria-pressed="false"] { background: #c9c7ba; color: #6b6a60; --lip: #9a988c; }
 </style>
 </head>
 <body data-mview="base">
@@ -1895,7 +1907,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <!-- 컨베이어: 물건이 왼쪽에서 오른쪽으로 흐른다. 병목인 기계 앞에는 물건이 쌓인다. 그림은 ui.js 의 drawBelt 가 그린다. -->
         <!-- 3.3.0 합치기 판: 같은 상자 둘을 누르면 윗단계 하나가 된다. 칸은 ui.js 가 스무 개 만든다 -->
         <!-- 3.8.5: 1구역과 같은 차림. 머리줄(왼쪽 숫자 · 오른쪽 자동 안내) → 막대 → 판 -->
-        <div class="mboard-wrap"><canvas class="mboard-top" id="mboard-top" width="184" height="30" aria-hidden="true"></canvas>
+        <div class="mboard-wrap"><canvas class="z3-cv" id="z3-cv" width="736" height="816" role="img" aria-label="공장"></canvas>
+        <div class="z3-chips" id="z3-chips"><span><b></b><small></small></span><span><b></b><small></small></span><span><b></b><small></small></span><span><b></b><small></small></span></div>
+        <canvas class="mboard-top" id="mboard-top" width="184" height="30" aria-hidden="true"></canvas>
         <div class="mboard" id="mboard" role="group" aria-label="상자 칸"></div></div>
         <canvas class="belt" id="belt" width="320" height="64" aria-hidden="true"></canvas>
         <div class="line-flow" id="line-flow"></div>
@@ -2024,6 +2038,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="rows" id="rows-z6" hidden></div>
       <div class="rows" id="ups-z0" hidden></div>
       <div class="rows" id="ups-z1" hidden></div>
+      <div class="z3-workers" id="z3-workers" hidden><button type="button" data-who="merge"></button><button type="button" data-who="ship"></button></div>
       <div class="rows" id="ups-z2" hidden></div>
       <div class="rows" id="ups-z3" hidden></div>
       <div class="rows" id="ups-z4" hidden></div>
@@ -2197,7 +2212,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.2.9 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.3.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

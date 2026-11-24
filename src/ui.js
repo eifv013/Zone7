@@ -1525,7 +1525,7 @@
       rows.machines[d.id] = r; $('rows-z2').appendChild(r.btn);
     });
     // 3.8.8 줄 순서: 4구역(기관차 → 화물 등급 → 연결 작업반)과 같게, 값 → 단계 → 빠르기. 전에는 금방 끝까지 올리는 투입구가 맨 위에 '최대'로 남아 있었다
-    ['paint', 'forge', 'feed'].forEach(function (id) { if (rows.machines[id]) $('rows-z2').appendChild(rows.machines[id].btn); });
+    ['feed', 'press', 'weld', 'paint', 'forge'].forEach(function (id) { if (rows.machines[id]) $('rows-z2').appendChild(rows.machines[id].btn); });
     // 4구역: 노선 현황(위쪽)과 열차·노선 구매 줄(아래쪽)
     rows.train = buildRow({ id: 'train', name: '기관차', desc: '화물을 더 싣는다. ' + C.FLEET_MILESTONES.slice(0, 3).join('·') + '레벨마다 2배' }, function () { buy(C.buyTrain(state, qtyFor(C.maxTrains(state), C.TRAIN_MAX - state.trains)), 'train'); });
     $('rows-z3').appendChild(rows.train.btn);
@@ -3085,6 +3085,7 @@
       if (!C.counterAttack(state).ok) return;
       log('버틴 만큼 되갚는다. 오늘 밤 무리는 절반이다.', 'good'); sfx('defense'); buzz(30); Store.save(); render();
     });
+    Array.prototype.forEach.call($('z3-workers').children, function (b) { b.addEventListener('click', function () { var who = b.getAttribute('data-who'); C.setWorker(state, who, !C.workerOn(state, who)); sfx('tab'); Store.save(); render(); }); });
     // 3.3.0 합치기 판: 칸 스무 개를 만들고, 누르면 같은 단계의 가까운 상자와 합친다
     var mb = $('mboard');
     for (var bi = 0; bi < C.BOARD_MAX; bi++) (function (i) {
@@ -3466,7 +3467,378 @@
     px(g, 36, 6, 3, 3, BK); px(g, 37, 7, 1, 1, '#ff5a4a'); g.fillStyle = 'rgba(255,90,74,.2)'; g.fillRect(33, 3, 9, 9);
     px(g, 4, 29, 176, 1, '#f0b400'); for (var sx = 4; sx < 180; sx += 6) px(g, sx + 3, 29, 3, 1, BK);
   }
+  /* ====== 5.3.0 3구역 공장 장면 ======
+   * 칸 격자 대신 그림 한 장: 위는 라인(투입구 → 프레스 → 용접 → 도장), 아래는 선반 창고(팔레트 위의 상자)와 상차장의 트럭.
+   * 시안(눌러 보는 페이지)에서 정한 그림을 그대로 옮겼다. 규칙은 core 가 맡고, 여기서는 상태를 읽어 그리고 누른 자리를 core 에 넘긴다.
+   *   z3Line · z3Board: 장면이 읽는 모양으로 상태를 바꿔 주는 다리.  z3Loop: 3구역 칸이 보이는 동안만 돈다. */
+  var SIMPLE = true, NOLINE = false;
+  var BOXART = (function () {
+    var W = 26, H = 22, BK = '#17180f';
+    function mk() {
+      var G = []; for (var i = 0; i < W * H; i++) G.push(null);
+      var o = {
+        G: G,
+        p: function (x, y, c) { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < W && y < H) G[y * W + x] = c; },
+        R: function (x, y, w, h, c) { for (var j = 0; j < h; j++) for (var i = 0; i < w; i++) o.p(x + i, y + j, c); },
+        D: function (cx, cy, r, c) { for (var y = Math.floor(cy - r); y <= cy + r; y++) for (var x = Math.floor(cx - r); x <= cx + r; x++) if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r + 0.3) o.p(x, y, c); },
+        /* 고리: 바깥 r1, 안 r0 */
+        O: function (cx, cy, r1, r0, c) { for (var y = Math.floor(cy - r1); y <= cy + r1; y++) for (var x = Math.floor(cx - r1); x <= cx + r1; x++) { var d = (x - cx) * (x - cx) + (y - cy) * (y - cy); if (d <= r1 * r1 + 0.3 && d > r0 * r0 + 0.3) o.p(x, y, c); } },
+        L: function (x0, y0, x1, y1, c) { var n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1; for (var k = 0; k <= n; k++) o.p(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n, c); },
+        /* 볼록 다각형 채우기 */
+        F: function (pts, c) { for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) { var inside = true; for (var k = 0; k < pts.length; k++) { var a = pts[k], b = pts[(k + 1) % pts.length]; if ((b[0] - a[0]) * (y + 0.5 - a[1]) - (b[1] - a[1]) * (x + 0.5 - a[0]) < 0) { inside = false; break; } } if (inside) o.p(x, y, c); } },
+        outline: function () { var add = []; for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) if (!G[y * W + x]) { var n = (x > 0 && G[y * W + x - 1]) || (x < W - 1 && G[y * W + x + 1]) || (y > 0 && G[(y - 1) * W + x]) || (y < H - 1 && G[(y + 1) * W + x]); if (n) add.push(y * W + x); } add.forEach(function (i) { G[i] = BK; }); }
+      };
+      return o;
+    }
+    var ART = [
+      function (a) {      /* 1 고철: 휜 철근 · 깨진 톱니 · 녹슨 판이 쌓인 더미 */
+        a.F([[3, 20], [6, 13], [12, 10], [19, 12], [23, 20]], '#7d8089'); a.F([[6, 13], [12, 10], [14, 14], [8, 17]], '#a3a7b0'); a.F([[14, 14], [19, 12], [23, 20], [15, 20]], '#5e616a');
+        a.F([[2, 20], [5, 15], [11, 16], [12, 20]], '#a8623a'); a.L(5, 16, 10, 17, '#d08a58'); a.R(6, 18, 2, 1, '#7a4226');
+        a.L(9, 9, 17, 4, '#b9bdc6'); a.L(9, 10, 17, 5, '#8b8f98'); a.L(17, 4, 20, 6, '#b9bdc6'); a.L(17, 5, 20, 7, '#8b8f98');      /* 휜 철근 */
+        if (!SIMPLE) a.O(18, 15, 3.2, 1.2, '#c9a23a'); if (!SIMPLE) a.p(18, 11, '#c9a23a'); a.p(22, 15, '#c9a23a'); a.p(15, 13, '#c9a23a'); a.p(21, 12, '#c9a23a'); a.p(17, 14, '#f0cf6a');      /* 깨진 톱니 */
+        a.p(10, 12, '#e6e8ee'); a.p(11, 12, '#e6e8ee'); a.p(13, 18, '#4a4d55'); a.p(20, 19, '#4a4d55');
+      },
+      function (a) {      /* 2 볼트: 육각 머리 · 나사산 · 옆에 너트 */
+        a.F([[5, 4], [8, 2], [14, 2], [17, 4], [17, 7], [14, 9], [8, 9], [5, 7]], '#aeb3bd'); a.R(8, 2, 6, 7, '#d5d9e0'); a.R(14, 3, 3, 5, '#80858f'); a.R(8, 2, 6, 1, '#f4f6f9'); a.R(5, 7, 12, 1, '#6c717b'); a.R(8, 8, 6, 1, '#6c717b');
+        a.R(8, 10, 6, 10, '#aeb3bd'); a.R(8, 10, 2, 10, '#d5d9e0'); a.R(12, 10, 2, 10, '#80858f');
+        for (var y = 11; y < 20; y += 2) { a.R(8, y, 6, 1, '#5e636d'); a.p(8, y, '#8f949e'); }
+        a.R(9, 20, 4, 1, '#80858f');
+        if (!SIMPLE) { a.O(20.5, 16.5, 3.6, 1.4, '#c9a23a'); a.R(18, 14, 3, 1, '#f0cf6a'); a.R(20, 19, 3, 1, '#8a6c1e'); a.p(23, 17, '#8a6c1e'); }
+      },
+      function (a) {      /* 3 철판: 비스듬히 본 강판 석 장 */
+        for (var k = 0; k < 3; k++) { var y = 13 - k * 4, x = 2 + k;
+          a.F([[x + 5, y], [x + 21, y], [x + 17, y + 5], [x + 1, y + 5]], k === 2 ? '#c5d6e6' : '#a9bdd0');
+          a.R(x + 1, y + 5, 16, 2, '#5f7890'); a.F([[x + 17, y + 5], [x + 21, y], [x + 21, y + 2], [x + 17, y + 7]], '#46607a');
+          a.L(x + 6, y + 1, x + 19, y + 1, '#eaf2f9');
+        }
+        a.L(9, 7, 13, 7, '#ffffff'); a.p(8, 8, '#eaf2f9'); a.p(18, 8, '#8fa6bc'); a.p(6, 8, '#8fa6bc');
+      },
+      function (a) {      /* 4 톱니: 이 여덟 개 */
+        var cx = 12.5, cy = 11, c1 = '#4fae7a', c2 = '#2f7a52', c3 = '#8fe0b0';
+        for (var k = 0; k < 8; k++) { var t = k * Math.PI / 4, x = cx + Math.cos(t) * 8.6, y = cy + Math.sin(t) * 8.6; a.R(Math.round(x - 1.5), Math.round(y - 1.5), 3, 3, (Math.sin(t) + Math.cos(t)) > 0.3 ? c2 : c1); }
+        a.D(cx, cy, 7, c1); a.O(cx + 0.6, cy + 0.6, 7, 5.6, c2); a.O(cx - 0.6, cy - 0.6, 6.4, 5.4, c3);
+        a.D(cx, cy, 3.4, c2); a.D(cx, cy, 2.2, '#17180f'); a.p(cx - 3.5, cy - 4.5, '#d6ffe6'); a.p(cx - 4.5, cy - 3.5, '#d6ffe6');
+        a.R(12, 5, 1, 2, c2); a.R(12, 15, 1, 2, c2); a.R(6, 11, 2, 1, c2); a.R(17, 11, 2, 1, c2);
+      },
+      function (a) {      /* 5 베어링: 겉 고리 · 금빛 구슬 · 속 고리 */
+        var cx = 12.5, cy = 11;
+        a.D(cx, cy, 9.2, '#b9bec8'); a.O(cx + 0.7, cy + 0.7, 9.2, 7.6, '#7b808a'); a.O(cx - 0.7, cy - 0.7, 8.6, 7.4, '#eef1f5');
+        a.D(cx, cy, 6.8, '#2a2c33');
+        for (var k = 0; k < 8; k++) { var t = k * Math.PI / 4 + 0.39, x = cx + Math.cos(t) * 5.2, y = cy + Math.sin(t) * 5.2; a.D(x, y, 1.3, '#e0a82a'); a.p(x - 0.6, y - 0.6, '#ffe9a0'); }
+        a.D(cx, cy, 3.4, '#b9bec8'); a.O(cx - 0.4, cy - 0.4, 3.2, 2.2, '#eef1f5'); a.D(cx, cy, 1.6, '#17180f');
+      },
+      function (a) {      /* 6 모터: 파란 몸통 · 냉각 주름 · 축 */
+        a.R(4, 18, 15, 2, '#3c4048'); a.R(3, 19, 17, 1, '#55585f');
+        a.R(3, 6, 15, 12, '#3f7fb8'); a.R(3, 6, 15, 2, '#7ab4e6'); a.R(3, 15, 15, 3, '#275a8c');
+        for (var x = 5; x < 17; x += 2) a.R(x, 8, 1, 8, '#275a8c');
+        a.R(2, 7, 2, 10, '#8f949e'); a.R(2, 7, 2, 2, '#d5d9e0');
+        a.R(18, 5, 3, 14, '#aeb3bd'); a.R(18, 5, 3, 2, '#e6e8ee'); a.R(18, 16, 3, 3, '#6c717b');
+        a.R(21, 10, 4, 3, '#d5d9e0'); a.R(21, 12, 4, 1, '#80858f'); a.p(24, 11, '#17180f');
+        a.R(8, 3, 6, 3, '#30343c'); a.R(8, 3, 6, 1, '#55585f'); a.p(10, 4, '#ffd95a'); a.p(12, 4, '#ff5a4a');
+      },
+      function (a) {      /* 7 변속기: 주황 상자 · 둥근 덮개 속 톱니 · 양쪽 축 */
+        a.R(1, 10, 3, 3, '#d5d9e0'); a.R(1, 12, 3, 1, '#80858f'); a.R(22, 13, 3, 3, '#d5d9e0'); a.R(22, 15, 3, 1, '#80858f');
+        a.R(4, 4, 18, 15, '#e98a3c'); a.R(4, 4, 18, 2, '#ffb878'); a.R(4, 16, 18, 3, '#a85a1e'); a.R(20, 6, 2, 10, '#c66f28');
+        [[5, 5], [20, 5], [5, 17], [20, 17]].forEach(function (b) { a.p(b[0], b[1], '#3a2a1a'); });
+        a.D(12.5, 11.5, 5.2, '#30343c'); a.O(12.5, 11.5, 5.2, 4.2, '#ffd9a8');
+        a.O(12.5, 11.5, 3.4, 1.4, '#c9a23a'); a.p(12, 7, '#c9a23a'); a.p(13, 15, '#c9a23a'); a.p(8, 11, '#c9a23a'); a.p(16, 12, '#c9a23a'); a.p(11, 10, '#f0cf6a');
+        a.R(6, 19, 4, 1, '#3c4048'); a.R(16, 19, 4, 1, '#3c4048');
+      },
+      function (a) {      /* 8 엔진: 붉은 몸 · 실린더 넷 · 벨트 바퀴 · 배기관 */
+        a.R(5, 9, 17, 10, '#c4402e'); a.R(5, 9, 17, 2, '#ee7a62'); a.R(5, 16, 17, 3, '#8a2a20'); a.R(20, 11, 2, 6, '#a5362a');
+        for (var k = 0; k < 4; k++) { a.R(6 + k * 4, 4, 3, 5, '#8f949e'); a.R(6 + k * 4, 4, 3, 1, '#e6e8ee'); a.R(8 + k * 4, 5, 1, 4, '#5e636d'); a.R(7 + k * 4, 2, 1, 2, '#30343c'); }
+        a.L(6, 2, 21, 2, '#30343c'); a.R(21, 2, 2, 6, '#55585f'); a.R(22, 2, 3, 2, '#55585f'); a.p(24, 1, '#b9bec8');
+        a.D(4.5, 14.5, 3.4, '#30343c'); a.O(4.5, 14.5, 3.4, 2.4, '#6c717b'); a.p(4, 14, '#d5d9e0');
+        a.R(9, 12, 9, 3, '#8a2a20'); a.R(10, 13, 2, 1, '#ffd95a'); a.R(13, 13, 2, 1, '#ffd95a'); a.R(16, 13, 1, 1, '#ffd95a');
+        a.R(7, 19, 4, 1, '#3c4048'); a.R(16, 19, 4, 1, '#3c4048');
+      },
+      function (a) {      /* 9 발전기: 노란 몸 · 번개 표시 · 손잡이 틀 */
+        a.R(3, 3, 1, 16, '#55585f'); a.R(22, 3, 1, 16, '#55585f'); a.R(3, 2, 20, 2, '#8f949e'); a.R(3, 2, 20, 1, '#d5d9e0');
+        a.R(5, 6, 16, 12, '#f0b400'); a.R(5, 6, 16, 2, '#ffe07a'); a.R(5, 15, 16, 3, '#b88600');
+        a.R(7, 8, 8, 7, '#17180f'); a.L(12, 9, 10, 11, '#ffd95a'); a.L(13, 9, 11, 11, '#ffd95a'); a.R(10, 11, 4, 1, '#ffd95a'); a.L(12, 12, 10, 14, '#ffd95a'); a.L(11, 12, 9, 14, '#fff6c8');
+        a.D(18, 10, 1.4, '#30343c'); a.p(18, 10, '#7fe08a'); a.R(17, 13, 3, 1, '#3a2f0c'); a.R(17, 15, 3, 1, '#3a2f0c');
+        a.R(4, 18, 18, 1, '#3c4048'); a.D(7, 19.5, 1.4, '#30343c'); a.D(19, 19.5, 1.4, '#30343c');
+      }
+    ];
+    var cache = {};
+    /** 격자(색 배열)를 돌려준다. n: 0 부터. */
+    function grid(n) { var key = n + '|' + SIMPLE + NOLINE; n = n; if (!cache[key]) { var a = mk(); ART[n](a); if (!NOLINE) a.outline(); cache[key] = a.G; } return cache[key]; }
+    function draw(g, n, x, y) { var G = grid(n % ART.length); for (var i = 0; i < G.length; i++) if (G[i]) { g.fillStyle = G[i]; g.fillRect(x + i % W, y + Math.floor(i / W), 1, 1); } }
+    return { draw: draw, count: ART.length, W: W, H: H };
+  })();
+  function mkScene(id, line, board) {
+    var E = 26, ROWS = 4;      /* 선반 줄 수(칸 ÷ 5)에 따라 아래로 늘어난다: E = (줄 − 3) × 26 */
+    var cv = $(id + '-cv'), g = cv.getContext('2d'), BK = '#17180f', hop = {}, T = 0, mini = {}, parts = [], ghosts = [], lift = { x: 8, tx: 8, work: 0, cell: 0 }, shipT = 0, shipPay = '', bg = null, c = g;
+    function px(x, y, w, h, col) { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); }
+    function spr(x, y, rows, pal) { rows.forEach(function (r, j) { for (var i = 0; i < r.length; i++) { var col = pal[r.charAt(i)]; if (col) px(x + i, y + j, 1, 1, col); } }); }
+    function hash(x, y) { var n = (x * 374761393 + y * 668265263) >>> 0; n = ((n ^ (n >>> 13)) * 1274126177) >>> 0; return (n ^ (n >>> 16)) >>> 0; }
+    function poly(pts, col) { c.fillStyle = col; c.beginPath(); pts.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.fill(); }
+    var DG = { 0: ['.#.', '#.#', '#.#', '#.#', '.#.'], 1: ['.#.', '##.', '.#.', '.#.', '###'], 2: ['##.', '..#', '.#.', '#..', '###'], 3: ['##.', '..#', '.#.', '..#', '##.'], 4: ['#.#', '#.#', '###', '..#', '..#'], 5: ['###', '#..', '##.', '..#', '##.'], 6: ['.##', '#..', '##.', '#.#', '.#.'], 7: ['###', '..#', '.#.', '.#.', '.#.'], 8: ['.#.', '#.#', '.#.', '#.#', '.#.'], 9: ['.#.', '#.#', '.##', '..#', '##.'] };
+    function num(n, x, y, col) { String(n).split('').forEach(function (d, k) { spr(x + k * 4, y, DG[d], { '#': col }); }); }
+    var MXS = [30, 80, 130];
+
+    /* ---------- 바탕(한 번만 그린다): 벽돌 벽 · 배관 · 창과 빛줄기 · 등 · 벨트 다리 · 콘크리트 바닥 · 상차장 ---------- */
+    function backdrop() {
+      bg = document.createElement('canvas'); bg.width = 184; bg.height = 178 + E; c = bg.getContext('2d');
+      var x, y, k, seed = 7; function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+      px(0, 0, 184, 84, '#1f2127');
+      for (y = 4; y < 72; y += 4) for (x = ((y / 4) % 2) * 5 - 5; x < 184; x += 10) { var h = Math.floor(rnd() * 6); px(x, y, 9, 3, ['#2a2c35', '#2d2f39', '#282a32', '#2f313c', '#2a2c35', '#2b2d36'][h]); px(x, y, 9, 1, h === 3 ? '#3a3d49' : '#33353f'); if (h === 0) px(x + 6, y + 1, 2, 1, '#23252c'); }
+      for (y = 0; y < 72; y++) { c.fillStyle = 'rgba(0,0,0,' + (0.3 * (1 - y / 72)).toFixed(3) + ')'; c.fillRect(0, y, 184, 1); }
+      px(0, 0, 184, 3, BK); px(0, 3, 184, 1, '#f0b400'); for (x = 0; x < 184; x += 8) px(x, 3, 4, 1, BK); for (x = 6; x < 184; x += 22) px(x, 1, 1, 1, '#55585f');
+      /* 천장 배관(굵은 것 하나 · 가는 것 하나) */
+      px(0, 6, 184, 3, '#4a4d57'); px(0, 6, 184, 1, '#7c808a'); px(0, 9, 184, 1, '#26282e'); for (x = 10; x < 184; x += 38) { px(x, 5, 3, 6, '#2a2c33'); px(x, 5, 1, 5, '#5e616a'); }
+      px(0, 12, 120, 1, '#6a4a3a'); px(0, 13, 120, 1, '#3a2a22'); px(119, 12, 1, 6, '#6a4a3a');
+      /* 벨트 아래 바닥 */
+      px(0, 72, 184, 12, '#2a2c33'); px(0, 72, 184, 1, '#454952'); for (x = 0; x < 184; x += 23) px(x, 73, 1, 11, '#24262c');
+      /* 등 */
+      [24, 74, 124].forEach(function (lx) { px(lx, 10, 1, 4, '#55585f'); px(lx - 3, 14, 7, 2, '#3c4048'); px(lx - 3, 14, 7, 1, '#6a707c'); px(lx - 2, 16, 5, 1, '#fff2c0'); });
+      c.save(); c.translate(0, 18);
+      /* 창고(아래층): 옆에서 본 벽 · 3단 선반 · 맨 아래는 바닥. 라인은 위층 난간 위에 있다 */
+      px(0, 66, 153, 82 + E, '#25272e'); for (x = 0; x < 153; x += 4) px(x, 66, 1, 81 + E, '#292b33');
+      for (y = 66; y < 80; y++) { c.fillStyle = 'rgba(0,0,0,' + (0.45 * (1 - (y - 66) / 14)).toFixed(3) + ')'; c.fillRect(0, y, 184, 1); }
+      px(0, 147 + E, 153, 1, '#454952');
+      /* 위층 바닥 판(라인이 선 곳) */
+      px(0, 62, 170, 1, '#6a6d76'); px(0, 63, 170, 3, '#33363e'); px(0, 65, 170, 1, '#f0b400'); for (x = 0; x < 170; x += 6) px(x + 3, 65, 3, 1, BK);
+      /* 선반: 눈에 띄지 않는 짙은 쇠빛(파란 기둥 · 주황 가로대는 상자보다 튀어서 거슬렸다). 기둥은 가는 한 줄 */
+      for (k = 0; k < 6; k++) { x = 2 + k * 29; px(x, 68, 1, 79 + E, '#34373f'); px(x - 1, 146 + E, 3, 1, '#3c4048'); }
+      var beams = []; for (k = 1; k < ROWS; k++) beams.push(69 + k * 26); beams.forEach(function (by) { px(0, by, 149, 2, '#3c4048'); px(0, by, 149, 1, '#555963'); c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(0, by + 2, 149, 2); });
+      /* 선반과 상차장 사이 기둥 */
+      px(149, 66, 5, 82 + E, '#33363e'); px(149, 66, 1, 82 + E, '#4a4d57'); px(153, 66, 1, 82 + E, BK);
+      /* 상차장: 어두운 문 안 · 셔터 · 범퍼 */
+      px(153, 66, 31, 82 + E, '#15171b'); px(153, 66, 31, 5, '#3c4048'); for (y = 66; y < 71; y += 2) px(153, y, 31, 1, '#55585f'); px(153, 71, 31, 1, BK);
+      for (y = 76; y < 148 + E; y += 8) poly([[156, y + 6], [168, y], [180, y + 6], [180, y + 8], [168, y + 2], [156, y + 8]], 'rgba(240,180,0,.07)');
+      c.restore();
+      /* 선반 앞 통로(조립공이 다니는 길) */
+      px(0, 166 + E, 184, 12, '#2c2f36'); px(0, 166 + E, 184, 1, '#4a4d57'); for (x = 0; x < 184; x += 23) px(x, 167 + E, 1, 11, '#262830'); for (k = 0; k < 40; k++) px(Math.floor(rnd() * 184), 167 + E + Math.floor(rnd() * 11), 1, 1, rnd() < 0.5 ? '#353841' : '#25272d'); px(154, 166 + E, 30, 1, '#f0b400'); for (x = 154; x < 184; x += 6) px(x, 166 + E, 3, 1, BK);
+      [24, 74, 124].forEach(function (lx) { poly([[lx - 2, 17], [lx + 3, 17], [lx + 18, 72], [lx - 17, 72]], 'rgba(255,236,170,.055)'); poly([[lx - 1, 17], [lx + 2, 17], [lx + 9, 72], [lx - 8, 72]], 'rgba(255,240,190,.05)'); });
+      c = g;
+    }
+
+    /* ---------- 기계 셋: 저마다 꼴이 다르다(유압 프레스의 문틀 · 로봇 팔 용접 · 도장 부스). 빛은 왼쪽 위에서 ---------- */
+    function puff(x, y, col) { parts.push({ x: x, y: y, vx: (Math.random() - 0.5) * 6, vy: -8 - Math.random() * 6, life: 0.7, max: 0.7, col: col, sz: 2 }); }
+    function thick(x0, y0, x1, y1, w, col) { var n = Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))) || 1; for (var k = 0; k <= n; k++) px(x0 + (x1 - x0) * k / n - w / 2, y0 + (y1 - y0) * k / n - w / 2, w, w, col); }
+    function prog(x, y, w, s) { px(x - 1, y - 1, w + 2, 4, BK); px(x, y, w, 2, '#2a2c33'); var f = s.q > 0 ? Math.min(1, s.p) : 0; px(x, y, Math.round(w * f), 2, s.blocked ? '#c0392b' : '#ffd95a'); if (f > 0) px(x, y, Math.round(w * f), 1, s.blocked ? '#e8684e' : '#fff6c8'); }
+    function lamp(x, y, s, act) { px(x - 1, y - 1, 4, 4, BK); px(x, y, 2, 2, s.blocked ? '#ffd95a' : act ? (Math.floor(T * 3) % 2 ? '#7fe08a' : '#4aa85a') : '#55564e'); }
+    function glow(x, y, w, h, on) { if (!on) return; c.fillStyle = Math.floor(T * 8) % 2 ? '#ffd95a' : '#fff6c8'; [[x - 2, y - 2, 1, 1], [x + w + 1, y - 2, -1, 1], [x - 2, y + h + 1, 1, -1], [x + w + 1, y + h + 1, -1, -1]].forEach(function (p) { c.fillRect(Math.min(p[0], p[0] + p[2] * 4), p[1], 5, 1); c.fillRect(p[0], Math.min(p[1], p[1] + p[3] * 4), 1, 5); }); }
+    function press(x, s, dt) {
+      var act = s.q > 0 && !s.blocked, sp = s.boost > 0 ? 3 : 1, ph = act ? (T * 1.5 * sp) % 1 : 0, py = ph < 0.22 ? ph / 0.22 * 19 : ph < 0.36 ? 19 : 19 * (1 - (ph - 0.36) / 0.64);
+      [2, 30].forEach(function (d) { px(x + d - 1, 22, 8, 50, BK); px(x + d, 23, 6, 48, '#5a6a7c'); px(x + d, 23, 2, 48, '#93a3b5'); px(x + d + 4, 23, 2, 48, '#3a4756'); for (var yy = 30; yy < 70; yy += 9) px(x + d + 2, yy, 2, 1, '#3a4756'); px(x + d - 2, 70, 10, 3, BK); px(x + d - 1, 70, 8, 2, '#6a707c'); });
+      px(x + 16, 22, 6, 10 + py, BK); px(x + 17, 22, 4, 10 + py, '#d5d9e0'); px(x + 17, 22, 1, 10 + py, '#ffffff'); px(x + 20, 22, 1, 10 + py, '#8f949e');
+      px(x + 8, 22, 2, 10 + py, '#30343c'); px(x + 28, 22, 2, 10 + py, '#30343c');
+      px(x + 8, 32 + py, 22, 9, BK); px(x + 9, 33 + py, 20, 7, '#cfcab4'); px(x + 9, 33 + py, 20, 1, '#ffffff'); px(x + 9, 38 + py, 20, 2, '#8a8678'); px(x + 11, 35 + py, 2, 2, '#f0b400'); px(x + 25, 35 + py, 2, 2, '#f0b400');
+      px(x - 1, 13, 40, 11, BK); px(x, 14, 38, 9, '#4a5969'); px(x, 14, 38, 2, '#93a3b5'); px(x, 21, 38, 2, '#f0b400'); for (var k = 0; k < 38; k += 6) px(x + k, 21, 3, 2, BK); [2, 35].forEach(function (d) { px(x + d, 17, 1, 1, '#c5d0dc'); });
+      px(x + 12, 6, 14, 8, BK); px(x + 13, 7, 12, 7, '#6a7a8c'); px(x + 13, 7, 3, 7, '#a5b5c7'); px(x + 22, 7, 3, 7, '#3a4756'); px(x + 13, 7, 12, 1, '#c5d0dc');
+      thick(x + 26, 9, x + 33, 12, 1, '#c0392b'); px(x + 33, 12, 1, 3, '#c0392b');
+      px(x + 29, 36, 9, 14, BK); px(x + 30, 37, 7, 12, '#30343c'); px(x + 30, 37, 7, 1, '#55585f'); px(x + 31, 39, 5, 5, '#f1f0e6'); px(x + 33, 41, 1, 1, BK); px(x + (act && ph < 0.36 ? 35 : 32), 40, 1, 1, '#c0392b'); px(x + 31, 46, 2, 2, act ? '#7fe08a' : '#3a5a40'); px(x + 34, 46, 2, 2, '#c0392b');
+      prog(x + 5, 17, 28, s); lamp(x + 18, 2, s, act); glow(x - 1, 5, 40, 68, s.boost > 0);
+      if (act && ph >= 0.22 && ph < 0.22 + dt * 1.5 * sp + 0.02) { puff(x + 8, 60, 'rgba(230,230,230,.55)'); puff(x + 28, 60, 'rgba(230,230,230,.55)'); c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(x + 8, 58, 22, 4); }
+    }
+    function welder(x, s) {
+      var act = s.q > 0 && !s.blocked, sp = s.boost > 0 ? 3 : 1, sw = act ? Math.sin(T * 4 * sp) * 3 : 0, dip = act ? Math.abs(Math.sin(T * 4 * sp)) * 2 : -4, k;
+      px(x + 13, 62, 2, 11, '#3c4048'); px(x + 36, 62, 2, 11, '#3c4048'); px(x + 12, 72, 4, 1, '#6a707c'); px(x + 35, 72, 4, 1, '#6a707c');      /* 가림막 다리 */
+      px(x + 13, 26, 25, 37, BK); c.fillStyle = '#2e2218'; c.fillRect(x + 14, 27, 23, 35); c.fillStyle = 'rgba(255,150,60,.12)'; c.fillRect(x + 14, 27, 23, 35); px(x + 14, 27, 23, 1, '#8a623a'); for (k = 20; k < 37; k += 6) px(x + k, 28, 1, 34, 'rgba(0,0,0,.3)');
+      poly([[x + 15, 21], [x + 37, 21], [x + 32, 14], [x + 20, 14]], BK); poly([[x + 17, 20], [x + 35, 20], [x + 31, 15], [x + 21, 15]], '#6a707c'); px(x + 21, 15, 10, 1, '#b9bec8'); px(x + 24, 9, 5, 6, BK); px(x + 25, 9, 3, 6, '#55585f'); px(x + 25, 9, 1, 6, '#8f949e');
+      px(x + 31, 42, 7, 30, BK); px(x + 32, 43, 5, 28, '#4a8a5a'); px(x + 32, 43, 2, 28, '#7ac08a'); px(x + 36, 43, 1, 28, '#2a5a3a'); px(x + 33, 39, 3, 4, '#8f949e'); px(x + 32, 50, 5, 2, '#f1f0e6');
+      px(x + 1, 46, 14, 27, BK); px(x + 2, 47, 12, 25, '#55585f'); px(x + 2, 47, 12, 2, '#8f949e'); px(x + 11, 49, 3, 23, '#3c4048'); for (k = 53; k < 68; k += 3) px(x + 4, k, 6, 1, '#30343c'); px(x + 4, 50, 2, 1, act ? '#7fe08a' : '#3a5a40'); px(x + 7, 50, 2, 1, '#f0b400');
+      var sx = x + 8, sy = 43, ex = x + 13 + sw * 0.4, ey = 27, wx = x + 23 + sw, wy = 44 + dip, tx = wx + 1, ty = 57 + dip;
+      px(sx - 4, 41, 9, 6, BK); px(sx - 3, 42, 7, 4, '#c66f28'); px(sx - 3, 42, 7, 1, '#ffb878');
+      thick(sx, sy, ex, ey, 6, BK); thick(sx, sy, ex, ey, 4, '#e98a3c'); thick(sx - 1, sy, ex - 1, ey, 1, '#ffc890');
+      thick(ex, ey, wx, wy, 5, BK); thick(ex, ey, wx, wy, 3, '#e98a3c'); thick(ex, ey - 1, wx, wy - 1, 1, '#ffc890');
+      [[sx, sy], [ex, ey], [wx, wy]].forEach(function (p) { px(p[0] - 3, p[1] - 3, 6, 6, BK); px(p[0] - 2, p[1] - 2, 4, 4, '#30343c'); px(p[0] - 1, p[1] - 1, 2, 2, '#8f949e'); });
+      thick(wx, wy, tx, ty, 3, BK); thick(wx, wy, tx, ty, 1, '#d5d9e0'); px(tx - 1, ty, 3, 3, BK); px(tx, ty, 1, 2, '#f0b400');
+      if (act && dip > 1 && Math.floor(T * 16) % 2) { px(tx - 1, ty + 2, 3, 3, '#fff6c8'); px(tx - 3, ty + 3, 7, 1, '#ffd95a'); px(tx, ty, 1, 7, '#ffd95a'); c.fillStyle = 'rgba(255,220,120,.2)'; c.fillRect(x + 14, 44, 23, 19);
+        if (Math.random() < 0.7) parts.push({ x: tx, y: ty + 3, vx: (Math.random() - 0.5) * 46, vy: -12 - Math.random() * 28, g: 110, life: 0.35, max: 0.35, col: Math.random() < 0.5 ? '#ffd95a' : '#ffb347', sz: 1 }); }
+      prog(x + 3, 68, 10, s); lamp(x + 7, 36, s, act); glow(x, 9, 38, 64, s.boost > 0);
+    }
+    function booth(x, s) {
+      var act = s.q > 0 && !s.blocked, sp = s.boost > 0 ? 3 : 1, k;
+      px(x + 25, 9, 9, 13, BK); px(x + 26, 9, 7, 12, '#6a707c'); px(x + 26, 9, 2, 12, '#b9bec8'); px(x + 31, 9, 2, 12, '#3c4048'); px(x + 24, 15, 11, 2, BK); px(x + 25, 15, 9, 1, '#8f949e');
+      [0, 33].forEach(function (d) { px(x + d - 1, 62, 7, 11, BK); px(x + d, 62, 5, 10, '#2e5446'); px(x + d, 62, 1, 10, '#6aa890'); px(x + d - 2, 71, 9, 2, BK); px(x + d - 1, 71, 7, 1, '#6a707c'); });      /* 부스 다리 */
+      px(x - 1, 20, 40, 44, BK); px(x, 21, 38, 42, '#4a7c6a'); px(x, 21, 38, 2, '#8ecbb0'); px(x + 34, 23, 4, 40, '#2e5446'); px(x, 60, 38, 3, '#2e5446'); px(x, 23, 1, 38, '#6aa890');
+      [[2, 24], [35, 24], [2, 58], [35, 58]].forEach(function (r) { px(x + r[0], r[1], 1, 1, '#2a4c3e'); });
+      px(x + 3, 27, 24, 26, BK); px(x + 4, 28, 22, 24, '#0f1a22'); px(x + 4, 28, 22, 1, '#1e3442');
+      px(x + 5, 30, 20, 3, '#8f949e'); px(x + 5, 30, 20, 1, '#d5d9e0'); var nx = act ? Math.round(Math.sin(T * 3 * sp) * 6) : 0; px(x + 13 + nx, 33, 4, 3, '#55585f'); px(x + 14 + nx, 36, 2, 2, '#d5d9e0');
+      if (act) for (k = 0; k < 9; k++) { var dy = (T * 24 * sp + k * 2.3) % 12, dxx = ((k * 5) % 9) - 4; c.fillStyle = 'rgba(106,196,255,' + (0.85 - dy / 15).toFixed(2) + ')'; c.fillRect(Math.round(x + 15 + nx + dxx * dy / 12), Math.round(38 + dy), 1, 1); }
+      if (act) { c.fillStyle = 'rgba(106,196,255,.13)'; c.fillRect(x + 4, 38, 22, 14); }
+      c.fillStyle = 'rgba(255,255,255,.07)'; c.fillRect(x + 6, 29, 3, 22); c.fillRect(x + 11, 29, 1, 22);
+      ['#c0392b', '#f0b400', '#3f7fb8'].forEach(function (col, n) { var ty = 27 + n * 9; px(x + 28, ty, 7, 8, BK); px(x + 29, ty + 1, 5, 6, col); px(x + 29, ty + 1, 1, 6, 'rgba(255,255,255,.35)'); px(x + 29, ty + 1, 5, 1, '#f1f0e6'); });
+      px(x + 2, 54, 30, 10, BK); px(x + 3, 55, 28, 8, '#0a0b0e'); for (k = 4; k < 30; k += 4) px(x + k, 55, 2, 3 + (k % 8 ? 0 : 1), '#1c2a30');
+      prog(x + 4, 24, 22, s); lamp(x + 8, 16, s, act); glow(x - 1, 8, 40, 56, s.boost > 0);
+    }
+    function machines(A, dt) { MXS.forEach(function (mx, n) { c.fillStyle = 'rgba(0,0,0,.22)'; c.fillRect(mx + 4, [10, 14, 24][n], 38, 62 - [10, 14, 24][n]); c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(mx - 1, 73, 40, 2); c.fillRect(mx + 2, 75, 34, 1); });      /* 벽에 지는 그늘 · 바닥 그늘 */
+      press(MXS[0], A.st[0], dt); welder(MXS[1], A.st[1]); booth(MXS[2], A.st[2]); }
+    function item(kind, x, y) {
+      if (kind === 0) { px(x, y + 1, 4, 3, '#8a8a82'); px(x + 1, y, 2, 1, '#b9bdc6'); px(x + 2, y + 2, 2, 2, '#a86a3a'); }
+      else if (kind === 1) { px(x, y + 1, 5, 3, '#9fb4c8'); px(x, y + 1, 5, 1, '#e0ecf6'); px(x, y + 3, 5, 1, '#5f7890'); }
+      else if (kind === 2) { px(x, y, 5, 4, '#b8a070'); px(x, y, 5, 1, '#e6d09c'); px(x, y + 3, 5, 1, '#7a6638'); px(x + 2, y + 1, 1, 2, BK); }
+      else { px(x, y - 1, 6, 5, '#f0b400'); px(x, y - 1, 6, 1, '#ffe07a'); px(x, y + 3, 6, 1, '#b88600'); px(x + 2, y, 2, 3, '#b88600'); }
+    }
+    function belt(A) {
+      var off = Math.floor(T * 12) % 6, x, i, k;
+      px(0, 61, 172, 1, '#7a7d87'); px(0, 62, 172, 6, '#0e0f13'); px(0, 68, 172, 1, '#4a4d57'); px(0, 69, 172, 1, BK);
+      for (x = -6 + off; x < 172; x += 6) { px(x, 64, 3, 3, '#24262c'); px(x, 64, 3, 1, '#34363e'); }
+      for (x = 8; x < 172; x += 20) { px(x, 70, 2, 9, '#3a3d46'); px(x, 70, 1, 9, '#55585f'); px(x - 1, 78, 4, 1, '#55585f'); c.fillStyle = 'rgba(0,0,0,.4)'; c.fillRect(x - 1, 79, 5, 1); }
+      var seg = [[14, 22, 0, true], [68, 76, 1, A.st[0].q > 0 && !A.st[0].blocked], [118, 126, 2, A.st[1].q > 0 && !A.st[1].blocked], [162, 170, 3, A.st[2].q > 0 && !A.st[2].blocked]];
+      seg.forEach(function (s, n) { if (!s[3]) return; var len = s[1] - s[0]; for (k = 0; k < 2; k++) item(s[2], s[0] + ((T * 9 + k * len / 2 + n * 3) % len), 58); });
+      var HEAP = [[-7, 58], [-13, 58], [-10, 54], [-7, 50], [-13, 50], [-10, 46]]; for (i = 0; i < 3; i++) { var q = Math.min(Math.ceil(A.st[i].q / 2), 6), mx = MXS[i]; for (k = 0; k < q; k++) item(i, mx + HEAP[k][0], HEAP[k][1]); }      /* 두 개에 하나씩, 석 줄까지만 보인다 */
+      if (A.st[0].q > 0) item(0, MXS[0] + 12 + ((T * 9) % 12), 58);      /* 프레스 아래를 지나는 것(문틀이라 보인다) */
+    }
+    function truck(o, have, yo) {
+      c.save(); c.beginPath(); c.rect(154, 72, 30, 88 + E); c.clip();
+      var y0 = 92 + E + yo;
+      c.fillStyle = 'rgba(0,0,0,.45)'; c.fillRect(155, y0 + 48, 28, 3);
+      px(154, y0, 29, 44, BK); px(155, y0 + 1, 27, 42, '#3f6f8f'); px(155, y0 + 1, 27, 2, '#7ab4e6'); px(180, y0 + 3, 2, 40, '#2c5578'); px(155, y0 + 40, 27, 3, '#2c5578');
+      px(157, y0 + 5, 23, 33, BK); px(158, y0 + 6, 21, 31, '#111b24'); px(158, y0 + 6, 21, 1, '#1e2e3c'); px(155, y0 + 5, 2, 33, '#5a8ab0'); px(180, y0 + 5, 1, 33, '#5a8ab0');      /* 열린 짐칸 · 양쪽 문 */
+      if (o) for (var k = 0; k < o.n; k++) { var y = y0 + 28 - k * 10; if (k < have) { px(160, y, 17, 9, BK); px(161, y + 1, 15, 7, '#f0b400'); px(161, y + 1, 15, 1, '#ffe07a'); px(161, y + 6, 15, 2, '#b88600'); px(167, y + 2, 3, 4, '#b88600'); px(168, y + 3, 1, 2, '#ffe07a'); } else { var a = 0.45 + 0.3 * Math.sin(T * 4); c.fillStyle = 'rgba(106,196,255,' + a.toFixed(2) + ')'; c.fillRect(160, y, 17, 1); c.fillRect(160, y + 8, 17, 1); c.fillRect(160, y, 1, 9); c.fillRect(176, y, 1, 9); } }
+      px(154, y0 + 44, 29, 3, '#8f949e'); px(154, y0 + 44, 29, 1, '#d5d9e0'); px(155, y0 + 45, 4, 2, '#ff5a4a'); px(178, y0 + 45, 4, 2, '#ff5a4a'); px(164, y0 + 45, 9, 2, '#f1f0e6');
+      px(157, y0 + 47, 6, 5, BK); px(174, y0 + 47, 6, 5, BK); px(158, y0 + 48, 4, 1, '#3c4048'); px(175, y0 + 48, 4, 1, '#3c4048');
+      c.restore();
+    }
+    function draw(dt) {
+      T += dt; var A = line.A(), S = board.S(), k, x, y;
+      var rows = Math.max(3, Math.ceil(S.cells.length / 5)); if (rows !== ROWS || !bg) { ROWS = rows; E = (rows - 3) * 26; bg = null; cv.width = 736; cv.height = (178 + E) * 4; backdrop(); }
+      g.setTransform(4, 0, 0, 4, 0, 0); g.imageSmoothingEnabled = false; c = g;
+      g.drawImage(bg, 0, 0);
+      /* 등 아래 떠다니는 먼지 */
+      for (k = 0; k < 6; k++) { var dx = [24, 74, 124][k % 3] - 8 + ((k * 7 + T * (2 + k % 3)) % 16), dy = 20 + ((k * 17 + T * (3 + k % 2)) % 48); c.fillStyle = 'rgba(255,236,170,' + (0.12 + 0.12 * Math.sin(T * 2 + k)).toFixed(2) + ')'; c.fillRect(Math.round(dx), Math.round(dy), 1, 1); }
+      /* 투입구: 다리 달린 깔때기, 위로 고철이 수북 */
+      px(4, 44, 2, 28, '#3c4048'); px(18, 44, 2, 28, '#3c4048'); px(4, 44, 1, 28, '#6a707c');
+      [[5, 30, 3, 0], [9, 28, 4, 1], [14, 29, 4, 0], [11, 31, 3, 2], [7, 32, 2, 1]].forEach(function (p) { px(p[0], p[1], p[2], 3, ['#8a8a82', '#a8623a', '#b9bdc6'][p[3]]); });
+      px(1, 33, 22, 3, BK); px(2, 34, 20, 1, '#d5d9e0');
+      spr(2, 36, ['kkkkkkkkkkkkkkkkkkkk', 'kLhHHHHHHHHHHHHHHdDk', '.kLhHHHHHHHHHHHHdDk.', '..kLhHHHHHHHHHHdDk..', '...kLhHHHHHHHHdDk...', '....kLhHHHHHHdDk....', '.....kLhHHHHdDk.....', '......kkkkkkkk......'], { k: BK, L: '#b9bec8', h: '#8f949e', H: '#6a707c', d: '#4a4d57', D: '#30343c' });
+      px(8, 44, 8, 10, BK); px(9, 44, 6, 9, '#4a4d57'); px(9, 44, 2, 9, '#8f949e'); px(13, 44, 2, 9, '#30343c');
+      for (k = 0; k < 2; k++) { var fy = (T * 22 + k * 4) % 8; item(0, 10 + k, Math.min(58, 52 + fy)); }
+      belt(A); machines(A, dt);
+      /* 내려보내는 길 */
+      px(170, 56, 14, 5, BK); px(171, 57, 13, 3, '#8f949e'); px(171, 57, 13, 1, '#d5d9e0'); px(170, 61, 1, 23, '#f0b400'); px(183, 61, 1, 23, '#f0b400'); px(171, 61, 12, 23, '#0e0f13');
+      for (y = 62; y < 84; y += 4) px(171, y + Math.floor(T * 14) % 4, 12, 1, '#1c1e24');
+      if (A.st[2].q > 0) { var by = (T * 26) % 22; px(173, 61 + by, 8, 7, BK); px(174, 62 + by, 6, 5, '#f0b400'); px(174, 62 + by, 6, 1, '#ffe07a'); px(174, 66 + by, 6, 1, '#b88600'); }
+      c.save(); c.translate(0, 18);
+      if (S.cells.every(function (v) { return v; }) && Math.floor(T * 3) % 2) { px(160, 68, 4, 3, '#ffd95a'); c.fillStyle = 'rgba(255,217,90,.2)'; c.fillRect(157, 65, 10, 9); }
+      /* 팔레트와 상자 */
+      var o = S.order, cnt = {}; S.cells.forEach(function (v) { if (v) cnt[v] = (cnt[v] || 0) + 1; });
+      S.cells.forEach(function (lv, n) {
+        var bx = 4 + (n % 5) * 29, by2 = 69 + Math.floor(n / 5) * 26, want = !!(o && lv === o.lv), h = hop[n] || 0;
+        if (h > 0) hop[n] = h - dt;
+        var p = want ? ['#6ac4ff', '#c4e8ff', '#2c6c9c', '#1a4466'] : ['#a87a48', '#d0a66c', '#6e4c28', '#4a3016'];
+        px(bx, by2 + 20, 26, 1, p[1]); px(bx, by2 + 21, 26, 2, p[0]); [0, 9, 18].forEach(function (d) { px(bx + d + 7, by2 + 21, 1, 2, p[2]); }); px(bx, by2 + 23, 26, 1, p[3]);
+        [0, 11, 22].forEach(function (d) { px(bx + d, by2 + 23, 4, 2, p[2]); px(bx + d, by2 + 25, 4, 1, p[3]); });
+        if (want) { c.fillStyle = 'rgba(106,196,255,' + (0.1 + 0.08 * Math.sin(T * 4)).toFixed(2) + ')'; c.fillRect(bx - 1, by2 + 18, 28, 9); }
+        if (!lv) return;
+        var up = h > 0 ? Math.round(Math.sin(h / 0.3 * Math.PI) * 5) : 0, kind = (lv - 1) % BOXART.count;
+        BOXART.draw(g, kind, bx + (kind === 1 ? 4 : kind === 0 ? 1 : 0), by2 - 2 - up);
+        if (h > 0.18) { c.fillStyle = 'rgba(255,255,255,.4)'; c.fillRect(bx + 2, by2 - 1 - up, 22, 20); }
+        var two = lv > 9; px(bx, by2, two ? 9 : 5, 7, 'rgba(12,12,16,.82)'); px(bx, by2 + 7, two ? 9 : 5, 1, cnt[lv] > 1 ? '#f0b400' : '#55585f'); num(lv, bx + 1, by2 + 1, cnt[lv] > 1 ? '#ffd95a' : '#f4f0dc');
+      });
+      /* 트럭: 실으면 떠났다가 돌아온다 */
+      var yo = 0; if (shipT > 0) { shipT -= dt; yo = shipT > 0.9 ? (1.6 - shipT) / 0.7 * 64 : shipT > 0.6 ? 64 : shipT / 0.6 * 64; }
+      var have = o ? Math.min(o.n, cnt[o.lv] || 0) : 0;
+      truck(shipT > 0.6 ? { n: 3, lv: 1 } : o, shipT > 0.6 ? 3 : have, yo);
+      /* 주문판 */
+      if (o) {
+        var ready = have >= o.n && shipT <= 0, kk = (o.lv - 1) % BOXART.count;
+        px(155, 73, 27, 16, ready && Math.floor(T * 3) % 2 ? '#ffd95a' : BK); px(156, 74, 25, 14, '#1c2a36'); px(156, 74, 25, 1, '#2c4256'); px(160, 72, 1, 2, '#55585f'); px(176, 72, 1, 2, '#55585f');
+        if (!mini[kk]) { var m = document.createElement('canvas'); m.width = 26; m.height = 22; BOXART.draw(m.getContext('2d'), kk, 0, 0); mini[kk] = m; }
+        g.drawImage(mini[kk], 157, 75, 13, 11); spr(171, 80, ['#.#', '.#.', '#.#'], { '#': '#cfcab4' }); num(o.n, 175, 79, '#6ac4ff');
+      }
+      c.restore();
+      /* 조립공(샀을 때만): 선반 앞 통로를 걸어 합칠 칸 아래로 가서 손본다. 일이 없으면 왼쪽에서 쉰다 */
+      if (S.auto > 0) {
+        if (!S.autoOn) { lift.tx = 8; lift.work = 0; }
+        if (lift.work > 0) lift.work -= dt; else if (Math.abs(lift.x - lift.tx) < 1) lift.tx = 8;
+        var spd = 60 + S.auto * 20, mv = Math.abs(lift.x - lift.tx) > 1, dir = lift.tx < lift.x ? -1 : 1; if (mv) lift.x += Math.max(-spd * dt, Math.min(spd * dt, lift.tx - lift.x));
+        var lx = Math.round(lift.x), wk = lift.work > 0 && !mv, st = mv ? Math.floor(T * 8) % 2 : 0, pal = { y: '#ffd95a', Y: '#c88a00', s: '#f1c9a0', e: BK, o: '#e8762a', w: '#f1f0e6', p: '#3c4a5a', k: BK };
+        c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(lx - 3, 177 + E, 7, 1);
+        spr(lx - 3, 165 + E, ['.yyyy.', 'yyyyyY', '.ssss.', wk ? '.ssss.' : dir < 0 ? '.es.s.' : '.s.se.', '.ssss.', 'oowwoo', 'oooooo', 'oowwoo', '.pppp.', st ? '.p..p.' : '.pp.p.', st ? 'kk..p.' : '.p..kk', st ? '....kk' : 'kk....'], pal);
+        if (!S.autoOn && !mv) spr(lx + 4, 160 + E - Math.floor(T * 2) % 2, ['###', '.#.', '###'], { '#': '#a8a290' });      /* 쉬는 중 */
+        if (wk) { px(lx + 3, 168 + E - Math.floor(T * 10) % 2, 1, 3, '#f1c9a0'); px(lx + 3, 166 + E - Math.floor(T * 10) % 2, 2, 2, '#b9bec8');      /* 든 연장 */
+          var cx2 = 4 + (lift.cell % 5) * 29 + 13, cy2 = 18 + 69 + Math.floor(lift.cell / 5) * 26 + 10; if (Math.floor(T * 10) % 2) { px(cx2 - 2, cy2, 5, 1, '#fff6c8'); px(cx2, cy2 - 2, 1, 5, '#fff6c8'); } }
+      }
+      /* 배차원(샀을 때만): 상차장 앞에 서 있다가 주문이 차면 잠깐 뒤 실어 보낸다 */
+      if (S.driver > 0) {
+        var wv = S.wait > 0 && Math.floor(T * 6) % 2; c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(144, 177 + E, 7, 1);
+        spr(144, 165 + E, ['.bbbb.', 'bbbbbB', '.ssss.', '.s.se.', '.ssss.', wv ? 'vvwwvs' : 'vvwwvv', 'vvvvvv', 'vvwwvv', '.pppp.', '.p..p.', '.p..p.', 'kk..kk'], { b: '#3f7fb8', B: '#275a8c', s: '#f1c9a0', e: BK, v: '#3f7fb8', w: '#ffd95a', p: '#3c4a5a', k: BK });
+        if (!S.driverOn) spr(151, 160 + E - Math.floor(T * 2) % 2, ['###', '.#.', '###'], { '#': '#a8a290' });
+        if (S.wait > 0) { var wf = Math.min(1, S.wait / board.driverWait()); px(155, 108, 27, 4, BK); px(156, 109, 25, 2, '#2a2c33'); px(156, 109, Math.round(25 * wf), 2, '#6ac4ff'); }
+      }
+      /* 합쳐지러 미끄러져 가는 짝 */
+      ghosts = ghosts.filter(function (gh) { gh.t -= dt; if (gh.t <= 0) return false; var u = 1 - gh.t / 0.16, fx0 = 4 + (gh.from % 5) * 29, fy0 = 18 + 69 + Math.floor(gh.from / 5) * 26, tx0 = 4 + (gh.to % 5) * 29, ty0 = 18 + 69 + Math.floor(gh.to / 5) * 26; c.globalAlpha = 1 - u * 0.5; BOXART.draw(g, gh.kind, Math.round(fx0 + (tx0 - fx0) * u), Math.round(fy0 - 2 + (ty0 - fy0) * u - Math.sin(u * Math.PI) * 4)); c.globalAlpha = 1; return true; });
+      /* 튀는 것들: 불꽃 · 김 · 합칠 때 반짝이 */
+      parts = parts.filter(function (p) { p.life -= dt; if (p.life <= 0) return false; p.vy += (p.g || 0) * dt; p.x += p.vx * dt; p.y += p.vy * dt; c.globalAlpha = Math.min(1, p.life / p.max * 1.5); px(p.x, p.y, p.sz, p.sz, p.col); c.globalAlpha = 1; return true; });
+      if (shipT > 0.5 && shipPay) { c.font = '7px Jua, sans-serif'; c.textAlign = 'center'; c.fillStyle = BK; c.fillText(shipPay, 168.5, 114 - (1.6 - shipT) * 12 + 0.5); c.fillStyle = '#ffd95a'; c.fillText(shipPay, 168, 114 - (1.6 - shipT) * 12); }
+    }
+    cv.addEventListener('pointerdown', function (e) {
+      var r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 184, y = (e.clientY - r.top) / r.height * (178 + E);
+      if (y < 84) { if (x < 28) line.boost(-1); else for (var i = 0; i < 3; i++) if (x >= MXS[i] - 6 && x <= MXS[i] + 42) line.boost(i); return; }
+      y -= 18;
+      if (x >= 152) { board.ship(); return; }
+      var col = Math.floor((x - 2) / 29), row = Math.floor((y - 67) / 26); if (col >= 0 && col < 5 && row >= 0 && row < ROWS && row * 5 + col < board.S().cells.length) board.tap(row * 5 + col);
+    });
+    function hopAt(i) {
+      hop[i] = 0.3; var bx = 4 + (i % 5) * 29 + 13, by = 18 + 69 + Math.floor(i / 5) * 26 + 9;
+      for (var k = 0; k < 8; k++) { var a = k * Math.PI / 4; parts.push({ x: bx, y: by, vx: Math.cos(a) * 28, vy: Math.sin(a) * 28 - 8, g: 40, life: 0.4, max: 0.4, col: k % 2 ? '#ffd95a' : '#fff6c8', sz: k % 2 ? 2 : 1 }); }
+    }
+    return { draw: draw, rect: function (i) { return [4 + (i % 5) * 29 + 13, 18 + 69 + Math.floor(i / 5) * 26 + 10, 184, 178 + E]; }, goTo: function (i) { lift.tx = 4 + (i % 5) * 29 + 13; lift.cell = i; lift.work = 0.9; }, slide: function (to, from, lv) { ghosts.push({ to: to, from: from, kind: (lv - 1) % BOXART.count, t: 0.16 }); }, hop: hopAt, drop: function (i) { hop[i] = 0.3; }, shipped: function (pay) { shipT = 1.6; shipPay = '+' + pay; } };
+  }
+
+  var z3 = null, z3Raf = 0, z3Last = 0, Z3_NAMES = ['press', 'weld'];
+  var z3Line = {
+    A: function () {
+      var st = C.lineStations(state), feed = st[0].rate, flowing = !!state.board, p = (state.feed || 0) % 1, boost = (state.lineBoost || 0) > 0;
+      function pile(own, up) { return own < up - 1e-12 ? Math.max(4, Math.min(12, Math.round((up / own - 1) * 40) + 4)) : 2; }
+      return { st: [
+        { q: pile(st[1].rate, feed), p: p, blocked: false, boost: boost && st[1].slow ? 1 : 0 },
+        { q: pile(st[2].rate, Math.min(feed, st[1].rate)), p: p, blocked: false, boost: boost && st[2].slow ? 1 : 0 },
+        { q: flowing ? 2 : 0, p: p, blocked: false, boost: 0 }] };
+    },
+    boost: function (i) { var r = C.boostLine(state, i < 0 ? 'feed' : Z3_NAMES[i] || ''); if (r.ok) { sfx('tab'); buzz(10); } }
+  };
+  var z3Board = {
+    S: function () {
+      var ct = state.contract, m = C.mods(state);
+      return { cells: (state.board || []).slice(0, C.boardSize(state)), order: ct ? { lv: ct.level, n: ct.need } : null,
+        auto: m.autoline > 0 ? m.autoline : 0, autoOn: C.autoEvents(state, 2) && C.workerOn(state, 'merge'),
+        driver: m.dispatch > 0 ? m.dispatch : 0, driverOn: !(state.autoOff && state.autoOff[2]) && C.workerOn(state, 'ship'), wait: ct && ct.wait > 0 ? ct.wait : 0 };
+    },
+    driverWait: function () { return C.dispatchWait(state); },
+    ship: function () { var b = $('contract-fill'); if (b && !$('contract').hidden && !b.disabled) b.click(); },
+    tap: function (i) { z3Merge(i); }
+  };
+  /** 선반의 i 칸을 눌렀다: 같은 단계의 짝이 모두 합쳐진다(규칙은 예전 그대로). 짝이 미끄러져 와 합쳐지고 통 튄다. */
+  function z3Merge(i) {
+    var lv = (state.board || [])[i], res = C.mergeBox(state, i);
+    if (!res.ok) return;
+    res.merges.forEach(function (m) { if (z3) { z3.slide(m.at, m.from, lv); z3.hop(m.at); } });
+    if (res.gain > 0) toast('+' + fmt(res.gain));
+    if (res.best && res.level >= 4) log(C.boxName(res.level) + ' 상자가 처음 나왔다.', 'good');
+    sfx(res.best ? 'goal' : res.count >= 4 ? 'upgrade' : 'buy'); buzz(res.best ? 30 : Math.min(40, 10 + res.count * 4)); Store.save(); render();
+  }
+  function z3Loop(now) {
+    z3Raf = 0;
+    var cv = $('z3-cv'); if (!cv || cv.offsetParent === null) return;      // 안 보이면 멈춘다(다시 보이면 render 가 깨운다)
+    try { if (!z3) z3 = mkScene('z3', z3Line, z3Board); z3.draw(Math.min(0.1, Math.max(0, (now - z3Last) / 1000))); } catch (e) { /* 그림이 없어도 아래 줄로 게임은 된다 */ }
+    z3Last = now; z3Raf = requestAnimationFrame(z3Loop);
+  }
+  function z3Wake() { if (!z3Raf && typeof requestAnimationFrame === 'function') { z3Last = performance.now(); z3Raf = requestAnimationFrame(z3Loop); } }
+  /** 라인 이름표와 화면 테스트가 읽는 값. */
+  function z3Chips() {
+    var box = $('z3-chips'), cv = $('z3-cv'); if (!box || !cv) return;
+    var st = C.lineStations(state), line = C.lineInfo(state), p = Math.round(((state.feed || 0) % 1) * 100);
+    st.forEach(function (x, i) { var e = box.children[i], text = x.name + '|' + (x.slow ? '▼ 가장 느림 ' : '초당 ') + x.rate.toFixed(2); if (e._t !== text) { e._t = text; e.className = x.slow ? 'slow' : ''; e.firstChild.textContent = x.name; e.lastChild.textContent = (x.slow ? '▼ 가장 느림 ' : '초당 ') + x.rate.toFixed(2); } e.style.backgroundImage = x.slow ? 'linear-gradient(90deg,#17180f ' + p + '%,transparent ' + p + '%)' : ''; });
+    var pe = box.children[3], pt = '값 ×' + fmt((1 + line.levels) * line.milestone); if (pe._t !== pt) { pe._t = pt; pe.firstChild.textContent = '도장'; pe.lastChild.textContent = pt; }
+    var cells = z3Board.S().cells, pairs = C.mergeable(state);
+    cv.setAttribute('data-cells', cells.length); cv.setAttribute('data-boxes', cells.filter(function (v) { return v; }).length); cv.setAttribute('data-pair', pairs.length ? pairs[0] : -1);
+    cv.setAttribute('aria-label', '공장 · 선반에 상자 ' + cells.filter(function (v) { return v; }).length + '개, 합칠 수 있는 상자 ' + pairs.length + '개');
+  }
+  /** 개조 칸 위의 일꾼 켬 · 끔: 산 일꾼만 보인다. */
+  function z3Workers(show) {
+    var box = $('z3-workers'); if (!box) return;
+    var m = C.mods(state), list = [['merge', '조립공', m.autoline > 0], ['ship', '배차원', m.dispatch > 0]], any = false;
+    list.forEach(function (w, i) { var b = box.children[i], on = C.workerOn(state, w[0]); b.hidden = !w[2]; if (w[2]) any = true; b.textContent = w[1] + (on ? ' ON' : ' OFF'); b.setAttribute('aria-pressed', String(on)); });
+    box.hidden = !(show && any);
+  }
   function renderBoard() {
+    z3Chips(); z3Wake(); return;      // 5.3.0 칸 격자는 장면으로 바뀌었다(아래는 옛 격자 그리기: 남겨 두되 부르지 않는다)
     var mb = $('mboard'); if (!mb || !mb.children.length) return;
     drawBoardTop();
     var board = state.board || [], can = {}, size = C.boardSize(state), held = C.heldLevel(state); C.mergeable(state).forEach(function (i) { can[i] = true; });
@@ -3965,7 +4337,7 @@
   }
   function wireContract() {
     $('contract-fill').addEventListener('click', function () {
-      var r = C.fillContract(state);
+      var r = C.fillContract(state); if (r.ok && z3) z3.shipped(fmt(r.gain));
       if (!r.ok) return;
       if (r.first) { toast('새 거래처 · ' + r.name); log('새 거래처가 생겼다. ' + r.name + '. 도감에 적었다.', 'good'); sfx('goal'); }
       else { log(r.name + '에 납품했다. 물자 ' + fmt(r.gain) + ' 확보.', 'good'); sfx('machine'); }
@@ -4257,13 +4629,14 @@
     $('guard').hidden = !(tab === 'z5' && open);
     $('rows-z6').hidden = !(tab === 'z6' && open);
     $('tower').hidden = !(tab === 'z6' && open);
+    z3Workers(tab === 'z2' && open && pane === 'up');
     $('settle').hidden = !(tab === 'z6' && open && pane === 'up');
     if (tab === 'z6' && open && pane === 'up') renderSettle();
     var aeZone = /^z\d$/.test(tab) ? Number(tab.slice(1)) : -1, aeShow = aeZone >= 1 && aeZone <= state.zone && C.autoOn(state, aeZone);
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
       $('auto-ev').checked = C.autoEvents(state, aeZone);
-      setText($('auto-ev-text'), ['', '단골 주문 자동', '조립공 · 의뢰 넘기기', '역무원 · 표류·특별 화물 자동', '연구 조교 · 간호사', '초소장 · 행렬 자동', '송신 기사 · 주파수·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
+      setText($('auto-ev-text'), ['', '단골 주문 자동', '조립공 · 배차원', '역무원 · 표류·특별 화물 자동', '연구 조교 · 간호사', '초소장 · 행렬 자동', '송신 기사 · 주파수·무전 자동'][aeZone] + ' · 효율 ' + Math.round(C.autoShare(state, aeZone) * 100) + '%');
     }
     $('rows-wall').hidden = tab !== 'wall';
     $('wall-now').hidden = tab !== 'wall';
@@ -4450,7 +4823,8 @@
         var r = rows.machines[d.id], lv = state.machines[d.id] || 0, q = qtyFor(C.maxMachines(state, d.id), d.max - lv), cost = C.machineCost(state, d.id, q);
         setText(r.count, (d.id === 'paint' ? '' : 'Lv ') + lv + ' / ' + d.max);      // 도장 라인은 별 딱지가 있어 자리가 좁다(1구역 시설처럼 숫자만)
         // 줄마다 "지금 어떤가 → 사면 어떻게 되나"를 적는다
-        setText(r.info, d.id === 'feed' ? (lv < d.max ? line.feed.toFixed(2) + '초 → ' + (line.feed * C.FEED_STEP).toFixed(2) + '초' : line.feed.toFixed(2) + '초마다')
+        var stn = d.id === 'feed' || d.id === 'press' || d.id === 'weld' ? C.lineStations(state).filter(function (x) { return x.id === d.id; })[0] : null;
+        setText(r.info, stn ? '초당 ' + stn.rate.toFixed(2) + (lv < d.max ? ' → ' + (stn.rate / C.FEED_STEP).toFixed(2) : '') + (stn.slow ? ', 가장 느림' : '')
           : d.id === 'forge' ? C.boxName(line.spawn) + (lv < d.max ? ' → ' + C.boxName(line.spawn + 1) : '')
           : '×' + fmt((1 + lv) * line.milestone) + (lv < d.max ? ' · 레벨당 +' + fmt(line.milestone) : ''));
         if (d.id === 'paint') setMile(r, lv, q, cost <= state.supplies, C.LINE_MILESTONES);
@@ -4466,10 +4840,10 @@
       var fullB = C.boardFull(state);
       /* 3.8.4: 글을 덜어 냈다. 횟수('손으로 N번 합침')는 목표에 이미 나오고, 자동 합치기의 박자는 글이 아니라 막대로 보여 준다.
          누르는 법은 처음 몇 번만 알려 주고, 그 뒤로는 판이 가득 찼을 때만 한 줄 적는다 */
-      setText($('line-note'), fullB ? '상자가 가득 찼어요 · 눌러서 자리를 내세요' : (state.mergesAll || 0) < 10 ? '상자를 누르면 같은 상자끼리 합쳐져요' : '');
+      setText($('line-note'), fullB ? '선반이 가득 찼어요. 새 상자는 바로 출하 중이에요(값이 낮아요)' : (state.mergesAll || 0) < 10 ? '상자를 누르면 같은 상자끼리 합쳐져요' : '');
       $('line').setAttribute('data-merges', state.mergesRun || 0);      // 화면 테스트가 읽는다(글에서 횟수를 뺐다)
       // 3.8.5 조립공: 1구역 순찰조와 같은 틀(글 한 줄 + .autobar, fill 이 부드럽게 채운다)
-      var aOn = !!autoM && C.autoEvents(state, 2);
+      var aOn = !!autoM && C.autoEvents(state, 2) && C.workerOn(state, 'merge');
       $('merge-bar').hidden = !aOn;
       setText($('merge-note'), !autoM ? '개조에서 조립공을 사요' : !aOn ? '조립공이 쉬고 있어요' : C.boardRoom(state) > C.AUTO_MERGE_ROOM ? '조립공 · 상자가 차면 일해요' : '조립공 · ' + secs(C.autoMergeSeconds(state)) + '마다');
       fill($('merge-bar'), aOn ? state.autoMerge || 0 : 0);
@@ -5040,6 +5414,7 @@
         toast('도감 · 새 좀비 〈' + f.name + '〉'); log('처음 보는 것이 무리에 섞여 있었다. 〈' + f.name + '〉 ' + C.ZOMBIE_RARITIES[f.rarity] + '.', 'story');
         if (f.rarity === 'rare' || f.rarity === 'epic') sfx('goal');
       });
+      if (z3) { try { if (ev.type === 'box-in') z3.drop(ev.at); else if (ev.type === 'box-merge') { z3.goTo(ev.at); z3.slide(ev.at, ev.from, ev.level - 1); z3.hop(ev.at); } else if (ev.type === 'contract-filled') z3.shipped(fmt(ev.gain)); } catch (e) { /* 그림만 건너뛴다 */ } }
       switch (ev.type) {
         case 'defended':
           heldLogged = false;

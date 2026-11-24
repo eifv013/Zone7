@@ -298,25 +298,24 @@ def run_case(browser, name, size, state, mode):
         # 3구역: 기계가 없을 때의 안내 → 병목 올리기 → 직접 사서 병목이 바뀌는지 → 한 화면에 들어오는지
         tap('[data-mview-set=manage]'); tap('[data-tab=z2]')
         if not page.locator('#line').is_visible(): problems.append('3구역 탭에 생산 라인 칸이 없다')
-        # 3.5.0 3구역: 판(30칸 가운데 20칸이 보인다) → 상자가 들어오고 → 눌러 합치면 덤 → 줄 셋을 사면 판에서 바로 보인다
-        if page.locator('#mboard button').count() != 30: problems.append('합치기 판의 칸이 서른 개가 아니다')
-        if page.locator('#mboard button:visible').count() != 20: problems.append('보이는 칸이 스무 개가 아니다: %d' % page.locator('#mboard button:visible').count())
+        # 5.3.0 3구역: 공장 장면(라인 + 선반 스무 칸) → 상자가 들어오고 → 그림 속 상자를 눌러 합친다
+        z3 = lambda k: page.get_attribute('#z3-cv', k)
+        if not page.locator('#z3-cv').is_visible(): problems.append('공장 장면이 없다')
+        if page.locator('#mboard').is_visible(): problems.append('옛 칸 격자가 보인다')
+        if z3('data-cells') != '20': problems.append('선반이 스무 칸이 아니다: %s' % z3('data-cells'))
+        if page.locator('#z3-chips span').count() != 4 or '가장 느림' not in text('z3-chips'): problems.append('라인 이름표가 없다: ' + text('z3-chips'))
         for gone in ['#recipes', '#jam-fix', '#surge', '#belt', '#tune', '#rebalance', '#truck']:
             if page.locator(gone).count() and page.locator(gone).is_visible(): problems.append('없앤 것이 보인다: ' + gone)
         page.wait_for_timeout(7500)      # 상자 둘 이상이 들어올 시간
-        boxes = page.evaluate("[...document.querySelectorAll('#mboard button small')].filter(b => b.textContent).length")
-        if boxes < 3: problems.append('상자가 들어오지 않는다: %d개' % boxes)
-        if page.locator('#mboard button.pair').count() < 2: problems.append('합칠 수 있는 짝이 없다')
+        if int(z3('data-boxes') or 0) < 3: problems.append('상자가 들어오지 않는다: %s개' % z3('data-boxes'))
+        if int(z3('data-pair') or -1) < 0: problems.append('합칠 수 있는 짝이 없다')
         if '합쳐져요' not in text('line-note'): problems.append('합치기 안내가 없다: ' + text('line-note'))
-        page.locator('#mboard button.pair').first.click(); page.wait_for_timeout(200)
-        if not page.evaluate("(() => { const c = document.querySelector('#mboard button.pair canvas, #mboard button canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4) seen.add(d[i] + ',' + d[i+1] + ',' + d[i+2]); return seen.size >= 3; })()"): problems.append('상자 그림이 그려지지 않았다')
-        # 합친 뒤에도(움직임이 끝난 뒤) 상자가 든 칸은 모두 눈에 보여야 한다. 3.5.0 에서는 합쳐진 칸이 통째로 투명해져 판이 빈 것처럼 보였다
-        page.wait_for_timeout(1300)
-        ghost = page.evaluate("(() => { const m = document.getElementById('mboard').getBoundingClientRect(); return [...document.querySelectorAll('#mboard button')].filter(b => !b.hidden && b.querySelector('small') && b.querySelector('small').textContent).filter(b => { const r = b.getBoundingClientRect(), cs = getComputedStyle(b); return cs.opacity !== '1' || cs.position !== 'relative' || r.top < m.top - 1 || r.bottom > m.bottom + 1; }).length; })()")
-        if ghost: problems.append('상자가 있는데 안 보이는 칸이 %d개 있다' % ghost)
-        if int(page.get_attribute('#line', 'data-merges') or 0) < 1: problems.append('합친 횟수가 안 오른다')
+        if not page.evaluate("(() => { const c = document.getElementById('z3-cv'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4 * 97) seen.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]); return seen.size > 12; })()"): problems.append('공장 장면이 비어 있다')
+        box = page.locator('#z3-cv').bounding_box(); pi = int(z3('data-pair') or 0); n0 = int(z3('data-boxes') or 0)
+        page.locator('#z3-cv').click(position={'x': (4 + (pi % 5) * 29 + 13) / 184 * box['width'], 'y': (18 + 69 + (pi // 5) * 26 + 10) / 204 * box['height']}); page.wait_for_timeout(400)      # locator.click 은 화면 밖이면 알아서 내려간다(PC 에서는 장면이 길다)
+        if int(page.get_attribute('#line', 'data-merges') or 0) < 1: problems.append('그림 속 상자를 눌렀는데 합쳐지지 않는다')
+        if int(z3('data-boxes') or 0) >= n0: problems.append('합쳤는데 상자 수가 그대로다')
         if '합침' in text('line-note') or '도와요' in text('line-note'): problems.append('3.8.4 에서 뺀 글이 남아 있다: ' + text('line-note'))
-        if page.locator('#mboard button i').count() < 1: problems.append('합쳤는데 덤(+물자) 표시가 없다')
         close_story()
         # 줄 셋: 도장 라인은 값이 바로 오르고, 단조기는 판의 상자가 모두 오르고, 투입구는 간격이 줄어든다
         rate3 = lambda: page.get_attribute('#line', 'data-rate') or ''
@@ -329,9 +328,11 @@ def run_case(browser, name, size, state, mode):
         if '볼트' not in text('row-forge') : problems.append('단조기 줄에 들어오는 상자가 안 적혀 있다: ' + text('row-forge'))
         feed0 = text('row-feed')
         if not tap('#row-feed'): problems.append('투입구를 살 수 없다')
-        if text('row-feed') == feed0 or '초 →' not in text('row-feed'): problems.append('투입구를 샀는데 간격이 그대로다: ' + text('row-feed'))
+        if text('row-feed') == feed0 or '초당' not in text('row-feed'): problems.append('투입구를 샀는데 속도가 그대로다: ' + text('row-feed'))
+        for nm in ['#row-press', '#row-weld']:
+            if not page.locator(nm).count(): problems.append('라인 기계 줄이 없다: ' + nm)
         tap('[data-qty="max"]'); tap('#row-paint'); tap('[data-qty="1"]')
-        for up in ['#row-bonus', '#row-lucky', '#row-manual']:
+        for up in ['#row-bonus', '#row-lucky', '#row-manual', '#row-dispatch']:
             if not page.locator(up).count(): problems.append('새 개조가 없다: ' + up)
         for old in ['#row-lube', '#row-belt', '#row-spare', '#row-sorter']:
             if page.locator(old).count(): problems.append('옛 줄이나 개조가 남아 있다: ' + old)
