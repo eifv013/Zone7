@@ -877,14 +877,13 @@
    * 고르는 일은 core 의 recommend 가 한다(저장을 복사해 하나씩 사 보고 잰다). 여기서는 보이는 줄만 넘기고 꼬리표를 붙인다.
    * 1.5초에 한 번, 또는 구역 · 칸을 옮겼을 때만 다시 잰다. */
   var recTimer = null, recAt = 0, recKey = '';
-  function recDur(sec) { return sec < 60 ? Math.max(1, Math.round(sec)) + '초' : sec < 3600 ? Math.round(sec / 60) + '분' : sec < 86400 ? Math.round(sec / 3600) + '시간' : Math.round(sec / 86400) + '일'; }
   function recPaint() {
     try {
       var all = document.querySelectorAll('button.row'), shown = [], by = {};
       Array.prototype.forEach.call(all, function (b) { if (b.id && b.id.indexOf('row-') === 0 && b.offsetParent !== null) shown.push(b.id.slice(4)); });
       if (shown.length) C.recommend(state, tab === 'wall' ? 'wall' : Number(tab.slice(1)), shown).forEach(function (p) { by[p.id] = p; });
       Array.prototype.forEach.call(all, function (b) {
-        var p = b.id ? by[b.id.slice(4)] : null, text = !p ? '' : p.kind === 'night' ? '추천 · 오늘 밤 위험' : p.kind === 'goal' ? '목표' : (p.kind === 'both' ? '추천 · 목표 · 본전 ' : '추천 · 본전 ') + recDur(p.secs);
+        var p = b.id ? by[b.id.slice(4)] : null, text = !p ? '' : p.kind === 'goal' ? '목표' : '추천';      /* 5.2.9 꼬리표는 '추천' 한마디만(이유는 빛깔로: 초록 수입 · 빨강 오늘 밤) */
         if ((b._recText || '') === text) return; b._recText = text;
         if (!b._rec) { if (!text) return; b._rec = el('span', 'row-rec'); b.appendChild(b._rec); }
         b._rec.hidden = !text; b._rec.textContent = text;      // textContent: ' · '에서 줄이 나뉘지 않게
