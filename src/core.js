@@ -5582,6 +5582,60 @@
 
   /* ---------- 저장 ---------- */
   function zoneLabel(state) { return (state.zone + 1) + '구역 ' + ZONES[state.zone].name; }
+  /*
+   * 5.2.8 추천: 구매 줄 가운데 '지금 무엇을 사면 좋은지'를 고른다(모든 구역 공통).
+   *   where  구역 번호(0~6) 또는 'wall',  ids  화면에 보이는 줄의 id 목록
+   * 줄마다 저장을 복사해 하나 사 보고 달라진 것을 잰다(구역마다 수입 식이 달라서, 식을 따로 두지 않고 결과로 잰다):
+   *   pay    값 ÷ 늘어난 초당 수입이 가장 짧은 줄(본전까지 secs 초)
+   *   goal   아직 못 채운 구역 목표가 한 칸이라도 오르는 줄 가운데 가장 싼 줄
+   *   night  방벽: 오늘 밤 방어력이 모자랄 때, 값에 견줘 방어력이 가장 많이 오르는 줄
+   * 돈이 모자란 줄도 고른다(무엇을 향해 모으는지 알 수 있게). 돌려주는 것: [{ id, kind, secs }] (많아야 둘)
+   */
+  var REC_TABLE = null;
+  function recTable() {
+    if (REC_TABLE) return REC_TABLE;
+    var t = {};
+    function one(id, cost, buy) { t[id] = { cost: cost, buy: buy }; }
+    BUILDINGS.forEach(function (b) { one(b.id, function (s) { return buildingCost(s, b.id, 1); }, function (s) { return buyBuilding(s, b.id, 1); }); });
+    one('stall', function (s) { return stallCost(s, 1); }, function (s) { return buyStall(s, 1); });
+    HANDS.forEach(function (d) { one(d.id, function (s) { return handCost(s, d.id, 1); }, function (s) { return buyHand(s, d.id, 1); }); });
+    MACHINES.forEach(function (d) { one(d.id, function (s) { return machineCost(s, d.id, 1); }, function (s) { return buyMachine(s, d.id, 1); }); });
+    one('train', function (s) { return trainCost(s, 1); }, function (s) { return buyTrain(s, 1); });
+    ROUTES.forEach(function (d) { one('route-' + d.id, function (s) { return routeCost(s, d.id); }, function (s) { return buyRoute(s, d.id); }); });
+    one('staff', function (s) { return staffCost(s, 1); }, function (s) { return buyStaff(s, 1); });
+    one('rack', rackCost, buyRack); one('reagent', reagentCost, buyReagent);
+    one('post', function (s) { return postCost(s, 1); }, function (s) { return buyPost(s, 1); });
+    one('fire', fireCost, buyFire); one('morale', moraleCost, buyMorale);
+    one('antenna', function (s) { return antennaCost(s, 1); }, function (s) { return buyAntenna(s, 1); });
+    CAMP_ROWS.forEach(function (d) { one(d.id, function (s) { return campRowCost(s, d.id); }, function (s) { return buyCampRow(s, d.id); }); });
+    UPGRADES.forEach(function (u) { one(u.id, function (s) { return upgradeCost(s, u.id); }, function (s) { return buyUpgrade(s, u.id); }); });
+    DEFENSES.forEach(function (d) { one(d.id, function (s) { return defenseCost(s, d.id, 1); }, function (s) { return buyDefense(s, d.id, 1); }); });
+    return (REC_TABLE = t);
+  }
+  function recommend(state, where, ids) {
+    var out = [];
+    try {
+      var table = recTable(), text = JSON.stringify(state), wall = where === 'wall', zone = wall ? -1 : Math.floor(where);
+      var inc0 = incomePerSec(state), def0 = defensePower(state), need = nightStrength(state);
+      var g0 = wall || !(zone >= 0 && zone < ZONES.length) ? [] : goals(state, zone);
+      var pay = null, goal = null, night = null;
+      (ids || []).forEach(function (id) {
+        var row = table[id]; if (!row) return;
+        var cost = row.cost(state); if (!(cost > 0) || !isFinite(cost)) return;      // 다 샀거나 아직 못 사는 줄
+        var c = JSON.parse(text); c.supplies = cost * 2 + 1;      // 복사본에 값만큼 쥐여 주고 사 본다
+        var r = row.buy(c); if (!r || !r.ok) return;
+        if (wall) { var dd = defensePower(c) - def0; if (def0 < need && dd > 0 && (!night || dd / cost > night.v)) night = { id: id, v: dd / cost }; return; }
+        var di = incomePerSec(c) - inc0;
+        if (di > 0 && (!pay || cost / di < pay.secs)) pay = { id: id, secs: cost / di };
+        var g1 = goals(c, zone), up = g0.some(function (g, k) { return !g.done && g1[k] && g1[k].value > g.value; });
+        if (up && (!goal || cost < goal.cost)) goal = { id: id, cost: cost };
+      });
+      if (night) out.push({ id: night.id, kind: 'night' });
+      if (pay) out.push({ id: pay.id, kind: goal && goal.id === pay.id ? 'both' : 'pay', secs: pay.secs });
+      if (goal && !(pay && pay.id === goal.id)) out.push({ id: goal.id, kind: 'goal' });
+    } catch (e) { return []; }      // 추천은 덤이다: 무엇이 틀어져도 게임은 그대로 돈다
+    return out;
+  }
   function serialize(state) { return JSON.stringify(state); }
   function deserialize(text, now) {
     if (typeof text !== 'string' || !text.trim()) throw new Error('저장 데이터가 비어 있습니다.');
@@ -5633,7 +5687,7 @@
     staffCost: staffCost, maxStaff: maxStaff, buyStaff: buyStaff, researchRate: researchRate, projectCost: projectCost, rerollCost: rerollCost,
     drawOffers: drawOffers, runProject: runProject, rerollOffers: rerollOffers,
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
-    BAL: BAL, rescueOffer: rescueOffer, sendRescue: sendRescue, RESCUE_GROW: RESCUE_GROW, COLLECT_TIERS: COLLECT_TIERS, collectCount: collectCount, collectInfo: collectInfo, collectCheck: collectCheck, AD_RETREAT: AD_RETREAT, adState: adState, adReward: adReward, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passSet: passSet, PASS_SETS: PASS_SETS, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, isPaid: isPaid, paidState: paidState, grantPaid: grantPaid, dayCard: dayCard, claimDayCard: claimDayCard, DAYCARD_DAYS: DAYCARD_DAYS, DAYCARD_TREATS: DAYCARD_TREATS, PASS_PLUS_TIERS: PASS_PLUS_TIERS, PAID_TREATS: PAID_TREATS, TIXPAY: TIXPAY, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
+    recommend: recommend, BAL: BAL, rescueOffer: rescueOffer, sendRescue: sendRescue, RESCUE_GROW: RESCUE_GROW, COLLECT_TIERS: COLLECT_TIERS, collectCount: collectCount, collectInfo: collectInfo, collectCheck: collectCheck, AD_RETREAT: AD_RETREAT, adState: adState, adReward: adReward, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passSet: passSet, PASS_SETS: PASS_SETS, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, isPaid: isPaid, paidState: paidState, grantPaid: grantPaid, dayCard: dayCard, claimDayCard: claimDayCard, DAYCARD_DAYS: DAYCARD_DAYS, DAYCARD_TREATS: DAYCARD_TREATS, PASS_PLUS_TIERS: PASS_PLUS_TIERS, PAID_TREATS: PAID_TREATS, TIXPAY: TIXPAY, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
     TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,

@@ -3994,3 +3994,25 @@ test('5.2.7: 무과금 하루 수입 — 출석 · 임무 · 광고 · 수첩 �
   var pulls = (perDay + 360) / C.TICKET_TREATS + tixDay + 1;
   assert.ok(pulls >= 3.5 && pulls <= 5.5, '하루 ' + pulls.toFixed(2) + '번'); assert.ok(pulls * 30 >= C.GACHA_PITY);
 });
+
+test('5.2.8: 추천 — 저장을 건드리지 않고, 본전이 가장 짧은 줄 · 목표 줄 · 오늘 밤 모자란 방벽을 고른다', function () {
+  var s = C.createState(0); s.supplies = 50;
+  var ids = C.BUILDINGS.map(function (b) { return b.id; }), before = C.serialize(s);
+  var r = C.recommend(s, 0, ids);
+  assert.strictEqual(C.serialize(s), before, '저장은 그대로');
+  assert.ok(r.length >= 1 && r.length <= 2, JSON.stringify(r));
+  var pay = r.filter(function (p) { return p.kind === 'pay' || p.kind === 'both'; })[0]; assert.ok(pay && pay.secs > 0);
+  // 고른 줄이 정말 본전이 가장 짧은가: 줄마다 직접 사 보고 견준다
+  var best = null; ids.forEach(function (id) { var c = C.deserialize(C.serialize(s)), cost = C.buildingCost(c, id, 1); if (!isFinite(cost)) return; c.supplies = cost * 2 + 1; var i0 = C.incomePerSec(s); if (!C.buyBuilding(c, id, 1).ok) return; var d = C.incomePerSec(c) - i0; if (d > 0 && (!best || cost / d < best.secs)) best = { id: id, secs: cost / d }; });
+  assert.strictEqual(pay.id, best.id);
+  // 목표(잔해 수색조 50곳)에 걸린 줄은 목표 딱지를 받는다
+  assert.ok(r.some(function (p) { return p.id === 'scouts' && (p.kind === 'goal' || p.kind === 'both'); }), JSON.stringify(r));
+  // 방벽: 모자랄 때만 고른다
+  var wall = C.DEFENSES.map(function (d) { return d.id; });
+  var unsafe = C.defensePower(s) < C.nightStrength(s), w = C.recommend(s, 'wall', wall);
+  assert.strictEqual(w.length, unsafe ? 1 : 0); if (unsafe) assert.strictEqual(w[0].kind, 'night');
+  var safe = C.deserialize(C.serialize(s)); safe.supplies = 1e12; for (var k = 0; k < 400 && C.defensePower(safe) < C.nightStrength(safe); k++) C.buyDefense(safe, wall[0], 1);
+  assert.ok(C.defensePower(safe) >= C.nightStrength(safe)); assert.deepStrictEqual(C.recommend(safe, 'wall', wall), []);
+  // 모르는 줄 · 빈 목록 · 이상한 자리에도 죽지 않는다
+  assert.deepStrictEqual(C.recommend(s, 0, ['nope']), []); assert.deepStrictEqual(C.recommend(s, 0, []), []); assert.deepStrictEqual(C.recommend(s, 99, ids).filter(function (p) { return p.kind === 'goal'; }), []);
+});
