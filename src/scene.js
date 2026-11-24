@@ -558,8 +558,6 @@
     mouse:   { 0: '..yy......yy..', 1: '.yiiy....yiiy.', 2: '.yiiyyyyyyiiy.' },      // 둥근 쥐 귀(크게)
     bat:     { 0: '.n..........n.', 1: '.nn.n....n.nn.', 2: '..nnnyyyynnn..' },      // 박쥐 날개 귀(수첩 · 마녀의 밤)
     polar:   { 0: '...ww....ww...', 1: '..wiiw..wiiw..', 2: '...wyyyyyyw...' },      // 북극곰 귀(수첩 · 눈 오는 날)
-    /* 5.2.6 상어 후드(수첩 · 해적의 바다): 후드 전체가 회색 상어, 머리 위 지느러미, 이마와 입 옆의 흰 이빨. 인어 지느러미 귀는 안 쓸 것 같다고 하셔서 바꿨다 */
-    shark: { 0: '.......a......', 1: '......aaa.....', 2: '....aaaaaa....', 3: '...aaaaaaaa...', 4: '..aawwwwwwaa..', 5: '..aasessesaa..', 6: '..aassssssaa..', 7: '...awsmmswa...' },
     lop: { 0: '....wi...wwww.', 1: '....wi...iw..w', 2: '....wiyyyiw...' },      // 4.9.1 한쪽이 접힌 토끼 귀(수첩 · 봄 소풍). 양옆으로 늘이면 헤드폰처럼 보였다
     raccoon: { 0: '..nn......nn..', 1: '..nan....nan..', 2: '...nyyyyyyn...' },      // 4.9.1 너구리 귀(헤드폰 대신)
     // 4.8.3 생존자 수첩 한정 후드(시즌마다 하나)
@@ -715,6 +713,19 @@
     if (fx === 'note') for (var nq = 0; nq < 2; nq++) { var np = (t * 0.55 + nq * 0.5) % 1, nx = 11 + nq * 2 + Math.round(Math.sin(t * 3 + nq) * 1), ny = 5 - Math.floor(np * 9), nc = nq ? '#8fc3ff' : '#ffd95a'; if (np < 0.85) { px(nc, nx + 1, ny - 2, 1, 3); px(nc, nx, ny, 2, 1); px(nc, nx + 2, ny - 2, 1, 1); } }      // 음표 둘이 번갈아 떠오른다
     if (fx === 'leaves') for (var lq = 0; lq < 3; lq++) { var lp = (t * 0.5 + lq / 3) % 1, lx = 1 + lq * 5 + Math.round(Math.sin(t * 1.8 + lq) * 2); px(lq % 2 ? '#e08a2a' : '#c0502a', lx, -2 + Math.floor(lp * 19), 2, 1); }      // 4.8.1 낙엽
     if (fx === 'hearts') for (var hq = 0; hq < 2; hq++) { var hp = (t * 0.5 + hq * 0.5) % 1, hx = (hq ? 12 : 0) + Math.round(Math.sin(t * 2 + hq) * 1), hy = 9 - Math.floor(hp * 12); if (hp < 0.9) { px('#ff6f9f', hx, hy, 1, 1); px('#ff6f9f', hx + 2, hy, 1, 1); px('#ff6f9f', hx, hy + 1, 3, 1); px('#ff6f9f', hx + 1, hy + 2, 1, 1); } }      // 하트가 떠오른다
+    /* 5.2.7 갈매기(수첩 · 해적의 바다 20칸): 머리 위를 크게 돌며 날갯짓한다. 하늘이 밝아도 보이게 날개 끝은 회색 */
+    if (fx === 'gull') {
+      var GULL = [['.a...a.', '.ww.ww.', '..wwwnG'], ['.......', 'awwwwwa', '..wwwnG'], ['.......', '..wwwnG', '.ww.ww.', '.a...a.']], GC = { w: '#f4f4ee', a: '#6f7a88', n: '#17180f', G: '#ffb347' };
+      var ga = t * 0.9, gx = Math.round(3.5 + Math.cos(ga) * 9), gy = Math.round(-7 + Math.sin(ga * 2) * 1.5), gl = Math.sin(ga) > 0;      // gl: 왼쪽으로 날아가는 중(그림을 뒤집는다)
+      var gf = GULL[[0, 1, 2, 1][Math.floor(t * 5) % 4]];
+      for (var gr = 0; gr < gf.length; gr++) for (var gc = 0; gc < 7; gc++) { var gch = gf[gr][gl ? 6 - gc : gc]; if (gch !== '.') px(GC[gch], gx + gc, gy + gr, 1, 1); }
+    }
+    /* 5.2.7 어깨 앵무새: 라라 오른쪽 어깨에 앉아 고개를 까딱이고, 가끔 날개를 편다 */
+    if (fx === 'parrot') {
+      var flap = (t % 3.2) > 2.8, bobp = Math.floor(t * 2) % 2, PC = { r: '#e0392b', R: '#a8281e', F: '#2fb0a0', f: '#1e7a70', G: '#ffd95a', n: '#17180f', w: '#f4f4ee' };
+      var PR = flap ? ['F.rr..', 'FfrnwG', '.frrr.', '..rRF.', '..RFF.', '...Ff.'] : ['..rr..', '.rrnwG', '..rrr.', '.FrRr.', '.FFRr.', '..fF..'];
+      for (var pr = 0; pr < PR.length; pr++) for (var pc = 0; pc < 6; pc++) { var pch = PR[pr][pc]; if (pch !== '.') px(PC[pch], 9 + pc, 4 + pr + (pr < 2 ? bobp : 0), 1, 1); }
+    }
     if (fx === 'star') { var bob = Math.floor(t * 2) % 2, sy = (LARA_HOODS[look.hood] && look.hood !== 'none' ? -3 : -1) - bob; px('#ffd95a', 7, sy, 1, 3); px('#ffd95a', 6, sy + 1, 3, 1); px('#ffffff', 7, sy + 1, 1, 1); }
   }
   /*

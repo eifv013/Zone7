@@ -151,9 +151,10 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
   return { marks, day, state: s, hours: active / 3600 };
 }
 
-if (require.main === module) {
+if (require.main === module || process.env.SIM_FORCE) {
   const r = run({ sessions: arg('SESSIONS', 4), minutes: arg('MINUTES', 15), days: arg('DAYS', 30), taps: arg('TAPS', 0), seed: arg('SEED', 1), stuck: arg('STUCK', 300), share: arg('SHARE', 0.5), dt: arg('DT', 1) });
   r.marks.forEach(m => console.log(m.end ? `엔딩: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, 철수 ${m.retreats}번` : m.retreat ? `  철수: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, ${m.zone + 1}구역에서 항체 +${m.gain}` : `${m.gate ? '다음 구역(준비 중)의 문 앞' : (m.enter + 1) + '구역 첫 도착'}: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, 철수 ${m.retreats}번` + (m.pps ? `, 그때 초당 ${C.formatNumber(m.pps)}` : '')));
+  console.log(`간식 ${r.state.treats || 0}, 뽑기권 ${r.state.tickets || 0}, 친구표 ${r.state.petTix || 0} (놀이에서 얻은 것만. 출석 · 임무 · 광고 · 수첩은 빠짐)`);      // 5.2.7 간식 수입 재기
   if (!r.marks.some(m => m.end)) console.log(`${r.day}일 동안 엔딩에 닿지 못했다. 지금 ${C.zoneLabel(r.state)}, 철수 ${r.state.retreats}번, 항체 ${r.state.antibodyTotal}, 이번 판 누적 ${C.formatNumber(r.state.runEarned)}`);
 }
 module.exports = { run };

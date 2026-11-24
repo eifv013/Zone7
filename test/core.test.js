@@ -2513,7 +2513,7 @@ test('1.9.0 뽑기권: 원정의 새 표시, 도전 성공, 변이체를 막은 
   const main = C.createState(0); main.bestZone = 2;
   const st = mk(main, 's1-1', false); st.runEarned = NEED(st); st.runSeconds = 100; C.tick(st, 0.1, () => 0.5);
   const r = C.finishStage(main, st); assert.equal(r.tickets, 3); assert.equal(main.tickets, 3);      // 클리어 · 스피드 · 무결
-  const c = C.createState(0); c.bestZone = 6; C.startChallenge(c, 'frugal'); c.zone = C.CHALLENGES.find(d => d.id === 'frugal').goal; C.tick(c, 0.1, () => 0.5); assert.equal(c.tickets, 3);
+  const c = C.createState(0); c.bestZone = 6; C.startChallenge(c, 'frugal'); c.zone = C.CHALLENGES.find(d => d.id === 'frugal').goal; C.tick(c, 0.1, () => 0.5); assert.equal(c.tickets, 1, '5.2.7 처음 성공 3 → 1');
 });
 
 test('1.9.0: README 의 뽑기 확률표가 코드의 표와 같다', () => {
@@ -3372,14 +3372,14 @@ test('4.4.4 금냥이는 브리티시 숏헤어가 됐다: 기본 이름 그대�
 test('출석 체크(4.7.1): 하루에 한 번, 서른 날 한 바퀴, 빠져도 이어 가고 날짜를 되돌리면 못 받는다', () => {
   const s = fresh(); const t0 = s.tickets, tr0 = s.treats;
   assert.equal(C.attendInfo(s, '2026-11-21').can, true);
-  const r = C.claimAttend(s, '2026-11-21'); assert.ok(r.ok); assert.equal(r.day, 0); assert.equal(s.treats, tr0 + 5);
+  const r = C.claimAttend(s, '2026-11-21'); assert.ok(r.ok); assert.equal(r.day, 0); assert.equal(s.treats, tr0 + C.ATTEND_REWARDS[0].treats);
   assert.equal(C.claimAttend(s, '2026-11-21').reason, 'done', '같은 날 두 번은 안 된다');
   assert.equal(C.claimAttend(s, '2026-11-20').reason, 'done', '날짜를 되돌려도 안 된다');
   assert.equal(C.claimAttend(s, 'x').reason, 'date');
-  assert.ok(C.claimAttend(s, '2026-11-25').ok, '빠진 날이 있어도 받는다'); assert.equal(s.tickets, t0 + 1, '둘째 날은 뽑기권');
+  assert.ok(C.claimAttend(s, '2026-11-25').ok, '빠진 날이 있어도 받는다'); assert.equal(s.treats, tr0 + C.ATTEND_REWARDS[0].treats + C.ATTEND_REWARDS[1].treats, '둘째 날은 간식(5.2.7)');
   for (let i = 0; i < 28; i++) C.claimAttend(s, '2027-01-' + String(i + 1).padStart(2, '0'));
   assert.equal(s.attend.count, 30); assert.equal(C.attendInfo(s, '2027-02-10').day, 0, '서른 날 뒤 처음으로');
-  assert.equal(C.ATTEND_REWARDS.length, 30); assert.deepEqual(C.ATTEND_REWARDS[29], { tickets: 5, treats: 40 }); assert.equal(C.ATTEND_REWARDS[7].treats, 10, '둘째 주는 간식이 5개 더');
+  assert.equal(C.ATTEND_REWARDS.length, 30); assert.deepEqual(C.ATTEND_REWARDS[29], { tickets: 3, treats: 60 }); assert.equal(C.ATTEND_REWARDS[7].treats, C.ATTEND_REWARDS[0].treats + 5, '둘째 주는 간식이 5개 더');
   // 저장 · 불러오기 · 철수
   const back = C.deserialize(C.serialize(s), 0); assert.deepEqual(back.attend, { last: '2027-01-28', count: 30 });
   const bad = JSON.parse(C.serialize(s)); bad.attend = { last: '어제', count: -3 };
@@ -3718,7 +3718,7 @@ test('4.9.6: 오늘의 임무 — 날짜로 정해진 셋, 하면 간식, 셋 �
   assert.strictEqual(C.dailyClaim(s, day).ok, false, '한 게 없으면 못 받는다');
   info.list.forEach(function (x) { s.daily.n[x.key] = x.need; });
   var t0 = s.treats, k0 = s.tickets, r = C.dailyClaim(s, day);
-  assert.ok(r.ok); assert.strictEqual(s.treats - t0, 3 * C.DAILY_TREATS); assert.strictEqual(s.tickets - k0, 1);
+  assert.ok(r.ok); assert.strictEqual(s.treats - t0, 3 * C.DAILY_TREATS + 20, '5.2.7 셋 다 하면 덤 간식 20'); assert.strictEqual(s.tickets - k0, 0);
   assert.strictEqual(C.dailyClaim(s, day).ok, false, '두 번은 못 받는다');
   var back = C.deserialize(C.serialize(s)); assert.strictEqual(C.dailyInfo(back, day).allGot, true, '저장해도 남는다');
   C.dailySync(s, '2026-11-22'); assert.strictEqual(s.daily.day, day, '날짜를 거꾸로 돌려도 새로 주지 않는다');
@@ -3883,7 +3883,7 @@ test('5.2.3: 결제 상품은 간식으로 못 사고, grantPaid 가 한도를 �
   ['pack-new', 'pack-pet', 'pack-big', 'pack-day', 'pass', 'passplus'].forEach(function (id) { assert.equal(C.buyShop(s, id, d).reason, 'paid', id); });
   // 새내기: 계정에 한 번
   var t0 = s.treats || 0; assert.ok(C.grantPaid(s, 'pack-new', d).ok);
-  assert.strictEqual(s.treats - t0, 500); assert.strictEqual(s.petTix, 1);
+  assert.strictEqual(s.treats - t0, C.shopItem('pack-new').give.treats); assert.strictEqual(s.petTix, 1);
   assert.equal(C.grantPaid(s, 'pack-new', next).reason, 'once');
   // 동물 친구: 시즌마다 한 번
   assert.ok(C.grantPaid(s, 'pack-pet', d).ok); assert.strictEqual(s.petTix, 9); assert.strictEqual(s.petShards, 20);
@@ -3907,8 +3907,8 @@ test('5.2.3: 수첩 결제는 프리미엄을 열고(이미 있으면 못 산다
 
 test('5.2.3: 매일 간식은 30일 동안 하루 한 번, 끝나야 다시 산다', function () {
   var s = C.createState(0), day = function (k) { return new Date(Date.UTC(2026, 10, 24 + k)).toISOString().slice(0, 10); };
-  var t0 = s.treats || 0; assert.ok(C.grantPaid(s, 'pack-day', day(0)).ok); assert.strictEqual(s.treats - t0, 200);
-  assert.equal(C.claimDayCard(s, day(0)).reason, 'done', '산 날 몫은 바로 준 200 에 들었다');
+  var t0 = s.treats || 0; assert.ok(C.grantPaid(s, 'pack-day', day(0)).ok); assert.strictEqual(s.treats - t0, C.shopItem('pack-day').give.treats);
+  assert.equal(C.claimDayCard(s, day(0)).reason, 'done', '산 날 몫은 바로 준 간식에 들었다');
   assert.equal(C.grantPaid(s, 'pack-day', day(3)).reason, 'active');
   var got = 0; for (var k = 1; k < 40; k++) { var r = C.claimDayCard(s, day(k)); if (r.ok) got += r.treats; assert.ok(!C.claimDayCard(s, day(k)).ok, '하루 두 번은 없다'); }
   assert.strictEqual(got, (C.DAYCARD_DAYS - 1) * C.DAYCARD_TREATS);
@@ -3924,7 +3924,7 @@ test('5.2.4: 간식 충전은 간식만, 비쌀수록 1원에 드는 간식이 �
   var prev = 0; paid.forEach(function (it) { var per = C.PAID_TREATS[it.id] / it.won; assert.ok(per > prev, it.id + ' 1원당 ' + per); prev = per; });
   assert.equal(C.shopItem('tixpay').kind, 'pack'); assert.equal(C.shopItem('noads').kind, 'noads');
   var s = C.createState(0), d = '2026-11-24', t0 = s.treats || 0, k0 = s.tickets || 0;
-  assert.ok(C.grantPaid(s, 'treat6', d).ok); assert.strictEqual(s.treats - t0, 25000);
+  assert.ok(C.grantPaid(s, 'treat6', d).ok); assert.strictEqual(s.treats - t0, C.PAID_TREATS.treat6);
   assert.ok(C.grantPaid(s, 'tixpay', d).ok); assert.strictEqual(s.tickets - k0, C.TIXPAY);
   assert.ok(C.grantPaid(s, 'noads', d).ok); assert.ok(s.noAds); assert.equal(C.grantPaid(s, 'noads', d).reason, 'owned');
   assert.equal(C.buyShop(s, 'noads', d).reason, 'paid');
@@ -3934,19 +3934,20 @@ test('5.2.4: 첫 결제 상자는 계정에 한 번(간식으로 사는 첫 보�
   var s = C.createState(0), d = '2026-11-24'; s.treats = 1000;
   assert.ok(C.buyStarter(s).ok);
   var t0 = s.treats, k0 = s.tickets; assert.ok(C.grantPaid(s, 'first', d).ok);
-  assert.strictEqual(s.treats - t0, 300); assert.strictEqual(s.tickets - k0, 10); assert.strictEqual(s.petTix, 2);
+  assert.strictEqual(s.treats - t0, 300); assert.strictEqual(s.tickets - k0, 3); assert.strictEqual(s.petTix, 2);
   assert.equal(C.grantPaid(s, 'first', '2027-03-01').reason, 'once'); assert.equal(C.buyShop(s, 'first', d).reason, 'paid');
 });
 
 test('5.2.5: 결제 패키지는 같은 돈으로 간식을 사는 것보다 1.5배 이상 든다(간식으로 환산)', function () {
-  var tix = 40, pet = C.shopItem('pettix').treats, shard10 = pet;
+  var tix = C.TICKET_TREATS, pet = C.shopItem('pettix').treats, shard10 = pet;
   function worth(it) {
     if (it.id === 'tixpay') return C.TIXPAY * tix;
     if (it.id === 'pack-day') return C.shopItem('pack-day').give.treats + (C.DAYCARD_DAYS - 1) * C.DAYCARD_TREATS;
     var g = it.give || {}; return (g.treats || 0) + (g.tickets || 0) * tix + (g.petTix || 0) * pet + (g.petShards || 0) / 10 * shard10;
   }
   var base = C.PAID_TREATS.treat2 / 5500;      // 간식 상자 값
-  C.SHOP_ITEMS.filter(function (it) { return it.kind === 'pack' || it.kind === 'first'; }).forEach(function (it) {
+  assert.ok(C.shopItem('tixpay').won / C.TIXPAY >= C.PITY_WON / 121 - 1, '뽑기권 꾸러미는 간식으로 사는 길보다 싸지 않다');
+  C.SHOP_ITEMS.filter(function (it) { return (it.kind === 'pack' && it.id !== 'tixpay') || it.kind === 'first'; }).forEach(function (it) {
     var r = worth(it) / it.won / base; assert.ok(r >= 1.5, it.id + ' ' + r.toFixed(2) + '배');
   });
 });
@@ -3978,4 +3979,18 @@ test('5.2.6: 간식을 사서 전설을 확정하려면 ₩66,000(이보다 적�
 test('5.2.6: 조각으로 전설을 만드는 길도 간식 1만 개가 넘게 든다(₩66,000 기준을 비켜 가지 않게)', function () {
   var box = C.shopItem('shards'), perShard = box.treats / 10;
   assert.ok(C.SHARDS_COST[2] * perShard >= 10000, '조각 상자로 전설: 간식 ' + C.SHARDS_COST[2] * perShard);
+});
+
+test('5.2.7: 무과금 하루 수입 — 출석 · 임무 · 광고 · 수첩 무료 줄만으로 하루 간식 150 안팎, 뽑기권 1장 미만', function () {
+  var days = 30, t = 0, k = 0;
+  C.ATTEND_REWARDS.forEach(function (r) { t += r.treats || 0; k += r.tickets || 0; });
+  ['day', 'week', 'month'].forEach(function (p) { var P = C.MISSION_PER[p], n = p === 'day' ? 30 : p === 'week' ? 30 / 7 : 1; t += n * (3 * P.treats + (P.bonus.treats || 0)); k += n * (P.bonus.tickets || 0); });
+  t += 30 * (C.AD_TREATS * C.AD_TREAT_DAILY + 12);
+  for (var i = 1; i <= 20; i++) { var r = C.passReward('free', i, 0); t += r.treats || 0; k += r.tickets || 0; }
+  var perDay = t / days, tixDay = k / days;
+  assert.ok(perDay > 120 && perDay < 190, '하루 간식 ' + perDay.toFixed(0));
+  assert.ok(tixDay < 1, '하루 뽑기권 ' + tixDay.toFixed(2));
+  // 하루 3시간 놀이 간식(시뮬레이터 약 360)을 더하면 무료 뽑기까지 하루 4번 남짓 → 한 달 안에 보장
+  var pulls = (perDay + 360) / C.TICKET_TREATS + tixDay + 1;
+  assert.ok(pulls >= 3.5 && pulls <= 5.5, '하루 ' + pulls.toFixed(2) + '번'); assert.ok(pulls * 30 >= C.GACHA_PITY);
 });

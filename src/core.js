@@ -1591,7 +1591,7 @@
     if (r.ok) { r.stage = state.serumStage; passStamp(state, PASS_STAMPS.serum); }
     return r;
   }
-  var SERUM_REWARDS = [{ tickets: 2, treats: 20 }, { tickets: 3, treats: 30 }], NIGHT_MILE = 5, NIGHT_MILE_TREATS = 5;
+  var SERUM_REWARDS = [{ tickets: 1, treats: 20 }, { tickets: 1, treats: 30 }],      /* 5.2.7 뽑기권 2 · 3 → 1 · 1 */ NIGHT_MILE = 5, NIGHT_MILE_TREATS = 5;
 
   /* ---------- 값 계산(공통) ---------- */
   /** 지금 owned 개를 가진 것을 qty 개 더 살 때의 값(등비수열의 합). */
@@ -2915,7 +2915,7 @@
   ];
   var DAILY_POOL = MISSION_POOL.filter(function (m) { return m.need[0] != null; }).map(function (m) { return { key: m.key, need: m.need[0], text: missionText(m, 0), can: m.can }; });      // 예전 이름(오늘의 임무)
   var MISSION_PER = {
-    day: { field: 'daily', idx: 0, name: '일일', treats: 10, bonus: { tickets: 1 } },
+    day: { field: 'daily', idx: 0, name: '일일', treats: 10, bonus: { treats: 20 } },      // 5.2.7 덤 뽑기권 1 → 간식 20
     week: { field: 'weekly', idx: 1, name: '주간', treats: 20, bonus: { tickets: 1, petTix: 1 } },      // 5.0.9 한 주 덤 값어치 ≈ 간식 180
     month: { field: 'monthly', idx: 2, name: '월간', treats: 50, bonus: { tickets: 3, petTix: 2 } }      // 5.0.9 한 달 덤 값어치 ≈ 간식 430(뽑기권 40 · 데려오기권 80으로 쳐서)
   };
@@ -2993,7 +2993,7 @@
     var info = missionInfo(state, per, today), d = state[P.field], t = 0, k = 0, x = 0;
     if (!d) return fail('day');
     info.list.forEach(function (m) { if (m.done && !m.got) { d.got[m.key] = true; t += P.treats; } });
-    if (info.list.length && info.list.every(function (m) { return d.got[m.key]; }) && !d.all) { d.all = true; k = P.bonus.tickets || 0; x = P.bonus.petTix || 0; }
+    if (info.list.length && info.list.every(function (m) { return d.got[m.key]; }) && !d.all) { d.all = true; k = P.bonus.tickets || 0; x = P.bonus.petTix || 0; t += P.bonus.treats || 0; }
     if (!t && !k && !x) return fail('none');
     state.treats = Math.min(1e9, (state.treats || 0) + t); state.tickets = (state.tickets || 0) + k; state.petTix = (state.petTix || 0) + x;
     return { ok: true, treats: t, tickets: k, petTix: x };
@@ -3895,7 +3895,7 @@
       state.edge = Math.min(1, (state.edge || 0) + Math.max(0, Math.min(1, defense / Math.max(1, strength) - 1)) * EDGE_GAIN);
       var edgeFull = edgeWas < 1 && state.edge >= 1;      // 넉넉하게 막은 만큼 여유 게이지가 찬다
       state.counterAt = 0;
-      if (boss && (state.bossPerks || 0) < BOSS_PERKS_MAX) { addTickets(state, 1); state.bossPerks = (state.bossPerks || 0) + 1; state.perkOwed = Math.min(PERK_OWED_MAX, (state.perkOwed || 0) + 1); }      // 변이체를 막으면 특전 하나(한 회차에 BOSS_PERKS_MAX 번까지)
+      if (boss && (state.bossPerks || 0) < BOSS_PERKS_MAX) { state.bossPerks = (state.bossPerks || 0) + 1; state.perkOwed = Math.min(PERK_OWED_MAX, (state.perkOwed || 0) + 1); }      // 변이체를 막으면 특전 하나(한 회차에 BOSS_PERKS_MAX 번까지)
       var passer = null;
       if (zoneOpen(state, 5) && defense >= strength * SAFE_NIGHT) { state.safeNights++; passer = passBridge(state, rng); }      // 6구역: 넉넉하게 막은 밤(목표)에는 가끔 누가 다리를 건넌다
       state.siege = false; state.siegeNights = 0;
@@ -3993,16 +3993,16 @@
     { id: 'night', kind: 'perm', treats: 800, name: '야간 근무', desc: '자리 비움 효율 75%(기본 50%)', icon: 'serum' },
     { id: 'skip', kind: 'cons', treats: 50, name: '시간 건너뛰기', desc: '물자 2시간치, 하루 3번', icon: 'supply' },
     { id: 'boost', kind: 'cons', treats: 100, name: '철수 보급', desc: '다음 철수 항체 샘플 ×1.25', icon: 'antibody' },
-    { id: 'tix11', kind: 'cons', treats: 400, name: '뽑기권 11장 묶음', desc: '10장 값에 11장', icon: 'ticket' },
-    { id: 'shards', kind: 'cons', treats: 400, name: '조각 상자', desc: '조각 10개', icon: 'shard' },
+    { id: 'tix11', kind: 'cons', treats: 2000, name: '뽑기권 11장 묶음', desc: '10장 값에 11장', icon: 'ticket' },
+    { id: 'shards', kind: 'cons', treats: 800, name: '조각 상자', desc: '조각 10개', icon: 'shard' },      // 5.2.7 전설 300조각 = 간식 24,000 = 보장 값과 같게
     { id: 'pettix', kind: 'cons', treats: PET_TIX_TREATS, name: '데려오기권', desc: '동물 친구 1번 데려오기', icon: 'ptix' },      // 5.0.1
-    { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 150개', icon: 'treat' },
-    { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 900개', icon: 'treat' },
-    { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 2,000개', icon: 'treat' },
+    { id: 'treat1', kind: 'paid', won: 1100, name: '간식 한 줌', desc: '간식 250개', icon: 'treat' },
+    { id: 'treat2', kind: 'paid', won: 5500, name: '간식 상자', desc: '간식 1,500개', icon: 'treat' },
+    { id: 'treat3', kind: 'paid', won: 11000, name: '간식 수레', desc: '간식 3,300개', icon: 'treat' },
     /* 5.2.4 큰 묶음: 비쌀수록 1원에 드는 간식이 조금씩 많다(0.14 · 0.16 · 0.18 · 0.20 · 0.21 · 0.23) */
-    { id: 'treat4', kind: 'paid', won: 33000, name: '간식 창고', desc: '간식 6,500개', icon: 'treat' },
-    { id: 'treat5', kind: 'paid', won: 55000, name: '간식 트럭', desc: '간식 11,500개', icon: 'treat' },
-    { id: 'treat6', kind: 'paid', won: 110000, name: '간식 보급선', desc: '간식 25,000개', icon: 'treat' },
+    { id: 'treat4', kind: 'paid', won: 33000, name: '간식 창고', desc: '간식 10,800개', icon: 'treat' },
+    { id: 'treat5', kind: 'paid', won: 55000, name: '간식 트럭', desc: '간식 19,200개', icon: 'treat' },
+    { id: 'treat6', kind: 'paid', won: 110000, name: '간식 보급선', desc: '간식 41,700개', icon: 'treat' },
     /* 5.2.4 뽑기권 꾸러미는 패키지로, 광고 제거는 광고 묶음으로 옮겼다(간식 충전 칸에 간식이 아닌 것이 섞여 있었다) */
     { id: 'noads', kind: 'noads', won: 5500, name: '광고 제거', desc: '광고 없이 보상을 바로, 영구', icon: 'people' },
     /*
@@ -4014,23 +4014,23 @@
      *   매일 간식 ₩4,400 바로 간식 200 + 30일 동안 매일 간식 40     (모두 1,400개, 끝나야 다시 살 수 있다)
      */
     /* 5.2.4 첫 결제 상자: 처음 결제의 문턱(₩1,100 에 간식 한 줌 일곱 배쯤). 간식으로 사는 첫 보급 상자와 나란히 둔다 */
-    { id: 'first', kind: 'first', won: 1100, limit: 'once', name: '첫 결제 상자', desc: '간식 300, 뽑기권 10장, 데려오기권 2장', icon: 'supply', give: { treats: 300, tickets: 10, petTix: 2 } },
-    { id: 'pack-new', kind: 'pack', won: 3300, limit: 'once', name: '새내기 꾸러미', desc: '간식 500, 뽑기권 10장, 데려오기권 1장', icon: 'treat', give: { treats: 500, tickets: 10, petTix: 1 } },
-    { id: 'pack-pet', kind: 'pack', won: 5500, limit: 'season', name: '동물 친구 꾸러미', desc: '데려오기권 8장, 친구 조각 20개, 간식 600', icon: 'ptix', give: { petTix: 8, petShards: 20, treats: 600 } },
-    { id: 'pack-big', kind: 'pack', won: 11000, limit: 'season', name: '생존 보급 꾸러미', desc: '간식 2,000, 뽑기권 25장, 데려오기권 4장', icon: 'supply', give: { treats: 2000, tickets: 25, petTix: 4 } },
-    { id: 'pack-day', kind: 'pack', won: 4400, name: '매일 간식 30일', desc: '바로 간식 200, 30일 동안 매일 간식 40', icon: 'treat', give: { treats: 200 } },
-    { id: 'tixpay', kind: 'pack', won: 3300, name: '뽑기권 꾸러미', desc: '뽑기권 22장', icon: 'ticket' },
+    { id: 'first', kind: 'first', won: 1100, limit: 'once', name: '첫 결제 상자', desc: '간식 300, 뽑기권 3장, 데려오기권 2장', icon: 'supply', give: { treats: 300, tickets: 3, petTix: 2 } },
+    { id: 'pack-new', kind: 'pack', won: 3300, limit: 'once', name: '새내기 꾸러미', desc: '간식 800, 뽑기권 5장, 데려오기권 1장', icon: 'treat', give: { treats: 800, tickets: 5, petTix: 1 } },
+    { id: 'pack-pet', kind: 'pack', won: 5500, limit: 'season', name: '동물 친구 꾸러미', desc: '데려오기권 8장, 친구 조각 20개, 간식 2,300', icon: 'ptix', give: { petTix: 8, petShards: 20, treats: 2300 } },
+    { id: 'pack-big', kind: 'pack', won: 11000, limit: 'season', name: '생존 보급 꾸러미', desc: '간식 3,000, 뽑기권 10장, 데려오기권 4장', icon: 'supply', give: { treats: 3000, tickets: 10, petTix: 4 } },
+    { id: 'pack-day', kind: 'pack', won: 4400, name: '매일 간식 30일', desc: '바로 간식 300, 30일 동안 매일 간식 60', icon: 'treat', give: { treats: 300 } },
+    { id: 'tixpay', kind: 'pack', won: 5500, name: '뽑기권 꾸러미', desc: '뽑기권 10장', icon: 'ticket' },      // 5.2.7 한 장 ₩550: 간식으로 사는 길(₩545)보다 싸지 않게
     { id: 'pass', kind: 'pass', won: 5500, limit: 'season', name: '프리미엄', desc: '이번 시즌 프리미엄 줄, 출석 보상 두 배', icon: 'ticket' },
-    { id: 'passplus', kind: 'pass', won: 11000, limit: 'season', name: '프리미엄 플러스', desc: '프리미엄 전부, 바로 10칸, 간식 800, 뽑기권 15장, 데려오기권 3장', icon: 'ticket', give: { treats: 800, tickets: 15, petTix: 3 } }      /* 5.2.5 더 내는 ₩5,500 만큼 간식 상자의 1.8배쯤(10칸은 덤) */
+    { id: 'passplus', kind: 'pass', won: 11000, limit: 'season', name: '프리미엄 플러스', desc: '프리미엄 전부, 바로 10칸, 간식 1,300, 뽑기권 5장, 데려오기권 3장', icon: 'ticket', give: { treats: 1300, tickets: 5, petTix: 3 } }      /* 5.2.5 더 내는 ₩5,500 만큼 간식 상자의 1.8배쯤(10칸은 덤) */
   ];
-  var PAID_TREATS = { treat1: 150, treat2: 900, treat3: 2000, treat4: 6500, treat5: 11500, treat6: 25000 };
+  var PAID_TREATS = { treat1: 250, treat2: 1500, treat3: 3300, treat4: 10800, treat5: 19200, treat6: 41700 };      // 5.2.7 뽑기권 200 기준으로 다시(1원에 0.23 ~ 0.38)
   /*
    * 5.2.5 값 맞추기(간식으로 환산). 뽑기권 1장 = 간식 40(TICKET_TREATS), 데려오기권 = 간식 80, 친구 조각 10개 = 데려오기 1번 = 간식 80.
    *   간식 충전은 1원에 0.14(₩1,100) ~ 0.23(₩110,000)개. 패키지는 '간식 상자(₩5,500 = 900개, 0.16)'보다 1.5배 이상 들어야 살 이유가 있다.
    *   예전 값(동물 친구 620개어치 · 생존 보급 2,260개어치 · 뽑기권 11장 440개어치)은 같은 돈으로 간식을 사는 것보다 못했다 → 올렸다.
    */
-  var TIXPAY = 22;
-  var DAYCARD_DAYS = 30, DAYCARD_TREATS = 40, PASS_PLUS_TIERS = 10;
+  var TIXPAY = 10;
+  var DAYCARD_DAYS = 30, DAYCARD_TREATS = 60, PASS_PLUS_TIERS = 10;
   /** 결제 상품인가(간식으로는 못 산다). */
   function isPaid(it) { return !!it && (it.kind === 'paid' || it.kind === 'pack' || it.kind === 'pass' || it.kind === 'noads' || it.kind === 'first'); }
   function buysOf(state) { if (!state.buys || typeof state.buys !== 'object') state.buys = {}; return state.buys; }
@@ -4118,7 +4118,7 @@
    *   무료 줄: 칸마다 간식(다섯 칸마다 뽑기권). 유료 줄(지금은 간식 PASS_PRICE 로 연다): 더 많은 간식 · 뽑기권, 10칸 · 20칸에 수첩 한정 외형.
    *   시즌이 바뀌면 도장 · 받은 칸 · 유료 줄이 처음으로 돌아간다(받은 외형은 남는다).
    */
-  var PASS_DAYS = 30, PASS_TIERS = 20, PASS_STEP = 10, PASS_PRICE = 1200, PASS_EPOCH = Date.UTC(2026, 0, 1);
+  var PASS_DAYS = 30, PASS_TIERS = 20, PASS_STEP = 10, PASS_PRICE = 2000, PASS_EPOCH = Date.UTC(2026, 0, 1);
   var PASS_STAMPS = { attend: 5, star: 2, night: 3, serum: 10, retreat: 3 };
   function passSeasonOf(dateStr) {
     var m = typeof dateStr === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr); if (!m) return -1;
@@ -4169,7 +4169,7 @@
     state.treats -= PASS_PRICE; p.premium = true; return { ok: true };
   }
   /* 4.8.2 첫 보급 상자: 한 번만. 값보다 훨씬 많이 든 상자(첫 구매의 문턱을 낮춘다). 보급소 한정 외형이 들어 있다 */
-  var STARTER = { treats: 150, give: { tickets: 5, shards: 10, cos: 'coat-starter' } };
+  var STARTER = { treats: 150, give: { tickets: 2, shards: 10, cos: 'coat-starter' } };      // 5.2.7 뽑기권 5 → 2(한 장 값이 다섯 배)
   function buyStarter(state) {
     if (state.starter) return fail('owned');
     if (!((state.treats || 0) >= STARTER.treats)) return fail('treats');
@@ -4324,7 +4324,7 @@
    *               누적이 RESCUE_TIERS 의 문턱을 넘을 때마다 전체 생산이 RESCUE_BONUS 씩 영구히 는다.
    *   기록      : 가장 빨리 끝낸 시간(전체, 단계별), 끝을 본 가장 높은 단계, 최근 끝 10번(endLog).
    */
-  var DANGER_MAX = 20, DANGER_HORDE = 1.2, DANGER_COST = 2.2, DANGER_ANTIBODY = 0.3, DANGER_TICKETS = 2;
+  var DANGER_MAX = 20, DANGER_HORDE = 1.2, DANGER_COST = 2.2, DANGER_ANTIBODY = 0.3, DANGER_TICKETS = 1;
   /*
    * 5.1.3 다시 맞춤(무과금 하루 1시간, 한 회차로 끝까지): 방치형 · 과금 게임이라 단계가 오를수록 길어져야 하는데 거꾸로였다.
    *   전: 1단계 29일 · 5단계 21일 · 10단계 14일(다 키운 사람) · 20단계 72일(6구역 → 7구역 문이 53일짜리 벽).
@@ -4377,13 +4377,15 @@
    * 세트를 다 모아야 보상을 주는 방식(컴플리트)은 두지 않는다. 뽑기에서 나오는 것은 전부 이 표에 있는 외형이다.
    */
   /*
-   * 5.2.6 기준: 간식을 돈으로 사서 전설을 '확정'하려면 ₩66,000 이 든다.
-   *   ₩66,000 = 간식 트럭(₩55,000, 11,500) + 간식 수레(₩11,000, 2,000) = 간식 13,500 → 11장 묶음(400)으로 바꾸면 뽑기권 370장.
-   *   ₩66,000 보다 적게(최대 ₩65,900 → 간식 13,000 → 357장)로는 닿지 않게 보장을 360번에 둔다(테스트가 지킨다).
-   *   보장만 멀면 2% 로 금방 나와 기준이 뜻이 없다 → 전설 2% → 0.5%(평균 200번 ≈ ₩36,000, 다섯에 하나 꼴로 보장까지 간다). 뺀 1.5% 는 희귀로.
+   * 5.2.7 기준(전체 간식 밸런스의 닻): ₩66,000 을 간식으로 바꿔 뽑으면 전설 확정(보장 120번)에 닿는다.
+   *   ₩66,000 = 간식 트럭(₩55,000) + 간식 수레(₩11,000) = 간식 22,500 → 11장 묶음(간식 2,000) 11개 = 뽑기권 121장.
+   *   ₩65,900 이하로는 아무리 섞어도 118장까지라 닿지 않는다(테스트가 지킨다).
+   *   뽑기권 한 장 = 간식 200. 무과금 하루 수입(시뮬레이터, 7구역까지 온 사람): 하루 3시간 놀이 간식 약 360 + 출석 · 임무 · 광고 약 120,
+   *   하루 1시간이면 놀이 간식 약 210. → 3시간이면 하루 4번 남짓(무료 1번 포함), 한 달이면 보장 120번에 닿는다. 1시간이면 5주쯤.
+   *   전설 1%(평균 100번 안쪽, 열에 일곱은 보장 전에 나온다). 뺀 몫은 희귀로.
    */
-  var RARITIES = ['일반', '희귀', '전설'], GACHA_ODDS = [0.76, 0.235, 0.005], GACHA_PITY = 360, PITY_WON = 66000,
-      TICKET_TREATS = 40;      // 4.8.4 20 → 40
+  var RARITIES = ['일반', '희귀', '전설'], GACHA_ODDS = [0.76, 0.23, 0.01], GACHA_PITY = 120, PITY_WON = 66000,
+      TICKET_TREATS = 200;      // 5.2.7 40 → 200(위 기준)      // 4.8.4 20 → 40
   /* 5.2.6 전설을 조각으로 만드는 길도 ₩66,000 기준에 맞춘다: 50 → 300조각. 조각 상자도 간식 80 → 400(조각 하나에 간식 40, 전설 하나에 간식 12,000) */
   var SHARDS_DUP = [1, 3, 10], SHARDS_COST = [5, 15, 300], COS_DUP_SHARDS = 50;
   var COSMETICS = [
@@ -4425,7 +4427,7 @@
     { id: 'coat-s3', slot: 'coat', name: '소풍 우비',     rarity: 1, reward: true, exclusive: true, look: { y: '#ff9fc0', j: '#5fd0b0' } },
     { id: 'hood-s0', slot: 'hood', name: '박쥐 귀',       rarity: 2, reward: true, exclusive: true, look: 'bat' },
     { id: 'hood-s1', slot: 'hood', name: '북극곰 귀',     rarity: 2, reward: true, exclusive: true, look: 'polar' },
-    { id: 'hood-s2', slot: 'hood', name: '상어 후드',     rarity: 2, reward: true, exclusive: true, look: 'shark' },      // 5.2.6 인어 지느러미 → 상어 후드
+    { id: 'hood-s2', slot: 'fx',   name: '어깨 앵무새',   rarity: 2, reward: true, exclusive: true, look: 'parrot' },      // 5.2.7 상어 후드 → 어깨 앵무새(효과 칸. 후드로는 바다 느낌이 안 났다). id 는 저장과 맞추려고 그대로
     { id: 'hood-s3', slot: 'hood', name: '접힌 토끼 귀', rarity: 2, reward: true, exclusive: true, look: 'lop' },
     { id: 'flag-s0', slot: 'flag', name: '호박 깃발',     rarity: 1, reward: true, exclusive: true, look: '#e8762a' },
     { id: 'flag-s1', slot: 'flag', name: '얼음 깃발',     rarity: 1, reward: true, exclusive: true, look: '#bfe6ff' },
@@ -4627,11 +4629,12 @@
    *   날짜를 거꾸로 돌리면(마지막으로 받은 날보다 이르면) 받을 수 없다.
    */
   // 4.7.1 서른 날 한 바퀴. 한 주(일곱 날)의 꼴은 같고 주가 갈수록 간식이 5개씩 늘어난다. 스물아흐레는 간식 40, 서른째 날은 뽑기권 5장과 간식 40.
-  var ATTEND_WEEK = [{ treats: 5 }, { tickets: 1 }, { treats: 10 }, { tickets: 1 }, { treats: 15 }, { tickets: 1 }, { tickets: 3, treats: 20 }];
+  /* 5.2.7 뽑기권이 비싸져서 출석 뽑기권은 주에 1장(+서른째 날 3장), 나머지 날은 간식으로 */
+  var ATTEND_WEEK = [{ treats: 10 }, { treats: 15 }, { treats: 15 }, { treats: 20 }, { treats: 20 }, { treats: 25 }, { tickets: 1, treats: 30 }];
   var ATTEND_REWARDS = (function () {
     var out = [];
     for (var d = 0; d < 28; d++) { var w = ATTEND_WEEK[d % 7], o = {}; if (w.tickets) o.tickets = w.tickets; if (w.treats) o.treats = w.treats + 5 * Math.floor(d / 7); out.push(o); }
-    out.push({ treats: 40 }); out.push({ tickets: 5, treats: 40 });
+    out.push({ treats: 60 }); out.push({ tickets: 3, treats: 60 });
     return out;
   })();
   function attendOf(state) { if (!state.attend || typeof state.attend !== 'object') state.attend = { last: '', count: 0 }; return state.attend; }
@@ -4934,7 +4937,7 @@
     state.challenge.done = true;
     state.medals[def.id] = Math.min(1e6, (state.medals[def.id] || 0) + 1);
     state.treats = Math.min(1e9, state.treats + treats);
-    var tk = addTickets(state, first ? 3 : 1), flags = grantFlags(state);
+    var tk = addTickets(state, first ? 1 : 0), flags = grantFlags(state);
     events.push({ type: 'challenge-done', id: def.id, name: def.name, first: first, treats: treats, tickets: tk, flags: flags, medals: medalCount(state) });
   }
   function retreat(state, now, rng) {
@@ -5636,7 +5639,7 @@
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,
-    PET_NAME_MAX: PET_NAME_MAX, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, PET_SHARD_GAIN: PET_SHARD_GAIN, PET_SHARD_PULL: PET_SHARD_PULL, PET_SHARD_DUP: PET_SHARD_DUP, AD_TREATS: AD_TREATS, AD_TREAT_DAILY: AD_TREAT_DAILY, PET_STAR_UP: PET_STAR_UP, petFreeReady: petFreeReady, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, MISSION_PERS: MISSION_PERS, MISSION_POOL: MISSION_POOL, missionInfo: missionInfo, missionClaim: missionClaim, missionClaimAll: missionClaimAll, periodStart: periodStart, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect, cosRank: cosRank,
+    PET_NAME_MAX: PET_NAME_MAX, MISSION_PER: MISSION_PER, PET_KINDS: PET_KINDS, PET_BREEDS: PET_BREEDS, PET_RARITIES: PET_RARITIES, PET_PULL_MIN: PET_PULL_MIN, PET_PULL_SHARE: PET_PULL_SHARE, PET_DUP_REFUND: PET_DUP_REFUND, PET_STAR_MAX: PET_STAR_MAX, PET_SHARD_GAIN: PET_SHARD_GAIN, PET_SHARD_PULL: PET_SHARD_PULL, PET_SHARD_DUP: PET_SHARD_DUP, AD_TREATS: AD_TREATS, AD_TREAT_DAILY: AD_TREAT_DAILY, PET_STAR_UP: PET_STAR_UP, petFreeReady: petFreeReady, DAILY_POOL: DAILY_POOL, DRIP_SECONDS: DRIP_SECONDS, DRIP_MAX: DRIP_MAX, DAILY_TREATS: DAILY_TREATS, dailySync: dailySync, MISSION_PERS: MISSION_PERS, MISSION_POOL: MISSION_POOL, missionInfo: missionInfo, missionClaim: missionClaim, missionClaimAll: missionClaimAll, periodStart: periodStart, dailyPlay: dailyPlay, dailyInfo: dailyInfo, dailyClaim: dailyClaim, dailyPicks: dailyPicks, PET_STAR_STEP: PET_STAR_STEP, petStar: petStar, petStarMult: petStarMult, equipEffect: equipEffect, cosRank: cosRank,
     cleanName: cleanName, setHeroName: setHeroName, kennelCount: kennelCount, petPullCost: petPullCost, rollRarity: rollRarity, adoptPet: adoptPet, choosePet: choosePet, renamePet: renamePet, petEffect: petEffect, petOwnBonus: petOwnBonus, petSkillText: petSkillText, partyOf: partyOf, PET_SKILLS: PET_SKILLS, PET_OWN: PET_OWN, breedDesc: breedDesc, petInfo: petInfo,
     MOM_CHAPTER: MOM_CHAPTER, MOM_PAGES: MOM_PAGES, momRead: momRead, afterEnding: afterEnding,
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,

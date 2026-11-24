@@ -2094,7 +2094,7 @@
     passPremTotals(season).cos.forEach(function (id) {
       var c = C.COSMETICS.filter(function (x) { return x.id === id; })[0]; if (!c) return;
       var it = el('div', ''), cv = document.createElement('canvas'); cv.width = 28; cv.height = 40;
-      it.appendChild(cv); it.appendChild(el('small', '', c.name)); it.appendChild(el('em', '', ({ coat: '우비', flag: '깃발', hood: '후드' })[c.slot] || '외형'));
+      it.appendChild(cv); it.appendChild(el('small', '', c.name)); it.appendChild(el('em', '', ({ coat: '우비', flag: '깃발', hood: '후드', fx: '효과' })[c.slot] || '외형'));
       box.appendChild(it); try { drawThumb(cv, c, worn); } catch (e) { /* 그림이 없어도 이름은 보인다 */ }
     });
   }
@@ -2324,7 +2324,7 @@
     if (c.slot === 'pet') { if (window.Scene && window.Scene.paintPet) window.Scene.paintPet(ctx, Math.floor((cv.width - 30) / 2), cv.height - 26, 2, false, petLook(petTab || undefined), c.look, 0); return; }      // 친구 옷: 데리고 있는 친구(없으면 누렁이)에게 입혀 보인다
     var look = lookWith(c.slot === 'fx' ? worn : { coat: worn.coat, hood: 'none', pat: 'none', bag: 'cooler', fx: 'none' }, c);
     if (c.slot !== 'coat' && c.slot !== 'fx') look.coat = worn.coat;
-    if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, 0, 2, 2, look, undefined, 0.65, look.fx === 'glow' ? 1 : 0);
+    if (window.Scene && window.Scene.drawHero) window.Scene.drawHero(ctx, look.fx === 'parrot' ? -2 : 0, 2, 2, look, undefined, 0.65, look.fx === 'glow' ? 1 : 0);      // 5.2.7 어깨 앵무새는 오른쪽으로 삐져나와서 두 칸 당겨 그린다
   }
   function drawLookScene(cv, look, frame) {
     var ctx = cv && cv.getContext ? cv.getContext('2d') : null; if (!ctx) return;
