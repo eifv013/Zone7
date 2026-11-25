@@ -303,7 +303,7 @@ def run_case(browser, name, size, state, mode):
         if not page.locator('#z3-cv').is_visible(): problems.append('공장 장면이 없다')
         if page.locator('#mboard').is_visible(): problems.append('옛 칸 격자가 보인다')
         if z3('data-cells') != '20': problems.append('선반이 스무 칸이 아니다: %s' % z3('data-cells'))
-        if page.locator('#z3-chips span').count() != 4 or '가장 느림' not in text('z3-chips'): problems.append('라인 이름표가 없다: ' + text('z3-chips'))
+        if page.locator('#z3-chips span').count() != 4 or '가장 느림' in text('z3-chips') or '투입구' not in text('z3-chips'): problems.append('라인 이름표가 없다: ' + text('z3-chips'))      # 5.3.1 세 기계 레벨이 같으면(새 저장은 모두 0) '가장 느림'이 나오면 안 된다
         for gone in ['#recipes', '#jam-fix', '#surge', '#belt', '#tune', '#rebalance', '#truck']:
             if page.locator(gone).count() and page.locator(gone).is_visible(): problems.append('없앤 것이 보인다: ' + gone)
         page.wait_for_timeout(7500)      # 상자 둘 이상이 들어올 시간

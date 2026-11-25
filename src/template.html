@@ -869,7 +869,7 @@ html, body, button, .row, .panel { touch-action: pan-x pan-y; }
 #rebalance[hidden] { display: none; }
 #wall-now { margin: 0 0 8px; font-size: 14px; }
 #wall-now.bad { color: var(--blood); }
-#auto-ev-row { margin: 0 0 8px; }
+#auto-ev-row { margin: 0 0 11px; }
 #auto-ev-row[hidden] { display: none; }
 /* 4.4.0 특성 창: 묶음 · 한 줄에 효과(현재 → 다음)와 막대 · 값은 오른쪽 · 최대인 것은 작은 칩 */
 .ex-seg { margin: 0 0 10px; flex: none; } .ex-seg button { flex: 1; padding: 9px 0; font-size: 14px; } [data-ex][hidden] { display: none; }
@@ -1684,6 +1684,16 @@ button.row.rec.rec-night { outline-color: #c0392b; }
 .z3-workers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; } .z3-workers[hidden] { display: none; }
 .z3-workers button { padding: 10px 4px; border: 0; border-radius: 10px; background: #2f6b3c; color: #f4f0dc; font: 400 14px/1.2 var(--font-head); --lip: #173a1e; }
 .z3-workers button[aria-pressed="false"] { background: #c9c7ba; color: #6b6a60; --lip: #9a988c; }
+/* 5.3.1 켬 · 끔 스위치는 어느 구역이든 같은 모양(초록 ON · 회색 OFF 알약 단추). 체크박스는 그대로 두고 겉만 바꾼다: 키보드 · 낭독기 · 기존 동작이 유지된다 */
+.check { position: relative; justify-content: center; min-height: 38px; padding: 10px 8px; margin: 0 0 11px; border-radius: 10px; font: 400 14px/1.2 var(--font-head); color: #6b6a60; text-align: center; flex: 1 1 140px; }
+.check[hidden] { display: none; }
+.check input { -webkit-appearance: none; appearance: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; margin: 0; border-radius: 10px; background: #c9c7ba; box-shadow: 0 3px 0 #9a988c; cursor: pointer; }
+.check input:checked { background: #2f6b3c; box-shadow: 0 3px 0 #173a1e; }
+.check input:focus-visible { outline: 2px solid var(--hazard); outline-offset: 2px; }
+.check > span { position: relative; pointer-events: none; }
+.check > span::after { content: ' OFF'; }
+.check input:checked + span { color: #f4f0dc; }
+.check input:checked + span::after { content: ' ON'; }
 </style>
 </head>
 <body data-mview="base">
@@ -1871,6 +1881,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="tabbar even" id="zone-tabs" role="group" aria-label="구역 고르기"></div>
       <p class="hint tab-hint" id="tab-hint"></p>
       <label class="check" for="auto-ev" id="auto-ev-row" hidden><input type="checkbox" id="auto-ev"> <span id="auto-ev-text">주문과 사건을 자동에 맡긴다</span></label>
+      <div class="z3-workers" id="z3-workers" hidden><button type="button" data-who="merge"></button><button type="button" data-who="ship"></button></div>
       <div class="panes" id="zone-panes" role="group" aria-label="구역 화면 고르기">
         <button type="button" data-pane="play" aria-pressed="true">운영</button>
         <button type="button" data-pane="up" aria-pressed="false">개조</button>
@@ -1900,8 +1911,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <button type="button" class="fortify sell" id="sell">상품이 없다</button>
         <div class="autobar" id="sell-bar" aria-hidden="true"></div>
         <div class="label" id="sell-auto"></div>
-        <label class="check" for="auto-sell" id="auto-sell-row"><input type="checkbox" id="auto-sell"> 흥정꾼이 알아서 판다</label>
-        <label class="check" for="sell-peak" id="sell-peak-row"><input type="checkbox" id="sell-peak"> 고점에서만 판다</label>
+        <label class="check" for="auto-sell" id="auto-sell-row"><input type="checkbox" id="auto-sell"> <span>흥정꾼 자동 판매</span></label>
+        <label class="check" for="sell-peak" id="sell-peak-row"><input type="checkbox" id="sell-peak"> <span>고점에서만 판매</span></label>
       </div>
       <div class="trade line" id="line" hidden>
         <!-- 컨베이어: 물건이 왼쪽에서 오른쪽으로 흐른다. 병목인 기계 앞에는 물건이 쌓인다. 그림은 ui.js 의 drawBelt 가 그린다. -->
@@ -2038,7 +2049,6 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="rows" id="rows-z6" hidden></div>
       <div class="rows" id="ups-z0" hidden></div>
       <div class="rows" id="ups-z1" hidden></div>
-      <div class="z3-workers" id="z3-workers" hidden><button type="button" data-who="merge"></button><button type="button" data-who="ship"></button></div>
       <div class="rows" id="ups-z2" hidden></div>
       <div class="rows" id="ups-z3" hidden></div>
       <div class="rows" id="ups-z4" hidden></div>
@@ -2212,7 +2222,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.3.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.3.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

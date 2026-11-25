@@ -3798,7 +3798,7 @@
       var ct = state.contract, m = C.mods(state);
       return { cells: (state.board || []).slice(0, C.boardSize(state)), order: ct ? { lv: ct.level, n: ct.need } : null,
         auto: m.autoline > 0 ? m.autoline : 0, autoOn: C.autoEvents(state, 2) && C.workerOn(state, 'merge'),
-        driver: m.dispatch > 0 ? m.dispatch : 0, driverOn: !(state.autoOff && state.autoOff[2]) && C.workerOn(state, 'ship'), wait: ct && ct.wait > 0 ? ct.wait : 0 };
+        driver: m.dispatch > 0 ? m.dispatch : 0, driverOn: C.workerOn(state, 'ship'), wait: ct && ct.wait > 0 ? ct.wait : 0 };
     },
     driverWait: function () { return C.dispatchWait(state); },
     ship: function () { var b = $('contract-fill'); if (b && !$('contract').hidden && !b.disabled) b.click(); },
@@ -3824,7 +3824,7 @@
   function z3Chips() {
     var box = $('z3-chips'), cv = $('z3-cv'); if (!box || !cv) return;
     var st = C.lineStations(state), line = C.lineInfo(state), p = Math.round(((state.feed || 0) % 1) * 100);
-    st.forEach(function (x, i) { var e = box.children[i], text = x.name + '|' + (x.slow ? '▼ 가장 느림 ' : '초당 ') + x.rate.toFixed(2); if (e._t !== text) { e._t = text; e.className = x.slow ? 'slow' : ''; e.firstChild.textContent = x.name; e.lastChild.textContent = (x.slow ? '▼ 가장 느림 ' : '초당 ') + x.rate.toFixed(2); } e.style.backgroundImage = x.slow ? 'linear-gradient(90deg,#17180f ' + p + '%,transparent ' + p + '%)' : ''; });
+    st.forEach(function (x, i) { var e = box.children[i], text = x.name + '|' + (x.mark ? '▼ 가장 느림 ' : '초당 ') + x.rate.toFixed(2); if (e._t !== text) { e._t = text; e.className = x.mark ? 'slow' : ''; e.firstChild.textContent = x.name; e.lastChild.textContent = (x.mark ? '▼ 가장 느림 ' : '초당 ') + x.rate.toFixed(2); } e.style.backgroundImage = x.slow ? 'linear-gradient(90deg,#17180f ' + p + '%,transparent ' + p + '%)' : ''; });
     var pe = box.children[3], pt = '값 ×' + fmt((1 + line.levels) * line.milestone); if (pe._t !== pt) { pe._t = pt; pe.firstChild.textContent = '도장'; pe.lastChild.textContent = pt; }
     var cells = z3Board.S().cells, pairs = C.mergeable(state);
     cv.setAttribute('data-cells', cells.length); cv.setAttribute('data-boxes', cells.filter(function (v) { return v; }).length); cv.setAttribute('data-pair', pairs.length ? pairs[0] : -1);
@@ -4629,10 +4629,10 @@
     $('guard').hidden = !(tab === 'z5' && open);
     $('rows-z6').hidden = !(tab === 'z6' && open);
     $('tower').hidden = !(tab === 'z6' && open);
-    z3Workers(tab === 'z2' && open && pane === 'up');
+    z3Workers(tab === 'z2' && open);
     $('settle').hidden = !(tab === 'z6' && open && pane === 'up');
     if (tab === 'z6' && open && pane === 'up') renderSettle();
-    var aeZone = /^z\d$/.test(tab) ? Number(tab.slice(1)) : -1, aeShow = aeZone >= 1 && aeZone <= state.zone && C.autoOn(state, aeZone);
+    var aeZone = /^z\d$/.test(tab) ? Number(tab.slice(1)) : -1, aeShow = aeZone >= 1 && aeZone !== 2 && aeZone <= state.zone && C.autoOn(state, aeZone);      // 5.3.1 3구역은 일꾼 스위치(조립공 · 배차원)가 대신한다
     $('auto-ev-row').hidden = !aeShow;
     if (aeShow) {
       $('auto-ev').checked = C.autoEvents(state, aeZone);
@@ -4811,7 +4811,7 @@
         var cl = null; C.CLIENTS.forEach(function (r) { if (r.id === ct.who) cl = r; });
         var cHave = Math.min(ct.need, C.contractHave(state)), cdone = cHave >= ct.need, cName = C.boxName(ct.level);
         setText($('contract-left'), clock(ct.left));
-        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' ' + cName + ' 상자 ' + ct.need + '개를 찾아요.\n넘기면 물자 +' + fmt(C.contractReward(state)) + ' · 간식 +' + C.CONTRACT_TREATS);
+        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' ' + cName + ' 상자 ' + ct.need + '개를 찾아요.\n넘기면 물자 +' + fmt(C.contractReward(state)) + (C.contractTreats(state) ? ' · 간식 +' + C.contractTreats(state) : ''));
         fill($('contract-bar'), cHave / ct.need);
         $('contract-fill').disabled = !cdone;
         setText($('contract-fill'), cdone ? '넘긴다' : cName + ' 상자 ' + cHave + ' / ' + ct.need + ' · 합치지 말고 모아 두세요');
@@ -4824,7 +4824,7 @@
         setText(r.count, (d.id === 'paint' ? '' : 'Lv ') + lv + ' / ' + d.max);      // 도장 라인은 별 딱지가 있어 자리가 좁다(1구역 시설처럼 숫자만)
         // 줄마다 "지금 어떤가 → 사면 어떻게 되나"를 적는다
         var stn = d.id === 'feed' || d.id === 'press' || d.id === 'weld' ? C.lineStations(state).filter(function (x) { return x.id === d.id; })[0] : null;
-        setText(r.info, stn ? '초당 ' + stn.rate.toFixed(2) + (lv < d.max ? ' → ' + (stn.rate / C.FEED_STEP).toFixed(2) : '') + (stn.slow ? ', 가장 느림' : '')
+        setText(r.info, stn ? '초당 ' + stn.rate.toFixed(2) + (lv < d.max ? ' → ' + (stn.rate / C.FEED_STEP).toFixed(2) : '') + (stn.mark ? ', 가장 느림' : '')
           : d.id === 'forge' ? C.boxName(line.spawn) + (lv < d.max ? ' → ' + C.boxName(line.spawn + 1) : '')
           : '×' + fmt((1 + lv) * line.milestone) + (lv < d.max ? ' · 레벨당 +' + fmt(line.milestone) : ''));
         if (d.id === 'paint') setMile(r, lv, q, cost <= state.supplies, C.LINE_MILESTONES);

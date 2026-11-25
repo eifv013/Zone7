@@ -24,7 +24,7 @@ function inFactory() {
   C.GOALS[1].forEach(g => { s.goalsDone[g.id] = true; });
   s.zone = 2; s.bestZone = 2;
   // 3.3.0: 합치기 판은 기준 상자(9단계) 하나만 두고 상자가 더 들어오지 않게 멈춰 둔다. 그러면 판 배수가 정확히 1이라 라인 셈을 따로 볼 수 있다
-  s.board = Array(C.BOARD_MAX).fill(0); s.feed = -1e9; s.contractIn = 270;
+  s.board = Array(C.BOARD_MAX).fill(0); s.feed = -1e9; s.contractIn = 25;
   return s;
 }
 /** 4구역(환승역)까지 연 상태. */
@@ -4052,4 +4052,29 @@ test('5.3.0: 3구역 라인 — 가장 느린 기계가 간격을 정하고, 가
   // 옛 저장: 조립공이 있었으면 배차원 1
   var old = JSON.parse(C.serialize(s)); old.upgrades.autoline = 2; delete old.upgrades.dispatch; delete old.machines.press; delete old.machines.weld;
   var mig = C.deserialize(JSON.stringify(old)); assert.strictEqual(mig.upgrades.dispatch, 1); assert.strictEqual(mig.machines.press, 5); assert.strictEqual(mig.machines.weld, 5);
+});
+
+test('5.3.1: 세 기계 레벨이 같으면 "가장 느림" 표시가 없고 셋 다 밀어 줄 수 있다 · 3구역 스위치는 일꾼 스위치로 옮겨진다 · 의뢰는 금방 다시 온다', function () {
+  var s = C.createState(0); s.zone = 2; s.bestZone = 2; s.supplies = 1e40;
+  C.buyMachine(s, 'feed', 4); C.buyMachine(s, 'press', 4); C.buyMachine(s, 'weld', 4);
+  var st = C.lineStations(s);
+  assert.ok(st.every(function (x) { return !x.mark; }), '같은 레벨이면 느린 곳 표시가 없다');
+  assert.ok(C.boostLine(s, 'weld').ok && C.boostLine(s, 'feed').ok, '같은 레벨이면 어느 기계든 밀어 줄 수 있다');
+  C.buyMachine(s, 'feed', 1); C.buyMachine(s, 'weld', 1); st = C.lineStations(s);
+  assert.deepStrictEqual(st.filter(function (x) { return x.mark; }).map(function (x) { return x.id; }), ['press'], '처지는 곳이 생기면 다시 표시한다');
+  assert.ok(!C.boostLine(s, 'feed').ok);
+  // 옛 저장: 3구역 자동을 꺼 둔 사람 → 일꾼 둘 다 쉼, 구역 스위치는 지워진다(켤 곳이 남아 있어야 한다)
+  var old = JSON.parse(C.serialize(s)); old.autoOff = { 2: true, 3: true }; old.workOff = {};
+  var mig = C.deserialize(JSON.stringify(old));
+  assert.ok(!C.workerOn(mig, 'merge') && !C.workerOn(mig, 'ship')); assert.ok(!mig.autoOff[2]); assert.strictEqual(mig.autoOff[3], true, '다른 구역 스위치는 그대로');
+  C.setWorker(mig, 'ship', true); assert.ok(C.workerOn(mig, 'ship'));
+  // 의뢰 간격: 길어야 25초(견본 상자 없이), 옛 저장의 긴 대기는 잘린다
+  assert.ok(C.CONTRACT_GAP_MAX <= 30);
+  old.contractIn = 270; assert.ok(C.deserialize(JSON.stringify(old)).contractIn <= C.CONTRACT_GAP_MAX);
+});
+
+test('5.3.1: 의뢰 간식은 다섯 번에 한 번만 준다(자주 와도 하루 간식 양은 그대로)', function () {
+  var s = C.createState(0); s.zone = 2; s.bestZone = 2; var got = 0;
+  for (var i = 0; i < 10; i++) { s.board[0] = 3; s.board[1] = 3; s.contract = { who: 'bike', level: 3, need: 2, have: 2, left: 50 }; var t = s.treats, r = C.fillContract(s); assert.ok(r.ok); assert.strictEqual(s.treats - t, r.treats); got += r.treats; }
+  assert.strictEqual(got, 2 * C.CONTRACT_TREATS);
 });
