@@ -3864,7 +3864,8 @@
         /* 동네가 넘어갈 때 잠깐 어두워졌다 밝아진다. 다만 순찰조가 빨라 동네가 몇 초도 안 돼 넘어가는 살림에서는
          * 어두워지는 연출이 끝나기 전에 다시 시작돼 화면이 계속 검게 남는다(1232번째 동네에서 실제로 났던 일).
          * 그래서 직전 전환에서 3초가 안 지났으면 어둡게 하지 않고, 날씨도 45초에 한 번까지만 바꾼다. */
-        var quick = T - (A.hoodT || -99) < 3; A.hoodT = T; A.fade = quick ? 0 : 0.5;
+        var quick = T - (A.hoodT || -99) < 3; A.hoodT = T; A.fade = 0;
+        if (!quick) { A.trAt = T; var tk = A.trK; while (tk === A.trK) tk = Math.floor(Math.random() * 5); A.trK = tk; }      /* 전환 연출 다섯 가지 중 직전과 다른 것 */
         if ((A.hood - A.wxAt >= WX_HOODS || A.hood < A.wxAt) && T - (A.wxT || -99) >= 45) { var nw = A.wx; while (nw === A.wx) nw = Math.floor(Math.random() * WX.length); A.wx = nw; A.wxAt = A.hood; A.wxT = T; }
         else if (A.hood < A.wxAt) A.wxAt = A.hood;
       }
@@ -4145,6 +4146,17 @@
       /* 동네가 넘어갈 때 화면 전체를 어둡게 덮던 연출은 뺐다(5.3.5). 이 덮개가 걷히지 않아 화면이 통째로 검게 남는 사고가 두 번 났다.
        * 전환은 밝은 반짝임으로만 알린다: 화면을 가리는 연출은 실패하면 게임이 안 보이므로 쓰지 않는다. */
       A.fade = 0;
+      /* 동네가 넘어가는 연출 다섯 가지. 모두 "넘어간 뒤 지난 시간"만으로 계산하므로 0.7초가 지나면 반드시 사라진다.
+       * (예전 덮개는 값을 조금씩 줄이는 방식이라, 줄이는 줄이 빠지자 화면이 영영 검게 남았다.) 덮는 세기도 0.85를 넘기지 않는다. */
+      var tp = (T - (A.trAt === undefined ? -99 : A.trAt)) / 0.7;
+      if (tp >= 0 && tp < 1) {
+        var inv = 1 - tp, tkk = A.trK || 0, dk = 'rgba(15,16,20,';
+        if (tkk === 0) { g.fillStyle = 'rgba(255,246,200,' + (0.75 * inv * inv).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); }      /* 번쩍 */
+        else if (tkk === 1) { var bxw = tp * 250 - 40; g.fillStyle = dk + (0.8 * inv).toFixed(2) + ')'; g.fillRect(Math.max(0, bxw + 30), 0, 184, 150); g.fillStyle = 'rgba(255,246,200,.8)'; g.fillRect(bxw + 22, 0, 8, 150); g.fillStyle = 'rgba(255,246,200,.35)'; g.fillRect(bxw, 0, 22, 150); }      /* 빛줄기가 왼쪽에서 오른쪽으로 훑는다 */
+        else if (tkk === 2) { var hw = Math.round(92 * inv * inv); g.fillStyle = dk + '.85)'; g.fillRect(0, 0, hw, 150); g.fillRect(184 - hw, 0, hw, 150); g.fillStyle = 'rgba(255,217,90,.7)'; g.fillRect(hw, 0, 1, 150); g.fillRect(183 - hw, 0, 1, 150); }      /* 문이 양옆으로 열린다 */
+        else if (tkk === 3) { for (k = 0; k < 5; k++) { var rp = Math.max(0, Math.min(1, tp * 2.2 - k * 0.24)); if (rp < 1) { g.fillStyle = dk + (0.85 * (1 - rp)).toFixed(2) + ')'; g.fillRect(0, k * 30, 184, 30); } } }      /* 위에서부터 한 줄씩 밝아진다 */
+        else { g.fillStyle = dk + (0.6 * inv).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); for (k = 0; k < 14; k++) { var dxx = (hash(k, 71) % 220 + tp * 160) % 230 - 20, dyy = 30 + hash(k, 73) % 110; g.fillStyle = 'rgba(200,190,170,' + (0.5 * inv).toFixed(2) + ')'; g.fillRect(dxx, dyy, 9, 3); g.fillRect(dxx + 3, dyy - 2, 5, 2); } }      /* 먼지바람이 지나간다 */
+      }
       base(dt);
     }
     return { draw: draw, icon: ob };
