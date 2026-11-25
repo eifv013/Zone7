@@ -3860,7 +3860,14 @@
     if (v.seed !== A.seed) {
       var first = A.seed === -1; A.seed = v.seed; A.hood = v.hood; for (i = 0; i < 20; i++) A.done[i] = 0;
       if (first) { A.wx = Math.floor(Math.random() * WX.length); A.wxAt = A.hood; }
-      else { A.fade = 0.5; if (A.hood - A.wxAt >= WX_HOODS || A.hood < A.wxAt) { var nw = A.wx; while (nw === A.wx) nw = Math.floor(Math.random() * WX.length); A.wx = nw; A.wxAt = A.hood; } }
+      else {
+        /* 동네가 넘어갈 때 잠깐 어두워졌다 밝아진다. 다만 순찰조가 빨라 동네가 몇 초도 안 돼 넘어가는 살림에서는
+         * 어두워지는 연출이 끝나기 전에 다시 시작돼 화면이 계속 검게 남는다(1232번째 동네에서 실제로 났던 일).
+         * 그래서 직전 전환에서 3초가 안 지났으면 어둡게 하지 않고, 날씨도 45초에 한 번까지만 바꾼다. */
+        var quick = T - (A.hoodT || -99) < 3; A.hoodT = T; A.fade = quick ? 0 : 0.5;
+        if ((A.hood - A.wxAt >= WX_HOODS || A.hood < A.wxAt) && T - (A.wxT || -99) >= 45) { var nw = A.wx; while (nw === A.wx) nw = Math.floor(Math.random() * WX.length); A.wx = nw; A.wxAt = A.hood; A.wxT = T; }
+        else if (A.hood < A.wxAt) A.wxAt = A.hood;
+      }
     }
     for (i = 0; i < 20; i++) { A.kind[i] = v.kinds[i]; var on = (v.mask & (1 << i)) !== 0; if (on && !A.done[i]) A.done[i] = T - 5; else if (!on) A.done[i] = 0; }
     A.b = v.counts; A.patrol = v.patrol; A.on = v.on; A.every = v.every; A.patNext = v.patNext; A.stage = v.stage; A.frac = v.frac; A.tier = v.tier;
@@ -4141,7 +4148,8 @@
 
       aNew();
       return { draw: function (dt, v) { T += dt; aSync(v); aG.draw(dt); }, searched: aSearch,
-        done: function (n, auto, bonusText) { aSay(n + '번째 동네 ' + (auto ? '순찰 완료' : '수색 완료'), 92, 66, 'big'); aSay(bonusText, 92, 84, 'gold'); },
+        /* 순찰조가 빨라 동네가 연달아 끝나는 살림에서는 알림이 겹쳐 쏟아진다. 순찰 완료 알림은 4초에 한 번까지만 띄운다(손으로 끝낸 것은 늘 띄운다) */
+        done: function (n, auto, bonusText) { if (auto && T - (A.doneT || -99) < 4) return; A.doneT = T; aSay(n + '번째 동네 ' + (auto ? '순찰 완료' : '수색 완료'), 92, 66, 'big'); aSay(bonusText, 92, 84, 'gold'); },
         built: function (i, hit) { aBuilt(i, hit); }, patrolUp: function (lv) { A.popP = T; aSay('순찰조 Lv ' + lv, 92, 80, 'big'); }, icon: aG.icon, weather: function () { return aWx().n; } };
     }
     function market(cv, flBox, host) {
