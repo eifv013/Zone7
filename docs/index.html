@@ -1713,7 +1713,8 @@ button.row.rec.rec-night { outline-color: #c0392b; }
 .zs-fl span.gold { color: #ffd95a; font-size: 16px; }
 @keyframes zs-up { 0% { opacity: 0; margin-top: 6px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -26px; } }
 #search-grid, #board, #streak, #trade .trade-top { display: none; }
-#trade .check { display: inline-flex; width: calc(50% - 4px); vertical-align: top; } #trade #sell-peak-row { margin-left: 8px; } #trade #auto-sell-row[hidden], #trade #sell-peak-row[hidden] { display: none; }      /* 스위치 둘을 한 줄에 */      /* 옛 칸 격자 · 시세 막대 · 연속 호가 점은 장면이 대신한다 */
+#trade .check { display: inline-flex; width: 48.5%; vertical-align: top; } #trade #sell-peak-row { margin-left: 3%; float: right; } #trade #auto-sell-row { float: left; } #trade::after { content: ''; display: block; clear: both; } #trade #auto-sell-row[hidden], #trade #sell-peak-row[hidden] { display: none; }      /* 스위치 둘을 한 줄에 */      /* 옛 칸 격자 · 시세 막대 · 연속 호가 점은 장면이 대신한다 */
+#line-head #line-load { visibility: hidden; width: 0; overflow: hidden; }      /* 초당 값은 위 머리줄에 나온다(두 번 보일 필요가 없다) */
 /* 구매 줄 왼쪽의 살아 있는 그림 */
 .row.has-ic { position: relative; padding-left: 92px; min-height: 66px; }
 .row.has-ic .row-mile { display: none; }      /* 별 줄은 그림의 막대와 점이 대신한다 */
@@ -2085,14 +2086,14 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <button type="button" data-pane="goal" aria-pressed="false">목표</button>
       </div>
       <div class="trade search" id="search" hidden>
-        <div class="search-head"><span class="num" id="search-count">0 / 20칸</span><span class="label" id="search-note"></span></div>
+        <div class="order-head plat-head"><span class="label" id="search-note">주택가</span><span class="num" id="search-count">0 / 20집</span></div>
         <div class="autobar" id="search-bar" aria-hidden="true"></div>
         <div class="zs-wrap"><canvas class="zs-cv" id="z1-cv" width="184" height="150" role="img" aria-label="주택가 · 불 꺼진 집을 누르면 수색해요"></canvas><div class="zs-fl" id="z1-fl" aria-hidden="true"></div></div>
         <div class="search-grid" id="search-grid"></div>
         <div class="label" id="search-bonus"></div>
       </div>
       <div class="trade" id="trade" hidden>
-        <div class="search-head"><span class="num" id="z2-goods"></span><span class="label" id="z2-note"></span></div>
+        <div class="order-head plat-head"><span class="label" id="z2-note">야시장</span><span class="num" id="z2-goods"></span></div>
         <div class="zs-wrap"><canvas class="zs-cv" id="z2-cv" width="184" height="132" role="img" aria-label="야시장 · 누르면 상품을 팔아요"></canvas><div class="zs-fl" id="z2-fl" aria-hidden="true"></div></div>
         <div class="trade-top">
           <div><div class="label">현재 시세</div><div class="trade-price num" id="price">×1.00</div><div class="label" id="price-range"></div></div>
@@ -2118,7 +2119,8 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <!-- 컨베이어: 물건이 왼쪽에서 오른쪽으로 흐른다. 병목인 기계 앞에는 물건이 쌓인다. 그림은 ui.js 의 drawBelt 가 그린다. -->
         <!-- 3.3.0 합치기 판: 같은 상자 둘을 누르면 윗단계 하나가 된다. 칸은 ui.js 가 스무 개 만든다 -->
         <!-- 3.8.5: 1구역과 같은 차림. 머리줄(왼쪽 숫자 · 오른쪽 자동 안내) → 막대 → 판 -->
-        <div class="mboard-wrap"><canvas class="z3-cv" id="z3-cv" width="736" height="816" role="img" aria-label="공장"></canvas>
+        <div class="order-head plat-head"><span class="label">공장</span><span class="num" id="z3-head"></span></div>
+        <div class="mboard-wrap"><canvas class="z3-cv" id="z3-cv" width="368" height="408" role="img" aria-label="공장"></canvas>
         <div class="z3-chips" id="z3-chips"><span><b></b><small></small></span><span><b></b><small></small></span><span><b></b><small></small></span><span><b></b><small></small></span></div>
         <canvas class="mboard-top" id="mboard-top" width="184" height="30" aria-hidden="true"></canvas>
         <div class="mboard" id="mboard" role="group" aria-label="상자 칸"></div></div>
@@ -2704,7 +2706,11 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
         '2구역 시세판이 야시장 거리로 바뀌었어요. 가운데 간판이 시세, 간판 위 등이 연속 호가예요. 상품은 좌판마다 쌓이고, 단골은 저마다 다른 방법으로 찾아와요.',
         '1 · 2구역 구매 줄 왼쪽에 그림이 생겼어요. 지을수록 그림이 자라요.',
         '단골 주문 단추는 "거래", 3구역 의뢰 단추는 "납품"으로 이름을 바꿨어요.',
-        '3구역 공장 화면을 가볍게 고쳤어요. 폰이 덜 뜨거워져요. 화면 밖으로 밀려난 그림은 그리지 않아요.'
+        '3구역 공장 화면을 가볍게 고쳤어요. 폰이 덜 뜨거워져요. 화면 밖으로 밀려난 그림은 그리지 않아요.',
+        '3구역 개조 "칸 넓히기"가 "출하대"로 바뀌었어요. 선반은 늘 네 줄이고, 대신 선반이 가득 찼을 때 바로 출하되는 상자 값이 올라요. 이미 산 분은 그대로 출하대를 가져요.',
+        '3구역 의뢰가 쉬워졌어요. 한두 단계 위 상자를 한두 개만 찾아요. 상자를 합칠 때마다 아래에 뜨던 물자 알림은 없앴어요.',
+        '1 · 2 · 3구역 화면 위에도 다른 구역처럼 곳 이름과 숫자가 한 줄로 나와요.',
+        '위쪽 거점 화면의 날씨가 늘었어요. 번개 치는 비, 눈보라, 강풍이 생겼고 가끔 돌풍이 불어요.'
       ] },
     { ver: '알파 5.3.1', date: '2026-11-25', at: '2026-11-25 11:20:00', title: '3구역 트럭과 스위치',
       items: [
@@ -5628,7 +5634,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
     { id: 'manual',  zone: 2, name: '정비 교범', desc: '3구역 시설 값 -4%',      key: 'z3cost',  per: -0.04, baseCost: 3e11, growth: 3,  max: 12 },
     { id: 'bonus',   zone: 2, name: '손맛',      desc: '손으로 합칠 때의 덤 +50%', key: 'mergebonus', per: 0.5, baseCost: 3e11, growth: 4,  max: 10 },
     { id: 'lucky',   zone: 2, name: '행운 상자', desc: '들어오는 상자가 한 단계 더 높을 확률 +10%p', key: 'lucky', per: 0.1, baseCost: 6e11, growth: 5, max: 5 },
-    { id: 'wide',    zone: 2, name: '칸 넓히기', desc: '칸이 5개 더 생긴다',     key: 'boardsize', per: 5, baseCost: 5e13, growth: 400, max: 2 },
+    /* 5.3.2 '칸 넓히기'(선반 줄 늘리기)를 '출하대'로 바꿨다: 선반이 길어지면 화면이 커져 스크롤해야 했다. 줄 수는 늘 네 줄이고, 대신 가득 찼을 때 바로 출하되는 상자의 값이 오른다. 저장의 이름(wide)은 그대로라 산 사람은 잃지 않는다 */
+    { id: 'wide',    zone: 2, name: '출하대',   desc: '선반이 가득 찼을 때 바로 출하되는 상자 값 +50%', key: 'overflow', per: 0.5, baseCost: 5e13, growth: 400, max: 2 },
     { id: 'yard',    zone: 3, name: '정비창',    desc: '4구역 시설 값 -4%',      key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
     { id: 'longplat', zone: 3, name: '긴 승강장', desc: '화물칸을 2칸 더 붙일 수 있다', key: 'platlen', per: 2, baseCost: 2e19, growth: 500, max: 2 },
     { id: 'fence',   zone: 3, name: '철조망',    desc: '무리가 다가오는 걸음 -8%', key: 'hordespeed', per: -0.08, baseCost: 2e18, growth: 4, max: 5 },
@@ -5775,7 +5782,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
-      machines: {}, lineEarned: 0, steadySeconds: 0, lineV: 3, board: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], autoMerge: 0, feed: 1, mergesRun: 0, mergesAll: 0, boxBest: 0,
+      machines: {}, lineEarned: 0, steadySeconds: 0, lineV: 3, board: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], autoMerge: 0, feed: 1, mergesRun: 0, mergesAll: 0, boxBest: 0,
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
@@ -6222,7 +6229,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { strayfast: 1, straytime: 1, lvcost: 1, fence: 1, muster: 1, loss: 1, nightpay: 1, wagon: 1, elder: 0, cool: 1, wall: 0, wallfix: 1, nade: 0, held: 1, prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, dispatch: 0, autosig: 0, rumor: 0 };
+    var m = { strayfast: 1, straytime: 1, lvcost: 1, fence: 1, muster: 1, loss: 1, nightpay: 1, wagon: 1, elder: 0, cool: 1, wall: 0, wallfix: 1, nade: 0, held: 1, prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, overflow: 1, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, dispatch: 0, autosig: 0, rumor: 0 };
     var ADD = { elder: 1, wall: 1, nade: 1, peak: 1, sterile: 1, horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, dispatch: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, nurse: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
@@ -6933,7 +6940,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
    * 자동: AUTO_MERGE_SECONDS 마다 짝 하나만 합친다(투입구보다 느리다). 그래서 자동을 사도 누를 짝은 늘 남고, 손이 언제나 더 낫다.
    *       의뢰가 찾는 단계의 상자는 자동이 건드리지 않는다.
    */
-  var BOARD_BASE = 20, BOARD_MAX = 30, BOX_MAX = 40, BOX_STEP = 2.5, FEED_SECONDS = 3, FEED_STEP = 0.95, MERGE_SECONDS = 2, AUTO_MERGE_SECONDS = 5;
+  var BOARD_BASE = 20, BOARD_MAX = 20, BOX_MAX = 40, BOX_STEP = 2.5, FEED_SECONDS = 3, FEED_STEP = 0.95, MERGE_SECONDS = 2, AUTO_MERGE_SECONDS = 5;
   var BOARD_SIZE = BOARD_BASE;      // 옛 이름(화면과 테스트가 쓴다): 기본 칸 수
   var BOXES = ['고철', '볼트', '철판', '톱니', '베어링', '모터', '변속기', '엔진', '발전기'];
   function boxName(level) { level = Math.floor(safeNum(level, 0)); if (level < 1) return ''; var tier = Math.floor((level - 1) / BOXES.length), n = BOXES[(level - 1) % BOXES.length]; for (var i = 0; i < tier; i++) n += '★'; return n; }
@@ -7093,7 +7100,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
         // 가득 찼다: 자동 합치기가 일할 몫이 남아 있으면 짝 하나를 합쳐 자리를 내고, 없으면 기다린다
         if (auto && state.autoMerge >= 1 && autoMergeOnce(state, n < 6 ? events : null)) continue;
         /* 5.3.0 가득 차도 라인은 서지 않는다: 자리가 없는 상자는 바로 출하한다(그 상자의 OVERFLOW_SECONDS 초치). 선반에 올려 합치는 것보다는 적다 */
-        var og = boxRate(state, spawnLevel(state)) * OVERFLOW_SECONDS; earn(state, og); state.lineEarned += og; state.feed -= 1; n++;
+        var og = boxRate(state, spawnLevel(state)) * OVERFLOW_SECONDS * mods(state).overflow; earn(state, og); state.lineEarned += og; state.feed -= 1; n++;
         if (events && n <= 2) events.push({ type: 'box-out', gain: og });
         continue;
       }
@@ -7202,7 +7209,8 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
     if (state.contractIn > 0) return;
     rng = typeof rng === 'function' ? rng : Math.random;
     var who = CLIENTS[Math.floor(rng() * CLIENTS.length) % CLIENTS.length];
-    var level = Math.min(BOX_MAX, spawnLevel(state) + 1 + Math.floor(rng() * 3) % 3), need = 2 + Math.floor(rng() * 2) % 2;
+    /* 5.3.2 의뢰를 쉽게: 들어오는 상자보다 한두 단계 위(전에는 세 단계 위까지)를 한두 개(전에는 두세 개). 자주 오는 만큼 금방 채울 수 있어야 한다 */
+    var level = Math.min(BOX_MAX, spawnLevel(state) + 1 + Math.floor(rng() * 2) % 2), need = 2 - Math.floor(rng() * 2) % 2;
     state.contract = { who: who.id, level: level, need: need, have: 0, left: CONTRACT_SECONDS };
     state.contract.have = Math.min(need, contractHave(state));
     state.contractIn = (CONTRACT_GAP_MIN + rng() * (CONTRACT_GAP_MAX - CONTRACT_GAP_MIN)) * mods(state).contractgap;
@@ -11416,10 +11424,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
     day = typeof day === 'number' && isFinite(day) ? Math.floor(day) : 1;
     zone = typeof zone === 'number' && isFinite(zone) ? Math.floor(zone) : 0;
     var r = seeded(day * 7 + zone * 131)() * 100;
-    var rain = 20, fog = zone === 5 ? 30 : 10, snow = zone >= 4 ? 12 : 0;
-    if (r < rain) return 'rain';
-    if (r < rain + fog) return 'fog';
-    if (r < rain + fog + snow) return 'snow';
+    /* 5.3.2 날씨를 늘렸다: 비 · 번개 치는 비 · 안개 · 눈 · 눈보라 · 강풍. 눈과 눈보라는 여정 후반(5구역부터)에 더 잦다 */
+    var rain = 15, storm = 6, fog = zone === 5 ? 28 : 9, snow = zone >= 4 ? 10 : 4, blizzard = zone >= 4 ? 5 : 2, wind = 10, acc = 0;
+    var table = [['rain', rain], ['storm', storm], ['fog', fog], ['snow', snow], ['blizzard', blizzard], ['wind', wind]];
+    for (var i = 0; i < table.length; i++) { acc += table[i][1]; if (r < acc) return table[i][0]; }
     return 'clear';
   }
 
@@ -12906,12 +12914,29 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
   /** 날씨: 상태를 따로 두지 않고 시간으로부터 위치를 계산해 그린다. */
   function drawWeather(ctx, model, view) {
     var kind = weatherFor(view.day, view.zone), W = model.W, t = model.time, i, rnd;
-    if (kind === 'rain') {
-      rnd = seeded(5); ctx.fillStyle = 'rgba(190,210,225,0.55)';
-      for (i = 0; i < W / 3; i++) { var rx = (rnd() * W + t * 40) % W, ry = (rnd() * H + t * 150) % GROUND; ctx.fillRect(Math.round(rx), Math.round(ry), 1, 3); }
-    } else if (kind === 'snow') {
+    /* 가끔 부는 돌풍(어느 날씨에나): 12초에 한 번쯤 3초 동안. 비는 비스듬히, 눈은 옆으로 몰아친다 */
+    var gp = (t % 12) / 3, gust = gp < 1 ? Math.min(1, Math.min(gp, 1 - gp) * 4) : 0, still = !!view.still;
+    if (still) gust = 0;
+    if (kind === 'rain' || kind === 'storm') {
+      var heavy = kind === 'storm', slant = heavy ? 2 : gust > 0.3 ? 1 : 0;
+      rnd = seeded(5); ctx.fillStyle = 'rgba(190,210,225,' + (heavy ? '0.7' : '0.55') + ')';
+      for (i = 0; i < W / (heavy ? 2 : 3); i++) { var rx = (rnd() * W + t * (40 + gust * 60 + (heavy ? 50 : 0))) % W, ry = (rnd() * H + t * (heavy ? 190 : 150)) % GROUND; ctx.fillRect(Math.round(rx), Math.round(ry), 1, 2); ctx.fillRect(Math.round(rx) + slant, Math.round(ry) + 2, 1, 2); }
+      if (heavy && !still) {      // 번개: 7초에 한 번쯤(주기마다 치는 곳이 다르다). 잠깐 하늘이 밝아지고 갈라진 줄기가 보인다
+        var cyc = Math.floor(t / 7), ph = t % 7, lr = seeded(cyc * 13 + 3);
+        if (lr() < 0.75 && ph < 0.32) { var lx = 20 + lr() * (W - 40), ly = 0, la = 1 - ph / 0.32;
+          if (ph < 0.18) { ctx.fillStyle = '#fff6c8'; for (i = 0; i < 9; i++) { var nx = lx + Math.round((lr() - 0.5) * 8); ctx.fillRect(Math.min(lx, nx), ly, Math.abs(nx - lx) + 1, 1); ctx.fillRect(nx, ly, 1, 4); lx = nx; ly += 4; } }
+          ctx.fillStyle = 'rgba(235,240,255,' + (0.4 * la).toFixed(2) + ')'; ctx.fillRect(0, 0, W, H); }
+      }
+    } else if (kind === 'snow' || kind === 'blizzard') {
+      var bz = kind === 'blizzard', push = bz ? 70 + gust * 60 : gust * 50;
       rnd = seeded(9); ctx.fillStyle = 'rgba(240,240,235,0.85)';
-      for (i = 0; i < W / 5; i++) { var sx = (rnd() * W + Math.sin(t + i) * 3 + W) % W, sy = (rnd() * H + t * 14) % (GROUND + 2); ctx.fillRect(Math.round(sx), Math.round(sy), 1, 1); }
+      for (i = 0; i < W / (bz ? 2 : 5); i++) { var sx = ((rnd() * W + Math.sin(t + i) * 3 + t * push * (0.7 + (i % 3) * 0.2)) % W + W) % W, sy = (rnd() * H + t * (bz ? 22 : 14)) % (GROUND + 2), tail = bz ? 2 : gust > 0.4 ? 1 : 0; ctx.fillRect(Math.round(sx) - tail, Math.round(sy), 1 + tail, 1); }
+      if (bz) { ctx.fillStyle = 'rgba(236,240,246,' + (0.14 + 0.1 * Math.sin(t * 0.7) + gust * 0.12).toFixed(2) + ')'; ctx.fillRect(0, 0, W, H); }      // 눈보라: 온통 뿌옇다
+      ctx.fillStyle = 'rgba(240,244,250,' + (bz ? '0.75' : '0.5') + ')'; ctx.fillRect(0, GROUND, W, 1);      // 땅에 쌓인 눈 한 줄
+    } else if (kind === 'wind' || (gust > 0.05 && kind === 'clear')) {
+      var wv = kind === 'wind' ? 0.6 + gust * 0.4 : gust; rnd = seeded(17);      // 강풍: 낙엽과 종이가 날리고 바람 줄이 지나간다
+      for (i = 0; i < 9; i++) { var lx2 = ((rnd() * W + t * (60 + i * 9) * wv) % (W + 20)) - 10, ly2 = 12 + rnd() * (GROUND - 16) + Math.sin(t * 4 + i) * 4; ctx.fillStyle = i % 3 === 0 ? '#e8e0cc' : i % 3 === 1 ? '#c8822a' : '#8a5a2a'; ctx.fillRect(Math.round(lx2), Math.round(ly2), 2, 1); if (i % 3) ctx.fillRect(Math.round(lx2) + 1, Math.round(ly2) + (Math.floor(t * 9 + i) % 2 ? 1 : -1), 1, 1); }
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.2 * wv).toFixed(2) + ')'; for (i = 0; i < 4; i++) ctx.fillRect(Math.round(((rnd() * W + t * 130 * wv) % (W + 30)) - 15), 10 + i * 13 + Math.round(rnd() * 6), 12, 1);
     } else if (kind === 'fog') {
       // 안개: 화면 전체를 덮는 띠를 없애고, 가장자리가 가는 덩어리 몇 개만 천천히 흘려보낸다.
       // 밤에는 어두운 바탕 위에서 회색 띠가 도드라지므로 색을 밤하늘 쪽으로 옮기고 훨씬 옅게 그린다.
@@ -14966,7 +14991,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
     for (var bi = 0; bi <= C.PRICE_HISTORY; bi++) { var bar = el('i'); rows.bars.push(bar); $('board-bars').appendChild(bar); }
     for (var pi = 0; pi < C.STREAK_MAX; pi++) { var pip = el('i'); rows.pips.push(pip); $('streak-pips').appendChild(pip); }
     // 2구역: 좌판
-    rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls)), 'stall'); });
+    rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls)), 'stall'); });
     $('rows-z1').appendChild(rows.stall.btn);
     // 2구역: 시장의 일손(짐꾼, 호객꾼)
     rows.hands = {};
@@ -17966,7 +17991,6 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
     var lv = (state.board || [])[i], res = C.mergeBox(state, i);
     if (!res.ok) return;
     res.merges.forEach(function (m) { if (z3) { z3.slide(m.at, m.from, lv); z3.hop(m.at); } });
-    if (res.gain > 0) toast('+' + fmt(res.gain));
     if (res.best && res.level >= 4) log(C.boxName(res.level) + ' 상자가 처음 나왔다.', 'good');
     sfx(res.best ? 'goal' : res.count >= 4 ? 'upgrade' : 'buy'); buzz(res.best ? 30 : Math.min(40, 10 + res.count * 4)); Store.save(); render();
   }
@@ -18873,10 +18897,10 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
         setText(b, searched ? kind.name : '');
         b.setAttribute('aria-label', searched ? kind.name + ' · 수색한 칸' : '아직 수색하지 않은 칸');
       });
-      setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
+      setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '집');
       var patrol = C.autoOn(state, 0), every = C.sweepInterval(state);
       var flashing = Date.now() < sweepFlashUntil;
-      setText($('search-note'), flashing ? sweepFlashText : (state.sweeps + 1) + '번째 동네 · ' + (patrol ? secs(every) + '마다 한 칸' : '개조에서 순찰조를 사요'));
+      setText($('search-note'), flashing ? sweepFlashText : '주택가 · ' + (state.sweeps + 1) + '번째 동네' + (zs1 ? ' · ' + zs1.weather() : ''));
       $('search-note').classList.toggle('flash', flashing);
       fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
       $('search-bar').hidden = !patrol;
@@ -18888,7 +18912,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
         var r = rows.buildings[b.id], n = state.buildings[b.id], q = qtyFor(C.maxBuildings(state, b.id), C.COUNT_MAX - n), cost = C.buildingCost(state, b.id, q);
         setText(r.count, n + ' / ' + C.COUNT_MAX);
         setMile(r, n, q, cost <= state.supplies);
-        setText(r.info, (n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state))) + (r.next ? ' · ' + r.next + '곳에서 2배' : ''));
+        setText(r.info, (n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state))) );      // 5.3.2 '몇 곳에서 2배'는 줄 왼쪽 그림의 막대와 점이 보여 준다
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + IC.supply + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
@@ -18901,7 +18925,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
       setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀌어요');
       setText($('goods'), fmt(state.goods) + ' / ' + fmt(cap));
       /* 5.3.2 머리줄 한 줄로 줄였다(1구역과 같은 꼴): 왼쪽은 쌓인 상품, 오른쪽은 시세와 다음 시세까지. 큰 시세 글과 막대는 장면의 간판이 대신한다 */
-      setText($('z2-goods'), '상품 ' + fmt(state.goods) + ' / ' + fmt(cap)); $('z2-note').textContent = '시세 ×' + state.price.toFixed(2) + ' · ' + Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 바뀜';
+      setText($('z2-goods'), '상품 ' + fmt(state.goods) + ' / ' + fmt(cap)); $('z2-note').textContent = '야시장 · ' + Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세 바뀜';
       $('goods-bar').style.width = (cap > 0 ? Math.min(100, state.goods / cap * 100) : 0).toFixed(1) + '%';
       // 시세판: 막대의 높이는 시세 범위 안에서의 위치(바닥 8% ~ 천장 100%). 맨 오른쪽이 지금 시세다.
       var span = Math.max(0.01, range.ceil - range.floor);
@@ -18998,6 +19022,7 @@ window.ZONE7_PWA = true; window.ZONE7_VERSION = "5.3.2"; window.ZONE7_BGM = {"da
       renderBoard();
       setText(ld, '초당 ' + fmt(C.lineRate(state)));
       ld.className = 'num steady';
+      setText($('z3-head'), '초당 ' + fmt(C.lineRate(state)));      // 5.3.2 머리줄(4~7구역과 같은 꼴)
       $('line').setAttribute('data-rate', fmt(C.lineRate(state)));      // 화면 테스트가 읽는다
       var pairs = C.mergeable(state).length;
       var fullB = C.boardFull(state);

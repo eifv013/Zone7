@@ -136,20 +136,21 @@ test('원정대: 출발 직후와 귀환 직전에만 화면에 보인다', () =
   assert.equal(S.squadAt(m, { elapsed: NaN, left: 5 }), null);
 });
 
-test('날씨: 같은 날·같은 구역이면 항상 같고, 눈은 여정 후반에만 내린다', () => {
+test('날씨: 같은 날·같은 구역이면 항상 같고, 일곱 가지가 모두 나오며, 눈은 여정 후반에 더 잦다', () => {
   const kinds = new Set();
   for (let day = 1; day <= 400; day++) {
     for (let zone = 0; zone < 7; zone++) {
       const w = S.weatherFor(day, zone);
       assert.equal(w, S.weatherFor(day, zone));
-      assert.ok(['clear', 'rain', 'fog', 'snow'].includes(w));
-      if (zone < 4) assert.notEqual(w, 'snow');
+      assert.ok(['clear', 'rain', 'storm', 'fog', 'snow', 'blizzard', 'wind'].includes(w));
       kinds.add(w);
     }
   }
-  assert.equal(kinds.size, 4, '네 가지 날씨가 모두 나온다');
+  assert.equal(kinds.size, 7, '일곱 가지 날씨가 모두 나온다');
   const count = (zone, kind) => { let n = 0; for (let d = 1; d <= 600; d++) if (S.weatherFor(d, zone) === kind) n++; return n; };
   assert.ok(count(5, 'fog') > count(0, 'fog'), '강변 구역은 안개가 더 잦다');
+  assert.ok(count(4, 'snow') + count(4, 'blizzard') > count(0, 'snow') + count(0, 'blizzard'), '눈은 후반 구역에서 더 잦다');
+  let clear = 0; for (let d = 1; d <= 600; d++) if (S.weatherFor(d, 0) === 'clear') clear++; assert.ok(clear > 240, '그래도 맑은 날이 가장 많다');
   assert.equal(S.weatherFor(NaN, undefined), S.weatherFor(1, 0));
 });
 

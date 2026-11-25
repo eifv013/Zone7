@@ -419,10 +419,10 @@
     day = typeof day === 'number' && isFinite(day) ? Math.floor(day) : 1;
     zone = typeof zone === 'number' && isFinite(zone) ? Math.floor(zone) : 0;
     var r = seeded(day * 7 + zone * 131)() * 100;
-    var rain = 20, fog = zone === 5 ? 30 : 10, snow = zone >= 4 ? 12 : 0;
-    if (r < rain) return 'rain';
-    if (r < rain + fog) return 'fog';
-    if (r < rain + fog + snow) return 'snow';
+    /* 5.3.2 날씨를 늘렸다: 비 · 번개 치는 비 · 안개 · 눈 · 눈보라 · 강풍. 눈과 눈보라는 여정 후반(5구역부터)에 더 잦다 */
+    var rain = 15, storm = 6, fog = zone === 5 ? 28 : 9, snow = zone >= 4 ? 10 : 4, blizzard = zone >= 4 ? 5 : 2, wind = 10, acc = 0;
+    var table = [['rain', rain], ['storm', storm], ['fog', fog], ['snow', snow], ['blizzard', blizzard], ['wind', wind]];
+    for (var i = 0; i < table.length; i++) { acc += table[i][1]; if (r < acc) return table[i][0]; }
     return 'clear';
   }
 
@@ -1909,12 +1909,29 @@
   /** 날씨: 상태를 따로 두지 않고 시간으로부터 위치를 계산해 그린다. */
   function drawWeather(ctx, model, view) {
     var kind = weatherFor(view.day, view.zone), W = model.W, t = model.time, i, rnd;
-    if (kind === 'rain') {
-      rnd = seeded(5); ctx.fillStyle = 'rgba(190,210,225,0.55)';
-      for (i = 0; i < W / 3; i++) { var rx = (rnd() * W + t * 40) % W, ry = (rnd() * H + t * 150) % GROUND; ctx.fillRect(Math.round(rx), Math.round(ry), 1, 3); }
-    } else if (kind === 'snow') {
+    /* 가끔 부는 돌풍(어느 날씨에나): 12초에 한 번쯤 3초 동안. 비는 비스듬히, 눈은 옆으로 몰아친다 */
+    var gp = (t % 12) / 3, gust = gp < 1 ? Math.min(1, Math.min(gp, 1 - gp) * 4) : 0, still = !!view.still;
+    if (still) gust = 0;
+    if (kind === 'rain' || kind === 'storm') {
+      var heavy = kind === 'storm', slant = heavy ? 2 : gust > 0.3 ? 1 : 0;
+      rnd = seeded(5); ctx.fillStyle = 'rgba(190,210,225,' + (heavy ? '0.7' : '0.55') + ')';
+      for (i = 0; i < W / (heavy ? 2 : 3); i++) { var rx = (rnd() * W + t * (40 + gust * 60 + (heavy ? 50 : 0))) % W, ry = (rnd() * H + t * (heavy ? 190 : 150)) % GROUND; ctx.fillRect(Math.round(rx), Math.round(ry), 1, 2); ctx.fillRect(Math.round(rx) + slant, Math.round(ry) + 2, 1, 2); }
+      if (heavy && !still) {      // 번개: 7초에 한 번쯤(주기마다 치는 곳이 다르다). 잠깐 하늘이 밝아지고 갈라진 줄기가 보인다
+        var cyc = Math.floor(t / 7), ph = t % 7, lr = seeded(cyc * 13 + 3);
+        if (lr() < 0.75 && ph < 0.32) { var lx = 20 + lr() * (W - 40), ly = 0, la = 1 - ph / 0.32;
+          if (ph < 0.18) { ctx.fillStyle = '#fff6c8'; for (i = 0; i < 9; i++) { var nx = lx + Math.round((lr() - 0.5) * 8); ctx.fillRect(Math.min(lx, nx), ly, Math.abs(nx - lx) + 1, 1); ctx.fillRect(nx, ly, 1, 4); lx = nx; ly += 4; } }
+          ctx.fillStyle = 'rgba(235,240,255,' + (0.4 * la).toFixed(2) + ')'; ctx.fillRect(0, 0, W, H); }
+      }
+    } else if (kind === 'snow' || kind === 'blizzard') {
+      var bz = kind === 'blizzard', push = bz ? 70 + gust * 60 : gust * 50;
       rnd = seeded(9); ctx.fillStyle = 'rgba(240,240,235,0.85)';
-      for (i = 0; i < W / 5; i++) { var sx = (rnd() * W + Math.sin(t + i) * 3 + W) % W, sy = (rnd() * H + t * 14) % (GROUND + 2); ctx.fillRect(Math.round(sx), Math.round(sy), 1, 1); }
+      for (i = 0; i < W / (bz ? 2 : 5); i++) { var sx = ((rnd() * W + Math.sin(t + i) * 3 + t * push * (0.7 + (i % 3) * 0.2)) % W + W) % W, sy = (rnd() * H + t * (bz ? 22 : 14)) % (GROUND + 2), tail = bz ? 2 : gust > 0.4 ? 1 : 0; ctx.fillRect(Math.round(sx) - tail, Math.round(sy), 1 + tail, 1); }
+      if (bz) { ctx.fillStyle = 'rgba(236,240,246,' + (0.14 + 0.1 * Math.sin(t * 0.7) + gust * 0.12).toFixed(2) + ')'; ctx.fillRect(0, 0, W, H); }      // 눈보라: 온통 뿌옇다
+      ctx.fillStyle = 'rgba(240,244,250,' + (bz ? '0.75' : '0.5') + ')'; ctx.fillRect(0, GROUND, W, 1);      // 땅에 쌓인 눈 한 줄
+    } else if (kind === 'wind' || (gust > 0.05 && kind === 'clear')) {
+      var wv = kind === 'wind' ? 0.6 + gust * 0.4 : gust; rnd = seeded(17);      // 강풍: 낙엽과 종이가 날리고 바람 줄이 지나간다
+      for (i = 0; i < 9; i++) { var lx2 = ((rnd() * W + t * (60 + i * 9) * wv) % (W + 20)) - 10, ly2 = 12 + rnd() * (GROUND - 16) + Math.sin(t * 4 + i) * 4; ctx.fillStyle = i % 3 === 0 ? '#e8e0cc' : i % 3 === 1 ? '#c8822a' : '#8a5a2a'; ctx.fillRect(Math.round(lx2), Math.round(ly2), 2, 1); if (i % 3) ctx.fillRect(Math.round(lx2) + 1, Math.round(ly2) + (Math.floor(t * 9 + i) % 2 ? 1 : -1), 1, 1); }
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.2 * wv).toFixed(2) + ')'; for (i = 0; i < 4; i++) ctx.fillRect(Math.round(((rnd() * W + t * 130 * wv) % (W + 30)) - 15), 10 + i * 13 + Math.round(rnd() * 6), 12, 1);
     } else if (kind === 'fog') {
       // 안개: 화면 전체를 덮는 띠를 없애고, 가장자리가 가는 덩어리 몇 개만 천천히 흘려보낸다.
       // 밤에는 어두운 바탕 위에서 회색 띠가 도드라지므로 색을 밤하늘 쪽으로 옮기고 훨씬 옅게 그린다.

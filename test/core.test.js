@@ -2890,7 +2890,7 @@ test('3구역 판: 상자 하나를 누르면 같은 단계의 짝이 모두 합
   for (const junk of [-1, 99, NaN, 'x', undefined]) assert.equal(C.mergeBox(a, junk).reason, 'empty');
   const top = onBoard([C.BOX_MAX, C.BOX_MAX]); assert.equal(C.mergeBox(top, 0).reason, 'alone');
   const b = onBoard([1, 1]); b.upgrades.bonus = 2; near(C.mergeBox(b, 0).gain, C.boxRate(b, 2) * C.MERGE_SECONDS * 2, '손맛: 덤이 커진다');
-  const w = onBoard([]); assert.equal(C.boardSize(w), 20); w.upgrades.wide = 1; assert.equal(C.boardSize(w), 25); w.upgrades.wide = 2; assert.equal(C.boardSize(w), C.BOARD_MAX);
+  const w = onBoard([]); assert.equal(C.boardSize(w), 20); w.upgrades.wide = 2; assert.equal(C.boardSize(w), 20, '5.3.2 선반은 늘 스무 칸(출하대는 줄을 늘리지 않는다)'); near(C.mods(w).overflow, 2);
   const bad = onBoard([]); bad.board = 'x'; assert.equal(C.boardSum(bad), 0); assert.equal(bad.board.length, C.BOARD_MAX);
 });
 
@@ -2939,7 +2939,7 @@ test('3구역 납품 의뢰: 찾는 단계의 상자를 모아 두었다가 넘�
   C.stepContracts(s, 1, 0, () => 0, ev);
   const c = s.contract; assert.ok(c); assert.equal(c.level, C.spawnLevel(s) + 1); assert.equal(c.need, 2); assert.equal(c.left, C.CONTRACT_SECONDS); assert.equal(c.have, 1);
   assert.ok(ev.some(e => e.type === 'contract' && e.itemName === C.boxName(2))); assert.equal(C.heldLevel(s), 2);
-  for (let i = 0; i < 30; i++) { const t = onBoard([1]); t.contractIn = 0; C.stepContracts(t, 1, 0, lcg(i + 1), []); assert.ok(t.contract.level >= 2 && t.contract.level <= 4); assert.ok(t.contract.need === 2 || t.contract.need === 3); }
+  for (let i = 0; i < 30; i++) { const t = onBoard([1]); t.contractIn = 0; C.stepContracts(t, 1, 0, lcg(i + 1), []); assert.ok(t.contract.level >= 2 && t.contract.level <= 3); assert.ok(t.contract.need === 1 || t.contract.need === 2); }
   assert.equal(C.fillContract(s).reason, 'short');
   C.mergeBox(s, 0); assert.equal(C.contractHave(s), 2);
   const sup = s.supplies, treats = s.treats, want = C.contractReward(s); near(want, 2 * C.boxRate(s, 2) * C.CONTRACT_PAY_SECONDS);
@@ -4092,4 +4092,11 @@ test('5.3.2: 순찰조는 하던 자리 다음 칸부터 이어 가고, 동네�
   // 저장을 거쳐도 자리가 남는다. 깨진 값은 -1 로 읽는다
   var back = C.deserialize(C.serialize(s)); assert.strictEqual(back.sweepAt, 2);
   var bad = JSON.parse(C.serialize(s)); bad.sweepAt = 'x'; assert.strictEqual(C.deserialize(JSON.stringify(bad)).sweepAt, -1);
+});
+
+test('5.3.2: 출하대(옛 칸 넓히기)는 선반을 늘리지 않고 바로 출하 값을 올린다 · 의뢰는 한두 단계 위를 한두 개만 찾는다', function () {
+  function fullRun(wide) { var s = C.createState(0); s.zone = 2; s.bestZone = 2; s.upgrades.wide = wide; for (var i = 0; i < C.boardSize(s); i++) s.board[i] = i + 2; s.feed = 0; s.supplies = 0; C.stepBoard(s, 30, function () { return 0.5; }, []); return s.supplies; }
+  var base = fullRun(0), up = fullRun(2); assert.ok(base > 0); assert.ok(Math.abs(up / base - 2) < 1e-6, '두 번 사면 바로 출하 값이 두 배');
+  for (var k = 0; k < 40; k++) { var t = C.createState(0); t.zone = 2; t.bestZone = 2; t.board[0] = 1; t.contractIn = 0; var seed = k * 7 + 1; C.stepContracts(t, 1, 0, function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }, []);
+    assert.ok(t.contract.level >= C.spawnLevel(t) + 1 && t.contract.level <= C.spawnLevel(t) + 2); assert.ok(t.contract.need >= 1 && t.contract.need <= 2); }
 });

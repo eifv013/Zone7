@@ -578,7 +578,8 @@
     { id: 'manual',  zone: 2, name: '정비 교범', desc: '3구역 시설 값 -4%',      key: 'z3cost',  per: -0.04, baseCost: 3e11, growth: 3,  max: 12 },
     { id: 'bonus',   zone: 2, name: '손맛',      desc: '손으로 합칠 때의 덤 +50%', key: 'mergebonus', per: 0.5, baseCost: 3e11, growth: 4,  max: 10 },
     { id: 'lucky',   zone: 2, name: '행운 상자', desc: '들어오는 상자가 한 단계 더 높을 확률 +10%p', key: 'lucky', per: 0.1, baseCost: 6e11, growth: 5, max: 5 },
-    { id: 'wide',    zone: 2, name: '칸 넓히기', desc: '칸이 5개 더 생긴다',     key: 'boardsize', per: 5, baseCost: 5e13, growth: 400, max: 2 },
+    /* 5.3.2 '칸 넓히기'(선반 줄 늘리기)를 '출하대'로 바꿨다: 선반이 길어지면 화면이 커져 스크롤해야 했다. 줄 수는 늘 네 줄이고, 대신 가득 찼을 때 바로 출하되는 상자의 값이 오른다. 저장의 이름(wide)은 그대로라 산 사람은 잃지 않는다 */
+    { id: 'wide',    zone: 2, name: '출하대',   desc: '선반이 가득 찼을 때 바로 출하되는 상자 값 +50%', key: 'overflow', per: 0.5, baseCost: 5e13, growth: 400, max: 2 },
     { id: 'yard',    zone: 3, name: '정비창',    desc: '4구역 시설 값 -4%',      key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
     { id: 'longplat', zone: 3, name: '긴 승강장', desc: '화물칸을 2칸 더 붙일 수 있다', key: 'platlen', per: 2, baseCost: 2e19, growth: 500, max: 2 },
     { id: 'fence',   zone: 3, name: '철조망',    desc: '무리가 다가오는 걸음 -8%', key: 'hordespeed', per: -0.08, baseCost: 2e18, growth: 4, max: 5 },
@@ -725,7 +726,7 @@
       // 시세판: priceHistory 지난 시세(오래된 것부터), streak 연속 호가 단계, streakUsed 지금 시세에서 이미 단계를 올렸는가
       priceHistory: [], streak: 0, streakUsed: false,
       // 3구역 생산 라인
-      machines: {}, lineEarned: 0, steadySeconds: 0, lineV: 3, board: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], autoMerge: 0, feed: 1, mergesRun: 0, mergesAll: 0, boxBest: 0,
+      machines: {}, lineEarned: 0, steadySeconds: 0, lineV: 3, board: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], autoMerge: 0, feed: 1, mergesRun: 0, mergesAll: 0, boxBest: 0,
       recipe: 'bolt', mastery: {}, retool: 0, jam: null, jamIn: 90, tuneLeft: 0, truck: null, truckIn: 100, stockSec: 0, repairsRun: 0, trucksRun: 0,      // 3구역: 품목, 고장과 정비, 출하 트럭
       surgeLeft: 0, surgeCool: 0,      // 전력 투입: 남은 시간, 다시 쓸 수 있을 때까지 남은 시간
       // 4구역 노선: routes 노선 단계, routeClock 이번 운행이 지난 시간(초), routeLoad 이번 운행에 실린 화물(열차 × 초)
@@ -1172,7 +1173,7 @@
    *   z3 완제품 값, z3cost 기계 값, steady 정속 가동 보너스에 더하는 값, slack 정속 가동 기준을 낮추는 값
    */
   function mods(state) {
-    var m = { strayfast: 1, straytime: 1, lvcost: 1, fence: 1, muster: 1, loss: 1, nightpay: 1, wagon: 1, elder: 0, cool: 1, wall: 0, wallfix: 1, nade: 0, held: 1, prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, dispatch: 0, autosig: 0, rumor: 0 };
+    var m = { strayfast: 1, straytime: 1, lvcost: 1, fence: 1, muster: 1, loss: 1, nightpay: 1, wagon: 1, elder: 0, cool: 1, wall: 0, wallfix: 1, nade: 0, held: 1, prod: 1, z1: 1, z2: 1, z3: 1, z4: 1, lab: 1, labcost: 1, staffcost: 1, trip: 1, routecost: 1, traincost: 1, click: 1, defense: 1, defcost: 1, repair: 0, reroll: 0, z6: 1, margin: 0, z7: 1, ordergap: 1, contractgap: 1, salvagegap: 1, recordchance: 0, passerchance: 0, mergebonus: 1, lucky: 0, boardsize: 0, overflow: 1, platlen: 0, hordespeed: 1, keepmore: 0, horn: 0, peak: 0, sterile: 0, autolab: 0, nurse: 0, autoguard: 0, autotower: 0, loot: 1, cost: 1, z1cost: 1, z3cost: 1, floor: 0, ceil: 0, cap: 1, offline: 0, antibody: 1, here: 1, start: 0, broker: 0, assist: 0, steady: 0, slack: 0, patrol: 0, autoline: 0, dispatch: 0, autosig: 0, rumor: 0 };
     var ADD = { elder: 1, wall: 1, nade: 1, peak: 1, sterile: 1, horn: 1, keepmore: 1, platlen: 1, lucky: 1, boardsize: 1, floor: 1, ceil: 1, offline: 1, start: 1, broker: 1, steady: 1, slack: 1, assist: 1, patrol: 1, autoline: 1, dispatch: 1, autosig: 1, rumor: 1, repair: 1, reroll: 1, margin: 1, recordchance: 1, passerchance: 1, autolab: 1, nurse: 1, autoguard: 1, autotower: 1 };      // 더하는 항목. 나머지는 (1 + 레벨 × per) 을 곱한다
     function apply(defs, levels) {
       defs.forEach(function (d) {
@@ -1883,7 +1884,7 @@
    * 자동: AUTO_MERGE_SECONDS 마다 짝 하나만 합친다(투입구보다 느리다). 그래서 자동을 사도 누를 짝은 늘 남고, 손이 언제나 더 낫다.
    *       의뢰가 찾는 단계의 상자는 자동이 건드리지 않는다.
    */
-  var BOARD_BASE = 20, BOARD_MAX = 30, BOX_MAX = 40, BOX_STEP = 2.5, FEED_SECONDS = 3, FEED_STEP = 0.95, MERGE_SECONDS = 2, AUTO_MERGE_SECONDS = 5;
+  var BOARD_BASE = 20, BOARD_MAX = 20, BOX_MAX = 40, BOX_STEP = 2.5, FEED_SECONDS = 3, FEED_STEP = 0.95, MERGE_SECONDS = 2, AUTO_MERGE_SECONDS = 5;
   var BOARD_SIZE = BOARD_BASE;      // 옛 이름(화면과 테스트가 쓴다): 기본 칸 수
   var BOXES = ['고철', '볼트', '철판', '톱니', '베어링', '모터', '변속기', '엔진', '발전기'];
   function boxName(level) { level = Math.floor(safeNum(level, 0)); if (level < 1) return ''; var tier = Math.floor((level - 1) / BOXES.length), n = BOXES[(level - 1) % BOXES.length]; for (var i = 0; i < tier; i++) n += '★'; return n; }
@@ -2043,7 +2044,7 @@
         // 가득 찼다: 자동 합치기가 일할 몫이 남아 있으면 짝 하나를 합쳐 자리를 내고, 없으면 기다린다
         if (auto && state.autoMerge >= 1 && autoMergeOnce(state, n < 6 ? events : null)) continue;
         /* 5.3.0 가득 차도 라인은 서지 않는다: 자리가 없는 상자는 바로 출하한다(그 상자의 OVERFLOW_SECONDS 초치). 선반에 올려 합치는 것보다는 적다 */
-        var og = boxRate(state, spawnLevel(state)) * OVERFLOW_SECONDS; earn(state, og); state.lineEarned += og; state.feed -= 1; n++;
+        var og = boxRate(state, spawnLevel(state)) * OVERFLOW_SECONDS * mods(state).overflow; earn(state, og); state.lineEarned += og; state.feed -= 1; n++;
         if (events && n <= 2) events.push({ type: 'box-out', gain: og });
         continue;
       }
@@ -2152,7 +2153,8 @@
     if (state.contractIn > 0) return;
     rng = typeof rng === 'function' ? rng : Math.random;
     var who = CLIENTS[Math.floor(rng() * CLIENTS.length) % CLIENTS.length];
-    var level = Math.min(BOX_MAX, spawnLevel(state) + 1 + Math.floor(rng() * 3) % 3), need = 2 + Math.floor(rng() * 2) % 2;
+    /* 5.3.2 의뢰를 쉽게: 들어오는 상자보다 한두 단계 위(전에는 세 단계 위까지)를 한두 개(전에는 두세 개). 자주 오는 만큼 금방 채울 수 있어야 한다 */
+    var level = Math.min(BOX_MAX, spawnLevel(state) + 1 + Math.floor(rng() * 2) % 2), need = 2 - Math.floor(rng() * 2) % 2;
     state.contract = { who: who.id, level: level, need: need, have: 0, left: CONTRACT_SECONDS };
     state.contract.have = Math.min(need, contractHave(state));
     state.contractIn = (CONTRACT_GAP_MIN + rng() * (CONTRACT_GAP_MAX - CONTRACT_GAP_MIN)) * mods(state).contractgap;

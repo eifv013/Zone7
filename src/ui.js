@@ -1509,7 +1509,7 @@
     for (var bi = 0; bi <= C.PRICE_HISTORY; bi++) { var bar = el('i'); rows.bars.push(bar); $('board-bars').appendChild(bar); }
     for (var pi = 0; pi < C.STREAK_MAX; pi++) { var pip = el('i'); rows.pips.push(pip); $('streak-pips').appendChild(pip); }
     // 2구역: 좌판
-    rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다. 10·25·50곳마다 2배' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls)), 'stall'); });
+    rows.stall = buildRow({ id: 'stall', name: '좌판', desc: '상품을 만든다' }, function () { buy(C.buyStall(state, qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls)), 'stall'); });
     $('rows-z1').appendChild(rows.stall.btn);
     // 2구역: 시장의 일손(짐꾼, 호객꾼)
     rows.hands = {};
@@ -4509,7 +4509,6 @@
     var lv = (state.board || [])[i], res = C.mergeBox(state, i);
     if (!res.ok) return;
     res.merges.forEach(function (m) { if (z3) { z3.slide(m.at, m.from, lv); z3.hop(m.at); } });
-    if (res.gain > 0) toast('+' + fmt(res.gain));
     if (res.best && res.level >= 4) log(C.boxName(res.level) + ' 상자가 처음 나왔다.', 'good');
     sfx(res.best ? 'goal' : res.count >= 4 ? 'upgrade' : 'buy'); buzz(res.best ? 30 : Math.min(40, 10 + res.count * 4)); Store.save(); render();
   }
@@ -5416,10 +5415,10 @@
         setText(b, searched ? kind.name : '');
         b.setAttribute('aria-label', searched ? kind.name + ' · 수색한 칸' : '아직 수색하지 않은 칸');
       });
-      setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '칸');
+      setText($('search-count'), done + ' / ' + C.SWEEP_TILES + '집');
       var patrol = C.autoOn(state, 0), every = C.sweepInterval(state);
       var flashing = Date.now() < sweepFlashUntil;
-      setText($('search-note'), flashing ? sweepFlashText : (state.sweeps + 1) + '번째 동네 · ' + (patrol ? secs(every) + '마다 한 칸' : '개조에서 순찰조를 사요'));
+      setText($('search-note'), flashing ? sweepFlashText : '주택가 · ' + (state.sweeps + 1) + '번째 동네' + (zs1 ? ' · ' + zs1.weather() : ''));
       $('search-note').classList.toggle('flash', flashing);
       fill($('search-bar'), patrol ? state.sweepClock / every : 0);            // 수색조가 다음 칸을 뒤질 때까지
       $('search-bar').hidden = !patrol;
@@ -5431,7 +5430,7 @@
         var r = rows.buildings[b.id], n = state.buildings[b.id], q = qtyFor(C.maxBuildings(state, b.id), C.COUNT_MAX - n), cost = C.buildingCost(state, b.id, q);
         setText(r.count, n + ' / ' + C.COUNT_MAX);
         setMile(r, n, q, cost <= state.supplies);
-        setText(r.info, (n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state))) + (r.next ? ' · ' + r.next + '곳에서 2배' : ''));
+        setText(r.info, (n ? '초당 ' + fmt(C.buildingRate(state, b.id)) : '하나에 초당 ' + fmt(b.baseRate * m.z1 * C.globalMult(state))) );      // 5.3.2 '몇 곳에서 2배'는 줄 왼쪽 그림의 막대와 점이 보여 준다
         setText(r.cost, isFinite(cost) ? '×' + q + ' ' + IC.supply + fmt(cost) : '최대');
         r.btn.disabled = !(cost <= state.supplies); afford(r.cost, cost);
       });
@@ -5444,7 +5443,7 @@
       setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀌어요');
       setText($('goods'), fmt(state.goods) + ' / ' + fmt(cap));
       /* 5.3.2 머리줄 한 줄로 줄였다(1구역과 같은 꼴): 왼쪽은 쌓인 상품, 오른쪽은 시세와 다음 시세까지. 큰 시세 글과 막대는 장면의 간판이 대신한다 */
-      setText($('z2-goods'), '상품 ' + fmt(state.goods) + ' / ' + fmt(cap)); $('z2-note').textContent = '시세 ×' + state.price.toFixed(2) + ' · ' + Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 바뀜';
+      setText($('z2-goods'), '상품 ' + fmt(state.goods) + ' / ' + fmt(cap)); $('z2-note').textContent = '야시장 · ' + Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세 바뀜';
       $('goods-bar').style.width = (cap > 0 ? Math.min(100, state.goods / cap * 100) : 0).toFixed(1) + '%';
       // 시세판: 막대의 높이는 시세 범위 안에서의 위치(바닥 8% ~ 천장 100%). 맨 오른쪽이 지금 시세다.
       var span = Math.max(0.01, range.ceil - range.floor);
@@ -5541,6 +5540,7 @@
       renderBoard();
       setText(ld, '초당 ' + fmt(C.lineRate(state)));
       ld.className = 'num steady';
+      setText($('z3-head'), '초당 ' + fmt(C.lineRate(state)));      // 5.3.2 머리줄(4~7구역과 같은 꼴)
       $('line').setAttribute('data-rate', fmt(C.lineRate(state)));      // 화면 테스트가 읽는다
       var pairs = C.mergeable(state).length;
       var fullB = C.boardFull(state);
