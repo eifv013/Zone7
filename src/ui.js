@@ -3865,7 +3865,9 @@
          * 어두워지는 연출이 끝나기 전에 다시 시작돼 화면이 계속 검게 남는다(1232번째 동네에서 실제로 났던 일).
          * 그래서 직전 전환에서 3초가 안 지났으면 어둡게 하지 않고, 날씨도 45초에 한 번까지만 바꾼다. */
         var quick = T - (A.hoodT || -99) < 3; A.hoodT = T; A.fade = 0;
-        if (!quick) { A.trAt = T; var tk = A.trK; while (tk === A.trK) tk = Math.floor(Math.random() * 5); A.trK = tk; }      /* 전환 연출 다섯 가지 중 직전과 다른 것 */
+        /* 전환 연출은 동네가 넘어갈 때마다 나온다. 앞선 연출이 아직 도는 중(0.7초)일 때만 건너뛴다.
+         * (5.3.6은 3초 안에 또 넘어가면 건너뛰어서, 손으로 빨리 넘기면 첫 번째만 나왔다.) */
+        if (T - (A.trAt === undefined ? -99 : A.trAt) >= 0.7) { A.trAt = T; var tk = A.trK; while (tk === A.trK) tk = Math.floor(Math.random() * 5); A.trK = tk; }      /* 다섯 가지 중 직전과 다른 것 */
         if ((A.hood - A.wxAt >= WX_HOODS || A.hood < A.wxAt) && T - (A.wxT || -99) >= 45) { var nw = A.wx; while (nw === A.wx) nw = Math.floor(Math.random() * WX.length); A.wx = nw; A.wxAt = A.hood; A.wxT = T; }
         else if (A.hood < A.wxAt) A.wxAt = A.hood;
       }
