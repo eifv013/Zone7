@@ -4142,7 +4142,9 @@
       A.parts = A.parts.filter(function (p) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.life > 0) px(p.x, p.y, 2, 2, 'rgba(220,210,180,' + (p.life * 1.6).toFixed(2) + ')'); return p.life > 0; });
       /* 어두워진 화면은 0.5초에 걸쳐 다시 밝아진다. (5.3.2 · 5.3.3에는 이 줄이 빠져 있어서, 동네가 한 번 넘어가면 화면이 영영 검게 남았다.) */
       if (A.fade > 0) A.fade = Math.max(0, A.fade - dt); if (!(A.fade >= 0) || A.fade > 0.5) A.fade = 0;
-      var f = A.next > 0 ? Math.max(0, 1 - A.next / 0.5) : A.fade > 0 ? A.fade / 0.5 : 0; if (f > 0) { g.fillStyle = 'rgba(15,16,20,' + Math.min(1, f).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); }
+      /* 동네가 넘어갈 때 화면 전체를 어둡게 덮던 연출은 뺐다(5.3.5). 이 덮개가 걷히지 않아 화면이 통째로 검게 남는 사고가 두 번 났다.
+       * 전환은 밝은 반짝임으로만 알린다: 화면을 가리는 연출은 실패하면 게임이 안 보이므로 쓰지 않는다. */
+      A.fade = 0;
       base(dt);
     }
     return { draw: draw, icon: ob };
@@ -4486,7 +4488,10 @@
           if (zsPrev2) { if (m.stalls > zsPrev2.stalls) zs2.bought(0); if (m.porter > zsPrev2.porter) zs2.bought(1); if (m.crier > zsPrev2.crier) zs2.bought(2); if (m.broker && !zsPrev2.broker) zs2.bought(3); }
           zsPrev2 = m; zs2.draw(dt, m); zsIcons(zs2.icon, ZS_ROWS2);
         }
-      } catch (e) { window.ZONE7_SCENE_ERROR = String(e && e.stack || e); /* 그림이 없어도 아래 단추로 게임은 된다. 화면 테스트가 이 값을 본다 */ }
+      } catch (e) {
+        /* 그림이 실패하면 왜 실패했는지 그림판 위에 작게 적는다(화면 한 장만 받아도 원인을 알 수 있게). 게임은 아래 단추로 계속된다 */
+        try { var eb = $(v1 ? 'z1-fl' : 'z2-fl'); if (eb && !eb.getAttribute('data-err')) { eb.setAttribute('data-err', '1'); var es = document.createElement('i'); es.style.cssText = 'position:absolute;left:4px;right:4px;bottom:4px;font:11px/1.3 monospace;color:#ffd95a;background:rgba(0,0,0,.7);padding:3px;word-break:break-all'; es.textContent = '그림 오류: ' + String(e && e.message || e).slice(0, 140); eb.appendChild(es); } } catch (e2) { /* 알림조차 못 띄워도 게임은 계속된다 */ }
+        window.ZONE7_SCENE_ERROR = String(e && e.stack || e); /* 그림이 없어도 아래 단추로 게임은 된다. 화면 테스트가 이 값을 본다 */ }
     }
     zsRaf = requestAnimationFrame(zsLoop);
   }
