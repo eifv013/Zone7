@@ -716,7 +716,7 @@
       gate: false,           // 아직 만들지 않은 구역의 문 앞에 닿았는가(이번 판)
       buildings: {}, defenses: {}, upgrades: {},
       // 1구역 수색 지도: sweepMask 뒤진 칸(비트), sweepSeed 동네 번호(칸의 배치를 정한다), sweepClock 자동 수색 시계, sweeps 이번 판에 다 뒤진 동네 수
-      sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0,
+      sweepMask: 0, sweepSeed: 1, sweepClock: 0, sweeps: 0, sweepAt: -1,
       autoDef: {}, repairClock: 0,      // 수리공: 방어 수단마다 자동 구입 목표(0 은 끔), 다음 구입까지의 시계
       // 2구역 거래
       sellClock: 0,                        // 흥정꾼이 마지막으로 판 뒤 흐른 시간(초)
@@ -905,7 +905,7 @@
     s.recipe = 'bolt'; s.mastery = {}; s.retool = 0; s.tuneLeft = 0; s.jamIn = 90; s.truckIn = 100; s.jam = null; s.truck = null; s.stockSec = 0;
     s.repairsRun = clamp(safeCount(raw.repairsRun), 0, 1e9); s.trucksRun = clamp(safeCount(raw.trucksRun), 0, 1e9);
     s.surgeCool = clamp(safeNum(raw.surgeCool, 0), 0, SURGE_COOLDOWN);
-    s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES);
+    s.sweepMask = safeCount(raw.sweepMask) % (1 << SWEEP_TILES); s.sweepAt = clamp(Math.floor(safeNum(raw.sweepAt, -1)), -1, SWEEP_TILES - 1);
     s.sweepSeed = Math.max(1, safeCount(raw.sweepSeed) % 1000000);
     s.sweepClock = clamp(safeNum(raw.sweepClock, 0), 0, SWEEP_AUTO_SECONDS);
     s.staff = Math.min(s.staff, COUNT_MAX);
@@ -3287,6 +3287,8 @@
   function sweepCount(state) { var n = 0; for (var i = 0; i < SWEEP_TILES; i++) if (state.sweepMask & (1 << i)) n++; return n; }
   /** 아직 뒤지지 않은 칸 가운데 맨 앞의 것. 없으면 -1. */
   function nextTile(state) { for (var i = 0; i < SWEEP_TILES; i++) if (!(state.sweepMask & (1 << i))) return i; return -1; }
+  /** 순찰조가 다음에 뒤질 칸(5.3.2): 마지막으로 뒤진 칸(sweepAt) 다음부터 돌아가며 찾는다. 동네가 바뀌어도 그 자리에서 이어 간다. 없으면 -1. */
+  function patrolNext(state) { var at = Math.floor(safeNum(state.sweepAt, -1)); for (var j = 1; j <= SWEEP_TILES; j++) { var i = ((at + j) % SWEEP_TILES + SWEEP_TILES) % SWEEP_TILES; if (!(state.sweepMask & (1 << i))) return i; } return -1; }
   function sweepBonus(state) { return clickValue(state) * SWEEP_BONUS_CLICKS; }
   /**
    * 순찰조(자동 수색)가 벌어 오는 초당 물자: 동네 하나의 보너스 ÷ (스무 칸 × 한 칸에 걸리는 시간).
@@ -3325,7 +3327,9 @@
     var guard = 0, every = sweepInterval(state);
     while (state.sweepClock >= every && guard++ < SWEEP_TILES * 3) {
       state.sweepClock -= every;
-      var bonus = markTile(state, nextTile(state));
+      var pt = patrolNext(state); if (pt < 0) break;
+      var pk = tileKind(state.sweepSeed, pt, cacheExtra(state)), bonus = markTile(state, pt); state.sweepAt = pt;
+      events.push({ type: 'patrol', tile: pt, kind: pk.id });      // 화면이 그 집에 불을 켠다(벌이는 없다)
       if (bonus > 0) events.push({ type: 'sweep', bonus: bonus, auto: true });
     }
     if (state.sweepClock > SWEEP_AUTO_SECONDS) state.sweepClock = 0;      // 아주 긴 dt: 남은 시간은 버린다(자리 비움은 따로 계산한다)
@@ -5738,7 +5742,7 @@
     SEAT_BASE: SEAT_BASE, SEAT_MAX: SEAT_MAX, SERUM_SECONDS: SERUM_SECONDS, SERUM_CAP: SERUM_CAP, SERUM_CAP_STEP: SERUM_CAP_STEP, SERUM_TAP: SERUM_TAP, TURN_SECONDS: TURN_SECONDS, TURN_BREAK: TURN_BREAK, TURN_STUN: TURN_STUN, WARD_DOSES: WARD_DOSES, WARD_CURE: WARD_CURE, WARD_STAY: WARD_STAY, WARD_STAY_ONE: WARD_STAY_ONE, NURSE_FROM: NURSE_FROM, WARD_ARRIVE: WARD_ARRIVE, NURSE_SECONDS: NURSE_SECONDS, REAGENT_STEP: REAGENT_STEP, REAGENT_MAX: REAGENT_MAX,
     recommend: recommend, lineStations: lineStations, boostLine: boostLine, workerOn: workerOn, setWorker: setWorker, dispatchWait: dispatchWait, LINE_BOOST: LINE_BOOST, OVERFLOW_SECONDS: OVERFLOW_SECONDS, BAL: BAL, rescueOffer: rescueOffer, sendRescue: sendRescue, RESCUE_GROW: RESCUE_GROW, COLLECT_TIERS: COLLECT_TIERS, collectCount: collectCount, collectInfo: collectInfo, collectCheck: collectCheck, AD_RETREAT: AD_RETREAT, adState: adState, adReward: adReward, PASS_TIERS: PASS_TIERS, PASS_STEP: PASS_STEP, PASS_PRICE: PASS_PRICE, PASS_STAMPS: PASS_STAMPS, PASS_DAYS: PASS_DAYS, passSeasonOf: passSeasonOf, passSync: passSync, passStamp: passStamp, passReward: passReward, passSet: passSet, PASS_SETS: PASS_SETS, passInfo: passInfo, passClaim: passClaim, buyPassPremium: buyPassPremium, isPaid: isPaid, paidState: paidState, grantPaid: grantPaid, dayCard: dayCard, claimDayCard: claimDayCard, DAYCARD_DAYS: DAYCARD_DAYS, DAYCARD_TREATS: DAYCARD_TREATS, PASS_PLUS_TIERS: PASS_PLUS_TIERS, PAID_TREATS: PAID_TREATS, TIXPAY: TIXPAY, STARTER: STARTER, buyStarter: buyStarter, SHOP_ITEMS: SHOP_ITEMS, shopItem: shopItem, shopState: shopState, buyShop: buyShop, offlineCap: offlineCap, REST_CAP: REST_CAP, NIGHT_RATE: NIGHT_RATE, RETREAT_BOOST: RETREAT_BOOST, SKIP_DAILY: SKIP_DAILY, SKIP_HOURS: SKIP_HOURS, buyContract: buyContract, timeSkip: timeSkip, SERUM_REWARDS: SERUM_REWARDS, NIGHT_MILE: NIGHT_MILE, NIGHT_MILE_TREATS: NIGHT_MILE_TREATS, seatCount: seatCount, wardOutTimes: wardOutTimes, serumGate: serumGate, canFinal: canFinal, startFinal: startFinal, settleLvSum: settleLvSum, SERUM_GATE: SERUM_GATE, FINAL_SECONDS: FINAL_SECONDS, FINAL_LV: FINAL_LV, serumCap: serumCap, turnSeconds: turnSeconds, serumSeconds: serumSeconds, nurseOn: nurseOn, wardOf: wardOf, doseValue: doseValue, tapSerum: tapSerum, injectSeat: injectSeat, injectEr: injectEr, boostSeat: boostSeat, pickBoon: pickBoon, ACUTE_RATE: ACUTE_RATE, HARD_SPEED: HARD_SPEED, chartFull: chartFull, CHART_MAX: CHART_MAX, CASH_DOSES: CASH_DOSES, nextChart: nextChart, mixNeed: mixNeed, boonOf: boonOf, BOONS: BOONS, BOON_BY: BOON_BY, CHART_TEXT: CHART_TEXT, ER_FIRST: ER_FIRST, ER_EVERY: ER_EVERY, ER_TIME: ER_TIME, ER_HAND: ER_HAND, BOOST_DOSES: BOOST_DOSES, CHART_EASY: CHART_EASY, CHART_HARD: CHART_HARD, stepWard: stepWard, rackCost: rackCost, buyRack: buyRack, reagentCost: reagentCost, buyReagent: buyReagent,
     SWEEP_COLS: SWEEP_COLS, SWEEP_ROWS: SWEEP_ROWS, SWEEP_TILES: SWEEP_TILES, SWEEP_AUTO_SECONDS: SWEEP_AUTO_SECONDS, SWEEP_BONUS_CLICKS: SWEEP_BONUS_CLICKS,
-    TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, sweepBonus: sweepBonus,
+    TILE_KINDS: TILE_KINDS, tileKind: tileKind, tileSearched: tileSearched, sweepCount: sweepCount, nextTile: nextTile, patrolNext: patrolNext, stepSweep: stepSweep, sweepBonus: sweepBonus,
     SURGE_MULT: SURGE_MULT, SURGE_SECONDS: SURGE_SECONDS, SURGE_COOLDOWN: SURGE_COOLDOWN, surge: surge, lineNow: lineNow,
     ASSIST_MAX: ASSIST_MAX, ASSIST_STEP: ASSIST_STEP, assistLevel: assistLevel, assistOn: assistOn, assistFactor: assistFactor, surgeCooldown: surgeCooldown, greenCooldown: greenCooldown,
     GREEN_SECONDS: GREEN_SECONDS, GREEN_COOLDOWN: GREEN_COOLDOWN, greenSignal: greenSignal,

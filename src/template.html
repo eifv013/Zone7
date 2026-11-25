@@ -1675,6 +1675,20 @@ button.row.rec.rec-night { outline-color: #c0392b; }
 
 /* ====== 5.3.0 3구역 공장 장면 ====== */
 .mboard-wrap { max-width: 460px; margin-left: auto; margin-right: auto; }      /* PC 에서 장면이 지나치게 커지지 않게 */
+/* 5.3.2 1 · 2구역 장면: 낮은 해상도로 그리고 화면에서 키운다(그릴 점이 적어 가볍다). 떠오르는 글은 그림 위에 따로 얹는다 */
+.zs-wrap { position: relative; margin: 0 auto 8px; max-width: 460px; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; background: #22242a; }
+.zs-cv { display: block; width: 100%; height: auto; image-rendering: pixelated; touch-action: manipulation; cursor: pointer; }
+.zs-fl { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; }
+.zs-fl span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font: 400 14px/1.2 var(--font-head); color: #fff6c8; text-shadow: 0 2px 0 #17180f, 0 -1px 0 #17180f, 1px 0 0 #17180f, -1px 0 0 #17180f; animation: zs-up .9s ease-out forwards; }
+.zs-fl span.big { font-size: 19px; color: #ffd95a; animation-duration: 1.5s; }
+.zs-fl span.gold { color: #ffd95a; font-size: 16px; }
+@keyframes zs-up { 0% { opacity: 0; margin-top: 6px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -26px; } }
+#search-grid, #board, #streak, #trade .trade-top { display: none; }
+#trade .check { display: inline-flex; width: calc(50% - 4px); vertical-align: top; } #trade #sell-peak-row { margin-left: 8px; } #trade #auto-sell-row[hidden], #trade #sell-peak-row[hidden] { display: none; }      /* 스위치 둘을 한 줄에 */      /* 옛 칸 격자 · 시세 막대 · 연속 호가 점은 장면이 대신한다 */
+/* 구매 줄 왼쪽의 살아 있는 그림 */
+.row.has-ic { position: relative; padding-left: 92px; min-height: 66px; }
+.row.has-ic .row-mile { display: none; }      /* 별 줄은 그림의 막대와 점이 대신한다 */
+.row-ic { position: absolute; left: 12px; top: 50%; margin-top: -24px; width: 69px; height: 45px; border-radius: 8px; border: 2px solid var(--ink); image-rendering: pixelated; background: #24232e; pointer-events: none; }
 .z3-cv { display: block; width: 100%; height: auto; image-rendering: pixelated; touch-action: manipulation; cursor: pointer; }
 .mboard-wrap #mboard, .mboard-wrap #mboard-top { display: none; }      /* 옛 칸 격자 */
 .z3-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 4px; background: #15161a; }
@@ -1890,10 +1904,13 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="trade search" id="search" hidden>
         <div class="search-head"><span class="num" id="search-count">0 / 20칸</span><span class="label" id="search-note"></span></div>
         <div class="autobar" id="search-bar" aria-hidden="true"></div>
+        <div class="zs-wrap"><canvas class="zs-cv" id="z1-cv" width="184" height="150" role="img" aria-label="주택가 · 불 꺼진 집을 누르면 수색해요"></canvas><div class="zs-fl" id="z1-fl" aria-hidden="true"></div></div>
         <div class="search-grid" id="search-grid"></div>
         <div class="label" id="search-bonus"></div>
       </div>
       <div class="trade" id="trade" hidden>
+        <div class="search-head"><span class="num" id="z2-goods"></span><span class="label" id="z2-note"></span></div>
+        <div class="zs-wrap"><canvas class="zs-cv" id="z2-cv" width="184" height="132" role="img" aria-label="야시장 · 누르면 상품을 팔아요"></canvas><div class="zs-fl" id="z2-fl" aria-hidden="true"></div></div>
         <div class="trade-top">
           <div><div class="label">현재 시세</div><div class="trade-price num" id="price">×1.00</div><div class="label" id="price-range"></div></div>
           <div class="trade-goods"><div class="label">쌓인 상품</div><div class="num" id="goods">0 / 0</div><div class="track"><i id="goods-bar"></i></div><div class="label" id="price-next"></div></div>
@@ -2222,7 +2239,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.3.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.3.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

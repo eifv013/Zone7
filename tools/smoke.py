@@ -151,7 +151,12 @@ def run_case(browser, name, size, state, mode):
         # 수색 지도: 칸을 직접 눌러 뒤지고, 구역 지도를 열었다 닫는다
         if page.locator('#search-grid .tile').count() != 20: problems.append('수색 지도가 20칸이 아니다')
         done_before = page.locator('#search-grid .tile.done').count()
-        if not tap('#tile-19'): problems.append('수색 지도의 칸을 누를 수 없다')
+        # 5.3.2 칸 격자는 동네 장면으로 바뀌었다: 그림 속 스무 번째 집(맨 아래 오른쪽)을 눌러 뒤진다
+        cvb = page.locator('#z1-cv').bounding_box()
+        if not cvb: problems.append('1구역 동네 장면이 없다')
+        else: page.locator('#z1-cv').click(position={'x': cvb['width'] * (2 + 4 * 36 + 17) / 184, 'y': cvb['height'] * (16 + 3 * 33 + 10) / 150}); page.wait_for_timeout(250)
+        if page.evaluate('() => window.ZONE7_SCENE_ERROR || ""'): problems.append('1구역 장면 오류: ' + page.evaluate('() => window.ZONE7_SCENE_ERROR')[:160])
+        if page.locator('#search-grid').is_visible(): problems.append('옛 수색 칸 격자가 보인다')
         if page.locator('#search-grid .tile.done').count() != done_before + 1 or 'done' not in page.get_attribute('#tile-19', 'class'): problems.append('칸을 눌렀는데 뒤진 칸이 되지 않았다')
         if not tap('#zmap-open') or not page.locator('#zmap').is_visible(): problems.append('구역 지도가 열리지 않는다')
         if '1구역 주택가' not in text('zmap-z0') or '잠김' not in text('zmap-z1'): problems.append('구역 지도 내용이 이상하다: ' + text('zmap-z0') + ' | ' + text('zmap-z1'))
@@ -606,6 +611,9 @@ def run_case(browser, name, size, state, mode):
         # 시세판: 막대가 보이고(지금 시세 하나는 반드시), 연속 호가 칸이 다섯 개다
         tap('[data-mview-set=manage]'); tap('[data-tab=z1]')
         if page.locator('#board-bars i.now').count() != 1: problems.append('시세판에 지금 시세 막대가 없다')
+        if not page.locator('#z2-cv').is_visible(): problems.append('2구역 야시장 장면이 없다')
+        page.wait_for_timeout(300)
+        if page.evaluate('() => window.ZONE7_SCENE_ERROR || ""'): problems.append('2구역 장면 오류: ' + page.evaluate('() => window.ZONE7_SCENE_ERROR')[:160])
         if page.locator('#streak-pips i').count() != 5: problems.append('연속 호가 칸이 다섯 개가 아니다')
         if not text('streak-note'): problems.append('연속 호가 안내가 없다')
         # 구역 화면: 고점에 팔고, 좌판과 강화를 사고, 자동 판매를 켠다

@@ -4078,3 +4078,18 @@ test('5.3.1: 의뢰 간식은 다섯 번에 한 번만 준다(자주 와도 하�
   for (var i = 0; i < 10; i++) { s.board[0] = 3; s.board[1] = 3; s.contract = { who: 'bike', level: 3, need: 2, have: 2, left: 50 }; var t = s.treats, r = C.fillContract(s); assert.ok(r.ok); assert.strictEqual(s.treats - t, r.treats); got += r.treats; }
   assert.strictEqual(got, 2 * C.CONTRACT_TREATS);
 });
+
+test('5.3.2: 순찰조는 하던 자리 다음 칸부터 이어 가고, 동네가 바뀌어도 처음으로 돌아가지 않는다', function () {
+  var s = C.createState(0); s.upgrades.patrol = 1; assert.ok(C.autoOn(s, 0));
+  assert.strictEqual(C.patrolNext(s), 0);
+  var ev = []; C.stepSweep(s, C.sweepInterval(s) * 3 + 0.01, ev);
+  assert.deepStrictEqual(ev.filter(function (e) { return e.type === 'patrol'; }).map(function (e) { return e.tile; }), [0, 1, 2]); assert.strictEqual(s.sweepAt, 2);
+  // 손으로 3번 칸을 먼저 뒤져 두면 순찰조는 건너뛰고 4번으로 간다
+  C.scavenge(s, 3); assert.strictEqual(C.patrolNext(s), 4);
+  // 손으로 나머지를 다 뒤져 동네가 바뀌어도, 순찰조는 2번 다음(3번)부터다
+  for (var i = 4; i < C.SWEEP_TILES; i++) C.scavenge(s, i);
+  assert.strictEqual(s.sweepMask, 0, '새 동네'); assert.strictEqual(C.patrolNext(s), 3);
+  // 저장을 거쳐도 자리가 남는다. 깨진 값은 -1 로 읽는다
+  var back = C.deserialize(C.serialize(s)); assert.strictEqual(back.sweepAt, 2);
+  var bad = JSON.parse(C.serialize(s)); bad.sweepAt = 'x'; assert.strictEqual(C.deserialize(JSON.stringify(bad)).sweepAt, -1);
+});

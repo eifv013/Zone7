@@ -1029,6 +1029,7 @@
   function search(index) {
     var r = C.scavenge(state, index);
     popNumber('+' + fmt(r.gain + r.bonus));
+    if (zs1) { zs1.searched(r.tile, false, zsKind(r.kind), (r.kind === 'cache' ? '은닉처! +' : '+') + fmt(r.gain)); if (r.swept) zs1.done(state.sweeps, false, '+' + fmt(r.bonus)); }
     var tile = rows.tiles[r.tile];
     if (tile) { tile.classList.remove('hit'); void tile.offsetWidth; tile.classList.add('hit'); }
     if (scene) scene.poke();
@@ -3032,6 +3033,7 @@
     $('order-fill').addEventListener('click', function () {
       var r = C.fillOrder(state);
       if (!r.ok) return;
+      if (zs2) zs2.filled('단골 · +' + fmt(r.gain), false);
       if (r.first) { toast('새 단골 · ' + r.name); log('새 단골이 생겼다. ' + r.name + '. 도감에 적었다.', 'good'); sfx('goal'); }
       else { log(r.name + '에게 상품을 팔았다. 물자 ' + fmt(r.gain) + ' 확보.', 'good'); sfx('sell'); }
       buzz(20); Store.save(); render();
@@ -3696,8 +3698,8 @@
     }
     function draw(dt) {
       T += dt; var A = line.A(), S = board.S(), k, x, y;
-      var rows = Math.max(3, Math.ceil(S.cells.length / 5)); if (rows !== ROWS || !bg) { ROWS = rows; E = (rows - 3) * 26; bg = null; cv.width = 736; cv.height = (178 + E) * 4; backdrop(); }
-      g.setTransform(4, 0, 0, 4, 0, 0); g.imageSmoothingEnabled = false; c = g;
+      var rows = Math.max(3, Math.ceil(S.cells.length / 5)); if (rows !== ROWS || !bg) { ROWS = rows; E = (rows - 3) * 26; bg = null; cv.width = 368; cv.height = (178 + E) * 2; backdrop(); }
+      g.setTransform(2, 0, 0, 2, 0, 0); g.imageSmoothingEnabled = false; c = g;      /* 5.3.2 4배 → 2배: 칠할 점이 4분의 1 */
       g.drawImage(bg, 0, 0);
       /* 등 아래 떠다니는 먼지 */
       for (k = 0; k < 6; k++) { var dx = [24, 74, 124][k % 3] - 8 + ((k * 7 + T * (2 + k % 3)) % 16), dy = 20 + ((k * 17 + T * (3 + k % 2)) % 48); c.fillStyle = 'rgba(255,236,170,' + (0.12 + 0.12 * Math.sin(T * 2 + k)).toFixed(2) + ')'; c.fillRect(Math.round(dx), Math.round(dy), 1, 1); }
@@ -3781,7 +3783,705 @@
     return { draw: draw, rect: function (i) { return [4 + (i % 5) * 29 + 13, 18 + 69 + Math.floor(i / 5) * 26 + 10, 184, 178 + E]; }, goTo: function (i) { lift.tx = 4 + (i % 5) * 29 + 13; lift.cell = i; lift.work = 0.9; }, slide: function (to, from, lv) { ghosts.push({ to: to, from: from, kind: (lv - 1) % BOXART.count, t: 0.16 }); }, hop: hopAt, drop: function (i) { hop[i] = 0.3; }, shipped: function (pay) { shipT = 1.6; shipPay = '+' + pay; } };
   }
 
-  var z3 = null, z3Raf = 0, z3Last = 0, Z3_NAMES = ['press', 'weld'];
+  /*
+   * 1 · 2구역 장면(5.3.2): 주택가(동네 한 장면)와 야시장. 그리기와 연출만 맡는다. 물자 · 시세 같은 값은 모두 core 가 계산하고, 여기서는 받아서 보여 주기만 한다.
+   *   ZS.town(canvas, 글 띄울 상자, { tap(i) })  → { draw(dt, view), searched(), done(), built(), patrolUp(), icon, weather() }
+   *   ZS.market(canvas, 글 띄울 상자, { sell(), fill() }) → { draw(dt, view), sold(), filled(), bought(), icon }
+   * icon 은 구매 줄에 잘라 넣는 그림판이다(한 칸 46×30).
+   */
+  var ZS = (function () {
+    var BK = '#17180f';
+    var AWN = ['#c8483a', '#3f7fb8', '#3f8a52', '#d89a1a'];      /* 차양 빛깔: 두 장면이 함께 쓴다 */
+  function hash(x, y) { var n = (x * 374761393 + y * 668265263) >>> 0; n = ((n ^ (n >>> 13)) * 1274126177) >>> 0; return (n ^ (n >>> 16)) >>> 0; }
+  /* 시설을 N곳 지을 때마다 두 배(본 게임의 10 · 25 · 50 · 100곳) */
+  function mix(a, b, t) { var o = '#'; for (var i = 1; i < 7; i += 2) { var v = Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t); o += (v < 16 ? '0' : '') + v.toString(16); } return o; }
+  function mile(n) { var m = 1; [10, 25, 50, 100].forEach(function (t) { if (n >= t) m *= 2; }); return m; }
+
+  /* 그림 도구: 점 사각형 · 글자판 스프라이트 · 작은 숫자 */
+  function tools(g) {
+    function px(x, y, w, h, col) { g.fillStyle = col; g.fillRect(Math.round(x), Math.round(y), w, h); }
+    function spr(x, y, rows, pal, sc) { sc = sc || 1; rows.forEach(function (r, j) { for (var i = 0; i < r.length; i++) { var col = pal[r.charAt(i)]; if (col) px(x + i * sc, y + j * sc, sc, sc, col); } }); }
+    var DG = { 0: ['###', '#.#', '#.#', '#.#', '###'], 1: ['.#.', '##.', '.#.', '.#.', '###'], 2: ['###', '..#', '###', '#..', '###'], 3: ['###', '..#', '###', '..#', '###'], 4: ['#.#', '#.#', '###', '..#', '..#'],
+      5: ['###', '#..', '###', '..#', '###'], 6: ['###', '#..', '###', '#.#', '###'], 7: ['###', '..#', '..#', '.#.', '.#.'], 8: ['###', '#.#', '###', '#.#', '###'], 9: ['###', '#.#', '###', '..#', '###'],
+      '.': ['.', '.', '.', '.', '#'], x: ['...', '#.#', '.#.', '#.#', '...'] };
+    /* 글자를 왼쪽부터 찍고 다음 x 를 돌려준다 */
+    function num(s, x, y, col, sc) { sc = sc || 1; String(s).split('').forEach(function (d) { var G = DG[d]; if (!G) return; spr(x, y, G, { '#': col }, sc); x += (G[0].length + 1) * sc; }); return x; }
+    /* 사람(6×12): 본 게임 3구역 일꾼과 같은 꼴. pal = { h 모자/머리, H 그 그늘, v 윗옷, w 윗옷 무늬 } */
+    function man(x, y, pal, step, dir) {
+      var P = { h: pal.h, H: pal.H || pal.h, s: '#f1c9a0', e: BK, v: pal.v, w: pal.w || pal.v, p: pal.p || '#3c4a5a', k: BK };
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(Math.round(x), Math.round(y) + 12, 6, 1);
+      spr(x, y, ['.hhhh.', 'hhhhhH', pal.back ? '.hhhh.' : '.ssss.', pal.back ? '.hhhh.' : dir < 0 ? '.es.s.' : '.s.se.', '.ssss.', 'vvwwvv', 'vvvvvv', 'vvwwvv', '.pppp.', step ? '.p..p.' : '.pp.p.', step ? 'kk..p.' : '.p..kk', step ? '....kk' : 'kk....'], P);
+    }
+    return { px: px, spr: spr, num: num, man: man };
+  }
+  /* 그림 위에 글을 띄운다. x · y 는 그림 좌표(0~W, 0~H) */
+  function floater(box, W, H) { return function (text, x, y, cls) { var s = el('span', cls || '', text); s.style.left = (x / W * 100) + '%'; s.style.top = (y / H * 100) + '%'; box.appendChild(s); setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 1600); }; }
+  function tapAt(cv, fn) { cv.addEventListener('pointerdown', function (e) { var r = cv.getBoundingClientRect(); fn((e.clientX - r.left) / r.width * cv.width, (e.clientY - r.top) / r.height * cv.height); e.preventDefault(); }); }
+
+
+    function town(cv, flBox, host) {
+  var A, T = 0;
+  var BLD = [{ name: '잔해 수색조', cost: 15, rate: 0.5 }, { name: '옥상 텃밭', cost: 120, rate: 4 }, { name: '빗물 정수기', cost: 1100, rate: 22 }, { name: '고철 작업장', cost: 12000, rate: 120 }];
+  var KIND = [{ name: '빈집', mult: 1 }, { name: '가게', mult: 1.25 }, { name: '은닉처', mult: 2 }];
+  var HW = [['#b9a58a', '#96846c', '#7a3b2e', '#a25240'], ['#9fb0b4', '#7f9094', '#3d4a5c', '#56687f'], ['#c9b27a', '#a48f5c', '#5a4a3a', '#76624e'], ['#a7b08c', '#868f6e', '#4d5a3a', '#66764e'], ['#c2a0a0', '#9f8080', '#5c3a44', '#7a4e5a']];
+  var AWN = ['#c8483a', '#3f7fb8', '#3f8a52', '#d89a1a'];
+  /* 동네가 바뀔 때마다 때와 날씨가 돈다: 노을 → 밤 → 아침 → 비 */
+  var WX = [{ n: '노을', sky: ['#d9825a', '#f2bd84'], far: ['#8a5a52', '#a06a5c', '#7a4c46'], tint: null, lamp: true },
+    { n: '밤', sky: ['#0e1328', '#2c3a66'], far: ['#1d2238', '#2a3050', '#161a2c'], tint: 'rgba(10,14,46,.42)', lamp: true },
+    { n: '아침', sky: ['#7fb8e6', '#d6ecf6'], far: ['#8fa3b8', '#a6b8ca', '#7d91a6'], tint: null, lamp: false },
+    { n: '비', sky: ['#5d6672', '#8c96a0'], far: ['#565e6a', '#666e7a', '#4a525e'], tint: 'rgba(36,46,66,.3)', lamp: true },
+    { n: '눈', sky: ['#8f9aa8', '#d4dae2'], far: ['#8a94a2', '#a2acb8', '#7a8492'], tint: 'rgba(210,220,236,.10)', lamp: true }];
+  var WX_HOODS = 3;      /* 이만큼의 동네를 뒤질 때마다 때 · 날씨가 바뀐다(동네마다 바뀌면 정신없다) */
+  function aWi() { return A.wx; }
+  function aWx() { return WX[aWi()]; }
+  /* 눈이 쌓인 정도(0~1): 눈 오는 세 동네 동안 뒤진 만큼 조금씩 쌓인다 */
+  function aSnow() { return aWi() === 4 ? Math.min(1, ((A.hood - A.wxAt) + (20 - aLeft()) / 20) / WX_HOODS * 1.25) : 0; }
+  var AX0 = 2, ATOP = 16, ACW = 36, ARH = 33;
+  function aHood() { A.done = []; A.kind = []; for (var i = 0; i < 20; i++) { var r = hash(A.seed * 31 + i, 77) % 100; A.kind.push(r >= 90 ? 2 : r >= 60 ? 1 : 0); A.done.push(0); } }
+  function aNew() { A = { money: 0, b: [1, 0, 0, 0], patrol: 0, on: true, clock: 0, pop: [-9, -9, -9, -9], popBig: [0, 0, 0, 0], popP: -9, pc: -1, wx: 0, wxAt: 1, ev: [], evT: { bolt: 5, star: 4, truck: 7, bird: 3 }, flash: 0, gustIn: 6, gust: 0, gustLen: 1, windX: 0, seed: -1, hood: 1, stage: [0, 0, 0, 0], frac: [0, 0, 0, 0], tier: [0, 0, 0, 0], every: 3, patNext: -1, next: 0, fade: 0, pat: { x: -8 }, parts: [] }; aHood(); }
+  function aLeft() { var n = 0; A.done.forEach(function (d) { if (!d) n++; }); return n; }
+  function aNext() { for (var i = 0; i < 20; i++) if (!A.done[i]) return i; return -1; }
+  function aNextPat() { return A.patNext; }
+  function aEvery() { return A.every || 3; }
+  var aSay = function () {}, aBuilt = function () {};
+  /* 한 집이 뒤져졌을 때의 연출(값은 core 가 이미 계산했다). k 는 집의 종류(0 빈집 · 1 가게 · 2 은닉처), text 는 띄울 글 */
+  function aSearch(i, auto, k, text) {
+    if (!(i >= 0 && i < 20)) return; var cx = AX0 + (i % 5) * ACW + 17, cy = ATOP + Math.floor(i / 5) * ARH + 8;
+    A.done[i] = T + 0.001;
+    /* 짐 들고 뛰어나오는 사람은 한 번에 한 명, 3초에 한 번까지만(집마다 나오면 정신없다) */
+    var running = A.ev.some(function (e) { return e.type === 'run'; });
+    if (A.ev.length < 14) { if (!running && T - (A.runAt || -9) > 3) { A.runAt = T; A.ev.push({ type: 'run', x: cx - 3, y: cy + 6, t: 0, dir: i % 2 ? 1 : -1, gold: k === 2 }); } if ((hash(i, A.seed) >>> 10) % 4 === 0) A.ev.push({ type: 'crow', x: cx - 2, y: cy - 8, t: 0, dir: i % 2 ? -1 : 1 }); }
+    for (var p = 0; p < 5; p++) A.parts.push({ x: cx - 6 + Math.random() * 12, y: cy + 12, vx: (Math.random() - 0.5) * 14, vy: -6 - Math.random() * 8, life: 0.5 });
+    if (text) aSay(text, cx, cy, k === 2 ? 'gold' : ''); else if (k === 2) aSay('은닉처', cx, cy, 'gold');
+  }
+  /* 본 게임의 상태(v)를 장면에 옮긴다. 동네가 바뀌면 어두워졌다 밝아지고, 세 동네마다 때 · 날씨를 새로 뽑는다 */
+  function aSync(v) {
+    var i;
+    if (v.seed !== A.seed) {
+      var first = A.seed === -1; A.seed = v.seed; A.hood = v.hood; for (i = 0; i < 20; i++) A.done[i] = 0;
+      if (first) { A.wx = Math.floor(Math.random() * WX.length); A.wxAt = A.hood; }
+      else { A.fade = 0.5; if (A.hood - A.wxAt >= WX_HOODS || A.hood < A.wxAt) { var nw = A.wx; while (nw === A.wx) nw = Math.floor(Math.random() * WX.length); A.wx = nw; A.wxAt = A.hood; } }
+    }
+    for (i = 0; i < 20; i++) { A.kind[i] = v.kinds[i]; var on = (v.mask & (1 << i)) !== 0; if (on && !A.done[i]) A.done[i] = T - 5; else if (!on) A.done[i] = 0; }
+    A.b = v.counts; A.patrol = v.patrol; A.on = v.on; A.every = v.every; A.patNext = v.patNext; A.stage = v.stage; A.frac = v.frac; A.tier = v.tier;
+  }
+  var aG = (function () {
+    var g = cv.getContext('2d'), t = tools(g), px = t.px, spr = t.spr;
+    aSay = floater(flBox, 184, 150);
+    tapAt(cv, function (x, y) { var c = Math.floor((x - AX0) / ACW), r = Math.floor((y - ATOP) / ARH); host.tap(c >= 0 && c < 5 && r >= 0 && r < 4 ? r * 5 + c : -1); });
+    var WIN_OFF = '#23262e', WIN_ON = '#ffd95a', WOOD = '#8a7a5a', OL = '#2b2620';
+    function win(x, y, lit, board) { px(x, y, 7, 7, '#3a342e'); px(x + 1, y + 1, 5, 5, lit ? WIN_ON : WIN_OFF); if (lit) { px(x + 1, y + 1, 5, 1, '#fff2b0'); px(x + 1, y + 4, 2, 2, '#f0b400'); } else px(x + 1, y + 1, 2, 1, '#3a3f4c'); px(x + 3, y + 1, 1, 5, '#3a342e'); px(x - 1, y + 7, 9, 1, '#e8e0cc'); if (board) { px(x - 1, y + 2, 9, 1, WOOD); px(x - 1, y + 4, 9, 1, '#75664a'); px(x, y + 2, 1, 1, '#4a4030'); px(x + 6, y + 4, 1, 1, '#4a4030'); } }
+    /* 집: 테두리 → 지붕(기와 결) → 벽(판자 결) → 창 · 문. h 로 꼴이 조금씩 다르다(다락창 · 현관 지붕 · 안테나 · 화단) */
+    function house(bx, by, p, done, h) {
+      var v = (h >>> 3) % 3, x, k;
+      px(bx + 3, by + 1, 28, 3, OL); px(bx + 1, by + 3, 32, 3, OL); px(bx, by + 5, 34, 4, OL); px(bx + 2, by + 8, 30, 15, OL);
+      px(bx + 23, by - 1, 5, 5, OL); px(bx + 24, by, 3, 4, '#6a5f54'); px(bx + 24, by, 3, 1, '#8a7c6e'); px(bx + 26, by + 1, 1, 3, '#4a423a');
+      px(bx + 4, by + 2, 26, 2, p[3]); px(bx + 2, by + 4, 30, 2, p[2]); px(bx + 1, by + 6, 32, 2, p[2]); px(bx + 4, by + 2, 26, 1, 'rgba(255,255,255,.22)'); px(bx + 1, by + 7, 32, 1, 'rgba(0,0,0,.28)');
+      for (x = 3; x < 31; x += 4) { px(bx + x, by + 4, 1, 1, 'rgba(0,0,0,.28)'); px(bx + x + 2, by + 6, 1, 1, 'rgba(0,0,0,.28)'); px(bx + x + 1, by + 5, 1, 1, 'rgba(255,255,255,.12)'); }
+      px(bx + 3, by + 9, 28, 14, p[0]); px(bx + 28, by + 9, 3, 14, p[1]); px(bx + 3, by + 9, 28, 1, 'rgba(0,0,0,.3)'); px(bx + 3, by + 10, 1, 13, 'rgba(255,255,255,.18)');
+      for (k = 12; k < 22; k += 3) px(bx + 4, by + k, 26, 1, 'rgba(0,0,0,.07)');
+      px(bx + 3, by + 21, 28, 2, '#5a554a'); px(bx + 3, by + 21, 28, 1, '#6e685c');
+      if ((h >>> 5) % 3 === 0) { px(bx + 8, by - 3, 1, 5, '#4a4d57'); px(bx + 6, by - 2, 5, 1, '#4a4d57'); px(bx + 7, by - 1, 3, 1, '#4a4d57'); }
+      if (v === 1) { px(bx + 9, by + 2, 7, 6, OL); px(bx + 10, by + 3, 5, 4, done ? WIN_ON : WIN_OFF); px(bx + 12, by + 3, 1, 4, '#3a342e'); px(bx + 9, by + 2, 7, 1, p[3]); }
+      win(bx + 6, by + 11, done, !done); win(bx + 22, by + 11, done, !done);
+      if (done) { px(bx + 13, by + 12, 8, 11, OL); px(bx + 14, by + 13, 6, 10, '#17120e'); px(bx + 15, by + 15, 4, 8, '#4a3626'); px(bx + 15, by + 15, 4, 1, '#6a4e36'); px(bx + 20, by + 13, 2, 10, '#7a5638'); px(bx + 20, by + 13, 1, 10, '#96704a'); }
+      else { px(bx + 13, by + 12, 8, 11, OL); px(bx + 14, by + 13, 6, 10, '#6b4a32'); px(bx + 14, by + 13, 1, 10, '#84603f'); px(bx + 15, by + 14, 4, 3, '#5a3e2a'); px(bx + 15, by + 18, 4, 4, '#5a3e2a'); px(bx + 18, by + 18, 1, 1, '#d8c070'); px(bx + 12, by + 15, 10, 1, WOOD); px(bx + 12, by + 19, 10, 1, '#75664a'); px(bx + 13, by + 15, 1, 1, '#4a4030'); px(bx + 20, by + 19, 1, 1, '#4a4030'); }
+      if (v === 2) { px(bx + 11, by + 10, 12, 2, OL); px(bx + 11, by + 10, 12, 1, p[3]); px(bx + 11, by + 12, 1, 11, '#e8e0cc'); px(bx + 22, by + 12, 1, 11, '#e8e0cc'); }
+      px(bx + 12, by + 23, 10, 1, '#a39f8c');
+      if ((h >>> 7) % 2) { px(bx + 3, by + 19, 4, 4, '#2f5a30'); px(bx + 3, by + 19, 3, 2, '#4a7a3e'); px(bx + 4, by + 19, 1, 1, done ? '#e86a7a' : '#6a8a4e'); }
+      if ((h >>> 8) % 2) { px(bx + 27, by + 20, 4, 3, '#2f5a30'); px(bx + 27, by + 20, 3, 1, '#4a7a3e'); }
+    }
+    function store(bx, by, h, done) {
+      var aw = AWN[h % AWN.length], x, y;
+      px(bx + 1, by + 4, 32, 19, OL); px(bx + 4, by - 1, 26, 8, OL);
+      px(bx + 2, by + 5, 30, 18, '#d6cfbb'); px(bx + 29, by + 5, 3, 18, '#aaa38f'); px(bx + 2, by + 5, 1, 18, '#ebe5d4'); px(bx + 2, by + 21, 30, 2, '#5a554a');
+      px(bx + 5, by, 24, 6, '#22201c'); px(bx + 6, by + 1, 22, 4, aw); px(bx + 6, by + 1, 22, 1, 'rgba(255,255,255,.3)'); px(bx + 6, by + 4, 22, 1, 'rgba(0,0,0,.25)'); for (var k = 0; k < 5; k++) px(bx + 8 + k * 4, by + 2, 2, 2, '#f1f0e6');
+      for (x = 0; x < 32; x++) { var c = (x >> 2) % 2 ? aw : '#f1f0e6'; px(bx + 1 + x, by + 7, 1, 3, c); if (x % 4 !== 3) px(bx + 1 + x, by + 10, 1, 1, c); } px(bx + 1, by + 7, 32, 1, 'rgba(255,255,255,.3)'); px(bx + 1, by + 9, 32, 1, 'rgba(0,0,0,.14)'); px(bx + 2, by + 11, 30, 1, 'rgba(0,0,0,.22)');
+      px(bx + 4, by + 13, 15, 8, '#3a342e'); px(bx + 5, by + 14, 13, 6, done ? WIN_ON : WIN_OFF);
+      if (done) { px(bx + 5, by + 14, 13, 1, '#fff2b0'); px(bx + 6, by + 17, 3, 3, '#c8483a'); px(bx + 6, by + 17, 3, 1, '#e86a5a'); px(bx + 10, by + 16, 3, 4, '#3f8a52'); px(bx + 14, by + 18, 3, 2, '#3f7fb8'); px(bx + 5, by + 20, 13, 1, '#8a6800'); }
+      else { px(bx + 5, by + 14, 3, 1, '#3a3f4c'); px(bx + 3, by + 15, 17, 1, WOOD); px(bx + 3, by + 18, 17, 1, '#75664a'); }
+      px(bx + 21, by + 12, 9, 11, OL);
+      if (done) { px(bx + 22, by + 13, 7, 10, '#17120e'); px(bx + 23, by + 16, 5, 7, '#4a3626'); px(bx + 22, by + 13, 7, 2, '#8a8e98'); px(bx + 22, by + 14, 7, 1, '#5e616a'); px(bx + 30, by + 17, 3, 3, '#b8853a'); px(bx + 30, by + 17, 3, 1, '#d8a654'); }
+      else { px(bx + 22, by + 13, 7, 10, '#8a8e98'); for (y = 14; y < 23; y += 2) px(bx + 22, by + y, 7, 1, '#5e616a'); px(bx + 25, by + 21, 1, 1, '#d8c070'); }
+      px(bx + 20, by + 23, 11, 1, '#a39f8c');
+    }
+    /* 눈이 얹힐 지붕 자리(칸마다 꼴이 달라서 그릴 때 적어 둔다): [x, y, 너비] */
+    var ROOF = {}, houseA = house, storeA = store;
+    function doorWin(bx, by, dx, done) { px(bx + dx - 1, by + 12, 8, 11, OL); if (done) { px(bx + dx, by + 13, 6, 10, '#17120e'); px(bx + dx + 1, by + 15, 4, 8, '#4a3626'); px(bx + dx + 6, by + 13, 2, 10, '#7a5638'); } else { px(bx + dx, by + 13, 6, 10, '#6b4a32'); px(bx + dx, by + 13, 1, 10, '#84603f'); px(bx + dx + 4, by + 18, 1, 1, '#d8c070'); px(bx + dx - 2, by + 15, 10, 1, WOOD); px(bx + dx - 2, by + 19, 10, 1, '#75664a'); } }
+    function sw(x, y, w, h, lit, board) { px(x - 1, y - 1, w + 2, h + 2, OL); px(x, y, w, h, lit ? WIN_ON : WIN_OFF); if (lit) px(x, y, w, 1, '#fff2b0'); else px(x, y, 1, 1, '#3a3f4c'); if (board) px(x - 1, y + (h >> 1), w + 2, 1, WOOD); }
+    /* 집 B: 평지붕 2층(콘크리트) · 옥상 물탱크 */
+    function houseB(bx, by, p, done, h) {
+      px(bx + 2, by + 1, 30, 22, OL); px(bx + 3, by + 2, 28, 20, p[0]); px(bx + 27, by + 2, 4, 20, p[1]); px(bx + 3, by + 2, 1, 20, 'rgba(255,255,255,.2)'); px(bx + 2, by + 1, 30, 2, p[2]); px(bx + 2, by + 1, 30, 1, p[3]); px(bx + 3, by + 11, 28, 1, 'rgba(0,0,0,.22)'); px(bx + 3, by + 21, 28, 1, '#5a554a');
+      px(bx + 21, by - 3, 8, 5, OL); px(bx + 22, by - 2, 6, 3, '#8a8e98'); px(bx + 22, by - 2, 6, 1, '#b0b4be'); px(bx + 6, by - 1, 4, 3, OL); px(bx + 7, by, 2, 1, '#70757f');
+      [6, 14, 22].forEach(function (o, q) { sw(bx + o, by + 5, 4, 4, done && (q + h) % 3 !== 0, !done && q === 1); });
+      sw(bx + 6, by + 14, 6, 5, done, !done); doorWin(bx, by, 19, done); px(bx + 17, by + 23, 10, 1, '#a39f8c');
+      ROOF.cur = [2, 0, 30];
+    }
+    /* 집 C: 낮은 지붕에 차고 딸린 단층 */
+    function houseC(bx, by, p, done, h) {
+      px(bx, by + 5, 34, 7, OL); px(bx + 2, by + 11, 30, 12, OL); px(bx + 3, by + 4, 28, 2, OL); px(bx + 4, by + 5, 26, 1, p[3]); px(bx + 1, by + 6, 32, 5, p[2]); px(bx + 1, by + 6, 32, 1, p[3]); px(bx + 1, by + 10, 32, 1, 'rgba(0,0,0,.3)'); for (var x = 3; x < 32; x += 4) px(bx + x, by + 8, 1, 1, 'rgba(0,0,0,.28)');
+      px(bx + 3, by + 11, 28, 11, p[0]); px(bx + 28, by + 11, 3, 11, p[1]); px(bx + 3, by + 21, 28, 1, '#5a554a');
+      px(bx + 4, by + 13, 14, 10, OL);
+      if (done) { px(bx + 5, by + 14, 12, 9, '#17120e'); px(bx + 5, by + 14, 12, 2, '#8a8e98'); px(bx + 7, by + 18, 8, 4, ['#8a4234', '#44546a', '#7a7866'][h % 3]); px(bx + 8, by + 17, 6, 2, '#55626e'); px(bx + 7, by + 21, 2, 2, BK); px(bx + 13, by + 21, 2, 2, BK); }
+      else { px(bx + 5, by + 14, 12, 9, '#9a9ea8'); for (var y = 15; y < 23; y += 2) px(bx + 5, by + y, 12, 1, '#70757f'); px(bx + 10, by + 21, 2, 1, '#d8c070'); }
+      px(bx + 19, by + 13, 6, 10, OL); px(bx + 20, by + 14, 4, 9, done ? '#17120e' : '#6b4a32'); if (done) px(bx + 21, by + 16, 2, 7, '#4a3626'); else px(bx + 22, by + 18, 1, 1, '#d8c070');
+      sw(bx + 27, by + 14, 3, 4, done, false); px(bx + 26, by + 2, 4, 5, OL); px(bx + 27, by + 3, 2, 3, '#6a5f54');
+      ROOF.cur = [1, 5, 32];
+    }
+    /* 집 D: 계단 박공의 벽돌집 · 발코니 */
+    function houseD(bx, by, p, done, h) {
+      var br = ['#a8604a', '#8f5240', '#b87a5a'][h % 3], bd = mix(br, '#000000', 0.25), x, y;
+      px(bx + 12, by - 1, 10, 4, OL); px(bx + 8, by + 1, 18, 4, OL); px(bx + 4, by + 3, 26, 20, OL);
+      px(bx + 13, by, 8, 3, br); px(bx + 9, by + 2, 16, 3, br); px(bx + 5, by + 4, 24, 18, br); px(bx + 26, by + 4, 3, 18, bd); px(bx + 13, by, 8, 1, mix(br, '#ffffff', 0.25)); px(bx + 5, by + 4, 4, 1, mix(br, '#ffffff', 0.25)); px(bx + 25, by + 4, 4, 1, mix(br, '#ffffff', 0.25));
+      for (y = 6; y < 22; y += 3) for (x = 6 + (y % 2) * 3; x < 27; x += 6) px(bx + x, by + y, 3, 1, bd);
+      sw(bx + 15, by + 2, 4, 3, done, false); sw(bx + 8, by + 8, 5, 5, done, !done); sw(bx + 21, by + 8, 5, 5, done && h % 2 === 0, !done);
+      px(bx + 6, by + 14, 22, 1, OL); for (x = 7; x < 28; x += 3) px(bx + x, by + 13, 1, 2, OL);
+      doorWin(bx, by, 14, done); px(bx + 13, by + 11, 8, 1, OL); px(bx + 5, by + 21, 24, 1, '#5a554a'); px(bx + 12, by + 23, 10, 1, '#a39f8c');
+      ROOF.cur = [12, -1, 10];
+    }
+    house = function (bx, by, p, done, h) { var sh = (h >>> 12) % 5; ROOF.cur = [4, 1, 26]; if (sh === 1) houseB(bx, by, p, done, h); else if (sh === 2) houseC(bx, by, p, done, h); else if (sh === 3) houseD(bx, by, p, done, h); else houseA(bx, by, p, done, h); };
+    /* 가게 B: 약국(흰 벽 · 초록 십자 간판) */
+    function storeB(bx, by, h, done) {
+      px(bx + 1, by + 3, 32, 20, OL); px(bx + 2, by + 4, 30, 18, '#e4e6e0'); px(bx + 28, by + 4, 4, 18, '#b8bcb4'); px(bx + 2, by + 4, 30, 2, '#3f8a52'); px(bx + 2, by + 4, 30, 1, '#6ac46a'); px(bx + 2, by + 21, 30, 1, '#5a554a');
+      px(bx + 12, by - 3, 10, 9, OL); px(bx + 13, by - 2, 8, 7, '#f4f6f0'); var gc = done && Math.floor(T * 2) % 2 ? '#8af08a' : '#3f8a52'; px(bx + 16, by - 1, 2, 5, gc); px(bx + 14, by + 1, 6, 1, gc); px(bx + 14, by + 1, 6, 2, gc);
+      sw(bx + 4, by + 9, 11, 9, done, !done); if (done) { px(bx + 5, by + 12, 3, 3, '#c8483a'); px(bx + 9, by + 11, 2, 4, '#3f7fb8'); px(bx + 12, by + 13, 2, 2, '#f4f6f0'); px(bx + 4, by + 15, 11, 1, '#8a6800'); } else for (var y = 10; y < 18; y += 2) px(bx + 4, by + y, 11, 1, '#3a3f4c');
+      px(bx + 18, by + 9, 11, 14, OL); px(bx + 19, by + 10, 9, 13, done ? '#cfe8f4' : '#4a5560'); px(bx + 23, by + 10, 1, 13, OL); if (done) px(bx + 19, by + 10, 9, 1, '#ffffff'); else { px(bx + 17, by + 14, 13, 1, WOOD); px(bx + 17, by + 18, 13, 1, '#75664a'); }
+      px(bx + 17, by + 23, 13, 1, '#a39f8c'); ROOF.cur = [2, 3, 30];
+    }
+    /* 가게 C: 마트(가로로 긴 간판 · 통유리 · 손수레) */
+    function storeC(bx, by, h, done) {
+      var sc = AWN[h % AWN.length], x;
+      px(bx, by + 2, 34, 21, OL); px(bx + 1, by + 9, 32, 13, '#c9c4b4'); px(bx + 29, by + 9, 4, 13, '#a39e8e'); px(bx + 1, by + 21, 32, 1, '#5a554a');
+      px(bx + 1, by + 3, 32, 6, sc); px(bx + 1, by + 3, 32, 1, 'rgba(255,255,255,.35)'); px(bx + 1, by + 8, 32, 1, 'rgba(0,0,0,.3)'); for (x = 4; x < 30; x += 5) { px(bx + x, by + 5, 3, 2, done ? '#fff6c8' : '#f1f0e6'); px(bx + x + 1, by + 4, 1, 4, done ? '#fff6c8' : '#f1f0e6'); }
+      px(bx + 2, by + 11, 30, 10, OL); px(bx + 3, by + 12, 12, 8, done ? WIN_ON : WIN_OFF); px(bx + 20, by + 12, 11, 8, done ? WIN_ON : WIN_OFF);
+      if (done) { px(bx + 3, by + 12, 12, 1, '#fff2b0'); px(bx + 20, by + 12, 11, 1, '#fff2b0'); for (x = 0; x < 4; x++) { px(bx + 4 + x * 3, by + 15, 2, 2, AWN[(x + h) % 4]); px(bx + 21 + x * 3, by + 17, 2, 2, AWN[(x + h + 1) % 4]); } px(bx + 3, by + 17, 12, 1, '#8a6800'); px(bx + 20, by + 15, 11, 1, '#8a6800'); px(bx + 16, by + 12, 3, 10, '#17120e'); }
+      else { px(bx + 2, by + 14, 30, 1, WOOD); px(bx + 2, by + 18, 30, 1, '#75664a'); px(bx + 16, by + 12, 3, 10, '#70757f'); }
+      px(bx + 14, by + 23, 7, 1, '#a39f8c'); if (done) { px(bx + 28, by + 18, 5, 4, OL); px(bx + 29, by + 19, 3, 2, '#8a8e98'); px(bx + 28, by + 22, 1, 1, BK); px(bx + 32, by + 22, 1, 1, BK); }
+      ROOF.cur = [1, 2, 32];
+    }
+    store = function (bx, by, h, done) { var sh = (h >>> 12) % 3; ROOF.cur = [5, -1, 24]; if (sh === 1) storeB(bx, by, h, done); else if (sh === 2) storeC(bx, by, h, done); else storeA(bx, by, h, done); };
+    function crate(x, y) { px(x, y, 9, 8, BK); px(x + 1, y + 1, 7, 6, '#f0b400'); px(x + 1, y + 1, 7, 1, '#ffd95a'); px(x + 4, y + 1, 1, 6, '#8a6800'); px(x + 1, y + 4, 7, 1, '#8a6800'); }
+    function lamp(x, y, on) { px(x, y, 1, 13, '#2b2e36'); px(x - 1, y + 12, 3, 1, '#2b2e36'); px(x - 2, y - 1, 5, 2, '#2b2e36'); px(x - 1, y + 1, 3, 1, on ? '#fff2b0' : '#8a8e98'); if (!on) return; g.fillStyle = 'rgba(255,230,150,.13)'; g.beginPath(); g.moveTo(x - 1, y + 2); g.lineTo(x + 2, y + 2); g.lineTo(x + 7, y + 13); g.lineTo(x - 6, y + 13); g.fill(); }
+
+    /* 거점(아래 띠): 지은 시설 넷이 그림으로 보인다. 지으면 그 시설이 들썩이고 먼지가 인다. 팻말의 숫자는 지은 수 */
+    var BASE_Y = 0, bparts = [], ob = document.createElement('canvas'); ob.width = 230; ob.height = 30; var og = ob.getContext('2d'), ot = tools(og);
+    function plate(x, y, n) { var s2 = String(n), w = s2.length * 4 + 3; px(x - (w >> 1) - 1, y - 1, w + 2, 9, OL); px(x - (w >> 1), y, w, 7, n ? '#17180f' : '#3a382f'); t.num(s2, x - (w >> 1) + 2, y + 1, n ? '#ffd95a' : '#8a887c'); }
+    function lot(x, y) { for (var q = 0; q < 30; q += 4) { px(x + q, y + 20, 2, 1, '#8a8676'); px(x + q, y + 8, 2, 1, '#6e6a5a'); } px(x, y + 9, 1, 11, '#6e6a5a'); px(x + 30, y + 9, 1, 11, '#6e6a5a'); }
+    var MILE = [10, 25, 50, 100];
+    function stageOf(n) { var st = 0; MILE.forEach(function (m) { if (n >= m) st++; }); return Math.min(3, st); }
+    function tentAt(cx, y, hgt, c1, c2, c3) { for (var r = 0; r < hgt; r++) { px(cx - r, y + r, r * 2 + 2, 1, r % 4 === 3 ? c2 : c1); px(cx - r, y + r, 1, 1, c3); } px(cx - hgt, y + hgt, hgt * 2 + 2, 1, OL); px(cx - 1, y + hgt - 6, 4, 6, '#2b2620'); px(cx, y + hgt - 5, 2, 5, '#17120e'); }
+    function tank(x, y, w, h) { px(x - 1, y - 1, w + 2, h + 2, OL); px(x, y, w, h, '#3f7fb8'); px(x, y, 2, h, '#6aa6d8'); px(x + w - 2, y, 2, h, '#275a8c'); for (var q = 3; q < h; q += 4) px(x, y + q, w, 1, '#275a8c'); }
+    /* 시설 그림: st(0~3)는 2배 고비(10 · 25 · 50곳)를 넘을 때마다 하나씩 오른다. 단계마다 눈에 띄게 커진다 */
+    var DRAWB = [
+      function (x, y, st) {      /* 수색조: 천막 → 모닥불과 짐 → 큰 천막 → 망루 */
+        if (st >= 3) { px(x, y + 5, 1, 16, OL); px(x + 7, y + 5, 1, 16, OL); px(x + 1, y + 10, 6, 1, '#5a4634'); px(x + 1, y + 15, 6, 1, '#5a4634'); px(x - 1, y + 4, 10, 2, OL); px(x, y + 4, 8, 1, '#96784e'); px(x - 1, y - 1, 10, 2, OL); px(x, y - 1, 8, 1, '#7a3b2e'); px(x + 3, y + 1, 3, 3, '#f1c9a0'); px(x + 3, y + 1, 3, 1, '#3a3028'); }
+        if (st >= 2) tentAt(x + 22, y + 3, 17, '#7f8f6a', '#66754f', '#a3b38a');
+        tentAt(x + (st >= 2 ? 13 : 16), y + 9, 11, '#9a8a64', '#75664a', '#b8a67a');
+        var fx = x + (st >= 2 ? 13 : 16); px(fx + 1, y + 3, 1, 7, OL); px(fx + 2, y + 3, 5, 3, Math.floor(T * 3) % 2 ? '#c8483a' : '#b23a30'); px(fx + 2, y + 3, 5, 1, '#e86a5a');
+        if (st >= 1) { var f = Math.floor(T * 7) % 2; px(x + 27, y + 19, 6, 2, OL); px(x + 28, y + 19, 4, 1, '#5a4634'); px(x + 28, y + 16 - f, 3, 3 + f, '#e8762a'); px(x + 29, y + 17, 1, 2, '#ffd95a'); g.fillStyle = 'rgba(255,170,60,.14)'; g.fillRect(x + 24, y + 13, 12, 9); }
+      },
+      function (x, y, st) {      /* 텃밭: 밭 하나 → 둘 → 셋 → 온실 */
+        var beds = Math.min(3, st + 1), grow = 2 + st;
+        for (var b = 0; b < beds; b++) { var bx2 = x + 1 + b * 11, by2 = y + 14; px(bx2, by2 - 1, 10, 8, OL); px(bx2 + 1, by2, 8, 6, '#7a5638'); px(bx2 + 1, by2, 8, 1, '#96704a'); px(bx2 + 1, by2 + 1, 8, 2, '#3a2c20');
+          for (var q = 0; q < 3; q++) { var sw = Math.floor(T * 2 + q + b) % 4 === 0 ? 1 : 0; px(bx2 + 2 + q * 3, by2 + 1 - grow, 1, grow, '#3f8a52'); px(bx2 + 1 + q * 3 + sw, by2 - grow, 2, 1, '#6ac46a'); if (st >= 1) px(bx2 + 3 + q * 3, by2 - grow + 2, 1, 1, '#6ac46a'); if (st >= 2 && (q + b) % 2) px(bx2 + 2 + q * 3, by2 - grow + 1, 2, 2, '#c8483a'); } }
+        if (st >= 3) { g.fillStyle = 'rgba(200,232,244,.2)'; g.fillRect(x, y + 4, 34, 17); px(x, y + 3, 34, 1, '#cfe8f4'); px(x - 1, y + 4, 1, 17, '#cfe8f4'); px(x + 34, y + 4, 1, 17, '#cfe8f4'); px(x + 11, y + 4, 1, 17, 'rgba(207,232,244,.6)'); px(x + 22, y + 4, 1, 17, 'rgba(207,232,244,.6)'); px(x + 3, y + 1, 28, 1, '#cfe8f4'); px(x + 1, y + 2, 32, 1, '#cfe8f4'); }
+      },
+      function (x, y, st) {      /* 정수기: 통 하나 → 작은 통 추가 → 급수탑 → 통 둘과 배관 */
+        var up = st >= 2 ? 5 : 0, w = st >= 2 ? 18 : 14, tx = x + (st >= 2 ? 6 : 9);
+        px(tx + 1, y + 16 - up, 2, 5 + up, OL); px(tx + w - 3, y + 16 - up, 2, 5 + up, OL); if (st >= 2) { px(tx + 3, y + 15, w - 6, 1, '#5e616a'); px(tx + 3, y + 18, w - 6, 1, '#5e616a'); }
+        tank(tx, y + 6 - up, w, 10);
+        px(tx + 2, y + 1 - up, w - 4, 2, OL); px(tx + 3, y + 2 - up, w - 6, 1, '#8a8e98'); px(tx + (w >> 1) - 3, y + 3 - up, 6, 2, OL); px(tx + (w >> 1) - 2, y + 3 - up, 4, 2, '#5e616a');
+        px(tx + w, y + 13 - up, 4, 2, OL); px(tx + w + 3, y + 14 - up, 1, 3, OL); var dp = (T * 6) % (6 + up); px(tx + w + 3, y + 17 - up + Math.floor(dp), 1, 1, '#9ad0ff'); px(tx + w + 1, y + 20, 5, 1, '#6aa6d8');
+        if (st >= 1) tank(x + 1, y + 13, 4, 7);
+        if (st >= 3) { tank(x + 28, y + 9, 6, 11); px(x + 24, y + 11, 5, 1, '#8a8e98'); px(x + 5, y + 16, 3, 1, '#8a8e98'); }
+      },
+      function (x, y, st) {      /* 작업장: 헛간 → 불 켜진 창과 모루 → 높은 굴뚝과 기중기 → 톱니 간판 */
+        var q;
+        px(x + 2, y + 6, 22, 15, OL); px(x + 3, y + 7, 20, 13, '#7c808a'); for (q = 5; q < 22; q += 3) px(x + q, y + 7, 1, 13, '#666a74'); px(x + 1, y + 4, 24, 4, OL); px(x + 2, y + 5, 22, 2, '#4a4d57'); px(x + 2, y + 5, 22, 1, '#70757f');
+        var ch = st >= 2 ? 6 : 0; px(x + 18, y - 1 - ch, 5, 6 + ch, OL); px(x + 19, y - ch, 3, 5 + ch, '#5a5148'); if (st >= 2) px(x + 19, y - ch + 2, 3, 1, '#c8483a');
+        for (q = 0; q <= (st >= 2 ? 2 : 0); q++) { var sp2 = (T * 5 + q * 2) % 6; px(x + 20 + (Math.floor(T * 7 + q) % 3 - 1), y - 2 - ch - Math.floor(sp2), 1, 1, sp2 < 3 ? '#ffd95a' : '#e8762a'); }
+        px(x + 6, y + 11, 8, 9, OL); px(x + 7, y + 12, 6, 8, Math.floor(T * 6) % 3 ? '#e8762a' : '#f0a040'); px(x + 8, y + 15, 4, 5, '#ffd95a');
+        if (st >= 1) { px(x + 15, y + 11, 6, 5, OL); px(x + 16, y + 12, 4, 3, '#ffd95a'); px(x + 18, y + 12, 1, 3, OL); px(x + 26, y + 16, 6, 2, OL); px(x + 27, y + 18, 4, 1, OL); px(x + 28, y + 19, 2, 2, OL); px(x + 26, y + 16, 6, 1, '#8a8e98'); }
+        if (st >= 2) { px(x + 28, y + 2, 1, 14, OL); px(x + 24, y + 2, 10, 1, OL); px(x + 33, y + 3, 1, 4 + Math.floor(T * 1.5) % 3, '#8a8e98'); px(x + 32, y + 7 + Math.floor(T * 1.5) % 3, 3, 2, '#b8853a'); }
+        if (st >= 3) { var gf = Math.floor(T * 4) % 2; px(x + 5, y - 3, 9, 8, OL); spr(x + 6, y - 2, gf ? ['.#.#.#.', '#######', '.##.##.', '###.###', '.##.##.', '#######'] : ['#.#.#.#', '.#####.', '###.###', '.##.##.', '###.###', '.#####.'], { '#': '#f0b400' }); }
+      }
+    ];
+    function base(dt) {
+      var x, k, keep = [px, spr, g, t]; px = ot.px; spr = ot.spr; g = og; t = ot;
+      px(0, BASE_Y, 230, 30, '#57503f'); for (k = 0; k < 40; k++) px(hash(k, 91) % 184, BASE_Y + 4 + hash(k, 17) % 22, 2, 1, k % 2 ? '#4a4435' : '#655d49');
+      for (k = 0; k < 4; k++) {
+        var n = A.b[k], x0 = 1 + k * 46, st = A.stage[k], age = T - A.pop[k], up = age < 0.35 ? Math.round(Math.sin(age / 0.35 * Math.PI) * 4) : 0, big = A.popBig[k] > 0 && T - A.popBig[k] < 0.9;
+        g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(x0 + 2, BASE_Y + 24, 30, 2);
+        if (n > 0) { DRAWB[k](x0, BASE_Y + 3 - up, st); if (age < 0.3) { g.fillStyle = 'rgba(255,246,200,' + (0.6 * (1 - age / 0.3)).toFixed(2) + ')'; g.fillRect(x0 - 1, BASE_Y + 3 - up, 36, 22); } } else lot(x0, BASE_Y + 4);
+        if (big) { var ba = (T - A.popBig[k]) / 0.9, rr = Math.round(ba * 22); px(x0 + 17 - rr, BASE_Y + 14, rr * 2, 1, 'rgba(255,217,90,' + (1 - ba).toFixed(2) + ')'); px(x0 + 17, BASE_Y + 14 - Math.min(11, rr), 1, Math.min(22, rr * 2), 'rgba(255,217,90,' + (1 - ba).toFixed(2) + ')'); }
+        /* 다음 2배까지: 지을 때마다 한 칸씩 찬다 */
+        var fr = A.frac[k];
+        px(x0, BASE_Y + 26, 34, 3, OL); px(x0 + 1, BASE_Y + 27, 32, 1, '#2b2e36'); px(x0 + 1, BASE_Y + 27, Math.round(32 * Math.min(1, fr)), 1, fr >= 1 ? '#fff6c8' : '#f0b400');
+        plate(x0 + 38, BASE_Y + 6, n);
+        for (var sI = 0; sI < 4; sI++) px(x0 + 35 + (sI % 2) * 4, BASE_Y + 16 + (sI >> 1) * 4, 3, 3, sI < A.tier[k] ? '#ffd95a' : '#3a382f');      /* 넘은 고비 수 */
+      }
+      /* 다섯째 칸: 순찰조(레벨만큼 점이 켜진다) */
+      var pa = T - A.popP, pu = pa < 0.35 ? Math.round(Math.sin(pa / 0.35 * Math.PI) * 4) : 0;
+      if (A.patrol > 0) { g.fillStyle = 'rgba(255,240,170,.3)'; g.beginPath(); g.moveTo(203, 14 - pu); g.lineTo(218, 9 - pu); g.lineTo(218, 22 - pu); g.fill(); t.man(196, 9 - pu, { h: '#3f7fb8', H: '#275a8c', v: '#3f7fb8', w: '#ffd95a' }, A.on ? Math.floor(T * 3) % 2 : 0, 1); if (pa < 0.3) { g.fillStyle = 'rgba(255,246,200,' + (0.6 * (1 - pa / 0.3)).toFixed(2) + ')'; g.fillRect(184, 0, 46, 26); } } else lot(190, 4);
+      for (k = 0; k < 5; k++) px(187 + k * 8, 26, 6, 2, k < A.patrol ? '#ffd95a' : '#3a382f');
+      bparts = bparts.filter(function (p) { p.life -= dt; p.vy += 60 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.life > 0) px(p.x, p.y, 2, 2, p.c); return p.life > 0; });
+      px = keep[0]; spr = keep[1]; g = keep[2]; t = keep[3];
+    }
+    aBuilt = function (i, hit) { A.pop[i] = T; var x0 = 1 + i * 46; if (hit) A.popBig[i] = T;
+      for (var q = 0; q < (hit ? 26 : 8); q++) bparts.push({ x: x0 + 4 + Math.random() * 26, y: BASE_Y + 20, vx: (Math.random() - 0.5) * (hit ? 60 : 26), vy: -18 - Math.random() * (hit ? 50 : 22), life: hit ? 1 : 0.6, c: q % 3 && !hit ? '#d8cfb4' : '#ffd95a' });
+      if (hit) aSay(BLD[i].name + ' 2배!', 92, 70, 'big'); };
+
+    /* 가끔 벌어지는 일: 보급 트럭 · 번개(비) · 별똥별(밤) · 새 떼(아침). 뒤질 때는 짐 든 사람이 뛰어나오고 까마귀가 날아간다 */
+    function events(dt, wi) {
+      var E = A.evT, k;
+      E.truck -= dt; if (E.truck <= 0) { E.truck = 14 + Math.random() * 12; A.ev.push({ type: 'truck', x: -30, row: Math.floor(Math.random() * 4), t: 0 }); }
+      if (wi === 3) { E.bolt -= dt; if (E.bolt <= 0) { E.bolt = 5 + Math.random() * 7; A.flash = 0.3; A.boltX = 20 + Math.random() * 140; } }
+      if (wi === 1) { E.star -= dt; if (E.star <= 0) { E.star = 5 + Math.random() * 8; A.ev.push({ type: 'star', x: 40 + Math.random() * 130, y: 1, t: 0 }); } }
+      if (wi === 2) { E.bird -= dt; if (E.bird <= 0) { E.bird = 8 + Math.random() * 6; A.ev.push({ type: 'bird', x: -12, y: 3 + Math.random() * 5, t: 0 }); } }
+      A.ev = A.ev.filter(function (e) {
+        e.t += dt;
+        if (e.type === 'run') { if (e.t < 0.25) e.y += 20 * dt; else e.x += e.dir * 46 * dt; if (e.x < -10 || e.x > 190) return false;
+          var bxx = e.x + (e.dir > 0 ? -3 : 6); px(bxx - 1, e.y + 3, 5, 5, OL); px(bxx, e.y + 4, 3, 3, e.gold ? '#f0b400' : '#b8853a'); px(bxx, e.y + 4, 3, 1, e.gold ? '#ffd95a' : '#d8a654');
+          t.man(e.x, e.y, { h: '#3a3028', v: '#6a7a4a' }, Math.floor(T * 10) % 2, e.dir); return true; }
+        if (e.type === 'crow') { e.x += e.dir * 26 * dt; e.y -= 22 * dt; if (e.y < -4) return false; spr(e.x, e.y, Math.floor(T * 10) % 2 ? ['#.#', '.#.'] : ['...', '###'], { '#': '#101216' }); return true; }
+        if (e.type === 'star') { if (e.t > 0.6) return false; for (k = 0; k < 6; k++) px(e.x - e.t * 60 + k * 2, e.y + e.t * 16 - k * 0.5, 1, 1, 'rgba(255,246,200,' + (1 - k / 6).toFixed(2) + ')'); return true; }
+        if (e.type === 'bird') { e.x += 30 * dt; if (e.x > 196) return false; for (k = 0; k < 5; k++) spr(e.x - k * 6, e.y + Math.abs(k - 2) * 2, Math.floor(T * 6 + k) % 2 ? ['#.#', '.#.'] : ['...', '###'], { '#': '#3a4656' }); return true; }
+        if (e.type === 'truck') { e.x += 34 * dt; if (e.x > 190) return false; var ty = ATOP + e.row * ARH + 22, tx = Math.round(e.x);
+          g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(tx, ty + 10, 25, 1);
+          px(tx - 1, ty - 1, 18, 10, OL); px(tx, ty, 16, 8, '#5f7a56'); px(tx, ty, 16, 2, '#7a966e'); px(tx + 5, ty, 1, 8, '#4a6044'); px(tx + 11, ty, 1, 8, '#4a6044');
+          px(tx + 16, ty + 1, 9, 8, OL); px(tx + 17, ty + 2, 7, 6, '#c8922a'); px(tx + 20, ty + 3, 3, 3, '#9ad0ff'); px(tx + 17, ty + 2, 7, 1, '#e8b85a');
+          px(tx + 2, ty + 8, 4, 3, BK); px(tx + 3, ty + 9, 2, 1, '#70757f'); px(tx + 18, ty + 8, 4, 3, BK); px(tx + 19, ty + 9, 2, 1, '#70757f');
+          if (wi === 1 || wi === 3 || wi === 4) { g.fillStyle = 'rgba(255,240,170,.3)'; g.beginPath(); g.moveTo(tx + 25, ty + 6); g.lineTo(tx + 44, ty + 2); g.lineTo(tx + 44, ty + 11); g.fill(); px(tx + 24, ty + 6, 1, 2, '#fff6c8'); }
+          return true; }
+        return false;
+      });
+      if (A.flash > 0) { A.flash -= dt; var fa = Math.max(0, A.flash / 0.3); if (fa > 0.5) { var bx3 = A.boltX, by3 = 0; for (k = 0; k < 7; k++) { var nx3 = bx3 + (hash(k, Math.floor(A.boltX)) % 7 - 3); px(Math.min(bx3, nx3), by3, Math.abs(nx3 - bx3) + 1, 1, '#fff6c8'); px(nx3, by3, 1, 3, '#fff6c8'); bx3 = nx3; by3 += 3; } } g.fillStyle = 'rgba(235,240,255,' + (0.45 * fa).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); }
+    }
+    function draw(dt) {
+      var x, y, r, i, k;
+      /* 하늘 · 해나 달 · 구름 · 먼 건물: 때와 날씨에 따라 달라진다 */
+      A.gustIn -= dt; if (A.gustIn <= 0) { A.gustIn = 9 + Math.random() * 10; A.gustLen = 3 + Math.random() * 3; A.gust = A.gustLen; }
+      if (A.gust > 0) A.gust -= dt;
+      var gp = A.gust > 0 ? 1 - A.gust / A.gustLen : 1, wind = A.gust > 0 ? Math.min(1, Math.min(gp, 1 - gp) * 4) : 0; A.windX += (8 + wind * 150) * dt;
+      var wx = aWx(), wi = aWi(), snow = aSnow(), cap = snow > 0.66 ? 3 : snow > 0.33 ? 2 : snow > 0.05 ? 1 : 0;
+      for (y = 0; y < ATOP; y++) px(0, y, 184, 1, mix(wx.sky[0], wx.sky[1], y / (ATOP - 1)));
+      if (wi === 0) { px(148, 5, 8, 8, '#ffe6a0'); px(146, 7, 12, 4, '#ffe6a0'); px(150, 3, 4, 12, '#ffe6a0'); px(149, 6, 6, 6, '#fff6d0'); }
+      if (wi === 1) { for (k = 0; k < 22; k++) if ((Math.floor(T * 2) + k) % 7) px(hash(k, 41) % 184, hash(k, 43) % 11, 1, 1, k % 3 ? '#cfd6f0' : '#fff6c8'); px(30, 3, 7, 7, '#f4f0dc'); px(29, 5, 9, 3, '#f4f0dc'); px(32, 2, 3, 9, '#f4f0dc'); px(33, 3, 5, 5, wx.sky[0]); }
+      if (wi === 2) { px(24, 4, 8, 8, '#fff6c8'); px(22, 6, 12, 4, '#fff6c8'); px(26, 2, 4, 12, '#fff6c8'); px(25, 5, 6, 6, '#ffffff'); }
+      var cl = (T * (wi === 3 ? 4 : 1.5) + A.windX * 0.15) % 230, cc0 = wi === 3 ? 'rgba(60,66,76,.8)' : wi === 4 ? 'rgba(236,240,246,.7)' : wi === 1 ? 'rgba(70,84,130,.5)' : 'rgba(255,246,226,.6)';
+      [[cl - 30, 3, 22], [cl + 70 > 214 ? cl + 70 - 244 : cl + 70, 6, 16], [cl + 140 > 214 ? cl + 140 - 244 : cl + 140, 2, 26]].forEach(function (c, ci) { if (ci === 2 && wi < 3) return; px(c[0], c[1], c[2], 2, cc0); px(c[0] + 4, c[1] - 1, c[2] - 9, 1, cc0); });
+      for (x = 0; x < 184; x += 14) { var hh = 4 + hash(x, A.seed) % 8; px(x, ATOP - hh, 12, hh, wx.far[0]); px(x, ATOP - hh, 12, 1, wx.far[1]); px(x + 10, ATOP - hh, 2, hh, wx.far[2]); if (wi !== 2) { if (hash(x, 3) % 3 === 0) px(x + 3, ATOP - hh + 3, 2, 2, '#f2d08a'); if (hash(x, 8) % 4 === 0) px(x + 7, ATOP - hh + 2, 2, 2, '#f2d08a'); } }
+      for (r = 0; r < 4; r++) {
+        var by = ATOP + r * ARH;
+        /* 마당: 풀밭 · 풀포기 · 울타리 */
+        px(0, by, 184, 23, '#566342'); for (k = 0; k < 26; k++) { x = hash(k, r * 7 + A.seed) % 184; y = by + 2 + hash(k, r + 5) % 20; px(x, y, 1, 2, k % 3 ? '#44552f' : '#6e7d4e'); }
+        px(0, by + 20, 184, 1, '#3f4a30');
+        if (snow > 0) { g.fillStyle = 'rgba(240,244,250,' + (0.12 + 0.6 * snow).toFixed(2) + ')'; g.fillRect(0, by, 184, 23); }
+        for (i = 0; i < 5; i++) {
+          var idx = r * 5 + i, bx = AX0 + i * ACW, d = A.done[idx], h = hash(idx, A.seed), kd = A.kind[idx];
+          g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(bx + 2, by + 22, 32, 2);
+          if (kd === 1) store(bx, by, h, !!d); else house(bx, by, HW[h % HW.length], !!d, h);
+          if (cap) { var rt = ROOF.cur; px(bx + rt[0], by + rt[1] - (cap > 1 ? 1 : 0), rt[2], cap, '#f4f6fa'); px(bx + rt[0] + 1, by + rt[1] + cap - (cap > 1 ? 1 : 0), rt[2] - 2, 1, '#cfd6e2'); if (cap > 1) px(bx + rt[0] + 3, by + rt[1] - 2, rt[2] - 8, 1, '#f4f6fa'); }
+          if (cap > 2 && (h >>> 9) % 3 === 0) { px(bx + 27, by + 16, 5, 5, OL); px(bx + 28, by + 17, 3, 3, '#f4f6fa'); px(bx + 28, by + 13, 4, 4, OL); px(bx + 29, by + 14, 2, 2, '#f4f6fa'); px(bx + 30, by + 15, 1, 1, '#e8762a'); }
+          if (!d) { g.fillStyle = 'rgba(14,16,34,.48)'; g.fillRect(bx, by - 1, 34, 24); if ((wi === 1 || wi === 3) && kd !== 1 && hash(idx, A.seed + Math.floor(T / 2.5)) % 6 === 0 && Math.floor(T * 2) % 5) { px(bx + 8, by + 14, 1, 1, '#ff4a3a'); px(bx + 10, by + 14, 1, 1, '#ff4a3a'); } if ((h >>> 10) % 4 === 0) spr(bx + 14, by, ['.##', '###', '.#.'], { '#': '#101216' }); }      /* 불 꺼진 집 · 지붕 위 까마귀 */
+          else {
+            if (kd !== 1 && [1, 2, 3].indexOf((h >>> 12) % 5) < 0) for (k = 0; k < 3; k++) { var ph = (T * 3 + k * 3 + idx) % 9; px(bx + 25 + Math.round(Math.sin(ph * 0.8 + idx) * 1.5), by - 2 - ph, ph > 5 ? 3 : 2, 2, 'rgba(240,232,214,' + (0.5 * (1 - ph / 9)).toFixed(2) + ')'); }      /* 굴뚝 연기: 사람이 든 집 */
+            if (kd === 2) { crate(bx + 22, by + 15); if (Math.floor(T * 3 + idx) % 3 === 0) { px(bx + 32, by + 13, 1, 3, '#fff6c8'); px(bx + 31, by + 14, 3, 1, '#fff6c8'); } }
+            g.fillStyle = 'rgba(255,217,90,.10)'; g.fillRect(bx + 4, by + 22, 26, 3);      /* 창에서 새는 빛 */
+            var age = T - d; if (age < 0.3) { g.fillStyle = 'rgba(255,246,200,' + (0.7 * (1 - age / 0.3)).toFixed(2) + ')'; g.fillRect(bx, by - 1, 34, 24); }
+          }
+        }
+        /* 길: 보도(턱) · 아스팔트 · 가운데 점선 · 맨홀 · 갈라진 틈 */
+        px(0, by + 23, 184, 2, '#8f8b7a'); px(0, by + 23, 184, 1, '#aaa693'); for (x = 0; x < 184; x += 9) px(x, by + 23, 1, 2, '#77735f');
+        px(0, by + 25, 184, 8, '#3d3f45'); px(0, by + 25, 184, 1, '#2c2e33'); if (cap) { px(0, by + 23, 184, 1, '#f4f6fa'); if (cap > 1) { px(0, by + 25, 184, 1, '#dfe4ec'); px(0, by + 32, 184, 1, '#dfe4ec'); } if (cap > 2) for (x = 3; x < 184; x += 7) px(x + hash(x, r) % 3, by + 26 + hash(x, r + 2) % 6, 2, 1, 'rgba(240,244,250,.5)'); } for (x = (r * 5) % 12; x < 184; x += 12) px(x, by + 28, 5, 1, '#77797c');
+        for (k = 0; k < 7; k++) px(hash(k + 9, r + A.seed) % 184, by + 26 + hash(k, r) % 6, k % 2 ? 3 : 1, 1, '#303237');
+        x = 30 + hash(r + 3, A.seed) % 120; px(x, by + 30, 5, 2, '#2c2e33'); px(x + 1, by + 30, 3, 1, '#4a4d55');
+        if (hash(r, A.seed + 4) % 2) { x = 20 + hash(r, A.seed) % 130; var cc = ['#8a4234', '#44546a', '#7a7866'][r % 3]; px(x, by + 25, 15, 5, BK); px(x + 1, by + 26, 13, 3, cc); px(x + 1, by + 26, 13, 1, 'rgba(255,255,255,.2)'); px(x + 3, by + 23, 9, 3, BK); px(x + 4, by + 24, 3, 2, '#55626e'); px(x + 8, by + 24, 3, 2, '#55626e'); px(x + 2, by + 30, 3, 2, BK); px(x + 10, by + 30, 3, 2, BK); px(x + 14, by + 27, 1, 1, '#c8483a'); }      /* 버려진 차 */
+      }
+      /* 밤 · 비: 온 동네에 색을 덧씌우고, 불 켜진 창과 가로등만 다시 밝힌다 */
+      if (wx.tint) { g.fillStyle = wx.tint; g.fillRect(0, ATOP, 184, 134);
+        for (i = 0; i < 20; i++) if (A.done[i]) { var lx = AX0 + (i % 5) * ACW, ly = ATOP + Math.floor(i / 5) * ARH; g.fillStyle = 'rgba(255,217,90,.16)'; g.fillRect(lx + 3, ly + 8, 28, 17); } }
+      for (r = 0; r < 4; r++) for (i = 1; i < 5; i += 2) lamp(AX0 + i * ACW - 2 + (r % 2) * ACW, ATOP + r * ARH + 12, wx.lamp);
+      if (wi === 4) { for (k = 0; k < 60 + Math.round(wind * 50); k++) { var fx2 = (hash(k, 81) % 190 + Math.sin(T * 0.8 + k) * 6 + A.windX * (0.6 + (k % 3) * 0.25)) % 190 - 3, fy2 = (hash(k, 83) % 150 + T * (14 + k % 5 * 4)) % 150, fl = wind > 0.3 ? 1 + Math.round(wind * 3) : 0; px(fx2 - fl, fy2, (k % 4 === 0 ? 2 : 1) + fl, k % 4 === 0 ? 2 : 1, 'rgba(250,252,255,.9)'); }
+        if (wind > 0) { g.fillStyle = 'rgba(240,244,250,' + (0.3 * wind).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); } }      /* 눈보라: 눈발이 옆으로 몰아치고 온통 뿌옇다 */
+      if (wind > 0.05 && wi !== 4) { for (k = 0; k < 16; k++) { var lx2 = (hash(k, 91) % 200 + A.windX * (1 + (k % 4) * 0.2)) % 200 - 8, ly2 = (hash(k, 93) % 140 + Math.sin(T * 5 + k) * 5 + 150) % 150; if (wi === 3) px(lx2, ly2, 6, 1, 'rgba(196,214,236,' + (0.5 * wind).toFixed(2) + ')'); else { px(lx2, ly2, 2, 1, k % 3 === 0 ? '#e8e0cc' : k % 3 === 1 ? '#c8822a' : '#8a5a2a'); if (k % 3) px(lx2 + 1, ly2 + (Math.floor(T * 9 + k) % 2 ? 1 : -1), 1, 1, '#a06a2a'); } }
+        for (k = 0; k < 5; k++) { var sx3 = (hash(k, 95) % 220 + A.windX * 2.2) % 220 - 20; px(sx3, 20 + k * 27 + hash(k, 97) % 9, 14, 1, 'rgba(255,255,255,' + (0.22 * wind).toFixed(2) + ')'); } }      /* 돌풍: 낙엽 · 종이 · 바람 줄 */
+      if (wi === 3) { for (k = 0; k < 46; k++) { var rx = (hash(k, 61) % 200 + T * 30 + A.windX * 0.8) % 200 - 8, ry = (hash(k, 67) % 150 + T * (190 + wind * 80)) % 150; px(rx, ry, 1, 2, 'rgba(196,214,236,.55)'); px(rx + (wind > 0.3 ? 1 : 0), ry + 2, 1, 2, 'rgba(196,214,236,.55)'); }
+        for (k = 0; k < 8; k++) { var ph2 = (T * 2 + k * 0.37) % 1, sx2 = hash(k + Math.floor(T * 2 + k * 0.37), 71) % 180, sy2 = ATOP + (k % 4) * ARH + 27 + hash(k, 73) % 5; px(sx2 - Math.round(ph2 * 2), sy2, 1 + Math.round(ph2 * 4), 1, 'rgba(196,214,236,' + (0.6 * (1 - ph2)).toFixed(2) + ')'); } }
+      /* 다음에 뒤질 집: 노란 모서리 */
+      var nx = aNext();
+      if (nx >= 0 && A.next <= 0) { var hx = AX0 + (nx % 5) * ACW, hy = ATOP + Math.floor(nx / 5) * ARH - 1, c = Math.floor(T * 2.5) % 2 ? '#ffd95a' : '#f0b400';
+        px(hx, hy, 5, 1, c); px(hx, hy, 1, 5, c); px(hx + 29, hy, 5, 1, c); px(hx + 33, hy, 1, 5, c); px(hx, hy + 23, 5, 1, c); px(hx, hy + 19, 1, 5, c); px(hx + 29, hy + 23, 5, 1, c); px(hx + 33, hy + 19, 1, 5, c); }
+      /* 수색조: 길마다 한 사람은 늘 있고, 지을수록 늘어난다. 짐을 지고 오간다. 첫 사람은 개가 따라다닌다 */
+      var n = A.b[0] > 0 ? Math.min(10, 1 + Math.floor((A.b[0] - 1) / 2)) : 0;
+      for (k = 0; k < n; k++) { var sp = 8 + (k * 37 % 7), dir = (k + (k >> 2)) % 2 ? -1 : 1, wkx = ((T * sp * dir + k * 61) % 204 + 204) % 204 - 10, wy = ATOP + (k % 4) * ARH + 19 + (k > 3 ? 3 : 0) + (k > 7 ? -2 : 0);
+        px(wkx + (dir > 0 ? -2 : 5), wy + 5, 3, 4, '#8a6a3a'); px(wkx + (dir > 0 ? -2 : 5), wy + 5, 3, 1, '#a8854a');
+        if (wi === 1 || wi === 3) { g.fillStyle = 'rgba(255,240,170,.26)'; g.beginPath(); var fx0 = wkx + (dir > 0 ? 6 : 0); g.moveTo(fx0, wy + 6); g.lineTo(fx0 + dir * 15, wy + 1); g.lineTo(fx0 + dir * 15, wy + 12); g.fill(); px(fx0 + dir, wy + 6, 1, 1, '#fff6c8'); }
+        t.man(wkx, wy, { h: ['#3a3028', '#6b4a3a', BK, '#8a3a2e'][k % 4], v: ['#6a7a4a', '#8a6a4a', '#5a6a7a', '#7a5a6a'][k % 4] }, Math.floor(T * 6 + k) % 2, dir);
+        if (k === 0) { var dxx = wkx - dir * 9, st = Math.floor(T * 8) % 2; spr(dxx, wy + 8, dir > 0 ? ['#...##', '.#####', '.####.', st ? '.#..#.' : '#....#'] : ['##...#', '#####.', '.####.', st ? '.#..#.' : '#....#'], { '#': '#e8e0cc' }); } }
+      /* 순찰조(샀을 때만): 보도를 따라 왼쪽에서 오른쪽으로 차분히 걷고, 문 앞에 서서 손전등을 비춘다.
+         줄이 바뀌면 오른쪽 끝으로 나가 다음 줄 왼쪽에서 들어온다(집을 가로질러 뛰어다니면 정신없다) */
+      if (A.patrol > 0) {
+        var pn = aNextPat(), P = A.pat, go = pn >= 0 && A.on && A.next <= 0, trow = go ? Math.floor(pn / 5) : P.row || 0, tx = go ? AX0 + (pn % 5) * ACW + 6 : P.x, spd = Math.max(16, 44 / aEvery());
+        if (P.row === undefined) { P.row = trow; P.x = -8; }
+        if (go && trow !== P.row) { P.x += spd * 1.6 * dt; if (P.x > 188) { P.row = trow; P.x = -8; } var mv = true, dirP = 1; }
+        else { var dx = tx - P.x; mv = Math.abs(dx) > 1; dirP = dx < 0 ? -1 : 1; if (mv) P.x += dirP * Math.min(Math.abs(dx), spd * dt); }
+        var py = ATOP + P.row * ARH + 14;
+        var night = wi === 1 || wi === 3; if ((!mv && go) || night) { g.fillStyle = 'rgba(255,240,170,' + (night ? '.4' : '.3') + ')'; g.beginPath(); var pf = P.x + (dirP > 0 ? 6 : 0), pl = night ? 22 : 10; g.moveTo(pf, py + 6); g.lineTo(pf + dirP * pl, py + (night ? -1 : 2)); g.lineTo(pf + dirP * pl, py + (night ? 14 : 11)); g.fill(); }
+        t.man(P.x, py, { h: '#3f7fb8', H: '#275a8c', v: '#3f7fb8', w: '#ffd95a' }, mv ? Math.floor(T * 5) % 2 : 0, dirP);
+        if (!A.on) spr(P.x + 7, py - 5 - Math.floor(T * 2) % 2, ['###', '.#.', '###'], { '#': '#f1f0e6' });
+      }
+      events(dt, wi);
+      A.parts = A.parts.filter(function (p) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.life > 0) px(p.x, p.y, 2, 2, 'rgba(220,210,180,' + (p.life * 1.6).toFixed(2) + ')'); return p.life > 0; });
+      var f = A.next > 0 ? Math.max(0, 1 - A.next / 0.5) : A.fade > 0 ? A.fade / 0.5 : 0; if (f > 0) { g.fillStyle = 'rgba(15,16,20,' + Math.min(1, f).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); }
+      base(dt);
+    }
+    return { draw: draw, icon: ob };
+  })();
+
+      aNew();
+      return { draw: function (dt, v) { T += dt; aSync(v); aG.draw(dt); }, searched: aSearch,
+        done: function (n, auto, bonusText) { aSay(n + '번째 동네 ' + (auto ? '순찰 완료' : '수색 완료'), 92, 66, 'big'); aSay(bonusText, 92, 84, 'gold'); },
+        built: function (i, hit) { aBuilt(i, hit); }, patrolUp: function (lv) { A.popP = T; aSay('순찰조 Lv ' + lv, 92, 80, 'big'); }, icon: aG.icon, weather: function () { return aWx().n; } };
+    }
+    function market(cv, flBox, host) {
+  var B, T = 0, FLOOR = 0.5, CEIL = 2, MEAN = 1.25, PEAK = 1.8, STEP = 10;
+  var REG = ['김 영감', '떡집 아주머니', '고물상', '약초꾼', '국밥집'];
+  var bSay = function () {};
+  function bNew() { B = { money: 0, stalls: 1, porter: 0, crier: 0, broker: 0, on: true, peak: false, goods: 0, price: 1.3, prev: 1.3, clock: 0, hist: [1.1, 0.8, 1.5, 1.3], streak: 0, used: false, low: 0, order: null, orderIn: 18, orders: 0, sold: 0, parts: [], cust: [], popS: -9, popW: -9, rush: 0, autoSold: 0, popI: [-9, -9, -9, -9], ev: [], fw: [], dust: [], stPop: [], cry: 4, crier_: [], shock: 0, evT: { cat: 6, kid: 10, bike: 15, fw: 0, crowd: 5 } }; }
+  function bCap() { return B.cap || 0; }
+  /* 팔렸을 때 · 단골과 거래했을 때의 연출(값은 core 가 이미 계산했다) */
+  function bSold(text, auto, peak) {
+    B.sold = 0.8; if (auto) B.autoSold = 1.1;
+    for (var k = 0; k < 14; k++) B.parts.push({ x: 20 + Math.random() * 150, y: 78 + Math.random() * 10, vx: (Math.random() - 0.5) * 20, vy: -30 - Math.random() * 30, life: 0.8 });
+    bSay(text, auto ? 44 : 92, auto ? 92 : 70, peak ? 'big' : 'gold');
+  }
+  function bFilled(text, auto) { if (auto) B.autoSold = 1.1; bSay(text, 140, 92, 'gold'); }
+  /* 본 게임의 상태(v)를 장면에 옮긴다 */
+  function bSync(v) {
+    FLOOR = v.floor; CEIL = v.ceil; MEAN = v.mean; PEAK = v.peakAt; STEP = v.step;
+    if (v.price !== B.price) { B.prev = B.price; B.price = v.price; }
+    B.stalls = v.stalls; B.porter = v.porter; B.crier = v.crier; B.broker = v.broker ? 1 : 0; B.on = v.on; B.peak = v.peak; B.goods = v.goods; B.cap = v.cap; B.clock = v.clock; B.hist = v.hist; B.streak = v.streak; B.stTier = v.stTier; B.stFrac = v.stFrac;
+    B.order = v.order ? { who: REG[v.order.wi % REG.length], need: v.order.need, left: v.order.left, max: v.order.max } : null;
+  }
+  var bG = (function () {
+    var g = cv.getContext('2d'), t = tools(g), px = t.px, spr = t.spr;
+    bSay = floater(flBox, 184, 132);
+    tapAt(cv, function (x, y) { if (B.order && x > 118 && y > 80) host.fill(); else host.sell(); });
+    var SHIRT = ['#b8483e', '#3f78ac', '#3f8452', '#c8922a', '#80589c', '#cfc8b4'], HAIR = ['#3a3028', '#6b4a3a', BK, '#a8a290'], OL = '#2b2620', porters = [], bg = null, regX = 230, regV = 0;
+    var STX = function (k) { return 9 + k * 28; };
+    function lantern(x, y, lit) { px(x + 1, y - 2, 1, 2, BK); px(x, y, 3, 1, BK); px(x - 1, y + 1, 5, 4, lit ? '#f0b400' : '#5e4a44'); if (lit) { px(x, y + 1, 3, 4, '#ffd95a'); px(x, y + 2, 1, 2, '#fff6c8'); glow(x + 1, y + 3, 10, 10, 0.32 + 0.1 * Math.sin(T * 5 + x)); } else px(x, y + 1, 1, 4, '#75605a'); px(x, y + 5, 3, 1, BK); px(x + 1, y + 6, 1, 1, lit ? '#c8483a' : '#4a3a30'); }
+    function box(x, y) { px(x, y, 7, 6, OL); px(x + 1, y + 1, 5, 4, '#b8853a'); px(x + 1, y + 1, 5, 1, '#d8a654'); px(x + 3, y + 1, 1, 4, '#7a5424'); }
+    function stall(sx, sy, k, busy, stock) {
+      var aw = AWN[k % AWN.length], x; if (stock === undefined) stock = 1; var items = stock > 0 ? Math.max(1, Math.ceil(stock * 6)) : 0, boxes = stock >= 0.999 ? 3 : stock > 0.66 ? 2 : stock > 0.33 ? 1 : 0;
+      px(sx, sy + 5, 2, 22, OL); px(sx + 24, sy + 5, 2, 22, OL); px(sx + 1, sy + 5, 1, 22, '#7a6044'); px(sx + 24, sy + 5, 1, 22, '#5a4634');
+      px(sx - 1, sy - 1, 28, 7, OL);
+      for (x = 0; x < 26; x++) { var c = (x >> 2) % 2 ? aw : '#f1f0e6'; px(sx + x, sy, 1, 5, c); if (x % 4 !== 3) px(sx + x, sy + 5, 1, 1, c); } px(sx, sy, 26, 1, 'rgba(255,255,255,.35)'); px(sx, sy + 3, 26, 2, 'rgba(0,0,0,.14)');
+      px(sx + 2, sy + 6, 22, 11, '#4a3222'); px(sx + 2, sy + 6, 22, 3, '#3a2618');
+      px(sx + 4, sy + 7, 1, 3, '#4a3a30'); px(sx + 3, sy + 10, 3, 3, '#d89a1a'); px(sx + 3, sy + 10, 3, 1, '#ffd95a');
+      px(sx + 10, sy + 7, 6, 3, HAIR[k % HAIR.length]); px(sx + 10, sy + 10, 6, 3, '#f1c9a0'); px(sx + (busy ? 11 : 12), sy + 11, 1, 1, BK); px(sx + (busy ? 13 : 14), sy + 11, 1, 1, BK); px(sx + 8, sy + 13, 10, 4, SHIRT[(k + 2) % SHIRT.length]); px(sx + 12, sy + 13, 2, 4, '#f1f0e6');
+      if (busy) px(sx + 18, sy + 10 - Math.floor(T * 8) % 2, 2, 4, '#f1c9a0');
+      px(sx, sy + 16, 26, 4, OL); px(sx + 1, sy + 17, 24, 2, '#b08a4e'); px(sx + 1, sy + 17, 24, 1, '#d0aa6a'); px(sx + 1, sy + 19, 24, 8, '#6b4a32'); px(sx + 1, sy + 19, 24, 1, '#4a3424'); for (x = 5; x < 24; x += 6) px(sx + x, sy + 20, 1, 7, '#5a3e2a'); px(sx + 1, sy + 26, 24, 1, '#3a2c20');
+      [[2, '#c8483a'], [6, '#d89a1a'], [10, '#3f8a52'], [14, '#c8483a'], [18, '#e0d8c0'], [21, '#8a5aa8']].forEach(function (q, j) { if ((j * 5 + k) % 6 >= items) return; var c2 = [q[1], AWN[(k + j) % 4], q[1]][(k + j) % 3]; px(sx + q[0], sy + 14, 3, 3, c2); px(sx + q[0], sy + 14, 3, 1, 'rgba(255,255,255,.35)'); px(sx + q[0] + 2, sy + 15, 1, 2, 'rgba(0,0,0,.2)'); });
+      if (boxes >= 1) box(sx + 17, sy + 21); if (boxes >= 2) box(sx + 10, sy + 21); if (boxes >= 3) box(sx + 14, sy + 16);
+    }
+    /* 바탕(한 번만 그린다): 야시장. 어두운 하늘과 건물 윤곽만 두고, 밝은 것은 좌판 · 등 · 간판뿐이다(자잘한 것을 줄여야 덜 조잡하다) */
+    function backdrop() {
+      bg = document.createElement('canvas'); bg.width = 184; bg.height = 132; var c = bg.getContext('2d'), x, y, k;
+      function P(x0, y0, w, h, col) { c.fillStyle = col; c.fillRect(x0, y0, w, h); }
+      for (y = 0; y < 62; y++) P(0, y, 184, 1, y < 38 ? mix('#12142a', '#2c2748', y / 38) : mix('#2c2748', '#6a4258', (y - 38) / 24));
+      for (k = 0; k < 26; k++) P(hash(k, 31) % 184, hash(k, 33) % 30, 1, 1, k % 4 ? '#8088b0' : '#e8e4d0');
+      P(133, 22, 6, 6, '#f4f0dc'); P(132, 24, 8, 2, '#f4f0dc'); P(135, 21, 2, 8, '#f4f0dc'); P(135, 22, 5, 5, '#1f1d3a');
+      for (x = -3; x < 184; x += 13) { var fh = 12 + hash(x + 9, 5) % 18; P(x, 62 - fh - 8, 12, fh + 8, '#252746'); if (hash(x, 7) % 3 === 0) P(x + 3 + hash(x, 8) % 6, 62 - fh - 3, 1, 2, '#c8a060'); if (hash(x, 9) % 4 === 0) P(x + 2 + hash(x, 10) % 7, 62 - fh + 3, 1, 2, '#c8a060'); }
+      for (k = 0; k < 8; k++) { var bx = k * 23, top = 34 + hash(k, 13) % 9; P(bx, top, 23, 62 - top, '#181a2e'); P(bx, top, 23, 1, '#2e3152'); P(bx + 22, top, 1, 62 - top, '#111222');
+        if (hash(k, 15) % 2) { var wxx = bx + 5 + hash(k, 17) % 9; P(wxx, top + 5, 4, 5, '#f0c070'); P(wxx, top + 5, 4, 1, '#ffe2a0'); P(wxx + 2, top + 5, 1, 5, '#181a2e'); c.fillStyle = 'rgba(240,192,112,.10)'; c.fillRect(wxx - 2, top + 3, 8, 9); }
+        if (hash(k, 19) % 3 === 0) P(bx + 14, top + 12, 3, 4, '#3a3d5c'); }
+      P(0, 62, 184, 70, '#24232e');
+      for (y = 62; y < 132; y += 10) for (x = ((Math.floor(y / 10)) % 2) * 9 - 9; x < 184; x += 18) { P(x, y, 17, 9, hash(x + 300, y) % 4 ? '#262530' : '#292833'); P(x, y + 9, 18, 1, '#1f1e28'); P(x + 17, y, 1, 9, '#1f1e28'); }
+      for (y = 108; y < 132; y++) { c.fillStyle = 'rgba(8,8,16,' + (0.35 * (y - 108) / 24).toFixed(3) + ')'; c.fillRect(0, y, 184, 1); }
+    }
+    /* 등불이 바닥에 떨어뜨리는 따뜻한 빛 */
+    /* 네모난 빛은 조잡해 보인다: 가장자리가 스르르 사라지는 둥근 빛을 쓴다 */
+    function glow(cx, cy, rx, ry, a) { var gr = g.createRadialGradient(cx, cy, 0, cx, cy, rx); gr.addColorStop(0, 'rgba(255,200,120,' + a + ')'); gr.addColorStop(1, 'rgba(255,200,120,0)'); g.save(); g.translate(0, cy); g.scale(1, ry / rx); g.translate(0, -cy); g.fillStyle = gr; g.fillRect(cx - rx, cy - rx, rx * 2, rx * 2); g.restore(); }
+    function pool(cx, cy, w, a) { glow(cx, cy + 3, w + 8, 8, Number(a) * 2.4); }
+    function wheel(cx, cy) { px(cx - 2, cy - 5, 5, 11, OL); px(cx - 5, cy - 2, 11, 5, OL); px(cx - 4, cy - 4, 9, 9, OL); px(cx - 1, cy - 4, 3, 9, '#7a5638'); px(cx - 4, cy - 1, 9, 3, '#7a5638'); px(cx - 3, cy - 3, 7, 7, '#7a5638'); px(cx - 2, cy - 2, 5, 5, '#5a3e2a'); px(cx - 1, cy - 1, 3, 3, '#d0aa6a'); px(cx - 3, cy - 3, 2, 1, '#96704a'); }
+    /* 짐수레(창고): 덮개 씌운 짐 더미 하나가 쌓인 만큼 높아진다 */
+    function wagon(fill, flash) {
+      var h = fill > 0 ? Math.max(3, Math.round(Math.sqrt(fill) * 20)) : 0, yy, full = fill >= 0.999;
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(3, 127, 46, 2);
+      px(46, 113, 10, 3, OL); px(47, 114, 8, 1, '#96704a'); px(54, 113, 2, 8, OL);
+      for (yy = 0; yy < h; yy++) { var w = 26 + Math.round(14 * (yy + 1) / h), x0 = 24 - (w >> 1), top = 112 - h + yy; px(x0 - 1, top, w + 2, 1, OL); px(x0, top, w, 1, yy < 2 ? '#8fae96' : '#6f927a'); px(x0, top, 3, 1, '#a9c4ae'); px(x0 + w - 5, top, 5, 1, '#557560'); if (yy > 2 && yy % 5 === 0) px(x0 + 3, top, w - 8, 1, '#628570'); }
+      if (h) { px(10, 112 - h, 28, 1, OL); px(15, 113 - h, 1, h - 1, '#3f5a48'); px(32, 113 - h, 1, h - 1, '#3f5a48'); if (h > 8) { box(7, 106); box(15, 106); box(31, 106); } }
+      px(2, 100, 2, 13, OL); px(44, 100, 2, 13, OL); px(1, 112, 46, 6, OL); px(2, 113, 44, 4, '#96704a'); px(2, 113, 44, 1, '#b88e5e'); px(2, 116, 44, 1, '#6a4a32'); for (yy = 10; yy < 44; yy += 11) px(2 + yy, 113, 1, 4, '#6a4a32');
+      wheel(12, 122); wheel(36, 122);
+      if (full && Math.floor(T * 3) % 2) { px(0, 90, 48, 1, '#ffd95a'); px(0, 90, 1, 6, '#ffd95a'); px(47, 90, 1, 6, '#ffd95a'); }
+      if (flash > 0) { g.fillStyle = 'rgba(255,246,200,' + (0.5 * flash).toFixed(2) + ')'; g.fillRect(0, 90, 50, 40); }
+    }
+    /* 탈것(오른쪽을 보고 그린다. 왼쪽으로 갈 때는 뒤집는다): 바퀴는 둥글게, 탄 사람은 앉은 자세로 */
+    function mirror(cx, dir, f) { g.save(); if (dir < 0) { g.translate(cx * 2, 0); g.scale(-1, 1); } f(); g.restore(); }
+    function wheel7(cx, cy, spin) { spr(cx - 3, cy - 3, ['..###..', '.#ooo#.', '#o#.#o#', '#o.H.o#', '#o#.#o#', '.#ooo#.', '..###..'], { '#': '#14151c', o: '#55585f', H: '#b0b4be', '.': null }); if (spin) px(cx + (Math.floor(T * 14) % 2 ? -1 : 1), cy - 1 + (Math.floor(T * 14) % 2 ? 2 : 0), 1, 1, '#8a8e98'); }
+    function wheel5(cx, cy) { spr(cx - 2, cy - 2, ['.###.', '#ooo#', '#oHo#', '#ooo#', '.###.'], { '#': '#14151c', o: '#55585f', H: '#b0b4be' }); }
+    function ln(x0, y0, x1, y1, col) { var n2 = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1; for (var q = 0; q <= n2; q++) px(x0 + (x1 - x0) * q / n2, y0 + (y1 - y0) * q / n2, 1, 1, col); }
+    function rider(x, y, pal, pedal) {      /* 앉은 사람: 머리 · 몸 · 앞으로 뻗은 팔 · 굽힌 다리 */
+      px(x, y, 6, 2, pal.h); px(x + 1, y + 2, 4, 3, '#f1c9a0'); px(x + 4, y + 3, 1, 1, BK); px(x, y + 2, 1, 2, pal.h);
+      px(x, y + 5, 5, 5, pal.v); px(x + 2, y + 6, 6, 2, pal.v); px(x + 7, y + 6, 2, 2, '#f1c9a0');
+      px(x + 1, y + 10, 5, 2, pal.p || '#3c4a5a'); px(x + 4 + (pedal ? 1 : 0), y + 11, 2, 3 + (pedal ? 0 : 1), pal.p || '#3c4a5a'); px(x + 4 + (pedal ? 1 : 0), y + 14 + (pedal ? -1 : 0), 3, 1, BK);
+    }
+    /* 오토바이(스쿠터): x 는 왼쪽 끝, gy 는 바퀴가 닿는 땅. cargo 가 있으면 뒤에 배달통 */
+    function scooter(x, gy, dir, moving, col, pal, cargo, lamp) {
+      mirror(x + 11, dir, function () {
+        g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x + 1, gy, 21, 1);
+        if (lamp && moving) glow(x + 34, gy - 4, 16, 6, 0.3);
+        wheel7(x + 4, gy - 3, moving); wheel7(x + 18, gy - 3, moving);
+        spr(x, gy - 13, ['.................KK...', '................KGK...', '................KGK...', '...KKKKKK......KCCK...', '..KSSSSSSK....KCCCKL..', '.KCCCCCCCCKKKKCCCCKL..', '.KCccccCCCCCCCCCCK....', '.KCCCCCCCCCCCCCCK.....', '..KKKK.KKKKKKK.KK.....'], { K: OL, C: col, c: mix(col, '#ffffff', 0.3), S: '#2a2c33', G: '#8a8e98', L: '#fff6c8' });
+        if (cargo) { px(x - 1, gy - 17, 9, 8, OL); px(x, gy - 16, 7, 6, '#e8e0cc'); px(x, gy - 16, 7, 1, '#ffffff'); px(x + 2, gy - 14, 3, 2, '#c8483a'); }
+        if (pal) rider(x + 6, gy - 22, pal, false);
+        if (moving) for (var q = 0; q < 2; q++) px(x - 4 - q * 3 - Math.floor(T * 10) % 2, gy - 3 - q, 2, 2, 'rgba(200,200,210,.35)');
+      });
+    }
+    function bicycle(x, gy, dir, moving, pal) {
+      mirror(x + 10, dir, function () {
+        g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x + 1, gy, 19, 1);
+        wheel7(x + 3, gy - 3, moving); wheel7(x + 17, gy - 3, moving);
+        var F = '#c8483a'; ln(x + 3, gy - 3, x + 8, gy - 9, F); ln(x + 8, gy - 9, x + 10, gy - 3, F); ln(x + 3, gy - 3, x + 10, gy - 3, F); ln(x + 8, gy - 8, x + 15, gy - 9, F); ln(x + 10, gy - 3, x + 15, gy - 9, F); ln(x + 15, gy - 10, x + 17, gy - 3, '#8a8e98');
+        px(x + 6, gy - 11, 5, 1, OL); px(x + 7, gy - 10, 1, 2, OL); px(x + 14, gy - 12, 1, 3, '#8a8e98'); px(x + 14, gy - 12, 4, 1, OL);
+        px(x + 9, gy - 3 + (moving && Math.floor(T * 8) % 2 ? 1 : -1), 3, 1, OL);
+        if (pal) rider(x + 6, gy - 21, pal, moving && Math.floor(T * 8) % 2 === 0);
+        else { px(x - 1, gy - 14, 6, 5, OL); px(x, gy - 13, 4, 3, '#3f8a52'); px(x, gy - 13, 4, 1, '#6ac46a'); }
+      });
+    }
+    function draw(dt) {
+      var x, y, k;
+      if (!bg) backdrop(); g.drawImage(bg, 0, 0);
+      B.fw = B.fw.filter(function (f) { f.life -= dt; f.vy += 14 * dt; f.x += f.vx * dt; f.y += f.vy * dt; if (f.life > 0) { g.globalAlpha = Math.min(1, f.life * 1.6); px(f.x, f.y, 1, 1, f.c); if (f.life > 0.5) px(f.x - f.vx * 0.04, f.y - f.vy * 0.04, 1, 1, f.c); g.globalAlpha = 1; } return f.life > 0; });
+      /* 줄에 건 세모 깃발 · 연속 호가 등 */
+      for (x = 0; x < 184; x++) px(x, 6 + Math.round(3 * Math.sin((x % 46) / 46 * Math.PI)), 1, 1, '#4a4668');
+      /* 줄에 건 꾸밈 등: 늘 켜져 있고 저마다 다른 박자로 일렁인다(연속 호가와 상관없다) */
+      [10, 30, 50, 134, 154, 174].forEach(function (lx, j) { var ly = 7 + Math.round(3 * Math.sin((lx % 46) / 46 * Math.PI)), fl = 0.26 + 0.14 * Math.sin(T * (3 + j * 0.7) + j * 2) + (hash(j, Math.floor(T * 9)) % 9 === 0 ? -0.12 : 0), cc = ['#ffd95a', '#ff9a6a', '#ffd95a', '#9ad0ff', '#ffd95a', '#ff9a6a'][j]; px(lx, ly, 1, 2, '#4a4668'); px(lx - 1, ly + 2, 3, 3, cc); px(lx, ly + 2, 1, 2, '#fff6c8'); glow(lx, ly + 3, 8, 8, Math.max(0.08, fl)); });
+      /* 별이 반짝인다 */
+      for (k = 0; k < 12; k++) { var tw = Math.sin(T * (1.5 + k % 4 * 0.6) + k * 1.9); if (tw > 0.2) { var stx = hash(k, 51) % 184, sty = hash(k, 53) % 26; if (stx > 56 && stx < 128 && sty > 6) continue; px(stx, sty, 1, 1, '#fff6c8'); if (tw > 0.85) { px(stx - 1, sty, 3, 1, 'rgba(255,246,200,.6)'); px(stx, sty - 1, 1, 3, 'rgba(255,246,200,.6)'); } } }
+      /* 시세 간판 */
+      var pr = B.price, col = pr >= PEAK ? (Math.floor(T * 4) % 2 ? '#ffd95a' : '#fff6c8') : pr >= MEAN ? '#7ed492' : '#ff7b6b';
+      px(67, 44, 5, 18, OL); px(112, 44, 5, 18, OL); px(68, 44, 3, 18, '#5a4634'); px(113, 44, 3, 18, '#5a4634'); px(68, 44, 1, 18, '#7a6044'); px(113, 44, 1, 18, '#7a6044');
+      px(59, 9, 66, 38, BK); px(60, 10, 64, 36, '#4a4e58'); px(60, 10, 64, 1, '#70757f'); px(61, 11, 62, 34, '#2b2e36'); px(62, 12, 60, 32, '#0c0e12'); px(62, 12, 60, 1, '#1c2028');
+      [[61, 11], [122, 11], [61, 44], [122, 44]].forEach(function (q) { px(q[0], q[1], 1, 1, '#8a8e98'); });
+      /* 연속 호가 등 다섯 개: 간판 위에 나란히. 쌓은 만큼 켜지고, 아직 못 쌓은 등은 꺼져 있다 */
+      for (k = 0; k < 5; k++) lantern(69 + k * 11, 3, k < B.streak);
+      var s = pr.toFixed(2); spr(69, 19, ['#...#', '.#.#.', '..#..', '.#.#.', '#...#'], { '#': '#a8a290' }); x = t.num(s, 77, 16, col, 2);
+      if (pr > B.prev) spr(x + 1, 18, ['..#..', '.###.', '#####'], { '#': '#7ed492' }); else if (pr < B.prev) spr(x + 1, 21, ['#####', '.###.', '..#..'], { '#': '#ff7b6b' });
+      var hs = B.hist.slice(-12).concat([pr]), bx0 = 92 - hs.length * 2;
+      hs.forEach(function (v, j) { var h2 = Math.max(1, Math.round((v - FLOOR) / (CEIL - FLOOR) * 9)), last = j === hs.length - 1; px(bx0 + j * 4, 39 - h2, 3, h2, last ? col : v >= PEAK ? '#b88a1a' : v >= MEAN ? '#3f7a52' : '#8a4a44'); });
+      for (x = 64; x < 121; x += 3) px(x, 39 - Math.round((MEAN - FLOOR) / (CEIL - FLOOR) * 9), 1, 1, '#6a6d76');
+      px(62, 42, 60, 2, '#1c2028'); px(62, 42, Math.round(60 * (1 - B.clock / STEP)), 2, B.clock > STEP - 3 && Math.floor(T * 5) % 2 ? '#fff6c8' : '#f0b400');
+      var fl0 = bCap() > 0 ? B.goods / bCap() : 0; px(71, 46, 42, 7, BK); px(72, 47, 40, 5, '#2b2e36'); px(73, 48, 4, 3, '#b8853a'); px(73, 48, 4, 1, '#d8a654'); px(79, 48, 32, 3, '#0c0e12'); px(79, 48, Math.round(32 * fl0), 3, fl0 >= 0.999 && Math.floor(T * 4) % 2 ? '#fff6c8' : '#f0b400');
+      /* 좌판: 재고가 쌓일수록 좌판 위 물건과 앞의 상자가 찬다. 팔면 비워진다 */
+      var fill = bCap() > 0 ? B.goods / bCap() : 0;
+      var n = B.stalls >= 40 ? 6 : B.stalls >= 20 ? 5 : B.stalls >= 10 ? 4 : B.stalls >= 6 ? 3 : B.stalls >= 3 ? 2 : B.stalls >= 1 ? 1 : 0;
+      for (k = 0; k < 6; k++) { var sx = STX(k); if (k < n) { pool(sx + 13, 84, 17, '.10'); var ag = T - B.popS - k * 0.06, up = ag > 0 && ag < 0.3 ? Math.round(Math.sin(ag / 0.3 * Math.PI) * 4) : 0, dp = T - (B.stPop[k] || -9); if (dp < 0.2) up += 2; stall(sx, 54 - up, k, B.sold > 0, fill); if (pr < 0.85 && !(B.sold > 0)) spr(sx + 17, 60 - Math.floor(T * 1.5 + k) % 2, ['###', '.#.', '###'], { '#': '#cfc8b4' }); glow(sx + 13, 66 - up, 26, 22, 0.2); if (ag > 0 && ag < 0.25 && k === n - 1) { g.fillStyle = 'rgba(255,246,200,' + (0.6 * (1 - ag / 0.25)).toFixed(2) + ')'; g.fillRect(sx - 1, 53 - up, 28, 29); } } else { for (x = 1; x < 25; x += 4) { px(sx + x, 72, 2, 1, 'rgba(240,236,220,.16)'); px(sx + x, 81, 2, 1, 'rgba(240,236,220,.16)'); } } }
+      var list = [];
+      /* 손님: 길로 들어와 → 좌판 앞에 서서 고르고 → 봉지를 들고 나간다. 시세가 좋을수록 많다 */
+      var strolling = B.cust.filter(function (c) { return !c.desk; }).length;
+      var want = n ? Math.min(11, 2 + Math.round((pr - FLOOR) * 4) + (B.rush > 0 ? 4 : 0)) : 0;
+      if (B.rush > 0) B.rush -= dt;
+      while (strolling < want) { strolling++; var left = Math.random() < 0.5, vis = Math.random() < 0.8; B.cust.push({ x: left ? -8 : 188, y: 88 + Math.random() * 26, lane: 0, dir: left ? 1 : -1, sp: (B.rush > 0 ? 16 : 9) + Math.random() * 7, k: Math.floor(Math.random() * 99), st: vis ? 'in' : 'out', tx: STX(Math.floor(Math.random() * n)) + 4 + Math.random() * 12, wait: 1.2 + Math.random() * 1.8, bag: false }); B.cust[B.cust.length - 1].lane = B.cust[B.cust.length - 1].y; }
+      B.cust.forEach(function (c) {
+        if (c.st === 'in') { c.x += c.dir * c.sp * dt; if ((c.dir > 0 && c.x >= c.tx) || (c.dir < 0 && c.x <= c.tx)) { c.x = c.tx; c.st = c.desk ? 'look' : 'up'; if (c.desk) c.dir = -1; } }
+        else if (c.st === 'up') { c.y -= c.sp * dt; if (c.y <= 72) { c.y = 72; c.st = 'look'; } }
+        else if (c.st === 'look') { c.wait -= dt; if (c.wait <= 0) { c.st = c.desk ? 'out' : 'down'; c.bag = true; if (c.desk) c.dir = 1; } }
+        else if (c.st === 'down') { c.y += c.sp * dt; if (c.y >= c.lane) { c.y = c.lane; c.st = 'out'; } }
+        else c.x += c.dir * c.sp * dt;
+      });
+      /* 가끔 벌어지는 일: 흥정꾼 앞에 줄 서는 손님 · 고점의 불꽃놀이 · 지나가는 고양이 · 풍선 든 아이 · 배달 자전거 */
+      var E = B.evT; E.cat -= dt; E.kid -= dt; E.bike -= dt; E.fw -= dt; E.crowd -= dt;
+      if (B.broker > 0 && B.on && n && (E.crowd <= 0 || B.autoSold > 1.05)) { E.crowd = 12 + Math.random() * 9; var qn = 2 + Math.floor(Math.random() * 3); for (k = 0; k < qn; k++) B.cust.push({ x: 188 + k * 12, y: 107 + (k % 2) * 4, lane: 0, dir: -1, sp: 22 + Math.random() * 5, k: Math.floor(Math.random() * 99), st: 'in', tx: 36 + k * 8, wait: 1.6 + k * 0.5, bag: false, desk: true }); }
+      if (E.cat <= 0) { E.cat = 11 + Math.random() * 12; B.ev.push({ type: 'cat', x: -8, dir: 1 }); }
+      if (E.kid <= 0) { E.kid = 16 + Math.random() * 12; B.ev.push({ type: 'kid', x: 190, dir: -1 }); }
+      if (E.bike <= 0) { E.bike = 22 + Math.random() * 16; B.ev.push({ type: 'bike', x: -20, dir: 1 }); }
+      if (pr >= PEAK && E.fw <= 0) { E.fw = 0.9 + Math.random() * 0.8; var fxx = Math.random() < 0.5 ? 10 + Math.random() * 42 : 134 + Math.random() * 42, fyy = 16 + Math.random() * 16, fcol = ['#ffd95a', '#ff7b6b', '#7ed492', '#9ad0ff'][Math.floor(Math.random() * 4)]; for (k = 0; k < 14; k++) { var an = k / 14 * Math.PI * 2; B.fw.push({ x: fxx, y: fyy, vx: Math.cos(an) * 18, vy: Math.sin(an) * 18, life: 0.9, c: fcol }); } }
+      B.ev = B.ev.filter(function (e) { var sp = e.type === 'bike' ? 62 : e.type === 'kid' ? 30 : 16; e.x += e.dir * sp * dt; if (e.x < -24 || e.x > 196) return false;
+        list.push({ y: e.type === 'cat' ? 118 : e.type === 'kid' ? 112 : 116, f: function () { var st = Math.floor(T * 8) % 2, ex = Math.round(e.x);
+          if (e.type === 'cat') { spr(ex, 121, st ? ['#.......o.o', '#.......ooo', '.#ooooooooe', '.oowoooooo.', '.o.o...o.o.'] : ['.#......o.o', '#.......ooo', '.#ooooooooe', '.oowoooooo.', 'o.o.....o.o'], { '#': '#b8621a', o: '#d8822a', w: '#f1e0c0', e: '#17180f' }); g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(ex + 1, 126, 9, 1); }
+          else if (e.type === 'kid') { px(ex + 7, 104 + st, 1, 8, '#cfc8b4'); px(ex + 5, 99 + st, 5, 5, OL); px(ex + 6, 100 + st, 3, 3, '#ff7b6b'); px(ex + 6, 100 + st, 1, 1, '#ffb0a6'); t.man(ex, 112, { h: '#6b4a3a', v: '#9ad0ff', p: '#3c4a5a' }, st, e.dir); }
+          else scooter(ex, 126, 1, true, '#3f78ac', { h: '#f0b400', v: '#e8e0cc', p: '#3c4a5a' }, true, true); } });
+        return true; });
+      B.cust = B.cust.filter(function (c) { return c.x > -12 && c.x < 192 + (c.desk ? 60 : 0); });
+      B.cust.forEach(function (c) { list.push({ y: c.y, f: function () { var back = !c.desk && (c.st === 'up' || c.st === 'look'), mv = c.st !== 'look';
+        if (B.shock > 0 && !c.desk && c.st !== 'look') { px(c.x + 2, c.y - 6, 2, 3, '#ffd95a'); px(c.x + 2, c.y - 2, 2, 1, '#ffd95a'); }
+        if (c.bag) { px(c.x + (c.dir > 0 ? 6 : -3), c.y + 6, 3, 4, '#e8e0cc'); px(c.x + (c.dir > 0 ? 6 : -3), c.y + 6, 3, 1, '#b8853a'); }
+        t.man(c.x, c.y - (c.st === 'look' && Math.floor(T * 3 + c.k) % 4 === 0 ? 1 : 0), { h: HAIR[c.k % HAIR.length], v: SHIRT[c.k % SHIRT.length], p: ['#3c4a5a', '#5a4a3a', '#4a4a4a'][c.k % 3], back: back }, mv ? Math.floor(T * 5 + c.k) % 2 : 0, c.dir); } }); });
+      /* 짐꾼(샀을 때만): 좌판에서 상자를 받아 수레까지 지고 간다. 없으면 장사꾼이 던져 보낸다 */
+      /* 짐꾼(샀을 때만): 왼쪽에서 상자를 지고 와 좌판에 내려놓는다(먼지가 일고 좌판이 들썩인다).
+         팔고 나면 땀을 흘리며 뛰고, 재고가 가득 차면 상자에 앉아 쉰다. 가끔 발이 걸려 상자를 떨어뜨린다. 여덟 명부터 첫 짐꾼은 손수레에 세 상자씩 싣는다 */
+      var np = B.porter > 0 && n ? Math.min(4, 1 + Math.floor(B.porter / 4)) : 0;
+      while (porters.length < np) porters.push({ x: -10 - porters.length * 14, y: 98 + porters.length * 5, st: 'go', tx: 0, has: false, k: porters.length, trip: 0, sprint: 0 });
+      if (porters.length > np) porters.length = np;
+      if (B.sold > 0.75) porters.forEach(function (p) { p.sprint = 4; });
+      porters.forEach(function (p) {
+        var full = fill >= 0.999, sp = (24 + (T - B.popW < 1 ? 26 : 0)) * (p.sprint > 0 ? 1.9 : 1), gx, gy; if (p.sprint > 0) p.sprint -= dt;
+        p.rest = full && !p.has && p.st === 'back' && p.x < 20 + p.k * 11; if (p.rest) { p.mv = false; return; }
+        if (p.trip > 0) { p.trip -= dt; p.mv = false; return; }
+        if (p.st === 'go') { if (!p.tx) { p.sk = Math.floor(Math.random() * n); p.tx = STX(p.sk) + 8; p.has = !full; } gx = p.tx; gy = 84; } else { gx = full ? 8 + p.k * 11 : -10; gy = full ? 112 : 98 + p.k * 5; }
+        var dx = gx - p.x, dy = gy - p.y, d = Math.sqrt(dx * dx + dy * dy); p.dir = dx < 0 ? -1 : 1; p.mv = d > 1;
+        if (d > 1) { p.x += dx / d * Math.min(d, sp * dt); p.y += dy / d * Math.min(d, sp * dt); if (p.has && p.x > 20 && p.x < 150 && Math.random() < dt * 0.04) p.trip = 0.9; }
+        else if (p.st === 'go') { if (p.has) { B.stPop[p.sk] = T; for (var q = 0; q < 5; q++) B.dust.push({ x: p.x + 2 + Math.random() * 6, y: 94, vx: (Math.random() - 0.5) * 16, vy: -6 - Math.random() * 8, life: 0.5 }); } p.st = 'back'; p.has = false; } else if (!full) { p.st = 'go'; p.tx = 0; }
+      });
+      porters.forEach(function (p) { list.push({ y: p.y, f: function () {
+        var cartP = p.k === 0 && B.porter >= 8, pal = { h: '#6b4a3a', H: '#4a3424', v: '#8a8e98', w: '#5e616a', p: '#4a3a30' }, x0 = Math.round(p.x), y0 = Math.round(p.y);
+        if (p.rest) { box(x0 - 1, y0 + 8); t.man(x0, y0 - 1, pal, 0, 1); px(x0, y0 + 9, 6, 2, '#4a3a30'); spr(x0 + 7, y0 - 5 - Math.floor(T * 1.5 + p.k) % 2, ['###', '.#.', '###'], { '#': '#cfc8b4' }); return; }
+        if (p.trip > 0) { box(x0 + (p.dir > 0 ? 9 : -9), y0 + 7); t.man(x0, y0 + 2, pal, 0, p.dir); px(x0 + 2, y0 - 4, 1, 3, '#ffd95a'); px(x0 + 2, y0, 1, 1, '#ffd95a'); return; }
+        if (cartP) { var cxp = x0 + (p.dir > 0 ? 7 : -9); px(cxp, y0 + 10, 9, 2, OL); px(cxp + 1, y0 + 12, 3, 3, OL); px(cxp + 5, y0 + 12, 3, 3, OL); px(cxp + (p.dir > 0 ? 0 : 8), y0 + 2, 1, 9, OL); if (p.has) { box(cxp + 1, y0 + 4); box(cxp + 1, y0 - 1); box(cxp + 1, y0 - 6); } }
+        else if (p.has) box(x0 + (p.dir > 0 ? -5 : 4), y0 + 2);
+        t.man(x0, y0, pal, p.mv ? Math.floor(T * (p.sprint > 0 ? 12 : 7) + p.k) % 2 : 0, p.dir);
+        if (p.sprint > 0 && p.mv) { var sd = Math.floor(T * 8 + p.k) % 3; px(x0 + (p.dir > 0 ? -2 - sd : 7 + sd), y0 + 1 + sd, 1, 2, '#9ad0ff'); px(x0 + (p.dir > 0 ? -4 - sd : 9 + sd), y0 + 8, 2, 1, 'rgba(200,200,210,.5)'); }
+      } }); });
+      B.dust = B.dust.filter(function (p) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.life > 0) px(p.x, p.y, 2, 2, 'rgba(210,200,180,' + (p.life * 1.4).toFixed(2) + ')'); return p.life > 0; });
+      /* 흥정꾼(샀을 때만): 계산대와 종. 간판을 올려다보며 기다리다가(머리 위에 노리는 시세), 팔 때 종을 울리고 동전이 계산대로 모인다 */
+      if (B.broker > 0) list.push({ y: 109, f: function () { g.save(); g.translate(-46, 0);
+        pool(68, 124, 14, '.08'); var ring = B.autoSold > 0, okNow = B.on && pr >= (B.peak ? PEAK : MEAN), sw = ring ? (Math.floor(T * 12) % 2 ? 1 : -1) : 0;
+        t.man(63, 104 - (ring && Math.floor(T * 8) % 2 ? 1 : 0), { h: '#3a3028', v: '#3f8452', w: '#ffd95a' }, 0, 1);
+        if (ring) px(69, 105, 1, 4, '#f1c9a0');
+        px(58, 113, 20, 4, OL); px(59, 114, 18, 2, '#b08a4e'); px(59, 114, 18, 1, '#d0aa6a'); px(59, 117, 18, 10, OL); px(60, 117, 16, 9, '#6b4a32'); px(60, 117, 16, 1, '#4a3424'); px(64, 119, 8, 5, OL); px(65, 120, 6, 3, '#f0b400'); px(67, 120, 2, 3, '#8a6800');
+        px(60, 111, 6, 3, OL); px(61, 112, 4, 1, '#f1f0e6');      /* 장부 */
+        px(78, 98, 1, 29, OL); px(74, 98, 5, 1, OL); px(74 + sw, 99, 1, 2, OL); px(72 + sw, 101, 5, 4, OL); px(73 + sw, 101, 3, 3, ring ? '#ffd95a' : '#d89a1a'); px(74 + sw * 2, 105, 1, 1, OL);
+        if (ring) { var rp = Math.floor(T * 10) % 3; px(69 - rp, 100, 1, 3, '#fff6c8'); px(80 + rp, 100, 1, 3, '#fff6c8'); px(70 - rp, 98, 1, 1, '#fff6c8'); px(79 + rp, 98, 1, 1, '#fff6c8'); }
+        if (!B.on) spr(70, 97 - Math.floor(T * 2) % 2, ['###', '.#.', '###'], { '#': '#f1f0e6' });
+        else if (!ring) {      /* 기다리는 동안은 말줄임표, 노리는 시세가 되면 동전이 깜빡인다(화살표는 뜻을 알기 어려웠다) */
+          px(56, 91, 11, 9, OL); px(57, 92, 9, 7, '#f1f0e6'); px(64, 100, 2, 1, OL);
+          if (okNow) { var cb = Math.floor(T * 4) % 2; px(59, 93, 5, 5, OL); px(60, 94, 3, 3, cb ? '#ffd95a' : '#f0b400'); px(61, 94, 1, 3, '#8a6800'); }
+          else for (var dq = 0; dq < 3; dq++) px(58 + dq * 3, 95 - (Math.floor(T * 3) % 3 === dq ? 1 : 0), 1, 1, '#6a6d76'); }
+        g.restore(); } });
+      /* 호객꾼(샀을 때만): 상자 위에 올라 확성기로 외친다. 살 때마다 손님이 몰려온다 */
+      /* 호객꾼(샀을 때만): 길을 오가며 확성기로 외친다. 몇 초에 한 번 크게 외치면 폴짝 뛰고 말이 뜨고, 지나던 손님들이 놀라(!) 좌판으로 몰려온다. 많이 살수록 자주 외친다 */
+      var nc = B.crier > 0 ? Math.min(2, 1 + Math.floor(B.crier / 10)) : 0;
+      while (B.crier_.length < nc) B.crier_.push({ x: B.crier_.length ? 150 : 40, dir: B.crier_.length ? -1 : 1, hop: 0 }); if (B.crier_.length > nc) B.crier_.length = nc;
+      if (nc) { B.cry -= dt; if (B.cry <= 0) { B.cry = Math.max(5, 12 - B.crier * 0.25) + Math.random() * 3; var who = B.crier_[Math.floor(Math.random() * nc)]; who.hop = 1.2; B.rush = 3; B.shock = 0.9; bSay(['싸요 싸요!', '골라 골라!', '떨이요 떨이!', '어서 오세요!', '오늘만 이 값!'][Math.floor(Math.random() * 5)], Math.max(30, Math.min(154, who.x + 3)), 84, 'gold'); } }
+      if (B.shock > 0) B.shock -= dt;
+      B.crier_.forEach(function (c, kk) { var cy = kk ? 97 : 93;
+        if (c.hop > 0) c.hop -= dt; else { c.x += c.dir * 9 * dt; if (c.x > 158) c.dir = -1; if (c.x < 26) c.dir = 1; }
+        list.push({ y: cy, f: function () { var hopping = c.hop > 0, jy = hopping ? Math.round(Math.abs(Math.sin(c.hop * 8)) * 4) : 0, d = c.dir, cx = Math.round(c.x), sh = hopping || Math.floor(T * 2.5 + kk) % 3 !== 0;
+          t.man(cx, cy - jy, { h: '#c8483a', H: '#8a2e26', v: '#f0b400', w: '#17180f' }, hopping ? 0 : Math.floor(T * 5 + kk) % 2, d);
+          var mx = d > 0 ? cx + 6 : cx - 5; px(mx, cy + 3 - jy, 5, 3, OL); px(mx + (d > 0 ? 0 : 3), cy + 4 - jy, 2, 1, '#f1f0e6'); px(mx + (d > 0 ? 3 : 0), cy + 2 - jy, 2, 5, OL); px(mx + (d > 0 ? 3 : 1), cy + 3 - jy, 1, 3, '#c8483a');
+          if (sh) { var rings = hopping ? 3 : 1; for (var w2 = 0; w2 < rings; w2++) { var wv = (Math.floor(T * 8) + w2) % 3, wx3 = d > 0 ? mx + 6 + wv * 2 + w2 * 3 : mx - 2 - wv * 2 - w2 * 3; px(wx3, cy + 1 - wv - w2 - jy, 1, 2, '#fff6c8'); px(wx3, cy + 5 + wv + w2 - jy, 1, 2, '#fff6c8'); px(wx3 + d, cy + 3 - jy, 1, 1, '#fff6c8'); } }
+        } }); });
+      /* 단골은 저마다 오는 법이 다르다: 김 영감은 지팡이 짚고 걸어서, 떡집 아주머니는 김 나는 손수레, 고물상은 고물 트럭, 약초꾼은 자전거, 국밥집은 오토바이 */
+      var o2 = B.order; if (o2) regV = REG.indexOf(o2.who);
+      var vsp = [20, 24, 46, 38, 56][regV] || 30; if (o2) { if (regX > 146) regX = Math.max(146, regX - vsp * dt); } else if (regX < 230) regX += vsp * dt;
+      if (regX < 230) list.push({ y: 104, f: function () { var o = B.order, here = o && regX <= 146.5, walking = !here, dir = o ? -1 : 1, st = walking ? Math.floor(T * 6) % 2 : 0, x0 = Math.round(regX), who = { h: ['#e8e0cc', '#6b4a3a', '#3a3028', '#a8a290', BK][regV], v: ['#7a6a5a', '#c8483a', '#5a6a7a', '#3f8452', '#80589c'][regV], w: '#f1f0e6' };
+        function flip(cx, f) { g.save(); if (dir > 0) { g.translate(cx * 2, 0); g.scale(-1, 1); } f(); g.restore(); }
+        function wheelS(cx, cy) { px(cx - 2, cy - 3, 5, 7, OL); px(cx - 3, cy - 2, 7, 5, OL); px(cx - 2, cy - 2, 5, 5, '#55585f'); px(cx - 1, cy - 1, 3, 3, '#24232e'); }
+        if (regV === 0) { t.man(x0, 104, who, st, dir); px(x0 + (dir < 0 ? -2 : 7), 109 + st, 1, 8, '#b08a4e'); px(x0 + (dir < 0 ? -2 : 6), 109 + st, 2, 1, '#b08a4e'); }
+        else if (regV === 1) { var cx1 = here ? x0 + 16 : x0 + (dir < 0 ? -10 : 16); t.man(x0, 104, who, st, dir);
+          px(cx1 - 6, 106, 13, 9, OL); px(cx1 - 5, 107, 11, 7, '#b08a4e'); px(cx1 - 5, 107, 11, 1, '#d0aa6a'); px(cx1 - 4, 104, 9, 3, OL); px(cx1 - 3, 105, 7, 1, '#f1f0e6'); wheel5(cx1 - 3, 116); wheel5(cx1 + 3, 116);
+          for (var q = 0; q < 3; q++) { var ph = (T * 3 + q * 2) % 6; px(cx1 - 2 + q * 2 + Math.round(Math.sin(ph + q)), 102 - ph, 1, 2, 'rgba(240,236,220,' + (0.6 * (1 - ph / 6)).toFixed(2) + ')'); } }
+        else if (regV === 2) { var tx = here ? x0 + 10 : x0 - 4; flip(tx + 13, function () {
+            g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(tx, 119, 27, 1);
+            px(tx - 1, 104, 11, 13, OL); px(tx, 105, 9, 11, '#3f78ac'); px(tx, 105, 9, 1, '#6aa6d8'); px(tx + 1, 107, 4, 4, '#9ad0ff'); px(tx + 9, 109, 18, 8, OL); px(tx + 10, 110, 16, 6, '#6b4a32'); px(tx + 10, 110, 16, 1, '#84603f');
+            px(tx + 11, 104, 6, 6, OL); px(tx + 12, 105, 4, 5, '#8a8e98'); px(tx + 18, 106, 7, 4, OL); px(tx + 19, 107, 5, 3, '#b87a5a'); px(tx + 15, 102, 5, 3, OL); px(tx + 16, 103, 3, 1, '#d89a1a');
+            wheel7(tx + 4, 116, walking); wheel7(tx + 21, 116, walking); if (walking) { glow(tx - 12, 114, 14, 6, 0.3); px(tx - 1, 112, 1, 2, '#fff6c8'); } });
+          if (here) t.man(x0, 104, who, 0, -1); }
+        else if (regV === 3) { if (here) { bicycle(x0 + 9, 117, -1, false, null); t.man(x0, 104, who, 0, -1); } else bicycle(x0 - 4, 117, dir, true, who); }
+        else { if (here) { scooter(x0 + 9, 117, -1, false, '#c8483a', null, false, false); t.man(x0, 104, who, 0, -1); } else scooter(x0 - 5, 117, dir, true, '#c8483a', who, false, true); }
+        if (!here) return;
+        var ok = B.goods >= o.need; g.save(); g.translate(-13, 0);
+        px(141, 84, 36, 17, BK); px(142, 85, 34, 15, '#f1f0e6'); px(142, 99, 34, 1, '#cfc8b4'); px(160, 101, 4, 1, BK); px(161, 102, 2, 1, BK); px(160, 100, 4, 1, '#f1f0e6');
+        box(144, 89); px(154, 89, 20, 4, OL); px(155, 90, 18, 2, '#cfc8b4'); px(155, 90, Math.round(18 * Math.min(1, B.goods / o.need)), 2, ok ? '#2f6b3c' : '#d89a1a');
+        px(155, 95, 18, 1, '#cfc8b4'); px(155, 95, Math.round(18 * o.left / (o.max || 90)), 1, o.left < 20 ? '#c8483a' : '#6a6d76');
+        if (ok && Math.floor(T * 3) % 2) { px(140, 83, 38, 1, '#ffd95a'); px(140, 101, 20, 1, '#ffd95a'); px(164, 101, 14, 1, '#ffd95a'); px(140, 83, 1, 19, '#ffd95a'); px(177, 83, 1, 19, '#ffd95a'); } g.restore(); } });
+      list.sort(function (a, b) { return a.y - b.y; }).forEach(function (o) { o.f(); });
+      /* 동전: 손으로 팔면 위로 튀고, 흥정꾼이 팔면 계산대로 모인다 */
+      B.parts = B.parts.filter(function (p) { p.life -= dt;
+        if (B.autoSold > 0) { p.x += (22 - p.x) * Math.min(1, dt * 5); p.y += (116 - p.y) * Math.min(1, dt * 5); } else { p.vy += 90 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+        if (p.life > 0) { px(p.x - 1, p.y, 4, 2, OL); px(p.x, p.y - 1, 2, 4, OL); px(p.x, p.y, 2, 2, '#ffd95a'); px(p.x, p.y, 1, 1, '#fff6c8'); } return p.life > 0; });
+      if (B.autoSold > 0) B.autoSold -= dt;
+    }
+    /* 구매 줄 그림(좌판 · 짐꾼 · 호객꾼 · 흥정꾼): 따로 둔 그림판에 그려 줄마다 잘라 쓴다 */
+    var ob = document.createElement('canvas'); ob.width = 184; ob.height = 30; var og = ob.getContext('2d'), ot = tools(og);
+    function icons() {
+      var keep = [px, spr, g, t], k; px = ot.px; spr = ot.spr; g = og; t = ot;
+      px(0, 0, 184, 30, '#24232e');
+      var cnt = [B.stalls, B.porter, B.crier, B.broker];
+      for (k = 0; k < 4; k++) { var x0 = k * 46, a = T - B.popI[k], up = a < 0.35 ? Math.round(Math.sin(a / 0.35 * Math.PI) * 4) : 0, n = cnt[k];
+        if (k === 0) { g.save(); g.beginPath(); g.rect(x0, 0, 46, 26); g.clip(); stall(x0 + 4, -1 - up, Math.min(5, Math.floor(n / 5)), a < 0.5); g.restore(); }
+        else if (!n) { for (var q = 4; q < 30; q += 4) px(x0 + q, 22, 2, 1, '#55546a'); }
+        else if (k === 1) { var m = Math.min(3, 1 + Math.floor(n / 4)); for (q = 0; q < m; q++) { var st = Math.floor(T * 6 + q) % 2; box(x0 + 3 + q * 10, 12 - up); t.man(x0 + 8 + q * 10, 10 - up, { h: '#6b4a3a', H: '#4a3424', v: '#8a8e98', w: '#5e616a', p: '#4a3a30' }, st, 1); } }
+        else if (k === 2) { var sh = Math.floor(T * 2.5) % 3 !== 0; px(x0 + 9, 20, 9, 5, OL); px(x0 + 10, 21, 7, 3, '#b8853a'); px(x0 + 10, 21, 7, 1, '#d8a654'); t.man(x0 + 10, 8 - up - (sh ? 1 : 0), { h: '#c8483a', H: '#8a2e26', v: '#f0b400', w: '#17180f' }, 0, 1); px(x0 + 16, 11 - up, 5, 3, OL); px(x0 + 19, 10 - up, 2, 5, OL); px(x0 + 19, 11 - up, 1, 3, '#c8483a'); if (sh) { var wv = Math.floor(T * 8) % 3; px(x0 + 23 + wv * 2, 9 - wv - up, 1, 2, '#fff6c8'); px(x0 + 23 + wv * 2, 14 + wv - up, 1, 2, '#fff6c8'); } }
+        else { var rg = B.autoSold > 0, sw2 = rg ? (Math.floor(T * 12) % 2 ? 1 : -1) : 0; t.man(x0 + 8, 6 - up, { h: '#3a3028', v: '#3f8452', w: '#ffd95a' }, 0, 1); px(x0 + 3, 15 - up, 18, 3, OL); px(x0 + 4, 16 - up, 16, 1, '#d0aa6a'); px(x0 + 4, 18 - up, 16, 7, OL); px(x0 + 5, 18 - up, 14, 6, '#6b4a32'); px(x0 + 9, 20 - up, 6, 3, '#f0b400'); px(x0 + 24, 3 - up, 1, 22, OL); px(x0 + 20, 3 - up, 5, 1, OL); px(x0 + 19 + sw2, 5 - up, 5, 4, OL); px(x0 + 20 + sw2, 5 - up, 3, 3, rg ? '#ffd95a' : '#d89a1a'); }
+        if (a < 0.3) { g.fillStyle = 'rgba(255,246,200,' + (0.6 * (1 - a / 0.3)).toFixed(2) + ')'; g.fillRect(x0, 0, 34, 26); }
+        var s2 = String(n), w = s2.length * 4 + 3; if (k < 3) { px(x0 + 38 - (w >> 1) - 1, 5, w + 2, 9, OL); px(x0 + 38 - (w >> 1), 6, w, 7, n ? '#17180f' : '#3a382f'); t.num(s2, x0 + 38 - (w >> 1) + 2, 7, n ? '#ffd95a' : '#8a887c'); }
+        if (k === 0) { var fr = B.stFrac || 0; px(x0, 26, 34, 3, OL); px(x0 + 1, 27, 32, 1, '#3a3848'); px(x0 + 1, 27, Math.round(32 * Math.min(1, fr)), 1, '#f0b400'); for (q = 0; q < 4; q++) px(x0 + 35 + (q % 2) * 4, 16 + (q >> 1) * 4, 3, 3, q < (B.stTier || 0) ? '#ffd95a' : '#3a382f'); }
+      }
+      px = keep[0]; spr = keep[1]; g = keep[2]; t = keep[3];
+    }
+    return { draw: draw, icons: icons, icon: ob };
+  })();
+
+      bNew();
+      return { draw: function (dt, v) { T += dt; bSync(v); bG.draw(dt); bG.icons(); }, sold: bSold, filled: bFilled,
+        bought: function (k) { B.popI[k] = T; if (k === 0) B.popS = T; else if (k === 1) { B.popW = T; B.popS = T; } else if (k === 2) B.rush = 4; else B.autoSold = 1.1; }, icon: bG.icon };
+    }
+    return { town: town, market: market };
+  })();
+
+  /* ---------- 1 · 2구역 장면을 게임에 잇는다(5.3.2) ---------- */
+  var zs1 = null, zs2 = null, zsRaf = 0, zsLast = 0, zsAcc = 0, zsPrev1 = null, zsPrev2 = null, zsIc = {};
+  var ZS_FPS = 20;      /* 도트 장면은 초당 20장이면 충분하다. 60장으로 그리면 폰이 뜨거워진다 */
+  var ZS_ROWS1 = ['scouts', 'garden', 'purifier', 'workshop'], ZS_ROWS2 = ['stall', 'porter', 'crier'];
+  function zsKind(id) { return id === 'cache' ? 2 : id === 'store' ? 1 : 0; }
+  /** 2배 고비까지 얼마나 찼는가: { tier 넘은 고비 수, frac 다음 고비까지 0~1 } */
+  function zsMile(n) { var marks = C.MILESTONES || [10, 25, 50, 100], prev = 0, next = null; for (var i = 0; i < marks.length; i++) { if (n >= marks[i]) prev = marks[i]; else { next = marks[i]; break; } } return { tier: C.milestoneTier(n), frac: next === null ? 1 : (n - prev) / (next - prev) }; }
+  function zsView1() {
+    var kinds = [], ce = C.cacheExtra(state), i, counts = [], stage = [], frac = [], tier = [];
+    for (i = 0; i < C.SWEEP_TILES; i++) kinds.push(zsKind(C.tileKind(state.sweepSeed, i, ce).id));
+    ZS_ROWS1.forEach(function (id) { var n = state.buildings[id] || 0, m = zsMile(n); counts.push(n); stage.push(Math.min(3, m.tier)); tier.push(m.tier); frac.push(m.frac); });
+    var auto = C.autoOn(state, 0);
+    return { seed: state.sweepSeed, hood: state.sweeps + 1, mask: state.sweepMask, kinds: kinds, counts: counts, stage: stage, frac: frac, tier: tier,
+      patrol: auto ? Math.max(1, Math.round(C.mods(state).patrol) || 1) : 0, on: auto, every: C.sweepInterval(state), patNext: auto ? C.patrolNext(state) : -1 };
+  }
+  function zsView2() {
+    var r = C.priceRange(state), o = state.order, wi = 0, m = zsMile(state.stalls || 0);
+    if (o) for (var i = 0; i < C.REGULARS.length; i++) if (C.REGULARS[i].id === o.who) wi = i;
+    return { floor: r.floor, ceil: r.ceil, mean: r.mean, peakAt: C.peakPrice(state), step: C.PRICE_STEP, price: state.price, clock: state.priceClock, hist: state.priceHistory || [], streak: state.streak || 0,
+      stalls: state.stalls || 0, porter: state.hands.porter || 0, crier: state.hands.crier || 0, broker: C.autoOn(state, 1), on: !!state.autoSell && C.autoEvents(state, 1), peak: !!state.sellPeak,
+      goods: state.goods || 0, cap: C.goodsCap(state), stTier: m.tier, stFrac: m.frac, order: o ? { wi: wi, need: o.need, left: o.left, max: C.ORDER_SECONDS } : null };
+  }
+  /** 구매 줄 왼쪽의 그림판. 줄이 아직 없으면 null(다음에 다시 찾는다). 보이지 않으면 그리지 않는다. */
+  function zsIcon(id) {
+    var c = zsIc[id];
+    if (!c) { var row = $('row-' + id); if (!row) return null; c = document.createElement('canvas'); c.className = 'row-ic'; c.width = 46; c.height = 30; c.setAttribute('aria-hidden', 'true'); row.classList.add('has-ic'); row.insertBefore(c, row.firstChild); zsIc[id] = c; }
+    return c.offsetParent !== null ? c : null;
+  }
+  function zsIcons(src, ids) { ids.forEach(function (id, i) { var c = zsIcon(id); if (c) c.getContext('2d').drawImage(src, i * 46, 0, 46, 30, 0, 0, 46, 30); }); }
+  /** 그림판이 화면 밖으로 밀려나 있는가(스크롤해서 안 보이면 그릴 필요가 없다). */
+  var zsSlow = 0;
+  function zsOff(cv) { var r = cv.getBoundingClientRect(); if (!(r.bottom < 0 || r.top > (window.innerHeight || 0))) return false; var now = Date.now(); if (now - zsSlow > 1000) { zsSlow = now; return false; } return true; }
+  function zsLoop(now) {
+    zsRaf = 0;
+    var c1 = $('z1-cv'), c2 = $('z2-cv'), v1 = !!c1 && c1.offsetParent !== null, v2 = !!c2 && c2.offsetParent !== null;
+    if ((!v1 && !v2) || document.hidden) return;      // 안 보이면 멈춘다(다시 보이면 render 가 깨운다)
+    zsAcc += Math.min(0.25, Math.max(0, (now - zsLast) / 1000)); zsLast = now;
+    if (zsAcc >= 1 / ZS_FPS) {
+      var dt = Math.min(0.2, zsAcc); zsAcc = 0;
+      try {
+        if (v1 && !zs1) zs1 = ZS.town(c1, $('z1-fl'), { tap: function (i) { search(i >= 0 ? i : undefined); } });
+        if (v2 && !zs2) zs2 = ZS.market(c2, $('z2-fl'), { sell: function () { $('sell').click(); }, fill: function () { var b = $('order-fill'); if (b && !$('order').hidden && !b.disabled) b.click(); else $('sell').click(); } });
+        if (v1 && zsOff(c1)) v1 = false; if (v2 && zsOff(c2)) v2 = false;      /* 화면 밖이면 그리기만 건너뛴다(누르기 처리는 이미 붙어 있다) */
+        if (v1) {
+          var a = zsView1();
+          if (zsPrev1) a.counts.forEach(function (n, i) { if (n > zsPrev1.counts[i]) zs1.built(i, a.tier[i] > zsPrev1.tier[i]); });
+          if (zsPrev1 && a.patrol > zsPrev1.patrol) zs1.patrolUp(a.patrol);
+          zsPrev1 = a; zs1.draw(dt, a); zsIcons(zs1.icon, ZS_ROWS1);
+        }
+        if (v2) {
+          var m = zsView2();
+          if (zsPrev2) { if (m.stalls > zsPrev2.stalls) zs2.bought(0); if (m.porter > zsPrev2.porter) zs2.bought(1); if (m.crier > zsPrev2.crier) zs2.bought(2); if (m.broker && !zsPrev2.broker) zs2.bought(3); }
+          zsPrev2 = m; zs2.draw(dt, m); zsIcons(zs2.icon, ZS_ROWS2);
+        }
+      } catch (e) { window.ZONE7_SCENE_ERROR = String(e && e.stack || e); /* 그림이 없어도 아래 단추로 게임은 된다. 화면 테스트가 이 값을 본다 */ }
+    }
+    zsRaf = requestAnimationFrame(zsLoop);
+  }
+  function zsWake() { if (!zsRaf && typeof requestAnimationFrame === 'function') { zsLast = performance.now(); zsRaf = requestAnimationFrame(zsLoop); } }
+  var z3 = null, z3Raf = 0, z3Last = 0, z3Acc = 0, Z3_NAMES = ['press', 'weld'];
   var z3Line = {
     A: function () {
       var st = C.lineStations(state), feed = st[0].rate, flowing = !!state.board, p = (state.feed || 0) % 1, boost = (state.lineBoost || 0) > 0;
@@ -3816,8 +4516,11 @@
   function z3Loop(now) {
     z3Raf = 0;
     var cv = $('z3-cv'); if (!cv || cv.offsetParent === null) return;      // 안 보이면 멈춘다(다시 보이면 render 가 깨운다)
-    try { if (!z3) z3 = mkScene('z3', z3Line, z3Board); z3.draw(Math.min(0.1, Math.max(0, (now - z3Last) / 1000))); } catch (e) { /* 그림이 없어도 아래 줄로 게임은 된다 */ }
-    z3Last = now; z3Raf = requestAnimationFrame(z3Loop);
+    if (document.hidden) return;      // 다른 앱을 보는 동안은 그리지 않는다
+    /* 5.3.2 초당 24장까지만 그린다. 화면 주사율(60~120)대로 그리면 폰이 뜨거워진다 */
+    z3Acc += Math.min(0.25, Math.max(0, (now - z3Last) / 1000)); z3Last = now;
+    if (z3Acc >= 1 / 24) { var zdt = Math.min(0.1, z3Acc); z3Acc = 0; try { if (!z3) z3 = mkScene('z3', z3Line, z3Board); if (!zsOff(cv)) z3.draw(zdt); } catch (e) { /* 그림이 없어도 아래 줄로 게임은 된다 */ } }
+    z3Raf = requestAnimationFrame(z3Loop);
   }
   function z3Wake() { if (!z3Raf && typeof requestAnimationFrame === 'function') { z3Last = performance.now(); z3Raf = requestAnimationFrame(z3Loop); } }
   /** 라인 이름표와 화면 테스트가 읽는 값. */
@@ -4630,6 +5333,7 @@
     $('rows-z6').hidden = !(tab === 'z6' && open);
     $('tower').hidden = !(tab === 'z6' && open);
     z3Workers(tab === 'z2' && open);
+    zsWake();      // 1 · 2구역 장면: 보이면 그리기를 다시 시작한다(안 보이면 스스로 멈춘다)
     $('settle').hidden = !(tab === 'z6' && open && pane === 'up');
     if (tab === 'z6' && open && pane === 'up') renderSettle();
     var aeZone = /^z\d$/.test(tab) ? Number(tab.slice(1)) : -1, aeShow = aeZone >= 1 && aeZone !== 2 && aeZone <= state.zone && C.autoOn(state, aeZone);      // 5.3.1 3구역은 일꾼 스위치(조립공 · 배차원)가 대신한다
@@ -4739,6 +5443,8 @@
       setText($('price-range'), '범위 ' + range.floor.toFixed(1) + ' ~ ' + range.ceil.toFixed(1) + ' · 평균 ' + range.mean.toFixed(2));
       setText($('price-next'), Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 시세가 바뀌어요');
       setText($('goods'), fmt(state.goods) + ' / ' + fmt(cap));
+      /* 5.3.2 머리줄 한 줄로 줄였다(1구역과 같은 꼴): 왼쪽은 쌓인 상품, 오른쪽은 시세와 다음 시세까지. 큰 시세 글과 막대는 장면의 간판이 대신한다 */
+      setText($('z2-goods'), '상품 ' + fmt(state.goods) + ' / ' + fmt(cap)); $('z2-note').textContent = '시세 ×' + state.price.toFixed(2) + ' · ' + Math.ceil(C.PRICE_STEP - state.priceClock) + '초 뒤 바뀜';
       $('goods-bar').style.width = (cap > 0 ? Math.min(100, state.goods / cap * 100) : 0).toFixed(1) + '%';
       // 시세판: 막대의 높이는 시세 범위 안에서의 위치(바닥 8% ~ 천장 100%). 맨 오른쪽이 지금 시세다.
       var span = Math.max(0.01, range.ceil - range.floor);
@@ -4782,11 +5488,11 @@
       if (od) {
         var reg = null; C.REGULARS.forEach(function (r) { if (r.id === od.who) reg = r; });
         setText($('order-left'), clock(od.left));
-        setText($('order-text'), (reg ? reg.name + (C.hasBatchim(reg.name) ? '이' : '가') : '단골이') + ' 상품 ' + fmt(od.need) + '개를 찾아요.\n팔면 물자 +' + fmt(C.orderReward(state)) + ' · 간식 +' + C.ORDER_TREATS);
+        setText($('order-text'), (reg ? reg.name + (C.hasBatchim(reg.name) ? '이' : '가') : '단골이') + ' 상품 ' + fmt(od.need) + '개를 찾아요.\n거래하면 물자 +' + fmt(C.orderReward(state)) + ' · 간식 +' + C.ORDER_TREATS);
         fill($('order-bar'), od.left / C.ORDER_SECONDS);
         var enough = state.goods >= od.need;
         $('order-fill').disabled = !enough;
-        setText($('order-fill'), enough ? '단골에게 판다' : '상품이 ' + fmt(od.need - state.goods) + '개 모자라요');
+        setText($('order-fill'), enough ? '거래' : '상품이 ' + fmt(od.need - state.goods) + '개 모자라요');
       }
       setText($('order-note'), '단골 ' + C.regularCount(state) + ' / ' + C.REGULARS.length + ' · 이번 회차 주문 ' + state.ordersRun + '번 · 상품 값 +' + Math.round((C.orderMult(state) - 1) * 100) + '% (최대 ' + Math.round(C.ORDER_BONUS_MAX * 100) + '%)');
       var q2 = qtyFor(C.maxStalls(state), C.COUNT_MAX - state.stalls), sc = C.stallCost(state, q2);
@@ -4811,10 +5517,10 @@
         var cl = null; C.CLIENTS.forEach(function (r) { if (r.id === ct.who) cl = r; });
         var cHave = Math.min(ct.need, C.contractHave(state)), cdone = cHave >= ct.need, cName = C.boxName(ct.level);
         setText($('contract-left'), clock(ct.left));
-        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' ' + cName + ' 상자 ' + ct.need + '개를 찾아요.\n넘기면 물자 +' + fmt(C.contractReward(state)) + (C.contractTreats(state) ? ' · 간식 +' + C.contractTreats(state) : ''));
+        setText($('contract-text'), (cl ? cl.name + (C.hasBatchim(cl.name) ? '이' : '가') : '거래처가') + ' ' + cName + ' 상자 ' + ct.need + '개를 찾아요.\n납품하면 물자 +' + fmt(C.contractReward(state)) + (C.contractTreats(state) ? ' · 간식 +' + C.contractTreats(state) : ''));
         fill($('contract-bar'), cHave / ct.need);
         $('contract-fill').disabled = !cdone;
-        setText($('contract-fill'), cdone ? '넘긴다' : cName + ' 상자 ' + cHave + ' / ' + ct.need + ' · 합치지 말고 모아 두세요');
+        setText($('contract-fill'), cdone ? '납품' : cName + ' 상자 ' + cHave + ' / ' + ct.need + ' · 합치지 말고 모아 두세요');
       }
       $('truck').hidden = true;
       setText($('stock-note'), '');
@@ -5415,6 +6121,10 @@
         if (f.rarity === 'rare' || f.rarity === 'epic') sfx('goal');
       });
       if (z3) { try { if (ev.type === 'box-in') z3.drop(ev.at); else if (ev.type === 'box-merge') { z3.goTo(ev.at); z3.slide(ev.at, ev.from, ev.level - 1); z3.hop(ev.at); } else if (ev.type === 'contract-filled') z3.shipped(fmt(ev.gain)); } catch (e) { /* 그림만 건너뛴다 */ } }
+      if (ev.type === 'patrol') { if (zs1) zs1.searched(ev.tile, true, zsKind(ev.kind), ''); }
+      else if (ev.type === 'sweep') { if (zs1) zs1.done(state.sweeps, true, '+' + fmt(ev.bonus)); }
+      else if (ev.type === 'sold') { if (zs2 && ev.auto) zs2.sold('딸랑! 흥정꾼 +' + fmt(ev.gain), true, ev.peak); }
+      else if (ev.type === 'order-filled') { if (zs2) zs2.filled('흥정꾼이 거래 · +' + fmt(ev.gain), true); }
       switch (ev.type) {
         case 'defended':
           heldLogged = false;
@@ -5886,7 +6596,7 @@
     $('sell').addEventListener('click', function () {
       var r = C.sellGoods(state);
       if (!r.ok) return;
-      popNumber('+' + fmt(r.gain));
+      popNumber('+' + fmt(r.gain)); if (zs2) zs2.sold((r.peak ? '고점! +' : '+') + fmt(r.gain), false, r.peak);
       if (r.streak === C.STREAK_MAX && r.bonus < C.streakMult(state)) toast('연속 호가 최대 · 판매 +' + Math.round(C.STREAK_MAX * C.STREAK_BONUS * 100) + '%');
       var sb = $('sell'); sb.classList.remove('flash'); void sb.offsetWidth; sb.classList.add('flash');
       sfx(r.peak ? 'peak' : 'sell'); render();

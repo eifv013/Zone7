@@ -24,7 +24,7 @@ test('도움말: 효과의 크기(몇 %, 몇 배)는 적지 않고, 시간과 �
   for (const s of H.sections(C)) assert.ok(s.items.length <= 5, s.id + ' 항목이 너무 길다');
   assert.ok(find('night').includes(C.BOSS_EVERY + '번째 밤마다'));
   assert.ok(find('night').includes('하루의 길이는 ' + H.span(C.DAY_SECONDS)));
-  assert.ok(find('map').includes(C.SWEEP_TILES + '칸'));
+  assert.ok(find('map').includes(C.SWEEP_TILES + '채'))      // 5.3.2 칸 격자가 동네 장면으로 바뀌어 '집 20채'로 적는다;
   assert.ok(find('retreat').includes('물자 ' + C.formatNumber(C.RETREAT_MIN)));
   assert.ok(find('away').includes('최대 ' + C.OFFLINE_CAP / 3600 + '시간치'));
   assert.ok(find('signal').includes(C.SIGNAL_WINDOW + '초 안에'));
