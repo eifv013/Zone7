@@ -4140,6 +4140,8 @@
       }
       events(dt, wi);
       A.parts = A.parts.filter(function (p) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.life > 0) px(p.x, p.y, 2, 2, 'rgba(220,210,180,' + (p.life * 1.6).toFixed(2) + ')'); return p.life > 0; });
+      /* 어두워진 화면은 0.5초에 걸쳐 다시 밝아진다. (5.3.2 · 5.3.3에는 이 줄이 빠져 있어서, 동네가 한 번 넘어가면 화면이 영영 검게 남았다.) */
+      if (A.fade > 0) A.fade = Math.max(0, A.fade - dt); if (!(A.fade >= 0) || A.fade > 0.5) A.fade = 0;
       var f = A.next > 0 ? Math.max(0, 1 - A.next / 0.5) : A.fade > 0 ? A.fade / 0.5 : 0; if (f > 0) { g.fillStyle = 'rgba(15,16,20,' + Math.min(1, f).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); }
       base(dt);
     }
