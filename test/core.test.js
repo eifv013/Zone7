@@ -176,12 +176,17 @@ test('보너스: 할인은 곱으로 쌓이고 80% 아래로는 내려가지 않
 
 /* ================= 구역 목표와 다음 구역 ================= */
 
-test('목표: 채우면 달성되고 특전 선택이 걸린다. 고르기 전에는 다음 목표를 달성 처리하지 않는다', () => {
+test('미션(5.5.0): 구역마다 여섯. 홀수째는 체크만, 2 · 4 · 6개째에 특전을 고른다. 고르기 전에는 다음 미션을 달성 처리하지 않는다', () => {
   const s = fresh();
-  s.buildings.scouts = 60; s.buildings.garden = 200;      // 목표 둘을 한꺼번에 채웠다
-  const ev = C.tick(s, 0.1, half).filter(e => e.type === 'goal');
-  assert.equal(ev.length, 1);
-  assert.equal(ev[0].id, 'z1a');
+  assert.equal(C.goals(s, 0).length, C.GOAL_N); assert.equal(C.GOAL_N, 6);
+  C.GOALS.forEach(list => { assert.equal(list.length, 6); assert.equal(new Set(list.map(g => g.id)).size, 6); });
+  s.buildings.scouts = 200;      // 첫째(수색조)만
+  let ev = C.tick(s, 0.1, half).filter(e => e.type === 'goal');
+  assert.equal(ev.length, 1); assert.equal(ev[0].id, 'z1a'); assert.equal(ev[0].perk, false); assert.equal(ev[0].done, 1);
+  assert.equal(s.pendingPerks.length, 0, '홀수째는 특전 없음');
+  s.buildings.garden = 200;      // 시설 합계(둘째)와 텃밭(넷째)이 한꺼번에 찬다
+  ev = C.tick(s, 0.1, half).filter(e => e.type === 'goal');
+  assert.equal(ev.length, 1, '둘째에서 특전이 걸리면 넷째는 기다린다'); assert.equal(ev[0].perk, true); assert.equal(ev[0].done, 2);
   assert.equal(s.pendingPerks.length, C.PERK_CHOICES);
   assert.equal(new Set(s.pendingPerks).size, C.PERK_CHOICES, '겹치지 않는 세 장');
   assert.equal(C.tick(s, 0.1, half).filter(e => e.type === 'goal').length, 0);
@@ -190,10 +195,11 @@ test('목표: 채우면 달성되고 특전 선택이 걸린다. 고르기 전�
   assert.ok(C.choosePerk(s, pick).ok);
   assert.equal(s.perks[pick], 1);
   assert.deepEqual(s.pendingPerks, []);
-  assert.equal(C.tick(s, 0.1, half).filter(e => e.type === 'goal')[0].id, 'z1b');
+  ev = C.tick(s, 0.1, half).filter(e => e.type === 'goal');
+  assert.equal(ev[0].id, 'z1a2'); assert.equal(ev[0].perk, false, '셋째는 체크만');
   const view = C.goals(s, 0);
-  assert.deepEqual(view.map(g => g.done), [true, true, false]);
-  assert.ok(view[0].value <= view[0].need);
+  assert.equal(view.filter(g => g.done).length, 3);
+  assert.ok(view.every(g => g.value <= g.need));
 });
 
 test('다음 구역: 목표를 다 채우고 이번 회차 누적 물자가 문 값에 닿아야 열린다. 가진 물자는 내지 않고, 앞 구역은 그대로 남는다', () => {
@@ -511,14 +517,18 @@ test('철수의 보람: 특성을 찍고 다시 하면 같은 시간에 훨씬 �
 
 /* ================= 이야기 ================= */
 
-test('이야기: 구역에 들어설 때, 목표 둘, 목표 셋에 일지가 열리고 한 번만 뜬다', () => {
+test('이야기: 구역에 들어설 때, 미션 넷, 미션 여섯에 일지가 열리고 한 번만 뜬다', () => {
   const s = fresh();
   const story = (st) => C.tick(st, 0.1, half).filter(e => e.type === 'story').map(e => e.id);
   assert.deepEqual(story(s), ['z1-0']);
   assert.deepEqual(story(s), []);
-  s.goalsDone.z1a = s.goalsDone.z1b = true;
+  s.goalsDone.z1a = s.goalsDone.z1b = s.goalsDone.z1c = true;
+  assert.deepEqual(story(s), [], '셋으로는 아직');
+  s.goalsDone.z1a2 = true;
   assert.deepEqual(story(s), ['z1-1']);
-  s.goalsDone.z1c = true;
+  s.goalsDone.z1b2 = true;
+  assert.deepEqual(story(s), []);
+  s.goalsDone.z1c2 = true;
   assert.deepEqual(story(s), ['z1-2']);
   s.runSeconds += 1e5; s.runEarned = C.ZONES[1].cost; assert.ok(C.openZone(s).ok);
   const ev = C.tick(s, 0.1, half).filter(e => e.type === 'story');
@@ -585,7 +595,7 @@ test('안내: 처음부터 철수까지 지금 할 일을 한 줄로 알려 준�
   s.defenses.wire = 5;
   const g = C.guide(s);
   assert.equal(g.id, 'goal');
-  assert.match(g.text, /1구역 목표/);
+  assert.match(g.text, /1구역 미션/);
   s.antibodies = 5;
   assert.equal(C.guide(s).id, 'trait');
   s.antibodies = 0;
@@ -632,17 +642,17 @@ test('3구역 광산: 광부가 깎는 만큼 물자를 번다(lineRate 는 광�
   assert.ok(s.supplies > before);
 });
 
-test('광산: 목표 셋과 일지, 그리고 철수하면 줄과 깊이가 사라진다', () => {
+test('광산: 미션 여섯과 일지, 그리고 철수하면 줄과 깊이가 사라진다', () => {
   const s = inFactory();
-  assert.equal(C.goals(s, 2).length, 3);
+  assert.equal(C.goals(s, 2).length, 6);
   assert.equal(C.goals(s, 2)[1].text, '손으로 바위 40개 깨기');
   s.defenses.rail = 1e5; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
   let ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'story' && e.id === 'z3-0'), '들어서면 일지가 열린다');
   assert.equal(C.guide(s).id, 'goal');
-  s.boxBest = 30;
+  s.boxBest = 60;
   ev = C.tick(s, 0.1, half);
-  assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z3a'), '지하 30m');
+  assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z3a'), '지하 60m');
   s.machines.miner = 5; C.mineOf(s).depth = 40;
   s.runEarned = C.RETREAT_MIN * 10; s.pendingPerks = [];
   const r = C.retreat(s, 0);
@@ -693,15 +703,15 @@ test('노선: 열차 수가 구간에 닿을 때마다 화물 2배', () => {
   near(C.cargoValue(s), v * 2);
 });
 
-test('노선: 목표와 일지, 그리고 철수하면 열차와 노선이 사라진다', () => {
+test('노선: 미션과 일지, 그리고 철수하면 열차와 노선이 사라진다', () => {
   const s = inStation();
-  assert.equal(C.goals(s, 3).length, 3);
+  assert.equal(C.goals(s, 3).length, 6);
   s.defenses.rail = 1e9; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
   let ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'story' && e.id === 'z4-0'));
-  s.trains = 16; s.expressRuns = 3;
+  s.trains = 30; s.expressRuns = 3;
   ev = C.tick(s, 0.1, half);
-  assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z4a'));
+  assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z4a'), '기관차 30레벨');
   s.pendingPerks = []; s.runEarned = C.RETREAT_MIN * 10; s.routes.grade = 3;
   const r = C.retreat(s, 0);
   assert.equal(r.state.trains, 0);
@@ -767,8 +777,8 @@ test('특전: 아직 열지 않은 구역의 특전은 나오지 않는다', () 
   assert.equal(C.drawPerks(half, fresh()).length, C.PERK_CHOICES);
   assert.equal(new Set(C.drawPerks(half)).size, C.PERK_CHOICES, '상태 없이 부르면 전체에서 뽑는다');
   // 목표를 달성했을 때 실제로 걸리는 선택지도 같다
-  const s = fresh(); s.buildings.scouts = 50; s.defenses.rail = 1e5; s.signalIn = 1e9;
-  C.tick(s, 0.1, half);
+  const s = fresh(); s.buildings.scouts = 200; s.buildings.garden = 200; s.defenses.rail = 1e5; s.signalIn = 1e9;      // 미션 둘째에서 특전이 걸린다
+  C.tick(s, 0.1, half); C.tick(s, 0.1, half);
   assert.equal(s.pendingPerks.length, C.PERK_CHOICES);
   for (const id of s.pendingPerks) assert.ok(!(C.PERKS.find(p => p.id === id).zone > 0), id);
 });
@@ -874,11 +884,11 @@ test('연구 성과는 없앴다(4.0.5): 자리를 비워도, 혈청을 놓아�
 
 test('연구: 목표와 일지, 그리고 철수하면 연구가 사라진다', () => {
   const s = inLab();
-  assert.equal(C.goals(s, 4).length, 3);
+  assert.equal(C.goals(s, 4).length, 6);
   s.defenses.rail = 1e9; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
   let ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'story' && e.id === 'z5-0'));
-  s.curesRun = 20;
+  s.curesRun = 40;
   ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z5c'));
   s.pendingPerks = []; s.runEarned = C.RETREAT_MIN * 10; s.staff = 9; s.points = 77; s.projectsDone = 4;
@@ -1349,6 +1359,7 @@ test('성별: 설정 안 함이면 중립 호칭, 고르면 형·오빠, 누나�
 
 test('간식과 친구 키우기: 밤을 막으면 간식을 얻고, 간식을 주면 레벨이 올라 효과가 커진다', () => {
   const s = inMarket(); s.defenses.rail = 1e6; s.signalIn = 1e9; s.dayClock = C.DAY_SECONDS - 0.05;
+  C.GOALS[0].forEach(g => { s.goalExt[g.id] = C.EXT_MAX; });      // 5.5.0: 방어 수단 미션의 연장 보상(간식)이 끼어들지 않게
   const ev = C.tick(s, 0.1, () => 0.5).find(e => e.type === 'defended');
   assert.ok(ev, '밤을 막았다');
   assert.equal(s.treats, ev.treats); assert.ok(ev.boss ? ev.treats === C.TREAT_BOSS : (ev.treats === 0 || ev.treats === C.TREAT_NIGHT), '보통 밤은 몇 밤에 한 번(4.8.4)');
@@ -1831,7 +1842,8 @@ test('7구역 송신탑: 안테나가 생존자를 모으고, 모인 만큼 전�
   const costs = []; for (let i = 0; i < 3; i++) { costs.push(C.serumCost(s)); assert.ok(C.buySerum(s).ok); }
   assert.ok(costs[0] < costs[1] && costs[1] < costs[2]);
   assert.equal(s.serumStage, 3); assert.equal(C.buySerum(s).reason, 'done'); assert.equal(C.serumCost(s), Infinity);
-  // 목표 셋을 채우면 끝난다(특전 고르기가 끼어들 수 있으므로 골라 가며 돌린다)
+  // 미션 여섯을 채우면 끝난다(특전 고르기가 끼어들 수 있으므로 골라 가며 돌린다). 뒤 셋(습격 · 울타리 밖 무리 · 경비 세우기)은 채운 것으로 둔다
+  s.nightsHeld = 10; s.straysRun = 30; s.sendsRun = 100;
   let ending = null;
   for (let i = 0; i < 12 && !ending; i++) { const ev = C.tick(s, 1, () => 0.5); ending = ev.find((e) => e.type === 'ending') || null; if (s.pendingPerks.length) C.choosePerk(s, s.pendingPerks[0]); }
   assert.ok(ending, '끝이 온다'); assert.equal(s.ended, 1); assert.ok(s.endedAt > 0);
@@ -1998,41 +2010,21 @@ test('흥정꾼의 고점 판매: 켜면 고점 아래에서는 팔지 않고 �
   assert.equal(C.sanitizeState({ version: 2, sellPeak: 'yes' }, 0).sellPeak, false); assert.equal(C.createState(0).sellPeak, false);
 });
 
-test('회차마다 달라지는 목표: 첫 회차는 원래 목표, 철수하면 자리별로 다시 뽑고 앞 회차와 셋이 모두 같지는 않다', () => {
+test('미션 여섯(5.5.0): 회차마다 같고, 옛 저장의 목표 고르기는 읽지 않고, 예전 목표 · 다른 후보의 달성 기록은 이어진다', () => {
   const s = fresh();
-  assert.deepEqual(C.goals(s, 0).map((g) => g.id), ['z1a', 'z1b', 'z1c'], '첫 회차는 원래 목표');
-  // 뽑기: 자리마다 0 또는 1, 앞 회차와 같은 구역은 없다. 후보가 없는 자리(6구역 셋째)와 7구역은 바뀌지 않는다
-  let seed = 3; const rng = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  let prev = {};
-  for (let i = 0; i < 200; i++) {
-    const now = C.rollGoalPick(prev, rng);
-    for (let zi = 0; zi <= 5; zi++) {
-      assert.equal(now[zi].length, 3); now[zi].forEach((v) => assert.ok(v === 0 || v === 1));
-      assert.notEqual(now[zi].join(), (prev[zi] || [0, 0, 0]).join(), '앞 회차와 같다(구역 ' + (zi + 1) + ')');
-    }
-    assert.equal(now[5][2], 0); assert.equal(now[6], undefined);
-    prev = now;
-  }
-  // 뽑힌 목표가 화면과 달성 판정에 쓰인다. 한 회차 안에서 겹치지 않는다
-  s.goalPick = { 0: [1, 0, 1] };
-  assert.deepEqual(C.goals(s, 0).map((g) => g.id), ['z1a2', 'z1b', 'z1c2']);
-  for (let zi = 0; zi < 7; zi++) for (let m = 0; m < 8; m++) {
-    const t = fresh(); t.goalPick = { [zi]: [m & 1, (m >> 1) & 1, (m >> 2) & 1] };
-    const ids = C.goals(t, zi).map((g) => g.id); assert.equal(new Set(ids).size, 3); assert.equal(new Set(C.goals(t, zi).map((g) => g.text)).size, 3);
-  }
-  s.goalsDone.z1a = s.goalsDone.z1c = true; assert.equal(C.goalsComplete(s, 0), false, '원래 목표를 채운 것으로는 안 된다');
-  s.buildings.garden = 40; s.supplies = 1e9; s.buildings.scouts = 200; s.upgrades.maps = 12;
-  for (let i = 0; i < 8; i++) { C.tick(s, 1, () => 0.5); if (s.pendingPerks.length) C.choosePerk(s, s.pendingPerks[0]); }
-  assert.ok(s.goalsDone.z1a2 && s.goalsDone.z1b && s.goalsDone.z1c2); assert.ok(C.goalsComplete(s, 0));
-  // 철수하면 새로 뽑히고, 저장을 거쳐도 남는다. 이상한 값은 버린다
-  s.runEarned = 1e30; s.pendingPerks = [];
-  const next = C.retreat(s, 1, rng).state;
-  assert.notEqual(next.goalPick[0].join(), '1,0,1'); assert.deepEqual(next.goalsDone, {});
-  const round = C.sanitizeState(JSON.parse(JSON.stringify(next)), 0); assert.deepEqual(round.goalPick, next.goalPick);
-  const bad = C.sanitizeState({ version: 2, goalPick: { 0: [5, 'x', null], 5: [1, 1, 1], 6: [1, 1, 1], 9: [1] } }, 0);
-  assert.deepEqual(bad.goalPick[0], [1, 1, 0]); assert.deepEqual(bad.goalPick[5], [1, 1, 0]); assert.equal(bad.goalPick[6], undefined); assert.equal(bad.goalPick[9], undefined);
-  // 다른 후보는 모두 돈과 시간으로 채울 수 있는 것이다(무리와 겨루는 것은 없다)
-  C.GOALS_ALT.forEach((list) => list.forEach((g) => { if (g) assert.ok(!/방어력|막기|방어 성공/.test(g.text), g.text); }));
+  assert.deepEqual(C.goals(s, 0).map((g) => g.id), ['z1a', 'z1b', 'z1c', 'z1a2', 'z1b2', 'z1c2']);
+  const ids = [].concat(...C.GOALS.map((l) => l.map((g) => g.id)));
+  assert.equal(new Set(ids).size, ids.length, 'id 가 겹치지 않는다');
+  C.GOALS.forEach((l) => assert.equal(new Set(l.map((g) => g.text)).size, l.length, '한 구역 안에서 글이 겹치지 않는다'));
+  C.GOALS.forEach((l) => l.forEach((g) => { assert.ok(g.need > 0 && isFinite(g.need), g.id); assert.ok(g.text.length <= 16, '칸에 들어가게 짧게: ' + g.text); }));
+  // 옛 저장: goalPick 은 버리고 미션은 늘 여섯, 다른 후보였던 z1a2 의 달성 기록은 남는다
+  const old = C.sanitizeState({ version: 2, goalPick: { 0: [1, 0, 1] }, goalsDone: { z1a2: true, z1b: true, ghost: true } }, 0);
+  assert.equal(old.goalPick, undefined);
+  assert.deepEqual(C.goals(old, 0).filter((g) => g.done).map((g) => g.id), ['z1b', 'z1a2']);
+  assert.equal(old.goalsDone.ghost, undefined);
+  // 철수하면 달성 기록은 비워진다
+  old.runEarned = 1e30; old.pendingPerks = [];
+  assert.deepEqual(C.retreat(old, 1, Math.random).state.goalsDone, {});
 });
 
 test('4·6·7구역 사건: 그 구역이 벌고 있을 때만 뜨고, 바로 받거나 이번 회차 배수를 쌓는다. 놓쳐도 잃는 것은 없다', () => {
@@ -2236,17 +2228,17 @@ test('구역마다 주문·사건 자동을 끌 수 있다: 꺼 두면 자동 �
 
 test('연장 목표: 채운 목표 자리에 더 큰 목표가 이어서 뜨고, 채우면 간식과 물자를 받는다. 문과 일지는 그대로다', () => {
   const s = fresh();
-  assert.deepEqual(C.extGoals(s, 0), [null, null, null], '원래 목표를 채우기 전에는 없다');
-  s.buildings.scouts = 50; s.supplies = 0;
+  assert.deepEqual(C.extGoals(s, 0), [null, null, null, null, null, null], '원래 미션을 채우기 전에는 없다');
+  s.buildings.scouts = 85; s.supplies = 0;
   for (let i = 0; i < 3; i++) { C.tick(s, 0.1, () => 0.5); if (s.pendingPerks.length) C.choosePerk(s, s.pendingPerks[0]); }
   assert.ok(s.goalsDone.z1a);
   let x = C.extGoals(s, 0)[0];
-  assert.equal(x.tier, 1); assert.equal(x.need, 75); assert.equal(x.text, '잔해 수색조 75곳'); assert.equal(x.value, 50);
+  assert.equal(x.tier, 1); assert.equal(x.need, 128); assert.equal(x.text, '잔해 수색조 128곳'); assert.equal(x.value, 85);
   // 채우면 다음 단계로 넘어가고 보상을 받는다. 특전은 없다
-  s.buildings.scouts = 75; const treats = s.treats, sup = s.supplies;
+  s.buildings.scouts = 128; const treats = s.treats, sup = s.supplies;
   const ev = C.tick(s, 0.1, () => 0.5).filter((e) => e.type === 'goal-ext');
   assert.equal(ev.length, 1); assert.equal(ev[0].tier, 1); assert.equal(s.treats - treats, C.EXT_TREATS); assert.ok(s.supplies > sup); assert.equal(s.pendingPerks.length, 0);
-  x = C.extGoals(s, 0)[0]; assert.equal(x.tier, 2); assert.equal(x.need, 100);
+  x = C.extGoals(s, 0)[0]; assert.equal(x.tier, 2); assert.equal(x.need, 170);
   // 크기: 수는 절반씩 더하고, 물자 누적은 10배씩. 글의 마지막 수를 바꿔 적는다
   assert.equal(C.extNeed({ need: 50 }, 2), 100); assert.equal(C.extNeed({ need: 3 }, 1), 5); assert.equal(C.extNeed({ need: 1e11 }, 2), 1e13);
   assert.equal(C.extNeed({ need: 120, unit: 'time' }, 1), 180);
@@ -2256,14 +2248,14 @@ test('연장 목표: 채운 목표 자리에 더 큰 목표가 이어서 뜨고,
   assert.equal(C.extText({ text: '1구역 개조를 모두 합쳐 12번', need: 12 }, 18), '1구역 개조를 모두 합쳐 18번');
   // 끝까지 채우면 그 자리는 더 없다. 7구역은 처음부터 없다
   s.goalExt.z1a = C.EXT_MAX; assert.equal(C.extGoals(s, 0)[0], null);
-  const last = inLab(); last.zone = 6; C.GOALS[6].forEach((g) => { last.goalsDone[g.id] = true; }); assert.deepEqual(C.extGoals(last, 6), [null, null, null]);
+  const last = inLab(); last.zone = 6; C.GOALS[6].forEach((g) => { last.goalsDone[g.id] = true; }); assert.deepEqual(C.extGoals(last, 6), [null, null, null, null, null, null]);
   // 문은 원래 목표로만 열린다. 저장과 철수
   assert.equal(C.goalsComplete(s, 0), false);
   const round = C.sanitizeState(JSON.parse(JSON.stringify(s)), 0); assert.deepEqual(round.goalExt, s.goalExt);
   assert.deepEqual(C.sanitizeState({ version: 2, goalsDone: { z1a: true }, goalExt: { z1a: 99, z1b: 3, nope: 2 } }, 0).goalExt, { z1a: C.EXT_MAX });
   s.runEarned = 1e30; s.pendingPerks = []; assert.deepEqual(C.retreat(s, 1).state.goalExt, {});
   // 모든 목표의 글이 수를 바꿔 적을 수 있는 모양이다(괄호로 덧붙이는 일이 없다)
-  C.GOALS.slice(0, 6).concat(C.GOALS_ALT.slice(0, 6)).forEach((list) => list.forEach((g) => { if (g) { const t = C.extText(g, C.extNeed(g, 1)); assert.ok(!/\($/.test(t) && !t.endsWith(')'), g.text + ' → ' + t); assert.notEqual(t, g.text, g.text); } }));
+  C.GOALS.slice(0, 6).forEach((list) => list.forEach((g) => { if (g) { const t = C.extText(g, C.extNeed(g, 1)); assert.ok(!/\($/.test(t) && !t.endsWith(')'), g.text + ' → ' + t); assert.notEqual(t, g.text, g.text); } }));
 });
 
 test('선제 공격·반격을 쓸 수 있게 된 순간을 알리고, 급한 밤에는 다음 할 일로 안내한다', () => {
@@ -2385,13 +2377,17 @@ test('1.7.0 도전의 고유 보상: 훈장이 있으면 붙고, 여러 번 성�
   const r0 = C.createState(0), r1 = has('oneshot'); r0.runEarned = r1.runEarned = 1e30; assert.ok(C.antibodiesOnRetreat(r1) > C.antibodiesOnRetreat(r0));
 });
 
-test('1.7.2 맨몸 도전 중에는 개조를 세는 목표가 원래 목표로 돌아간다(채울 방법이 없어 막히지 않게)', () => {
-  const s = C.createState(0); s.bestZone = 6; s.goalPick = { 0: [1, 1, 1], 1: [1, 1, 1] };
-  assert.ok(C.activeGoals(s, 0).some(g => /개조/.test(g.text)), '평소에는 개조 목표가 뽑힐 수 있다');
+test('1.7.2 · 5.5.0 맨몸 도전 중에는 개조를 세는 미션을 채운 것으로 친다(채울 방법이 없어 막히지 않게)', () => {
+  const s = C.createState(0); s.bestZone = 6;
+  const ups = C.goals(s, 0).find(g => /개조/.test(g.text));
+  assert.ok(ups && !ups.done && ups.value === 0, '평소에는 개조를 사야 찬다');
   assert.ok(C.startChallenge(s, 'frugal').ok);
-  for (const zi of [0, 1]) assert.ok(!C.activeGoals(s, zi).some(g => /개조/.test(g.text)), (zi + 1) + '구역');
-  assert.equal(C.activeGoals(s, 0)[0].id, 'z1a2', '개조와 상관없는 바뀐 목표는 그대로');
-  C.quitChallenge(s); assert.ok(C.activeGoals(s, 0).some(g => /개조/.test(g.text)), '포기하면 돌아온다');
+  for (const zi of [0, 1, 2, 3, 4]) { const g = C.goals(s, zi).find(x => /개조/.test(x.text)); assert.equal(g.value, g.need, (zi + 1) + '구역'); }
+  assert.equal(C.goals(s, 5).find(x => x.id === 'z6b2').value, 7, '검문대(개조) 미션도');
+  C.tick(s, 0.1, half);
+  assert.ok(s.goalsDone.z1c2, '틱에서 달성 처리된다');
+  assert.equal(C.goals(s, 0).find(x => x.id === 'z1a').value, 0, '개조와 상관없는 미션은 그대로');
+  C.quitChallenge(s); assert.equal(C.goals(s, 1).find(x => x.id === 'z2c2').value, 0, '포기하면 돌아온다');
 });
 
 test('1.7.4: 훈장은 생산 +2%, 손수 도전 중에는 자리 비움 효율이 절반', () => {
@@ -2627,9 +2623,11 @@ test('엄마의 수첩: 끝을 본 뒤의 회차에서 구역을 따라 한 쪽�
   const moms = (st) => C.tick(st, 0.1, half).filter(e => e.type === 'story' && e.mom).map(e => e.id);
   assert.deepEqual(moms(s), ['mom-0'], '새 회차가 시작되면 여는 글');
   assert.deepEqual(moms(s), [], '같은 쪽은 다시 열리지 않는다');
-  // 1구역: 목표 둘을 채우면 첫 쪽, 모두 채우면 둘째 쪽
-  const g0 = C.activeGoals(s, 0);
-  s.goalsDone[g0[0].id] = true; s.goalsDone[g0[1].id] = true;
+  // 1구역: 미션 넷을 채우면 첫 쪽, 모두 채우면 둘째 쪽
+  const g0 = C.goals(s, 0);
+  g0.slice(0, 3).forEach(g => { s.goalsDone[g.id] = true; });
+  assert.ok(!moms(s).includes('mom-1'), '셋으로는 아직');
+  s.goalsDone[g0[3].id] = true;
   assert.ok(moms(s).includes('mom-1'));
   g0.forEach(g => { s.goalsDone[g.id] = true; });
   assert.ok(moms(s).includes('mom-2'));
@@ -3110,7 +3108,7 @@ test('4구역: 긴 시간 · 이상한 값 · 저장 · 자리 비움 · 철수 
   near(away.railEarned - before, rate * 1000 * C.OFFLINE_RATE, '자리를 비운 동안은 역무원이 보낸 것으로 친다'); assert.equal(away.plat.t, 0);
   assert.equal(C.greenSignal(onPlatform()).reason, 'gone');
   const g = onPlatform(); g.upgrades.longplat = 1; g.upgrades.fence = 5; C.stepRail(g, C.CAR_SECONDS * 10, [], calm); assert.equal(C.trainInfo(g).cars, 10); C.sendTrain(g); assert.equal(g.longRuns, 1); assert.equal(g.expressRuns, 0);
-  assert.equal(C.goals(g, 3)[1].text, '10칸 이상 열차 3번 보내기');
+  assert.equal(C.goals(g, 3)[1].text, '10칸 이상 열차 18번');
   away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(next.trainsSent, 0); assert.equal(next.longRuns, 0); assert.equal(next.plat.pos, 1);
 });
 
@@ -3248,7 +3246,7 @@ test('5구역 줄 · 연구 성과 · 저장 · 옛 저장 옮기기 · 자리 �
   // 자리 비움: 조교와 간호사가 다 있으면 초당 그대로
   const away = onWard(4); away.defenses.rail = 1e5; away.upgrades.autolab = 1; away.upgrades.nurse = 1; const rate = C.labRate(away), sup = away.supplies; C.applyOffline(away, 1000); assert.ok(away.supplies - sup >= rate * 1000 * C.OFFLINE_RATE * 0.999);
   // 목표 · 철수
-  assert.equal(C.goals(s, 4)[2].text, '사람 20명 되돌리기');
+  assert.equal(C.goals(s, 4)[2].text, '사람 40명 되돌리기');
   away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(next.racks, 0); assert.equal(next.curesRun, 0); assert.equal(next.staff, 0);
 });
 

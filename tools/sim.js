@@ -8,8 +8,22 @@
  *           판을 30분 넘게 했고, 얻을 항체가 지금까지 얻은 총량의 절반 이상이며, 다음 살 것까지 5분(STUCK=초) 넘게 걸릴 만큼 막혔으면 철수한다. 항체는 정해진 순서로 찍는다.
  */
 const C = require('../src/core.js');
+if (process.env.EASYZ) process.env.EASYZ.split(',').forEach(z => C.GOALS[+z - 1].forEach(g => { g.need = Math.max(1, Math.ceil(g.need * 0.01)); }));      // 실험: 그 구역 미션을 아주 작게
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith(k + '=')); return a ? +a.split('=')[1] : d; };
 
+
+// 미션 크기 재기(DUMP=1): 구역 문이 처음 열리는 순간 이번 회차의 기록 값들. 미션의 크기를 이 값의 70~80%로 잡는다
+function dumpVals(s) {
+  const sum = o => Object.values(o || {}).reduce((a, b) => a + (+b || 0), 0), M = s.mine || {};
+  const zu = z => C.UPGRADES.filter(u => u.zone === z).reduce((a, u) => a + (s.upgrades[u.id] || 0), 0);
+  return { blds: C.totalBuildings(s), scouts: (s.buildings || {}).scouts, garden: (s.buildings || {}).garden, sweeps: s.sweeps, defs: sum(s.defenses), waves: s.wavesCleared, signals: s.signalsAnswered, zu0: zu(0),
+    stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned, orders: s.ordersRun, hands: sum(s.hands), zu1: zu(1),
+    depth: M.depth, merges: s.mergesRun, sends: s.contractsRun, mkills: M.kills, line: s.lineEarned, miner: (s.machines || {}).miner, zu2: zu(2),
+    trains: s.trains, long: s.longRuns, sent: s.trainsSent, express: s.expressRuns, rail: s.railEarned, salv: s.salvagesRun, grade: (s.routes || {}).grade, zu3: zu(3),
+    staff: s.staff, doses: s.dosesAll, cures: s.curesRun, stops: s.stopsRun, turned: s.turnedRun, recs: s.recordsRun, projects: s.projectsDone, zu4: zu(4),
+    posts: s.posts, hand: s.handKills, big: s.bigKills, bridge: s.bridgeKills, pass: s.passersRun, guardE: s.guardEarned, safe: s.safeNights, sbest: s.streakBest, zev: s.zevRun, zu5: zu(5),
+    ant: s.antennas, surv: s.survivors, serum: s.serumStage, nights: s.nightsHeld, sends7: s.sendsRun, strays: s.straysRun, nlv: s.nightLvBest, settle: sum(s.settleLv), zu6: zu(6), run: Math.round(s.runSeconds) };
+}
 function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck = 300, share = 0.5, dt = 1 } = {}) {
   // dt: 한 걸음에 흐르는 초(1.2.2). 엔딩까지 재려면 수백 시간을 돌려야 하므로 3~5초로 성기게 돌릴 수 있다
   let z = seed >>> 0; const rng = () => { z = (z * 1664525 + 1013904223) >>> 0; return z / 4294967296; };
@@ -80,6 +94,13 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       if (!(s.tune.cool > 0) && C.tuneHit(s)) C.tuneNow(s, rng);
     }
     if (s.zone >= 6 && C.serumCost(s) <= s.supplies * 0.5) C.buySerum(s);      // 7구역: 혈청은 가진 물자의 절반으로 살 수 있을 때 산다
+    // 미션 크기 재기(DUMP=1): 구역 문이 처음 열리는 순간 이번 회차의 기록 값들을 찍는다
+    // 5.5.0 미션 재기(MISS=1): 구역마다 '미션 여섯이 다 찬 때'와 '다음 구역을 여는 값에 닿은 때'(이번 회차 시간, 분)
+    if (process.env.MISS) { const nzz = C.nextZone(s); s._mk = s._mk || {}; const key = s.retreats + ':' + s.zone; const k = s._mk[key] = s._mk[key] || {};
+      if (k.g === undefined && C.goalsComplete(s, s.zone)) k.g = s.runSeconds / 60;
+      if (k.c === undefined && nzz && nzz.enough) { k.c = s.runSeconds / 60; if (s.retreats >= 3) console.log('MISSV ' + (s.zone + 1) + ' r' + s.retreats + ' ' + JSON.stringify(dumpVals(s))); }
+      if (!k.told && k.g !== undefined && k.c !== undefined) { k.told = true; console.log('MISS ' + (s.zone + 1) + '구역 (철수 ' + s.retreats + '번 뒤) 미션 다 참 ' + k.g.toFixed(0) + '분 · 여는 값 닿음 ' + k.c.toFixed(0) + '분'); } }
+    if (process.env.DUMP) for (let zi = 1; zi <= s.zone; zi++) if (!marks.some(m => m.enter === zi)) console.log('DUMP ' + zi + ' ' + JSON.stringify(dumpVals(s)));
     for (let zi = 1; zi <= s.zone; zi++) if (!marks.some(m => m.enter === zi)) marks.push({ enter: zi, day: day + 1, hours: active / 3600, retreats: s.retreats, pps: C.productionPerSec(s) });
     for (let k = 0; k < taps * dt; k++) C.scavenge(s);
     if (s.clicks < 15) C.scavenge(s);
@@ -150,10 +171,12 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const gain = C.antibodiesOnRetreat(s);
     // 철수: 판을 30분 넘게 했고, 얻을 항체가 지금까지의 절반 이상이며, 다음 살 것까지 stuck 초 넘게 걸릴 만큼 막혔을 때
     const isStuck = cheapest - s.supplies > C.productionPerSec(s) * stuck;
-    const nz = C.nextZone(s), wall = nz && nz.ready && (nz.cost - nz.have) > C.incomePerSec(s) * 6 * 3600;      // 문 값의 벽: 목표는 다 채웠는데 문 값이 한참 멀다
+    const nz = C.nextZone(s), wall = nz && (nz.ready || process.env.WALLANY) && (nz.cost - nz.have) > C.incomePerSec(s) * 6 * 3600;      // WALLANY: 미션과 상관없이 다음 구역을 여는 값이 한참 멀면 철수(5.5.0 비교용)      // 문 값의 벽: 목표는 다 채웠는데 문 값이 한참 멀다
     const endWall = !process.env.NOENDWALL && !nz && s.zone >= 6 && !s.endedRun && isFinite(C.serumCost(s)) && (C.serumCost(s) - s.supplies) > C.incomePerSec(s) * 6 * 3600;
     if (process.env.CHAL && s.challenge && (s.challenge.done || s.challenge.failed)) { console.log(`도전 ${process.env.CHAL}: ${s.challenge.done ? '성공' : '실패'} · 회차 ${(s.runSeconds / 3600).toFixed(1)}시간(접속 ${(active / 3600).toFixed(1)}시간) · ${s.zone + 1}구역 · 뚫림 ${s.breaches}`); process.exit(0); }
-    if (!process.env.NORETREAT && !C.activeChallenge(s) && C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', depth: s.zone === 2 ? C.mineOf(s).depth : undefined, mlv: s.zone === 2 ? [s.machines.pick, s.machines.miner, s.machines.minecart].join('/') : undefined, goals: C.goals(s, s.zone).filter(g => !g.done).map(g => g.id + ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need)).join(' ') }); s = C.retreat(s, 0, rng).state; spendTraits(); }
+    // POLICY=half: 흔한 방치형 습관(얻을 항체가 지금까지의 절반을 넘으면 철수)도 같이 본다. 두 버전을 같은 습관으로 견줄 때 쓴다
+    const halfRule = process.env.POLICY === 'half' && gain >= Math.max(3, s.antibodyTotal * 0.5) && !(nz && nz.ready && nz.enough);
+    if (!process.env.NORETREAT && !C.activeChallenge(s) && C.canRetreat(s) && s.runSeconds > 1800 && (halfRule || (isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', depth: s.zone === 2 ? C.mineOf(s).depth : undefined, mlv: s.zone === 2 ? [s.machines.pick, s.machines.miner, s.machines.minecart].join('/') : undefined, goals: C.goals(s, s.zone).filter(g => !g.done).map(g => g.id + ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need)).join(' ') }); s = C.retreat(s, 0, rng).state; spendTraits(); }
   };
   if (process.env.CONTRACT) C.buyContract(s);
   const gap = Math.max(0, 16 * 3600 / sessions - minutes * 60);
@@ -170,6 +193,7 @@ if (require.main === module || process.env.SIM_FORCE) {
   const r = run({ sessions: arg('SESSIONS', 4), minutes: arg('MINUTES', 15), days: arg('DAYS', 30), taps: arg('TAPS', 0), seed: arg('SEED', 1), stuck: arg('STUCK', 300), share: arg('SHARE', 0.5), dt: arg('DT', 1) });
   r.marks.forEach(m => console.log(m.end ? `엔딩: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, 철수 ${m.retreats}번` : m.retreat ? `  철수: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, ${m.zone + 1}구역에서 항체 +${m.gain}` : `${m.gate ? '다음 구역(준비 중)의 문 앞' : (m.enter + 1) + '구역 첫 도착'}: ${m.day}일째, 접속 ${m.hours.toFixed(1)}시간, 철수 ${m.retreats}번` + (m.pps ? `, 그때 초당 ${C.formatNumber(m.pps)}` : '')));
   console.log(`간식 ${r.state.treats || 0}, 뽑기권 ${r.state.tickets || 0}, 친구표 ${r.state.petTix || 0} (놀이에서 얻은 것만. 출석 · 임무 · 광고 · 수첩은 빠짐)`);      // 5.2.7 간식 수입 재기
+  if (process.env.DUMP) console.log("DUMP 7 " + JSON.stringify(dumpVals(r.state)));
   if (!r.marks.some(m => m.end)) console.log(`${r.day}일 동안 엔딩에 닿지 못했다. 지금 ${C.zoneLabel(r.state)}, 철수 ${r.state.retreats}번, 항체 ${r.state.antibodyTotal}, 이번 판 누적 ${C.formatNumber(r.state.runEarned)}`);
 }
 module.exports = { run };

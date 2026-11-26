@@ -1627,13 +1627,15 @@
       var gi = 0; TRAIT_GROUPS.forEach(function (gp, k) { if (gp.ids.indexOf(t.id) >= 0) gi = k; });
       r.grp = gi; rows.traits[t.id] = r; rows.traitGrp[gi].box.appendChild(r.btn);
     });
-    // 구역 목표 세 줄
-    for (var g = 0; g < 3; g++) {
-      var li = el('li'), text = el('span'), num = el('span', 'num'), track = el('div', 'track'), bar = el('i');
-      track.appendChild(bar); li.appendChild(text); li.appendChild(num); li.appendChild(track);
-      rows.goals.push({ li: li, text: text, num: num, bar: bar });
+    // 5.5.0 구역 미션 여섯 칸(동그라미 · 글 · 수 · 바닥 막대)과 진행 막대의 특전 자리(2 · 4 · 6개째)
+    for (var g = 0; g < C.GOAL_N; g++) {
+      var li = el('li'), box = el('span', 'gm-box'), text = el('span', 'gm-t'), num = el('span', 'num'), track = el('div', 'track'), bar = el('i');
+      track.appendChild(bar); li.appendChild(box); li.appendChild(text); li.appendChild(num); li.appendChild(track);
+      rows.goals.push({ li: li, text: text, num: num, bar: bar, was: null });
       $('goals').appendChild(li);
     }
+    rows.gcMarks = [];
+    for (var gk = 2; gk <= C.GOAL_N; gk += 2) { var mk = el('b', 'gc-mark'); mk.appendChild(el('span', '', '특전')); mk.style.left = (gk / C.GOAL_N * 100) + '%'; $('gc-bar').appendChild(mk); rows.gcMarks.push({ el: mk, at: gk }); }
     C.ZONES.forEach(function (z) { var li = el('li', '', String(z.no)); li.title = z.no + '구역 ' + z.name; $('route').appendChild(li); });
     setText($('signal-gain'), '물자, 간식, 생산 ' + C.BUFF_MULT + '배 가운데 하나');
     buildNotes(); buildHelp(); buildStats();
@@ -5298,7 +5300,7 @@
     var box = $('perk-list');
     box.textContent = '';
     if (!state.pendingPerks.length) { $('perk').hidden = true; return; }
-    setText($('perk-lead'), (state.perkFrom === 'boss' ? '변이체를 막아냈어요.' : '구역 목표를 달성했어요.') + ' 하나를 골라 주세요. 이번 회차가 끝날 때까지 남아요.');
+    setText($('perk-lead'), (state.perkFrom === 'boss' ? '변이체를 막아냈어요.' : '구역 미션을 채웠어요.') + ' 하나를 골라 주세요. 이번 회차가 끝날 때까지 남아요.');
     state.pendingPerks.forEach(function (id) {
       var def = null;
       C.PERKS.forEach(function (k) { if (k.id === id) def = k; });
@@ -5587,24 +5589,40 @@
     // 목표와 다음 구역
     if (zi >= 0) {
       var gs = open ? C.goals(state, zi) : [], xs = open ? C.extGoals(state, zi) : [];
+      // 5.5.0 문 열기 카드: 머리(구역 그림 · 이름 · 채운 %) · 진행 막대 · 미션 여섯
+      var nDone = gs.filter(function (q) { return q.done; }).length, lastZone = zi >= C.ZONES.length - 1;
+      $('gate-card').hidden = !open;
+      if (open) {
+        if (rows.gcIcon !== zi) { rows.gcIcon = zi; var gi0 = $('gc-icon'); while (gi0.firstChild) gi0.removeChild(gi0.firstChild); zmapIcon(gi0, zi, 0, 0); }
+        setText($('gc-kick'), (zi + 1) + '구역 ' + C.ZONES[zi].name + ' · 미션');
+        setText($('gc-title'), lastZone ? '마지막 방송' : (zi + 2) + '구역 문 열기');
+        setText($('gc-pct'), Math.round(nDone / Math.max(1, gs.length) * 100) + '%');
+        $('gc-fill').style.width = (nDone / Math.max(1, gs.length) * 100).toFixed(1) + '%';
+        rows.gcMarks.forEach(function (m) { m.el.classList.toggle('got', nDone >= m.at); });
+        $('gate-card').classList.toggle('all', nDone >= gs.length && gs.length > 0);
+      }
       rows.goals.forEach(function (r, i) {
         var g = gs[i];
         r.li.hidden = !g;
         if (!g) return;
-        // 연장 목표: 원래 목표를 채운 자리에 더 큰 목표가 이어서 뜬다. 채우면 간식과 물자를 받는다
+        // 방금 채운 칸은 한 번 톡 튄다(같은 구역을 보는 동안만: 탭을 바꿔 들어올 때는 튀지 않는다)
+        var key = zi + ':' + g.id;
+        var just = g.done && r.was === key + ':0';
+        r.was = key + ':' + (g.done ? 1 : 0);
+        // 연장: 채운 칸은 그대로 줄을 긋고, 아랫줄에 다음 크기(연장)를 작게 적는다. 채우면 간식과 물자를 받는다
         var x = xs[i];
         if (x) {
-          r.li.className = 'ext';
-          setText(r.text, '◆ 연장 ' + x.tier + ' · ' + x.text);
-          setText(r.num, x.unit === 'time' ? clock(x.value) + ' / ' + clock(x.need) : fmt(x.value) + ' / ' + fmt(x.need));
+          r.li.className = 'done ext' + (just ? ' just' : '');
+          setText(r.text, g.text);
+          setText(r.num, '연장 ' + (x.unit === 'time' ? clock(x.value) + ' / ' + clock(x.need) : fmt(x.value) + ' / ' + fmt(x.need)));
           r.bar.style.width = Math.min(100, x.value / x.need * 100).toFixed(1) + '%';
           return;
         }
-        r.li.className = g.done ? 'done' : '';
-        setText(r.text, (g.done ? '■ ' : '□ ') + g.text);
+        r.li.className = (g.done ? 'done' : '') + (just ? ' just' : '');
+        setText(r.text, g.text);
         // 시간으로 재는 목표(정속 가동 등)는 분:초로 보여 준다
-        setText(r.num, g.done ? '달성' : g.unit === 'time' ? clock(g.value) + ' / ' + clock(g.need) : fmt(g.value) + ' / ' + fmt(g.need));
-        r.bar.style.width = (g.done ? 100 : Math.min(100, g.value / g.need * 100)).toFixed(1) + '%';
+        setText(r.num, g.done ? '완료' : g.unit === 'time' ? clock(g.value) + ' / ' + clock(g.need) : fmt(g.value) + ' / ' + fmt(g.need));
+        r.bar.style.width = (g.done ? 0 : Math.min(100, g.value / g.need * 100)).toFixed(1) + '%';
       });
       var n = C.nextZone(state), ob = $('open-zone'), showOpen = !!n && (zi === state.zone || zi === n.index) && !(n.soon && state.gate);
       // 7구역: 다음 문은 없지만 정찰(송신 준비) 시간이 남았으면 같은 자리에 알려 준다(1.6.2)
@@ -5620,14 +5638,14 @@
         ob.disabled = !n.ready || !n.enough || n.wait > 0;
         // 두 줄로 나눠 적는다: 윗줄은 할 일, 아랫줄은 모은 물자 / 필요한 물자(막대와 함께)
         if (!ob.firstChild) { ob.appendChild(el('span', 'oz-main')); ob.appendChild(el('span', 'oz-sub num')); var ozb = el('span', 'oz-bar'); ozb.appendChild(el('i')); ob.appendChild(ozb); }
-        setText(ob.children[0], n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다' : (state.zone + 1) + '구역 목표를 모두 채우면 ' + n.zone.no + '구역이 열려요');
+        setText(ob.children[0], n.ready ? n.zone.no + '구역 ' + n.zone.name + '의 문을 연다' : '미션 ' + (gs.length - nDone) + '개 남았어요');
         // 문 값은 이번 회차 누적 물자로 잰다(1.4.0). 가진 물자는 줄지 않는다
         setText(ob.children[1], '이번 회차 누적 ' + fmt(Math.min(n.have, n.cost)) + ' / ' + fmt(n.cost) + (n.wait > 0 ? ' · 길 정찰 ' + clock(n.wait) : ''));
         if (n.ready && n.enough && n.wait > 0) setText(ob.children[0], n.zone.no + '구역 가는 길을 정찰하고 있어요');
         ob.children[2].firstChild.style.width = (n.cost > 0 ? Math.min(100, n.have / n.cost * 100) : 100).toFixed(1) + '%';
       }
       var soonText = !open && soon ? (state.gate ? C.ZONES[zi].name + '의 문 앞까지 왔어요. 이 구역은 다음 버전에서 열려요. 현재는 철수해서 항체 샘플을 모아 두면 돼요.' : '이 구역은 다음 버전에서 열려요. 현재는 문 앞까지 갈 수 있어요.')
-        : !open ? '아직 열지 않은 구역이에요. 앞 구역의 목표를 모두 채우면 문을 열 수 있어요.' : '';
+        : !open ? '아직 열지 않은 구역이에요. 앞 구역의 미션을 모두 채우면 문을 열 수 있어요.' : '';
       $('soon').hidden = !soonText;
       setText($('soon'), soonText);
     } else $('soon').hidden = true;
@@ -6367,12 +6385,13 @@
           if (fxShow) fxShow('도전 실패', ev.name, -1, -1, -1);
           break;
         case 'goal-ext':
-          log((ev.zone + 1) + '구역 연장 목표 달성: ' + ev.text + '. 물자 ' + fmt(ev.gain) + ', 간식 ' + ev.treats + '개.', 'good');
-          toast('연장 목표 · ' + ev.text + ' · 간식 +' + ev.treats); sfx('upgrade');
+          log((ev.zone + 1) + '구역 연장 미션 완료: ' + ev.text + '. 물자 ' + fmt(ev.gain) + ', 간식 ' + ev.treats + '개.', 'good');
+          toast('연장 미션 · ' + ev.text + ' · 간식 +' + ev.treats); sfx('upgrade');
           break;
         case 'goal':
-          log((ev.zone + 1) + '구역 목표 달성: ' + ev.text + '. 특전을 하나 고른다.', 'good');
-          toast('목표 달성 · ' + ev.text); sfx('goal');
+          // 5.5.0 미션: 2 · 4 · 6개째에만 특전을 고른다. 홀수째는 칸에 체크만 하고 지나간다
+          log((ev.zone + 1) + '구역 미션 ' + (ev.done || '') + '/' + (ev.of || C.GOAL_N) + ' 완료: ' + ev.text + '.' + (ev.perk ? ' 특전을 하나 고른다.' : ''), 'good');
+          toast('미션 완료 · ' + ev.text + (ev.of ? ' (' + ev.done + '/' + ev.of + ')' : '')); sfx('goal');
           break;
         case 'surge': if (tab === 'z2' && pane === 'play') sfx('surge'); break;      // 알아서 들어간 전력: 3구역을 보고 있을 때만 소리를 낸다
         case 'settle-done':      // 4.2.0: 이장이 다 놓았다(손으로 놓은 것은 누른 자리에서 바로 알린다). 팝업은 띄우지 않는다
@@ -6833,7 +6852,6 @@
       moveFx('철수', (state.retreats + 1) + '회차 · 다시 1구역', -1, wasZone, 0);
       tab = 'z0'; perkShown = '';
       log('거점을 버리고 철수했다. 항체 샘플 ' + fmt(r.gained) + '개를 챙겼다. 다시 1구역이다.', 'good');
-      log('이번 회차는 구역 목표가 달라졌다.', '');      // 1.4.2: 철수할 때마다 목표를 다시 뽑는다
       notice('항체 샘플 ' + fmt(r.gained) + '개를 얻었어요. 특성 화면에서 영구 특성을 찍어 보세요.');
       sfx('relocate'); Store.save(); Cloud.flush(); render();
     }

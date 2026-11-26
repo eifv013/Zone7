@@ -39,5 +39,25 @@ function scan(root) {
   t.split('\n').forEach(function (l, i) { var txt = l.replace(/<[^>]*>/g, ' '); BANNED.forEach(function (b) { if (!b.from && b.re.test(txt)) hits.push('src/template.html:' + (i + 1) + ' ' + b.why + ' — ' + txt.trim().slice(0, 80)); }); });
   return hits;
 }
-module.exports = { scan: scan, BANNED: BANNED };
-if (require.main === module) { var h = scan(path.join(__dirname, '..')); console.log(h.join('\n') || '깨끗하다'); process.exit(h.length ? 1 : 0); }
+/**
+ * 시안 · 따로 만든 HTML 파일 검사(5.4.2 뒤): 게임 소스 밖의 파일(시안 등)도 같은 금지어로 본다.
+ *   왜: 시안은 이 검사를 거치지 않아 "문 값"이 그대로 올라간 일이 있었다. 시안을 올리기 전에 반드시 이것을 돌린다.
+ *   화면 글 = 태그를 지운 본문 + 스크립트 속 따옴표 글. 주석은 버린다.
+ */
+function scanFile(file) {
+  var hits = [], src = fs.readFileSync(file, 'utf8');
+  src = src.replace(/<!--[\s\S]*?-->/g, '').replace(/<style[\s\S]*?<\/style>/g, '');
+  var scripts = [];
+  src = src.replace(/<script[\s\S]*?<\/script>/g, function (m) { scripts.push(m); return ''; });
+  var texts = [];
+  src.split('\n').forEach(function (l) { texts.push(l.replace(/<[^>]*>/g, ' ')); });
+  scripts.join('\n').split('\n').forEach(function (l) { var t = l.trim(); if (/^(\/\/|\*|\/\*)/.test(t)) return; t = t.replace(/\s\/\/ .*$/, '').replace(/\/\*.*?\*\//g, ''); texts.push(quoted(t).join(' ')); });
+  texts.forEach(function (t) { BANNED.forEach(function (b) { var m = t.match(b.re); if (m) hits.push(path.basename(file) + ': ' + b.why + ' — ' + t.trim().slice(0, 80)); }); });
+  return hits;
+}
+module.exports = { scan: scan, scanFile: scanFile, BANNED: BANNED };
+if (require.main === module) {
+  // 인자가 있으면 그 파일들(시안 등)만, 없으면 게임 소스 전체
+  var files = process.argv.slice(2), h = files.length ? [].concat.apply([], files.map(scanFile)) : scan(path.join(__dirname, '..'));
+  console.log(h.join('\n') || '깨끗하다'); process.exit(h.length ? 1 : 0);
+}

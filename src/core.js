@@ -653,32 +653,62 @@
   ];
 
   /*
-   * 구역 목표: 구역마다 셋. 달성할 때마다 특전을 하나 고르고, 셋을 모두 채워야 다음 구역의 문을 열 수 있다.
-   *   value(state) 가 need 이상이면 달성. text 는 화면에 보일 문장.
+   * 구역 미션(5.5.0): 구역마다 여섯. 여섯을 모두 채우고 이번 회차 누적 물자가 다음 구역을 여는 값에 닿아야 문이 열린다.
+   *   특전은 2 · 4 · 6개째를 채울 때 하나씩 고른다(구역마다 세 번: 예전 목표 셋일 때와 횟수가 같아 강해지는 속도는 그대로다).
+   *   value(state) 가 need 이상이면 달성. text 는 화면에 보일 문장(미션 칸이 좁으니 짧게).
+   *   크기: 시뮬레이션(tools/sim.js DUMP=1)에서 그 구역의 문이 처음 열리는 순간 이번 회차에 쌓여 있던 기록의 70~80%.
+   *     다음 구역을 여는 값이 모일 무렵 미션도 끝나게 한 것이다(예전 목표 셋은 그보다 몇 배에서 수십 배 작아서 금방 끝났다).
+   *     물자 누적 미션만은 다음 구역을 여는 값 근처로 잡았다(시뮬레이션의 누적은 자리 비움 동안 문 값을 한참 넘겨 있어서).
+   *     철수 뒤 다시 오르는 회차에서도 막지 않게, 시간이 지나야만 차는 것(동네 수색 · 고점 판매 · 단골 주문 · 큰 광차 등)은
+   *     다시 오르는 회차의 문 앞 기록(MISS=1 의 MISSV)에 맞춰 더 작게 잡았다. 밤 습격 횟수처럼 기다리기만 하면 되는 것은 넣지 않는다.
+   *   앞 셋은 예전 목표, 뒤 셋은 회차마다 바뀌던 다른 후보(GOALS_ALT, 5.5.0에서 없앴다)였던 것이라 id 가 그대로다: 옛 저장의 달성 기록이 이어진다.
+   *   7구역의 뒤 셋은 새로 넣었다(마지막 장은 혈청 3단계가 사실상 끝을 정하므로 작게 잡았다).
    */
+  var GOAL_N = 6;
+  function defenseCount(s) { var n = 0; DEFENSES.forEach(function (d) { n += s.defenses[d.id] || 0; }); return n; }
   var GOALS = [
-    [ { id: 'z1a', text: '잔해 수색조 50곳', need: 50, value: function (s) { return s.buildings.scouts; } },
-      { id: 'z1b', text: '1구역 시설 합계 200곳', need: 200, value: function (s) { return totalBuildings(s); } },
-      // 기다리기만 하면 되는 목표(밤 30번)는 뺐다: 손을 움직이는 만큼 빨리 끝나는 것으로 바꿨다
-      { id: 'z1c', text: '동네 12곳 다 수색하기', need: 12, value: function (s) { return s.sweeps; } } ],
-    [ { id: 'z2a', text: '좌판 50곳', need: 50, value: function (s) { return s.stalls; } },
-      { id: 'z2b', text: '고점 시세에서 10번 팔기', need: 10, value: function (s) { return s.peakSales; } },
-      { id: 'z2c', text: '상품 판매 누적 1,000억', need: 1e11, value: function (s) { return s.tradeEarned; } } ],
-    [ { id: 'z3a', text: '광산 지하 30m까지 내려가기', need: 30, value: function (s) { return s.boxBest || 0; } },
+    [ { id: 'z1a', text: '잔해 수색조 85곳', need: 85, value: function (s) { return s.buildings.scouts; } },
+      { id: 'z1b', text: '1구역 시설 280곳', need: 280, value: function (s) { return totalBuildings(s); } },
+      { id: 'z1c', text: '동네 15곳 다 수색', need: 15, value: function (s) { return s.sweeps; } },
+      { id: 'z1a2', text: '옥상 텃밭 75곳', need: 75, value: function (s) { return s.buildings.garden; } },
+      { id: 'z1b2', text: '방어 수단 60개', need: 60, value: function (s) { return defenseCount(s); } },
+      { id: 'z1c2', text: '1구역 개조 30번', need: 30, value: function (s) { return zoneUpgrades(s, 0); }, ups: true } ],
+    [ { id: 'z2a', text: '좌판 65곳', need: 65, value: function (s) { return s.stalls; } },
+      { id: 'z2b', text: '고점 시세에서 40번 팔기', need: 40, value: function (s) { return s.peakSales; } },
+      { id: 'z2c', text: '상품 판매 3,000억', need: 3e11, value: function (s) { return s.tradeEarned; } },
+      { id: 'z2a2', text: '시장 일손 12명', need: 12, value: function (s) { return (s.hands.porter || 0) + (s.hands.crier || 0); } },
+      { id: 'z2b2', text: '단골 주문 3번 채우기', need: 3, value: function (s) { return s.ordersRun; } },
+      { id: 'z2c2', text: '2구역 개조 40번', need: 40, value: function (s) { return zoneUpgrades(s, 1); }, ups: true } ],
+    [ { id: 'z3a', text: '광산 지하 60m', need: 60, value: function (s) { return s.boxBest || 0; } },
       { id: 'z3b', text: '손으로 바위 40개 깨기', need: 40, value: function (s) { return s.mergesRun || 0; } },
-      { id: 'z3c', text: '광산으로 번 물자 누적 10경', need: 1e17, value: function (s) { return s.lineEarned; } } ],
-    [ { id: 'z4a', text: '기관차 11레벨', need: 11, value: function (s) { return s.trains; } },
-      { id: 'z4b', text: '10칸 이상 열차 3번 보내기', need: 3, value: function (s) { return s.longRuns || 0; } },
-      { id: 'z4c', text: '화물로 번 물자 누적 10해', need: 1e21, value: function (s) { return s.railEarned; } } ],
-    [ { id: 'z5a', text: '연구원 28명', need: 28, value: function (s) { return s.staff; } },
-      { id: 'z5b', text: '혈청 200대 놓기', need: 200, value: function (s) { return s.dosesAll || 0; } },
-      { id: 'z5c', text: '사람 20명 되돌리기', need: 20, value: function (s) { return s.curesRun || 0; } } ],
-    [ { id: 'z6a', text: '초소 28곳', need: 28, value: function (s) { return s.posts; } },
-      { id: 'z6b', text: '손으로 150마리 잡기', need: 150, value: function (s) { return s.handKills || 0; } },
-      { id: 'z6c', text: '통행 물자 누적 5,000자', need: 5e27, value: function (s) { return s.guardEarned; } } ],
+      { id: 'z3c', text: '광산으로 1해 벌기', need: 1e20, value: function (s) { return s.lineEarned; } },
+      { id: 'z3a2', text: '3구역 개조 32번', need: 32, value: function (s) { return zoneUpgrades(s, 2); }, ups: true },
+      { id: 'z3b2', text: '광부 75단계', need: 75, value: function (s) { return s.machines.miner || 0; } },
+      { id: 'z3c2', text: '큰 광차 8번 보내기', need: 8, value: function (s) { return s.contractsRun; } } ],
+    [ { id: 'z4a', text: '기관차 30레벨', need: 30, value: function (s) { return s.trains; } },
+      { id: 'z4b', text: '10칸 이상 열차 18번', need: 18, value: function (s) { return s.longRuns || 0; } },
+      { id: 'z4c', text: '화물로 1자 벌기', need: 1e24, value: function (s) { return s.railEarned; } },
+      { id: 'z4a2', text: '화물 등급 4레벨', need: 4, value: function (s) { return s.routes.grade || 0; } },
+      { id: 'z4b2', text: '표류 화물 4번 끌어오기', need: 4, value: function (s) { return s.salvagesRun; } },
+      { id: 'z4c2', text: '4구역 개조 21번', need: 21, value: function (s) { return zoneUpgrades(s, 3); }, ups: true } ],
+    [ { id: 'z5a', text: '연구원 40명', need: 40, value: function (s) { return s.staff; } },
+      { id: 'z5b', text: '혈청 650대 놓기', need: 650, value: function (s) { return s.dosesAll || 0; } },
+      { id: 'z5c', text: '사람 40명 되돌리기', need: 40, value: function (s) { return s.curesRun || 0; } },
+      { id: 'z5a2', text: '5구역 개조 22번', need: 22, value: function (s) { return zoneUpgrades(s, 4); }, ups: true },
+      { id: 'z5b2', text: '사람 450명 멈추기', need: 450, value: function (s) { return s.stopsRun || 0; } },
+      { id: 'z5c2', text: '의자 6개', need: 6, value: function (s) { return seatCount(s); } } ],
+    [ { id: 'z6a', text: '초소 60곳', need: 60, value: function (s) { return s.posts; } },
+      { id: 'z6b', text: '손으로 2,000마리 잡기', need: 2000, value: function (s) { return s.handKills || 0; } },
+      { id: 'z6c', text: '통행 물자 1,500양', need: 1.5e31, value: function (s) { return s.guardEarned; } },
+      { id: 'z6a2', text: '방어 수단 1,200개', need: 1200, value: function (s) { return defenseCount(s); } },
+      { id: 'z6b2', text: '검문대 7단계', need: 7, value: function (s) { return s.upgrades.booth || 0; }, ups: true },
+      { id: 'z6c2', text: '큰 놈 90마리 잡기', need: 90, value: function (s) { return s.bigKills || 0; } } ],
     [ { id: 'z7a', text: '안테나 21기', need: 21, value: function (s) { return s.antennas; } },
       { id: 'z7b', text: '생존자 7만 명 모으기', need: 7e4, value: function (s) { return s.survivors; } },
-      { id: 'z7c', text: '혈청 3단계 완성', need: 3, value: function (s) { return s.serumStage; } } ]
+      { id: 'z7c', text: '혈청 3단계 완성', need: 3, value: function (s) { return s.serumStage; } },
+      { id: 'z7a2', text: '습격 10번 막아 내기', need: 10, value: function (s) { return s.nightsHeld || 0; } },
+      { id: 'z7b2', text: '울타리 밖 무리 30번 들이기', need: 30, value: function (s) { return s.straysRun || 0; } },
+      { id: 'z7c2', text: '손으로 경비 100번 세우기', need: 100, value: function (s) { return s.sendsRun || 0; } } ]
   ];
 
   /* ---------- 작은 도우미 ---------- */
@@ -730,7 +760,6 @@
       autoOff: {},      // 구역 index → true 면 그 구역의 주문·사건 자동을 꺼 둔 것(철수해도 남는다)
       elderOff: false,      // 4.3.8: 7구역 이장을 꺼 둔 것(철수해도 남는다). 송신 기사(autoOff[6])와 따로 켜고 끈다
       goalExt: {},      // 목표 id → 채운 연장 단계 수(이번 회차)
-      goalPick: {},      // 이번 회차의 목표 고르기(구역 index → 자리별 0|1). 비어 있으면 원래 목표 셋
       perks: {}, pendingPerks: [], goalsDone: {}, rerollsUsed: 0,      // rerollsUsed: 이번 판에 특전을 다시 뽑은 횟수(철수하면 0)
       // 영구
       pet: null,             // 지금 데리고 다니는 동물 친구 { kind, breed, name }. 없으면 null. 철수해도 남는다
@@ -1035,7 +1064,7 @@
     s.rerollsUsed = clamp(safeCount(raw.rerollsUsed), 0, 99);
     s.pendingPerks = (Array.isArray(raw.pendingPerks) ? raw.pendingPerks : []).filter(function (id) { return !!findById(PERKS, id); }).slice(0, PERK_CHOICES);
     var gd = raw.goalsDone && typeof raw.goalsDone === 'object' ? raw.goalsDone : {};
-    GOALS.concat(GOALS_ALT).forEach(function (list) { list.forEach(function (g) { if (g && gd[g.id]) s.goalsDone[g.id] = true; }); });
+    GOALS.forEach(function (list) { list.forEach(function (g) { if (g && gd[g.id]) s.goalsDone[g.id] = true; }); });
     var rz = raw.zev && typeof raw.zev === 'object' ? raw.zev : {}, rzi = raw.zevIn && typeof raw.zevIn === 'object' ? raw.zevIn : {};
     ZONE_EVENTS.forEach(function (d) {
       s.zev[d.id] = s.zone >= d.zone && rz[d.id] && typeof rz[d.id] === 'object' && safeNum(rz[d.id].left, 0) > 0 ? { left: clamp(safeNum(rz[d.id].left, 0), 0, ZEV_WAIT) } : null;
@@ -1069,9 +1098,8 @@
     if (raw.upgrades && typeof raw.upgrades === 'object' && raw.upgrades.dispatch === undefined && (s.upgrades.autoline || 0) > 0) s.upgrades.dispatch = 1;      // 5.3.0 조립공이 하던 '의뢰 넘기기'가 배차원으로 갈렸다: 있던 사람은 잃지 않게
     s.elderOff = typeof raw.elderOff === 'boolean' ? raw.elderOff : ao[6] === true;      // 4.3.8 전 저장: 7구역 자동을 꺼 두었으면 이장도 꺼 둔 것으로
     var ge = raw.goalExt && typeof raw.goalExt === 'object' ? raw.goalExt : {};
-    GOALS.concat(GOALS_ALT).forEach(function (list) { list.forEach(function (g) { if (g && s.goalsDone[g.id]) { var tv = clamp(safeCount(ge[g.id]), 0, EXT_MAX); if (tv > 0) s.goalExt[g.id] = tv; } }); });
-    var gp = raw.goalPick && typeof raw.goalPick === 'object' ? raw.goalPick : {};
-    GOALS_ALT.forEach(function (alt, zi) { var p = gp[zi]; if (Array.isArray(p) && alt.some(function (g) { return !!g; })) s.goalPick[zi] = [0, 1, 2].map(function (k) { return p[k] && alt[k] ? 1 : 0; }); });
+    GOALS.forEach(function (list) { list.forEach(function (g) { if (g && s.goalsDone[g.id]) { var tv = clamp(safeCount(ge[g.id]), 0, EXT_MAX); if (tv > 0) s.goalExt[g.id] = tv; } }); });
+    // 5.5.0: 옛 goalPick(회차마다 바뀌던 목표 고르기)은 읽지 않는다. 미션 여섯이 늘 같다
     var st = raw.story && typeof raw.story === 'object' ? raw.story : {};
     BEATS.forEach(function (b) { if (st[b.id]) s.story[b.id] = true; });
     var rz = raw.zdex && typeof raw.zdex === 'object' ? raw.zdex : {};
@@ -3319,57 +3347,19 @@
   }
 
   /*
-   * 회차마다 달라지는 목표(1.4.2). 구역의 목표 셋은 자리(첫째·둘째·셋째)마다 후보가 둘씩 있다: GOALS 의 원래 것과 GOALS_ALT 의 다른 것.
-   *   첫 회차는 원래 것 셋이다(처음 하는 사람이 보는 길은 그대로다). 철수할 때마다 자리별로 다시 뽑고, 바로 앞 회차와 셋이 모두 같지는 않게 한다.
-   *   자리마다 후보가 다르므로 한 회차 안에서 같은 목표가 겹치는 일은 없다.
-   *   다른 후보는 "돈과 시간으로 반드시 채울 수 있는 것"만 넣었다(무리와의 경주에 묶인 것은 넣지 않는다). null 인 자리는 바뀌지 않는다.
-   *   7구역은 바꾸지 않는다: 마지막 장의 목표는 이야기의 끝과 묶여 있다.
-   *   state.goalPick = { 구역 index: [0|1, 0|1, 0|1] }. 없으면 원래 것.
+   * 회차마다 달라지던 목표(1.4.2 ~ 5.4.x)는 5.5.0에서 없앴다: 자리마다 둘이던 후보를 모두 미션 여섯으로 펼쳤다.
+   *   state.goalPick 은 옛 저장에 남아 있어도 읽지 않는다.
    */
-  function defenseCount(s) { var n = 0; DEFENSES.forEach(function (d) { n += s.defenses[d.id] || 0; }); return n; }
-  function routeLevels(s) { var n = 0; ROUTES.forEach(function (r) { n += s.routes[r.id] || 0; }); return n; }
-  var GOALS_ALT = [
-    [ { id: 'z1a2', text: '옥상 텃밭 40곳', need: 40, value: function (s) { return s.buildings.garden; } },
-      { id: 'z1b2', text: '방어 수단 합계 50개', need: 50, value: function (s) { return defenseCount(s); } },
-      { id: 'z1c2', text: '1구역 개조를 모두 합쳐 12번', need: 12, value: function (s) { return zoneUpgrades(s, 0); } } ],
-    [ { id: 'z2a2', text: '시장 일손 합계 12명', need: 12, value: function (s) { return (s.hands.porter || 0) + (s.hands.crier || 0); } },
-      { id: 'z2b2', text: '단골 주문 3번 채우기', need: 3, value: function (s) { return s.ordersRun; } },
-      { id: 'z2c2', text: '2구역 개조를 모두 합쳐 15번', need: 15, value: function (s) { return zoneUpgrades(s, 1); } } ],
-    [ { id: 'z3a2', text: '3구역 개조를 모두 합쳐 12번', need: 12, value: function (s) { return zoneUpgrades(s, 2); } },
-      { id: 'z3b2', text: '광부 25단계', need: 25, value: function (s) { return s.machines.miner || 0; } },
-      { id: 'z3c2', text: '큰 광차 3번 보내기', need: 3, value: function (s) { return s.contractsRun; } } ],
-    [ { id: 'z4a2', text: '화물 등급 3레벨', need: 3, value: function (s) { return s.routes.grade || 0; } },
-      { id: 'z4b2', text: '표류 화물 2번 끌어오기', need: 2, value: function (s) { return s.salvagesRun; } },
-      { id: 'z4c2', text: '4구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 3); } } ],
-    [ { id: 'z5a2', text: '5구역 개조를 모두 합쳐 10번', need: 10, value: function (s) { return zoneUpgrades(s, 4); } },
-      { id: 'z5b2', text: '사람 60명 멈추기', need: 60, value: function (s) { return s.stopsRun || 0; } },
-      { id: 'z5c2', text: '의자 6개', need: 6, value: function (s) { return seatCount(s); } } ],
-    [ { id: 'z6a2', text: '방어 수단 합계 200개', need: 200, value: function (s) { return defenseCount(s); } },
-      { id: 'z6b2', text: '검문대 7단계', need: 7, value: function (s) { return s.upgrades.booth || 0; } },
-      null ],
-    [ null, null, null ]
-  ];
-  /** 이번 회차에 그 구역에서 채울 목표 셋(정의). */
-  function activeGoals(state, index) {
-    var base = GOALS[index] || [], alt = GOALS_ALT[index] || [], pick = (state.goalPick && state.goalPick[index]) || [];
-    // 도전 '맨몸'(개조 금지) 중에는 "개조를 N번" 목표가 뽑혀 있어도 원래 목표로 돌린다: 그대로 두면 채울 방법이 없어 도전이 막힌다(1.7.2)
-    var noUps = challengeOn(state, 'frugal');
-    return base.map(function (g, k) { return pick[k] && alt[k] && !(noUps && /개조/.test(alt[k].text)) ? alt[k] : g; });
+  /** 이번 회차에 그 구역에서 채울 미션 여섯(정의). */
+  function activeGoals(state, index) { return GOALS[index] || []; }
+  /** 도전 '맨몸'(개조 금지) 중에는 "개조 N번" 미션을 채운 것으로 친다: 그대로 두면 채울 방법이 없어 문이 막힌다(1.7.2의 생각을 이었다). */
+  function goalValue(state, g) {
+    if (g.ups && challengeOn(state, 'frugal')) return g.need;
+    var v = 0; try { v = safeNum(g.value(state), 0); } catch (e) { v = 0; }
+    return v;
   }
-  /** 다음 회차의 목표를 뽑는다. 바로 앞 회차(prev)와 셋이 모두 같은 구역이 없게 한다. */
-  function rollGoalPick(prev, rng) {
-    rng = typeof rng === 'function' ? rng : Math.random;
-    var out = {};
-    GOALS_ALT.forEach(function (alt, zi) {
-      var slots = []; alt.forEach(function (g, k) { if (g) slots.push(k); });
-      if (!slots.length) return;
-      var before = (prev && prev[zi]) || [0, 0, 0], now = [0, 0, 0];
-      slots.forEach(function (k) { now[k] = rng() < 0.5 ? 1 : 0; });
-      if (now.join() === [before[0] ? 1 : 0, before[1] ? 1 : 0, before[2] ? 1 : 0].join()) { var flip = slots[Math.floor(rng() * slots.length) % slots.length]; now[flip] = now[flip] ? 0 : 1; }
-      out[zi] = now;
-    });
-    return out;
-  }
+  /** 그 구역에서 채운 미션 수. */
+  function goalsDoneCount(state, index) { return activeGoals(state, index).filter(function (g) { return !!state.goalsDone[g.id]; }).length; }
 
   /*
    * 4·5·6·7구역에서 손으로 할 일(1.5.0). 3구역(고장·트럭·품목)과 같은 생각이다: 내버려 둬도 잃는 것은 없고, 누르면 더 번다.
@@ -3643,8 +3633,7 @@
   /** 구역 index 의 목표 진행 [{ id, text, value, need, done }]. 아직 없는 구역은 빈 배열. */
   function goals(state, index) {
     return activeGoals(state, index).map(function (g) {
-      var v = 0;
-      try { v = safeNum(g.value(state), 0); } catch (e) { v = 0; }
+      var v = goalValue(state, g);
       return { id: g.id, text: g.text, value: Math.min(v, g.need), need: g.need, unit: g.unit || null, done: !!state.goalsDone[g.id] };
     });
   }
@@ -3666,7 +3655,7 @@
   }
   /** 그 구역의 연장 목표 [{ id, tier, text, value, need, unit } | null]. 원래 목표를 아직 못 채웠거나 끝까지 채운 자리는 null. */
   function extGoals(state, index) {
-    if (index >= ZONES.length - 1) return [null, null, null];
+    if (index >= ZONES.length - 1) return activeGoals(state, index).map(function () { return null; });
     return activeGoals(state, index).map(function (g) {
       var tier = (state.goalExt && state.goalExt[g.id]) || 0;
       if (!state.goalsDone[g.id] || tier >= EXT_MAX) return null;
@@ -3696,12 +3685,12 @@
       for (var i = 0; i < list.length; i++) {
         var g = list[i];
         if (state.goalsDone[g.id] || state.pendingPerks.length) continue;
-        var v = 0;
-        try { v = g.value(state); } catch (e) { v = 0; }
-        if (!(v >= g.need)) continue;
+        if (!(goalValue(state, g) >= g.need)) continue;
         state.goalsDone[g.id] = true;
-        state.pendingPerks = drawPerks(rng, state); state.perkFrom = 'goal';
-        events.push({ type: 'goal', zone: z, id: g.id, text: g.text });
+        // 5.5.0 특전은 2 · 4 · 6개째에만(구역마다 세 번). 홀수째는 칸에 체크만 하고 지나간다
+        var nDone = goalsDoneCount(state, z), perk = nDone % 2 === 0;
+        if (perk) { state.pendingPerks = drawPerks(rng, state); state.perkFrom = 'goal'; }
+        events.push({ type: 'goal', zone: z, id: g.id, text: g.text, done: nDone, of: list.length, perk: perk });
       }
     }
     checkExtGoals(state, events);
@@ -4980,7 +4969,6 @@
     if (!canRetreat(state)) return fail('not-ready');
     var gained = antibodiesOnRetreat(state); passStamp(state, PASS_STAMPS.retreat);      // 4.8.2 철수도 수첩 도장(다음 판으로 이어진다)
     var next = createState(now);
-    next.goalPick = rollGoalPick(state.goalPick, rng);      // 다음 회차의 목표는 이번과 다르게
     next.medals = state.medals || {};      // 훈장은 남는다
     next.stageGoal = state.stageGoal || {};
     next.stageMarks = state.stageMarks || {};      // 원정에서 얻은 표시도 남는다
@@ -5117,8 +5105,8 @@
       BEATS.push({ id: (z.kind === 'soon' ? 'gate-' + z.no : 'z' + z.no + '-' + k), zone: z.no, zoneName: z.name, title: ep.title, part: k + 1, text: text, when: function (s) {
         if (ZONES[zi].kind === 'soon') return s.gate && s.zone === zi - 1;          // 아직 없는 구역: 문 앞에 닿았을 때
         if (s.zone < zi) return false;
-        var done = activeGoals(s, zi).filter(function (g) { return !!s.goalsDone[g.id]; }).length;
-        return k === 0 || (k === 1 && done >= 2) || (k === 2 && done >= 3);
+        var done = goalsDoneCount(s, zi);      // 5.5.0 미션 여섯: 둘째 장은 넷째, 셋째 장은 여섯째를 채웠을 때(예전 목표 셋의 둘째 · 셋째와 같은 자리)
+        return k === 0 || (k === 1 && done >= 4) || (k === 2 && done >= GOAL_N);
       } });
     });
   });
@@ -5224,8 +5212,8 @@
       if (!afterEnding(s)) return false;
       if (i === 0) return true;
       if (s.zone < zi) return false;
-      var done = activeGoals(s, zi).filter(function (g) { return !!s.goalsDone[g.id]; }).length;
-      return second ? done >= 3 : (zi === 0 ? done >= 2 : true);
+      var done = goalsDoneCount(s, zi);
+      return second ? done >= GOAL_N : (zi === 0 ? done >= 4 : true);
     } });
   });
   function momRead(s) { var n = 0; BEATS.forEach(function (b) { if (b.mom && s.story[b.id]) n++; }); return n; }
@@ -5570,7 +5558,7 @@
     if (state.antibodies > 0 && TRAITS.some(function (t) { return traitCost(state, t.id) <= state.antibodies; })) return g('trait', '쓸 수 있는 항체 샘플이 있어요. 특성을 찍어 보세요.', 'trait');
     var open = goals(state, state.zone).filter(function (x) { return !x.done; })[0];
     if (open && open.id === 'z7c') { var sv = serumGuide(state); if (sv) return sv; }      // 5.1.2 혈청 목표는 막힌 것을 자세히
-    if (open) return g('goal', (state.zone + 1) + '구역 목표: ' + open.text + ' (' + formatNumber(open.value) + ' / ' + formatNumber(open.need) + ')', 'zone');
+    if (open) return g('goal', (state.zone + 1) + '구역 미션: ' + open.text + ' (' + formatNumber(open.value) + ' / ' + formatNumber(open.need) + ')', 'zone');
     var n = nextZone(state);
     if (n && !(n.soon && state.gate)) return g('open', n.zone.no + '구역 ' + n.zone.name + (n.enough ? '의 문을 열 수 있어요.' : '의 문은 이번 회차 누적 물자 ' + formatNumber(n.cost) + '에 열려요.'), 'zone');
     /*
@@ -5733,7 +5721,7 @@
     PRICE_HISTORY: PRICE_HISTORY, STREAK_MAX: STREAK_MAX, STREAK_BONUS: STREAK_BONUS, streakMult: streakMult,
     PRICE_STEP: PRICE_STEP, PRICE_FLOOR: PRICE_FLOOR, PRICE_CEIL: PRICE_CEIL, GOODS_VALUE: GOODS_VALUE, GOODS_CAP_SECONDS: GOODS_CAP_SECONDS, PEAK_PRICE: PEAK_PRICE, peakPrice: peakPrice,
     RETREAT_MIN: RETREAT_MIN, RETREAT_K: RETREAT_K, RETREAT_POW: RETREAT_POW,
-    ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, GOALS_ALT: GOALS_ALT, activeGoals: activeGoals, rollGoalPick: rollGoalPick, BEATS: BEATS,
+    ZONES: ZONES, BUILDINGS: BUILDINGS, DEFENSES: DEFENSES, UPGRADES: UPGRADES, PERKS: PERKS, TRAITS: TRAITS, GOALS: GOALS, GOAL_N: GOAL_N, EXT_MAX: EXT_MAX, EXT_TREATS: EXT_TREATS, EXT_SECONDS: EXT_SECONDS, extNeed: extNeed, extText: extText, extGoals: extGoals, activeGoals: activeGoals, BEATS: BEATS,
     createState: createState, sanitizeState: sanitizeState, mods: mods, globalMult: globalMult,
     settleTime: settleTime, TUNE_BUILD: TUNE_BUILD, SETTLE_BUILD: SETTLE_BUILD, campOf: campOf, setElder: setElder, raidTight: raidTight, raidShift: raidShift, raidRate: raidRate, raidLen: raidLen, NIGHT_FLOOR: NIGHT_FLOOR, NIGHT_STEP: NIGHT_STEP, NIGHT_CAP: NIGHT_CAP, LV_MAX: LV_MAX7, CAMP_ROWS: CAMP_ROWS, campRow: campRow, campRowCost: campRowCost, buyCampRow: buyCampRow, levelNeed: levelNeed, CART_STEP: CART_STEP, WALL7_STEP: WALL7_STEP, ARMS_STEP: ARMS_STEP, guardPool: guardPool, NIGHT_FRAC: NIGHT_FRAC, rescueStray: rescueStray, strayGain: strayGain, STRAY_PAY: STRAY_PAY, STRAY_TIME: STRAY_TIME, STRAY_MAX: STRAY_MAX, STRAY_EVERY: STRAY_EVERY, sideHold: sideHold, sideNeed: sideNeed, towerHold: towerHold, newRaid: newRaid, RAID_SHIFT: RAID_SHIFT, campSeen: campSeen, raidNeed: raidNeed, levelPow: levelPow, LV_GROW: LV_GROW, TOWER_HOLD_MAX: TOWER_HOLD_MAX, GUARD_LOSS: GUARD_LOSS, settleLv: settleLv, settleBroken: settleBroken, levelCost: levelCost, settleNeed: settleNeed, settleWork: settleWork, settleLevels: settleLevels, nightHold: nightHold, sendGuard: sendGuard, stepCamp: stepCamp, elderOn: elderOn, elderTarget: elderTarget, LV_MAX7: LV_MAX7, LV_COST: LV_COST, SEND_PARTS: SEND_PARTS, REPAIR_FRAC: REPAIR_FRAC, RAID_EVERY: RAID_EVERY, RAID_SECONDS: RAID_SECONDS, CAMP_HAND: CAMP_HAND, NIGHT_DROP: NIGHT_DROP, GUARD_PARTS: GUARD_PARTS, ELDER_SECONDS: ELDER_SECONDS, TOWER_HOLD: TOWER_HOLD,
     SETTLE: SETTLE, settleHas: settleHas, settleUsed: settleUsed, settleFree: settleFree, settleCount: settleCount, settleBlock: settleBlock, buildSettle: buildSettle, serumNeeds: serumNeeds,
@@ -5747,7 +5735,7 @@
     goodsValue: goodsValue, sellGoods: sellGoods, setAutoSell: setAutoSell, setSellPeak: setSellPeak, tradeRate: tradeRate,
     upgradeCost: upgradeCost, buyUpgrade: buyUpgrade,
     productionPerSec: productionPerSec, clickPower: clickPower, clickValue: clickValue, scavenge: scavenge,
-    goals: goals, goalsComplete: goalsComplete, nextZone: nextZone, openZone: openZone,
+    goals: goals, goalsComplete: goalsComplete, goalsDoneCount: goalsDoneCount, nextZone: nextZone, openZone: openZone,
     defenseCost: defenseCost, maxDefenses: maxDefenses, buyDefense: buyDefense, defensePower: defensePower, currentWave: currentWave, isBossWave: isBossWave,
     strengthAt: strengthAt, nightStrength: nightStrength, nightReward: nightReward, defensePlan: defensePlan, fortify: fortify, dayPhase: dayPhase, resolveNight: resolveNight,
     answerSignal: answerSignal, drawPerks: drawPerks, choosePerk: choosePerk,

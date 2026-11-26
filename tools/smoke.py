@@ -64,8 +64,8 @@ def guard(**over):
 
 def tower(**over):
     """7구역(송신탑)까지 연 판: 안테나는 없고 물자는 넉넉하다."""
-    s = guard(zone=6, supplies=5e45, runEarned=5e45, posts=40, runSeconds=1e5)      # runSeconds: 길 정찰(1.6.2)이 이미 끝난 판
-    s["goalsDone"].update({"z6a": True, "z6b": True, "z6c": True})
+    s = guard(zone=6, supplies=5e45, runEarned=5e45, posts=40, runSeconds=1e5, nightsHeld=10, straysRun=30, sendsRun=100)      # 5.5.0 7구역 미션 뒤 셋(습격 · 무리 · 경비)은 채운 판. runSeconds: 길 정찰(1.6.2)이 이미 끝난 판
+    s["goalsDone"].update({"z6a": True, "z6b": True, "z6c": True, "z7a2": True, "z7b2": True, "z7c2": True})      # 7구역 뒤 셋은 이미 채운 것으로(불러오자마자 특전 창이 뜨지 않게)
     s["story"].update({"z6-1": True, "z6-2": True, "z7-0": True})
     # 3.1.0: 정착지는 여덟 채를 지어 두고 마지막 한 채(학교)만 남긴다: 화면에서 짓는 것과 혈청의 문턱을 같이 본다
     s["settle"] = {k: True for k in ["farm", "mess", "store", "clinic", "lab7", "ward", "guard7", "watch"]}
@@ -100,6 +100,11 @@ def run_case(browser, name, size, state, mode):
     page.on('pageerror', lambda e: problems.append('페이지 오류: ' + str(e)))
     # 외부 글꼴을 못 받아 생기는 네트워크 오류는 게임과 무관하므로 뺀다
     page.on('console', lambda m: problems.append('console.error: ' + m.text) if m.type == 'error' and 'Failed to load resource' not in m.text and 'net::' not in m.text else None)
+    if state is not None and isinstance(state, dict) and state.get('zone', 0) > 0:
+        # 5.5.0 미션 여섯: 지나온 구역의 미션은 모두 채운 것으로 둔다(불러오자마자 특전 창이 떠서 화면을 가리지 않게)
+        gd = state.setdefault('goalsDone', {})
+        for zn in range(1, state['zone'] + 1):
+            for k in ['a', 'b', 'c', 'a2', 'b2', 'c2']: gd.setdefault('z%d%s' % (zn, k), True)
     if state is not None:
         page.add_init_script("var s=%s; s.lastSeen=Date.now(); if(!localStorage.getItem('%s'))localStorage.setItem('%s', JSON.stringify(s))" % (json.dumps(state), SAVE_KEY, SAVE_KEY))
     page.add_init_script("window.ZONE7_NO_ATTEND_POPUP = true")      # 4.7.1 출석 창이 저절로 떠서 다른 검사를 가리지 않게(창 자체는 따로 본다)
@@ -165,7 +170,13 @@ def run_case(browser, name, size, state, mode):
         page.click('#zmap-close')
         if not tap('#row-scouts'): problems.append('첫 수색조를 살 수 없다')
         tap('#zone-panes [data-pane=goal]')
-        if page.locator('#goals li:visible').count() != 3 or page.locator('#row-scouts').is_visible(): problems.append('목표 화면에 목표 셋만 보여야 한다')
+        if page.locator('#goals li:visible').count() != 6 or page.locator('#row-scouts').is_visible(): problems.append('목표 화면에 미션 여섯만 보여야 한다')
+        # 5.5.0 문 열기 카드: 제목 · 채운 % · 특전 자리 셋, 미션 칸이 두 줄로(한 화면 너비 안에)
+        if '2구역 문 열기' not in text('gc-title') or '%' not in text('gc-pct'): problems.append('문 열기 카드 머리가 이상하다: %s | %s' % (text('gc-title'), text('gc-pct')))
+        if page.locator('#gc-bar .gc-mark').count() != 3: problems.append('진행 막대의 특전 자리가 셋이 아니다')
+        lis = page.locator('#goals li:visible')
+        if lis.count() >= 2 and abs(lis.nth(0).bounding_box()['y'] - lis.nth(1).bounding_box()['y']) > 2: problems.append('미션 칸이 두 줄로 놓이지 않는다')
+        if page.locator('#gc-icon rect').count() < 3: problems.append('카드의 구역 그림이 없다')
         tap('#zone-panes [data-pane=up]')
         if not page.locator('#row-crowbar').is_visible() or page.locator('#search').is_visible(): problems.append('강화 화면에 강화 목록만 보여야 한다')
         tap('#zone-panes [data-pane=play]')
