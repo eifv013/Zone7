@@ -2089,7 +2089,10 @@
     m.blastT = mineBlastCool(state);
     m.zom.forEach(function (z) { if (mineLive(z)) mineWhack(state, z, z.hp, events); });
     if (!(m.hp > 0)) mineNewRock(state);
-    var d = m.hp * (1.2 + (state.machines.powder || 0) * 0.4) + mineTapPower(state) * 12, guard = 0;
+    // 5.4.2 발파 세기는 '내 힘'으로 정한다(광부 6초치 + 곡괭이 15번치, 화약 한 단계마다 +15%).
+    //   전에는 '지금 바위 체력의 몇 배'라서 힘과 상관없이 늘 몇 m씩 뚫었다. 그래서 암반이 벽 노릇을 못 하고,
+    //   발파만 돌려도 깊이(곧 값)가 끝없이 올라 3구역이 문 값을 한참 넘겨 버렸다(4구역 뒤 구역이 사흘 빨라진 원인).
+    var d = (minerBase(state) * 6 + mineTapPower(state) * 15) * (1 + (state.machines.powder || 0) * 0.15) * mineFeverX(state), guard = 0;
     while (d > 1e-9 && guard++ < 30) { var take = Math.min(d, m.hp > 0 ? m.hp : mineRockHp(state)); d -= take; mineHit(state, take, true, events); }
     if (events) events.push({ type: 'mine-blast' });
     return { ok: true };

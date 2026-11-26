@@ -2970,6 +2970,14 @@ test('발파 · 독려 · 열기: 발파는 크게 깎고 굴 안 좀비를 모�
   tk(s, C.MINE_FEVER_SECONDS + 0.2, ev); assert.ok(!(m.fever > 0));
 });
 
+test('발파 세기는 내 힘으로 정해진다(5.4.2): 힘이 약하면 깊은 암반을 한 번에 뚫지 못하고, 화약을 올리면 더 크게 깎는다', () => {
+  const s = inMine(), m = C.mineOf(s); m.depth = 60; m.hp = -1; C.tick(s, 0.01, half);
+  const full = m.hp; assert.ok(C.mineBlast(s).ok);
+  assert.equal(m.depth, 60, '약한 힘으로는 60m 암반을 못 넘는다'); const cut0 = full - m.hp; assert.ok(cut0 > 0 && cut0 < full);
+  const t = inMine(), n = C.mineOf(t); t.machines.powder = 10; n.depth = 60; n.hp = -1; C.tick(t, 0.01, half);
+  const f2 = n.hp; C.mineBlast(t); near((f2 - n.hp) / cut0, 2.5, '화약 10단계면 2.5배');
+});
+
 test('광산: 가만히 < 자동 < 손. 자동(발파 기사)은 절반만 받는다', () => {
   function run(miners, taps) { const s = inMine(), ev = []; s.machines.miner = miners; const b = s.lineEarned; for (let i = 0; i < 600; i++) { tk(s, 0.1, ev); if (taps && i % 3 === 0) C.mineTap(s, 100, 60); } return s.lineEarned - b; }
   const idle = run(0, false), auto = run(10, false), hand = run(10, true);
