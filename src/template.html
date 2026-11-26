@@ -1896,7 +1896,6 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       <div class="tabbar even" id="zone-tabs" role="group" aria-label="구역 고르기"></div>
       <p class="hint tab-hint" id="tab-hint"></p>
       <label class="check" for="auto-ev" id="auto-ev-row" hidden><input type="checkbox" id="auto-ev"> <span id="auto-ev-text">주문과 사건을 자동에 맡긴다</span></label>
-      <div class="z3-workers" id="z3-workers" hidden><button type="button" data-who="merge"></button><button type="button" data-who="ship"></button></div>
       <div class="panes" id="zone-panes" role="group" aria-label="구역 화면 고르기">
         <button type="button" data-pane="play" aria-pressed="true">운영</button>
         <button type="button" data-pane="up" aria-pressed="false">개조</button>
@@ -1933,40 +1932,11 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
         <label class="check" for="sell-peak" id="sell-peak-row"><input type="checkbox" id="sell-peak"> <span>고점에서만 판매</span></label>
       </div>
       <div class="trade line" id="line" hidden>
-        <!-- 컨베이어: 물건이 왼쪽에서 오른쪽으로 흐른다. 병목인 기계 앞에는 물건이 쌓인다. 그림은 ui.js 의 drawBelt 가 그린다. -->
-        <!-- 3.3.0 합치기 판: 같은 상자 둘을 누르면 윗단계 하나가 된다. 칸은 ui.js 가 스무 개 만든다 -->
-        <!-- 3.8.5: 1구역과 같은 차림. 머리줄(왼쪽 숫자 · 오른쪽 자동 안내) → 막대 → 판 -->
-        <div class="order-head plat-head"><span class="label">공장</span><span class="num" id="z3-head"></span></div>
-        <div class="mboard-wrap"><canvas class="z3-cv" id="z3-cv" width="368" height="408" role="img" aria-label="공장"></canvas>
-        <div class="z3-chips" id="z3-chips"><span><b></b><small></small></span><span><b></b><small></small></span><span><b></b><small></small></span><span><b></b><small></small></span></div>
-        <canvas class="mboard-top" id="mboard-top" width="184" height="30" aria-hidden="true"></canvas>
-        <div class="mboard" id="mboard" role="group" aria-label="상자 칸"></div></div>
-        <canvas class="belt" id="belt" width="320" height="64" aria-hidden="true"></canvas>
-        <div class="line-flow" id="line-flow"></div>
-        <!-- 품목: 무엇을 만들지 고른다. 품목마다 느린 기계가 다르다 -->
-        <div class="recipes" id="recipes" role="group" aria-label="만들 품목"></div>
-        <!-- 3.8.7: 조립공 글과 막대는 판 아래에 둔다(막대는 1구역 순찰조와 같은 .autobar) -->
-        <div class="search-head" id="line-head"><span class="num steady" id="line-load"></span><span class="label" id="merge-note"></span></div>
-        <div class="autobar" id="merge-bar" aria-hidden="true" hidden></div>
+        <!-- 5.4.0 3구역 광산(1 · 2구역과 같은 차림): 머리줄(이름 · 초당) → 장면(어디든 누르면 캐요) → 깊이 줄 → 안내 한 줄 -->
+        <div class="order-head plat-head"><span class="label">광산</span><span class="num" id="z3-head"></span></div>
+        <div class="zs-wrap"><canvas class="zs-cv" id="z3-cv" width="184" height="160" role="img" aria-label="광산 · 누르면 캐요. 아래 왼쪽 구석은 발파, 오른쪽 구석은 독려"></canvas><div class="zs-fl" id="z3-fl" aria-hidden="true"></div></div>
+        <div class="search-head"><span class="label" id="z3-note"></span><span class="num" id="z3-sub"></span></div>
         <div class="label" id="line-note"></div>
-        <button type="button" class="jam-fix" id="jam-fix" hidden></button>
-        <button type="button" class="lab-reroll" id="rebalance" hidden></button>
-        <div class="order" id="contract" hidden>
-          <div class="order-head"><span class="label">납품 의뢰</span><span class="num" id="contract-left"></span></div>
-          <p id="contract-text"></p>
-          <div class="autobar" id="contract-bar" aria-hidden="true"></div>
-          <button type="button" class="order-fill" id="contract-fill"></button>
-        </div>
-        <div class="order truck" id="truck" hidden>
-          <div class="order-head"><span class="label">출하 트럭</span><span class="num" id="truck-left"></span></div>
-          <p id="truck-text"></p>
-          <button type="button" class="order-fill" id="truck-load">싣는다</button>
-        </div>
-        <!-- 3.8.8 순서: 판 → 초당·조립공(막대) → 납품 의뢰 → 기록 두 줄(거래처, 가장 높은 상자). 전에는 기록 한 줄이 막대와 의뢰 사이에 끼어 있었다 -->
-        <div class="label" id="contract-note"></div>
-        <div class="label" id="line-mile"></div>
-        <div class="label" id="stock-note"></div>
-        <div class="line-acts"><button type="button" class="fortify sell" id="tune" hidden>한 번에 올리기</button><button type="button" class="surge" id="surge">전력 투입</button></div>
       </div>
       <div class="trade rail" id="rail" hidden>
         <!-- 노선도: 왼쪽이 환승역, 오른쪽으로 갈수록 먼 노선. 열차가 갔다가 돌아오는 것이 보인다. 그림은 ui.js 의 drawRail 이 그린다. -->
@@ -2241,7 +2211,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.3.7 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.4.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

@@ -35,5 +35,5 @@ touch "$REPO/docs/.nojekyll"     # GitHub Pages 가 파일을 가공하지 않�
 cd "$REPO"
 git add -A
 if git diff --cached --quiet; then echo "바뀐 것이 없다."; exit 0; fi
-git commit -q -m "알파 $VERSION" -m "Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01LfK2SDRQiTYi6z9XC6XwSo"
+git commit -q -m "알파 $VERSION" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01LfK2SDRQiTYi6z9XC6XwSo"
 echo "커밋: 알파 $VERSION ($(git rev-parse --short HEAD))"

@@ -27,7 +27,7 @@ def market(**over):
     return s
 
 def factory(**over):
-    """3구역(공단)까지 연 판: 기계는 아직 없고 물자는 넉넉하다."""
+    """3구역(광산)까지 연 판: 줄은 아직 없고 물자는 넉넉하다."""
     s = market(zone=2, supplies=5e13, runEarned=5e13, autoSell=True, dayClock=5, signalIn=500,
                defenses={"wire": 80, "tower": 60, "turret": 50, "flame": 40, "emp": 20},
                goalsDone={"z1a": True, "z1b": True, "z1c": True, "z2a": True, "z2b": True, "z2c": True})
@@ -37,7 +37,7 @@ def factory(**over):
 
 def station(**over):
     """4구역(환승역)까지 연 판: 열차도 노선도 아직 없고 물자는 넉넉하다."""
-    s = factory(zone=3, supplies=5e22, runEarned=5e22, machines={"sorter": 20, "press": 30, "assembler": 60},
+    s = factory(zone=3, supplies=5e22, runEarned=5e22, machines={"pick": 20, "miner": 30, "minecart": 3}, lineV=4,
                 defenses={"wire": 80, "tower": 60, "turret": 50, "flame": 40, "emp": 40, "rail": 30})
     s["goalsDone"].update({"z3a": True, "z3b": True, "z3c": True})
     s["story"].update({"z3-1": True, "z3-2": True, "z4-0": True})
@@ -79,8 +79,10 @@ CASES = [
     ('폰 · 2구역, 못 막는 밤', (390, 760), market(), 'full'),
     ('PC · 2구역, 막는 밤', (1280, 900), market(defenses={"wire": 60, "tower": 40, "turret": 30, "flame": 10}, autoSell=True), 'full'),
     ('폰 · 새 게임', (390, 760), None, 'new'),
-    ('폰 · 3구역 생산 라인', (390, 760), factory(jam={'id': 'press', 'left': 30}, jamIn=900, truck={'left': 20}, truckIn=900, stockSec=60), 'line'),
-    ('PC · 3구역 생산 라인', (1280, 900), factory(jam={'id': 'press', 'left': 30}, jamIn=900, truck={'left': 20}, truckIn=900, stockSec=60), 'line'),
+    ('폰 · 3구역 광산', (390, 760), factory(lineV=4), 'line'),
+    ('PC · 3구역 광산', (1280, 900), factory(lineV=4), 'line'),
+    ('폰 · 광산 암반과 좀비', (390, 760), factory(lineV=4, machines={"pick": 30, "miner": 30}, mine={"depth": 30, "raidIn": 5, "load": {"n": 3, "v": 1e15, "t": 1}}), 'line-boss'),
+    ('폰 · 옛 공단 저장 → 광산', (390, 760), factory(lineV=3, machines={"feed": 10, "press": 10, "weld": 10, "paint": 40, "forge": 3}), 'line-old'),
     ('폰 · 4구역 노선', (390, 760), station(), 'rail'),
     ('PC · 4구역 노선', (1280, 900), station(), 'rail'),
     ('폰 · 5구역 연구', (390, 760), lab(), 'lab'),
@@ -248,9 +250,9 @@ def run_case(browser, name, size, state, mode):
         tap('[data-gender=f]')
         if page.get_attribute('[data-gender=f]', 'aria-pressed') != 'true': problems.append('성별 단추가 눌린 표시가 안 된다')
         tap('[data-gender=none]')
-        # 0.8.3 자동화 설명: 영구 특성 '자동화' 줄에 전력 투입 대기 시간(초)이 나온다
+        # 0.8.3 자동화 설명: 영구 특성 '자동화' 줄에 3구역 자동(5.4.0 광산의 발파) 대기 시간(초)이 나온다
         tap('#mnav-exped'); tap('[data-view=party] [data-grow-set=exped]')
-        if '조립공' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
+        if '발파' not in text('row-auto') or '초' not in text('row-auto'): problems.append('자동화 설명에 초가 없다: ' + text('row-auto'))
         open_record()
         # 0.8.0 기록 화면: 일지의 장 탭과 소설 본문, 도움말 탭, 지난 구역, 설정 단추
         tap('[data-rtab-set=journal]')
@@ -299,50 +301,56 @@ def run_case(browser, name, size, state, mode):
         # '+0.5', '+0.6' 처럼 소수로 시작하는 값은 0 이 아니다(0.6 을 0 으로 잘못 읽던 것을 고침)
         if text('pps').strip().endswith('초당 +0'): problems.append('수색조를 샀는데 생산이 0이다: ' + text('pps'))
         page.wait_for_timeout(6000)
-    elif mode == 'line':
-        # 3구역: 기계가 없을 때의 안내 → 병목 올리기 → 직접 사서 병목이 바뀌는지 → 한 화면에 들어오는지
+    elif mode == 'line-boss':
+        # 5.4.0: 암반(제한 시간 막대) · 좀비 습격 · 큰 광차를 그리는 동안 장면에 오류가 없어야 한다(그림 오류는 #z3-fl 에 data-err 로 남는다)
+        tap('[data-mview-set=manage]'); tap('[data-tab=z2]'); close_story()
+        page.wait_for_timeout(7000)
+        if page.get_attribute('#z3-fl', 'data-err'): problems.append('광산 장면에 그림 오류: ' + (page.locator('#z3-fl').inner_text() or ''))
+        if '암반' not in text('z3-sub') and '암반' not in text('z3-note'): problems.append('암반 안내가 없다: %s | %s' % (text('z3-note'), text('z3-sub')))
+        cv = page.locator('#z3-cv'); cv.scroll_into_view_if_needed(); box = cv.bounding_box()
+        for _ in range(25):
+            page.mouse.click(box['x'] + box['width'] * 0.55, box['y'] + box['height'] * 0.45); page.wait_for_timeout(60)
+        page.wait_for_timeout(500)
+        if page.get_attribute('#z3-fl', 'data-err'): problems.append('누른 뒤 광산 장면에 그림 오류: ' + (page.locator('#z3-fl').inner_text() or ''))
+    elif mode == 'line-old':
+        # 5.4.0 옛 저장: 공단 시절 줄에 쓴 물자로 광산 줄을 사 주고 남은 것은 돌려준다(일지에 한 줄)
         tap('[data-mview-set=manage]'); tap('[data-tab=z2]')
-        if not page.locator('#line').is_visible(): problems.append('3구역 탭에 생산 라인 칸이 없다')
-        # 5.3.0 3구역: 공장 장면(라인 + 선반 스무 칸) → 상자가 들어오고 → 그림 속 상자를 눌러 합친다
-        z3 = lambda k: page.get_attribute('#z3-cv', k)
-        if not page.locator('#z3-cv').is_visible(): problems.append('공장 장면이 없다')
-        if page.locator('#mboard').is_visible(): problems.append('옛 칸 격자가 보인다')
-        if z3('data-cells') != '20': problems.append('선반이 스무 칸이 아니다: %s' % z3('data-cells'))
-        if page.locator('#z3-chips span').count() != 4 or '가장 느림' in text('z3-chips') or '투입구' not in text('z3-chips'): problems.append('라인 이름표가 없다: ' + text('z3-chips'))      # 5.3.1 세 기계 레벨이 같으면(새 저장은 모두 0) '가장 느림'이 나오면 안 된다
-        for gone in ['#recipes', '#jam-fix', '#surge', '#belt', '#tune', '#rebalance', '#truck']:
+        if not page.locator('#z3-cv').is_visible(): problems.append('옛 저장에서 광산 장면이 없다')
+        for nm in ['#row-pick', '#row-miner', '#row-minecart']:
+            if not page.locator(nm).count(): problems.append('광산 줄이 없다: ' + nm)
+        if '0' == (page.get_attribute('#line', 'data-rate') or '0'): problems.append('옮긴 광부가 캐지 않는다')
+        for old in ['#row-feed', '#row-press', '#row-paint']:
+            if page.locator(old).count(): problems.append('옛 줄이 남아 있다: ' + old)
+    elif mode == 'line':
+        # 3구역 광산(5.4.0): 장면이 있고 → 누르면 캐서 깊이 · 덩이 · 깬 수가 오르고 → 큰 광차를 보내고 → 줄을 사면 값이 오른다
+        tap('[data-mview-set=manage]'); tap('[data-tab=z2]')
+        if not page.locator('#line').is_visible(): problems.append('3구역 탭에 광산 칸이 없다')
+        L = lambda k: page.get_attribute('#line', k) or ''
+        if not page.locator('#z3-cv').is_visible(): problems.append('광산 장면이 없다')
+        for gone in ['#mboard', '#z3-chips', '#z3-workers', '#recipes', '#jam-fix', '#surge', '#belt', '#truck']:
             if page.locator(gone).count() and page.locator(gone).is_visible(): problems.append('없앤 것이 보인다: ' + gone)
-        page.wait_for_timeout(7500)      # 상자 둘 이상이 들어올 시간
-        if int(z3('data-boxes') or 0) < 3: problems.append('상자가 들어오지 않는다: %s개' % z3('data-boxes'))
-        if int(z3('data-pair') or -1) < 0: problems.append('합칠 수 있는 짝이 없다')
-        if '합쳐져요' not in text('line-note'): problems.append('합치기 안내가 없다: ' + text('line-note'))
-        if not page.evaluate("(() => { const c = document.getElementById('z3-cv'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4 * 97) seen.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]); return seen.size > 12; })()"): problems.append('공장 장면이 비어 있다')
-        box = page.locator('#z3-cv').bounding_box(); pi = int(z3('data-pair') or 0); n0 = int(z3('data-boxes') or 0)
-        page.locator('#z3-cv').click(position={'x': (4 + (pi % 5) * 29 + 13) / 184 * box['width'], 'y': (18 + 69 + (pi // 5) * 26 + 10) / 204 * box['height']}); page.wait_for_timeout(400)      # locator.click 은 화면 밖이면 알아서 내려간다(PC 에서는 장면이 길다)
-        if int(page.get_attribute('#line', 'data-merges') or 0) < 1: problems.append('그림 속 상자를 눌렀는데 합쳐지지 않는다')
-        if int(z3('data-boxes') or 0) >= n0: problems.append('합쳤는데 상자 수가 그대로다')
-        if '합침' in text('line-note') or '도와요' in text('line-note'): problems.append('3.8.4 에서 뺀 글이 남아 있다: ' + text('line-note'))
+        if '캐요' not in text('line-note'): problems.append('광산 안내가 없다: ' + text('line-note'))
+        page.wait_for_timeout(600)
+        if not page.evaluate("(() => { const c = document.getElementById('z3-cv'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const seen = new Set(); for (let i = 0; i < d.length; i += 4 * 97) seen.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]); return seen.size > 12; })()"): problems.append('광산 장면이 비어 있다')
         close_story()
-        # 줄 셋: 도장 라인은 값이 바로 오르고, 단조기는 판의 상자가 모두 오르고, 투입구는 간격이 줄어든다
-        rate3 = lambda: page.get_attribute('#line', 'data-rate') or ''
-        load0 = rate3()
-        if not tap('#row-paint'): problems.append('도장 라인을 살 수 없다')
-        if rate3() == load0: problems.append('도장 라인을 샀는데 판이 버는 양이 그대로다: ' + load0)
-        best0 = text('line-mile'); load0 = rate3()
-        if not tap('#row-forge'): problems.append('단조기를 살 수 없다')
-        if text('line-mile') == best0 or rate3() == load0: problems.append('단조기를 샀는데 판이 그대로다: ' + best0 + ' / ' + load0)
-        if '볼트' not in text('row-forge') : problems.append('단조기 줄에 들어오는 상자가 안 적혀 있다: ' + text('row-forge'))
-        feed0 = text('row-feed')
-        if not tap('#row-feed'): problems.append('투입구를 살 수 없다')
-        if text('row-feed') == feed0 or '초당' not in text('row-feed'): problems.append('투입구를 샀는데 속도가 그대로다: ' + text('row-feed'))
-        for nm in ['#row-press', '#row-weld']:
-            if not page.locator(nm).count(): problems.append('라인 기계 줄이 없다: ' + nm)
-        tap('[data-qty="max"]'); tap('#row-paint'); tap('[data-qty="1"]')
-        for up in ['#row-bonus', '#row-lucky', '#row-manual', '#row-dispatch']:
-            if not page.locator(up).count(): problems.append('새 개조가 없다: ' + up)
-        for old in ['#row-lube', '#row-belt', '#row-spare', '#row-sorter']:
+        cv = page.locator('#z3-cv'); cv.scroll_into_view_if_needed(); box = cv.bounding_box(); d0 = int(L('data-depth') or 0)
+        for _ in range(40):
+            page.mouse.click(box['x'] + box['width'] * 100 / 184, box['y'] + box['height'] * 70 / 160); page.wait_for_timeout(40)
+        if int(L('data-depth') or 0) <= d0: problems.append('눌러도 내려가지 않는다: %s → %s' % (d0, L('data-depth')))
+        if int(L('data-merges') or 0) < 1: problems.append('손으로 깬 바위 수가 안 오른다')
+        if int(L('data-load') or 0) < 1 and int(L('data-depth') or 0) > d0: problems.append('깬 바위가 큰 광차에 안 모인다')
+        rate = lambda: L('data-rate')
+        r0 = rate()
+        if not tap('#row-miner'): problems.append('광부를 살 수 없다')
+        if rate() == r0: problems.append('광부를 샀는데 캐는 양이 그대로다: ' + r0)
+        for nm in ['#row-pick', '#row-minecart', '#row-powder', '#row-wall', '#row-guard']:
+            if not page.locator(nm).count(): problems.append('광산 줄이 없다: ' + nm)
+        if not tap('#row-pick'): problems.append('곡괭이를 살 수 없다')
+        for up in ['#row-bonus', '#row-lucky', '#row-dispatch']:
+            if not page.locator(up).count(): problems.append('광산 개조가 없다: ' + up)
+        for old in ['#row-feed', '#row-press', '#row-weld', '#row-paint', '#row-forge', '#row-lube', '#row-belt']:
             if page.locator(old).count(): problems.append('옛 줄이나 개조가 남아 있다: ' + old)
         if not fits(): problems.append('한 화면에 들어오지 않는다(3구역)')
-        if rate3() == '0': problems.append('판에 상자가 있는데 버는 양이 0이다: ' + rate3())
         tap('[data-tab=z3]')
         if '아직 열지 않은' not in text('soon'): problems.append('잠긴 4구역 탭에 안내가 없다: ' + text('soon'))
         if page.locator('[data-tab=z4]').is_visible(): problems.append('아직 먼 5구역 탭이 보인다')

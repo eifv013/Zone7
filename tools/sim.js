@@ -46,7 +46,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     active += dt;
     const evs = C.tick(s, dt, rng);
     // PROBE=분: 접속 시간으로 그만큼마다 한 줄씩 찍는다(어디서 막혔는지 본다)
-    if (process.env.PROBE && active % (Number(process.env.PROBE) * 60) < dt) console.log(`  @${(active / 3600).toFixed(1)}h ${s.zone + 1}구역 물자 ${C.formatNumber(s.supplies)} 초당 ${C.formatNumber(C.productionPerSec(s))} 혈청 ${s.serumStage}(${isFinite(C.serumCost(s)) ? C.formatNumber(C.serumCost(s)) : '-'}) 방어 ${C.formatNumber(C.defensePower(s))}/${C.formatNumber(C.nightStrength(s))} 농성 ${s.siege ? 1 : 0} 뚫림 ${s.breaches || 0} 목표 ${C.goals(s, s.zone).map(g => g.id + (g.done ? '✓' : ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need))).join(' ')}${C.serumGate && C.serumGate(s) ? ' 문턱 밤' + C.serumGate(s).nightNow + '/' + C.serumGate(s).night + ' 단계합' + C.serumGate(s).lvNow + '/' + C.serumGate(s).lvSum + (C.serumNeeds && C.serumNeeds(s) ? ' 건물:' + C.serumNeeds(s).id : '') : ''}`);      // 5.1.3 7구역 문턱도 찍는다
+    if (process.env.PROBE && active % (Number(process.env.PROBE) * 60) < dt) console.log(`  @${(active / 3600).toFixed(1)}h ${s.zone + 1}구역 물자 ${C.formatNumber(s.supplies)} 초당 ${C.formatNumber(C.productionPerSec(s))} 혈청 ${s.serumStage}(${isFinite(C.serumCost(s)) ? C.formatNumber(C.serumCost(s)) : '-'}) 방어 ${C.formatNumber(C.defensePower(s))}/${C.formatNumber(C.nightStrength(s))} 농성 ${s.siege ? 1 : 0} 뚫림 ${s.breaches || 0} 목표 ${C.goals(s, s.zone).map(g => g.id + (g.done ? '✓' : ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need))).join(' ')}${C.serumGate && C.serumGate(s) ? ' 문턱 밤' + C.serumGate(s).nightNow + '/' + C.serumGate(s).night + ' 단계합' + C.serumGate(s).lvNow + '/' + C.serumGate(s).lvSum + (C.serumNeeds && C.serumNeeds(s) ? ' 건물:' + C.serumNeeds(s).id : '') : ''}${s.zone === 2 ? ` | 광산 ${C.mineOf(s).depth}m 실패${C.mineOf(s).fails} 줄 ${C.MACHINES.map(d => d.id[0] + (s.machines[d.id] || 0)).join(' ')} 광산초당 ${C.formatNumber(C.lineRate(s))} 런 ${Math.round(s.runSeconds/60)}분 번것 ${C.formatNumber(s.runEarned)} 1구 ${C.formatNumber(C.searchRate(s))} 2구 ${C.formatNumber(C.tradeRate(s))} 문 ${C.nextZone(s) ? C.formatNumber(C.nextZone(s).cost) : '-'}` : ''}`);      // 5.1.3 7구역 문턱도 찍는다 · 5.4.0 광산도
     if (process.env.STAGE) {
       if (s.runSeconds >= stageBeat) { stageBeat += 60; if (process.env.RAW) console.log(`RAW ${Math.round(s.runSeconds / 60)} ${s.runEarned} ${C.totalBuildings(s)} ${s.wavesCleared} ${s.sweeps} ${s.breaches}`); if (process.env.CURVE) console.log(`  ${Math.round(s.runSeconds / 60)}분 누적 ${C.formatNumber(s.runEarned)} 시설 ${C.totalBuildings(s)} 밤 ${s.wavesCleared} 동네 ${s.sweeps} 뚫림 ${s.breaches}`); }
       const st = C.stageStatus(s);
@@ -56,7 +56,13 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (!marks.some(m => m.end) && evs.some(e => e.type === 'ending')) marks.push({ end: true, day: day + 1, hours: active / 3600, retreats: s.retreats });
     // 구역 사이 콘텐츠: 채울 수 있으면 바로 채운다(주문·의뢰·화물)
     const IDLE = !!process.env.IDLE;      // IDLE=1: 사기만 하고 사건·단추는 손대지 않는 사람(자동 개조가 대신 하는 것만 일어난다)
-    if (!IDLE) { if (s.zone === 2) { const held = C.heldLevel(s); for (let g = 0; g < 3; g++) { const m = C.mergeable(s).filter(i => s.board[i] !== held); if (!m.length) break; const lo = Math.min(...m.map(i => s.board[i])); C.mergeBox(s, m.find(i => s.board[i] === lo)); } } }      // 3.3.0: 3구역에 있는 동안은 상자를 손으로 합친다(지나온 뒤에는 가만히 둔다)
+    if (!IDLE && s.zone === 2) {      // 5.4.0 3구역 광산: 있는 동안은 초당 3번쯤 누르고, 큰 광차 · 발파 · 독려를 알맞을 때 쓴다(지나온 뒤에는 가만히 둔다)
+      for (let k = 0, n = Math.min(15, Math.round(3 * dt)); k < n; k++) C.mineTap(s, 100, 60);
+      const mm = C.mineOf(s), danger = mm.zom.some(z => z.st === 'hide' || z.st === 'tip');
+      if (mm.load.n >= C.mineCap(s) - 1 || (danger && mm.load.n >= 2)) C.mineSend(s);
+      if (C.mineBoss(mm.depth) || mm.zom.some(z => C.mineLive(z) && z.x > 60)) C.mineBlast(s);
+      C.mineCheer(s);
+    }
     if (!IDLE && s.zone === 3) { for (let k = 0; k < Math.round((taps || 0) * dt); k++) C.pullCar(s); let ti = C.trainInfo(s); if (ti.running && ti.rush && ti.horn > 0) { C.blowHorn(s); ti = C.trainInfo(s); } if (ti.running && ti.cars >= 1 && (ti.full || ti.near < 0.36 || ti.rush)) C.sendTrain(s); }      // 3.4.0: 4구역에 있는 동안은 무리가 닿기 직전에 손으로 보낸다      // 접속 중에는 고장을 고치고 트럭에 싣는다(품목은 바꾸지 않는다)
     // 4·6·7구역 사건: 배수를 먼저 다 쌓고, 그 뒤로는 바로 받는다. 5구역 밤샘 연구는 되는 대로 누른다
     if (!IDLE) for (const d of C.ZONE_EVENTS) if (s.zev[d.id]) { if (!(d.choices.includes('boost') && C.answerZoneEvent(s, d.id, 'boost', false).ok)) C.answerZoneEvent(s, d.id, 'now', false); }
@@ -66,7 +72,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     // 4.3.7: 7구역 습격에는 생존자를 몰리는 쪽에 세우고, 울타리 밖 생존자는 들인다
     if (!IDLE && s.zone >= 6 && process.env.RESCUE) { const ro = C.rescueOffer(s), sc = C.serumCost(s); if (ro && s.supplies >= ro.cost + (isFinite(sc) ? sc : 0)) C.sendRescue(s); }      /* RESCUE=1: 혈청 값을 남기고 남는 물자로 구조대를 보낸다 */
     if (!IDLE && s.zone >= 6) { C.campSeen(s); if (C.canFinal && C.canFinal(s)) C.startFinal(s, rng); const c7 = C.campOf(s); if (c7.night) for (let k = 0, g7 = Math.round((+process.env.GUARD || 3) * dt); k < g7; k++) if (!C.sendGuard(s, -1).ok) break;      /* 4.7.5 보고 있으면 습격이 온다(GUARD=초당 세우는 횟수). 문턱을 채우면 최후의 밤을 맞는다 */ (c7.strays || []).slice().forEach(q => C.rescueStray(s, q.id)); }
-    if (!IDLE) { if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 2) C.fillContract(s); if (s.zone >= 3) C.fillSalvage(s); }
+    if (!IDLE) { if (s.zone >= 1) C.fillOrder(s); if (s.zone >= 3) C.fillSalvage(s); }
     // 7구역 정착지와 주파수(3.1.0): 지을 수 있는 건물은 짓되 혈청 줄(가운데)을 먼저. 주파수는 바늘이 띠 안에 있을 때만 누른다
     if (s.zone >= 6) {
       const need = C.serumNeeds(s); if (need && C.settleBlock(s, need.id) === '') C.buildSettle(s, need.id);
@@ -98,7 +104,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const toward = {
       z1a: () => C.buyBuilding(s, 'scouts', 1), z1a2: () => C.buyBuilding(s, 'garden', 1), z1b2: cheapestDef, z1c2: () => cheapestUp(0),
       z2a: () => C.buyStall(s, 1), z2a2: cheapestHand, z2c2: () => cheapestUp(1),
-      z3a: () => C.buyMachine(s, 'forge', 1), z3b2: () => C.buyMachine(s, 'paint', 1), z3a2: () => cheapestUp(2), z3b: () => ({ ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
+      z3a: () => C.buyMachine(s, 'miner', 1), z3b2: () => C.buyMachine(s, 'miner', 1), z3a2: () => cheapestUp(2), z3b: () => ({ ok: false }),      // 정속 가동이 깨져 있으면 병목을 올려 맞춘다
       z4a: () => C.buyTrain(s, 1), z4b: () => (s.upgrades.longplat ? { ok: false } : C.buyUpgrade(s, 'longplat')), z4a2: () => C.buyRoute(s, 'grade'), z4c2: () => cheapestUp(3),
       z5a: () => C.buyStaff(s, 1), z5a2: () => cheapestUp(4), z5c2: () => C.buyRack(s),
       z6a: () => C.buyPost(s, 1), z6a2: cheapestDef, z6b: () => cheapestUp(5), z6b2: () => C.buyUpgrade(s, 'booth'),
@@ -118,7 +124,16 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
       const consider = (cost, gain, buy) => { if (cost > s.supplies && gain > 0) cheapest = Math.min(cheapest, cost); if (cost <= s.supplies && gain > 0 && (!best || cost / gain < best.pay)) best = { pay: cost / gain, buy }; };
       for (const b of C.BUILDINGS) consider(C.buildingCost(s, b.id, 1), b.baseRate * C.mods(s).z1 * C.globalMult(s) * C.milestoneMult(s.buildings[b.id] + 1), () => C.buyBuilding(s, b.id, 1));
       if (s.zone >= 1) consider(C.stallCost(s, 1), C.goodsValue(s) * C.priceRange(s).mean * 1.2, () => C.buyStall(s, 1));
-      if (s.zone >= 2) for (const d of C.MACHINES) consider(C.machineCost(s, d.id, 1), Math.max(C.lineRate(s) * C.machineGain(s, d.id), C.lineInfo(s).unit * 0.2), () => C.buyMachine(s, d.id, 1));   // 3.5.0 3구역: 줄 셋을 '길게 보아 느는 수입'으로 따진다
+      if (s.zone >= 2) {      // 5.4.0 3구역 광산: 광부 몫 + (있는 동안이면) 손 몫이 얼마나 느는지로 따진다. 화약 · 바리케이드 · 경비원은 조금만 친다
+        const handRate = (st) => (IDLE || s.zone !== 2) ? 0 : C.mineTapPower(st) * C.minePerHp(st) * 3 * C.mods(st).mergebonus;
+        const total = () => C.lineRate(s) + handRate(s), now = total();
+        for (const d of C.MACHINES) {
+          let g;
+          if (d.id === 'powder' || d.id === 'wall' || d.id === 'guard') g = now * 0.01;
+          else { s.machines[d.id]++; g = total() - now; s.machines[d.id]--; }
+          consider(C.machineCost(s, d.id, 1), g, () => C.buyMachine(s, d.id, 1));
+        }
+      }
       if (s.zone >= 3) {   // 4구역: 열차를 사거나 노선을 늘렸을 때 늘어나는 평균 수입으로 따진다
         const rate = C.railRate(s), probe = () => { const o = Object.create(s); o.routes = Object.assign({}, s.routes); return o; };
         const t = probe(); t.trains = s.trains + 1;
@@ -138,7 +153,7 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     const nz = C.nextZone(s), wall = nz && nz.ready && (nz.cost - nz.have) > C.incomePerSec(s) * 6 * 3600;      // 문 값의 벽: 목표는 다 채웠는데 문 값이 한참 멀다
     const endWall = !process.env.NOENDWALL && !nz && s.zone >= 6 && !s.endedRun && isFinite(C.serumCost(s)) && (C.serumCost(s) - s.supplies) > C.incomePerSec(s) * 6 * 3600;
     if (process.env.CHAL && s.challenge && (s.challenge.done || s.challenge.failed)) { console.log(`도전 ${process.env.CHAL}: ${s.challenge.done ? '성공' : '실패'} · 회차 ${(s.runSeconds / 3600).toFixed(1)}시간(접속 ${(active / 3600).toFixed(1)}시간) · ${s.zone + 1}구역 · 뚫림 ${s.breaches}`); process.exit(0); }
-    if (!process.env.NORETREAT && !C.activeChallenge(s) && C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', goals: C.goals(s, s.zone).filter(g => !g.done).map(g => g.id + ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need)).join(' ') }); s = C.retreat(s, 0, rng).state; spendTraits(); }
+    if (!process.env.NORETREAT && !C.activeChallenge(s) && C.canRetreat(s) && s.runSeconds > 1800 && ((isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', depth: s.zone === 2 ? C.mineOf(s).depth : undefined, mlv: s.zone === 2 ? [s.machines.pick, s.machines.miner, s.machines.minecart].join('/') : undefined, goals: C.goals(s, s.zone).filter(g => !g.done).map(g => g.id + ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need)).join(' ') }); s = C.retreat(s, 0, rng).state; spendTraits(); }
   };
   if (process.env.CONTRACT) C.buyContract(s);
   const gap = Math.max(0, 16 * 3600 / sessions - minutes * 60);

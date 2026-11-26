@@ -5,7 +5,7 @@ const F = require('../src/feedback.js');
 const C = require('../src/core.js');
 
 const base = () => ({
-  text: '3구역이 너무 빨리 끝나요', version: '0.6.4', zone: '3구역 공단',
+  text: '3구역이 너무 빨리 끝나요', version: '0.6.4', zone: '3구역 광산',
   stats: { retreats: 2, bestZone: 2, antibodyTotal: 120, wavesCleared: 31, breaches: 1, play: 7500, away: 18000, run: 2400, days: 3,
     runs: [{ zone: 1, seconds: 2100, antibodies: 12 }, { zone: 2, seconds: 3000, antibodies: 40 }] },
   screen: { w: 390, h: 760 }, ua: 'Mozilla/5.0 (Linux; Android 14; SM-S911N Build/UP1A; wv) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36',
@@ -16,10 +16,10 @@ test('의견: 쓴 글과 판 정보가 한 덩어리로 묶인다', () => {
   const out = F.compose(base());
   assert.ok(out.startsWith('[7구역 의견] 알파 0.6.4\n'));
   assert.ok(out.includes('\n3구역이 너무 빨리 끝나요\n'));
-  assert.ok(out.includes('현재: 3구역 공단 · 가장 멀리: 3구역 공단'));
+  assert.ok(out.includes('현재: 3구역 광산 · 가장 멀리: 3구역 광산'));
   assert.ok(out.includes('철수 2번 · 항체 누적 120 · 막아낸 밤 31 · 뚫린 밤 1'));
   assert.ok(out.includes('플레이 2시간 5분 · 자리 비움 5시간 0분 · 이번 회차 40분 0초 · 3일째'));
-  assert.ok(out.includes('지난 회차: 2구역 재래시장 35분 0초 (+12) / 3구역 공단 50분 0초 (+40)'));
+  assert.ok(out.includes('지난 회차: 2구역 재래시장 35분 0초 (+12) / 3구역 광산 50분 0초 (+40)'));
   assert.ok(out.includes('기기: 안드로이드 · 앱 · 화면 390×760'));
 });
 
