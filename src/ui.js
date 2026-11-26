@@ -3410,7 +3410,9 @@
         var quick = T - (A.hoodT || -99) < 3; A.hoodT = T; A.fade = 0;
         /* 전환 연출은 동네가 넘어갈 때마다 나온다. 앞선 연출이 아직 도는 중(0.7초)일 때만 건너뛴다.
          * (5.3.6은 3초 안에 또 넘어가면 건너뛰어서, 손으로 빨리 넘기면 첫 번째만 나왔다.) */
-        if (T - (A.trAt === undefined ? -99 : A.trAt) >= 0.7) { A.trAt = T; var tk = A.trK; while (tk === A.trK) tk = Math.floor(Math.random() * 5); A.trK = tk; }      /* 다섯 가지 중 직전과 다른 것 */
+        /* 5.4.1 전환은 '검게 덮였다가 다시 밝아지는' 한 가지로 통일. 연출이 아직 도는 중(0.7초)이면 새로 시작하지 않는다.
+         * 순찰조가 빨라 3초 안에 또 넘어가는 살림에서는 덜 어둡게(0.5) 해서 화면이 자꾸 깜깜해지지 않게 한다. */
+        if (T - (A.trAt === undefined ? -99 : A.trAt) >= 0.7) { A.trAt = T; A.trStr = quick ? 0.5 : 0.95; }
         if ((A.hood - A.wxAt >= WX_HOODS || A.hood < A.wxAt) && T - (A.wxT || -99) >= 45) { var nw = A.wx; while (nw === A.wx) nw = Math.floor(Math.random() * WX.length); A.wx = nw; A.wxAt = A.hood; A.wxT = T; }
         else if (A.hood < A.wxAt) A.wxAt = A.hood;
       }
@@ -3689,18 +3691,14 @@
       /* 어두워진 화면은 0.5초에 걸쳐 다시 밝아진다. (5.3.2 · 5.3.3에는 이 줄이 빠져 있어서, 동네가 한 번 넘어가면 화면이 영영 검게 남았다.) */
       if (A.fade > 0) A.fade = Math.max(0, A.fade - dt); if (!(A.fade >= 0) || A.fade > 0.5) A.fade = 0;
       /* 동네가 넘어갈 때 화면 전체를 어둡게 덮던 연출은 뺐다(5.3.5). 이 덮개가 걷히지 않아 화면이 통째로 검게 남는 사고가 두 번 났다.
-       * 전환은 밝은 반짝임으로만 알린다: 화면을 가리는 연출은 실패하면 게임이 안 보이므로 쓰지 않는다. */
+       * 5.4.1부터 전환은 아래의 '검정 → 밝아짐' 하나다. 줄여 가는 값이 아니라 지난 시간으로만 그려서 덮개가 남을 수 없다. */
       A.fade = 0;
-      /* 동네가 넘어가는 연출 다섯 가지. 모두 "넘어간 뒤 지난 시간"만으로 계산하므로 0.7초가 지나면 반드시 사라진다.
-       * (예전 덮개는 값을 조금씩 줄이는 방식이라, 줄이는 줄이 빠지자 화면이 영영 검게 남았다.) 덮는 세기도 0.85를 넘기지 않는다. */
+      /* 동네가 넘어가는 연출: 0.7초 동안 검정에서 다시 밝아진다. 덮는 세기는 처음에 가장 크고(0.95, 연달아 넘어가면 0.5) 시간이 지나면 반드시 0이 된다. */
       var tp = (T - (A.trAt === undefined ? -99 : A.trAt)) / 0.7;
       if (tp >= 0 && tp < 1) {
-        var inv = 1 - tp, tkk = A.trK || 0, dk = 'rgba(15,16,20,';
-        if (tkk === 0) { g.fillStyle = 'rgba(255,246,200,' + (0.75 * inv * inv).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); }      /* 번쩍 */
-        else if (tkk === 1) { var bxw = tp * 250 - 40; g.fillStyle = dk + (0.8 * inv).toFixed(2) + ')'; g.fillRect(Math.max(0, bxw + 30), 0, 184, 150); g.fillStyle = 'rgba(255,246,200,.8)'; g.fillRect(bxw + 22, 0, 8, 150); g.fillStyle = 'rgba(255,246,200,.35)'; g.fillRect(bxw, 0, 22, 150); }      /* 빛줄기가 왼쪽에서 오른쪽으로 훑는다 */
-        else if (tkk === 2) { var hw = Math.round(92 * inv * inv); g.fillStyle = dk + '.85)'; g.fillRect(0, 0, hw, 150); g.fillRect(184 - hw, 0, hw, 150); g.fillStyle = 'rgba(255,217,90,.7)'; g.fillRect(hw, 0, 1, 150); g.fillRect(183 - hw, 0, 1, 150); }      /* 문이 양옆으로 열린다 */
-        else if (tkk === 3) { for (k = 0; k < 5; k++) { var rp = Math.max(0, Math.min(1, tp * 2.2 - k * 0.24)); if (rp < 1) { g.fillStyle = dk + (0.85 * (1 - rp)).toFixed(2) + ')'; g.fillRect(0, k * 30, 184, 30); } } }      /* 위에서부터 한 줄씩 밝아진다 */
-        else { g.fillStyle = dk + (0.6 * inv).toFixed(2) + ')'; g.fillRect(0, 0, 184, 150); for (k = 0; k < 14; k++) { var dxx = (hash(k, 71) % 220 + tp * 160) % 230 - 20, dyy = 30 + hash(k, 73) % 110; g.fillStyle = 'rgba(200,190,170,' + (0.5 * inv).toFixed(2) + ')'; g.fillRect(dxx, dyy, 9, 3); g.fillRect(dxx + 3, dyy - 2, 5, 2); } }      /* 먼지바람이 지나간다 */
+        /* 검정에서 밝아지기: 시작할 때 가장 어둡고(trStr) 부드럽게(smoothstep) 걷힌다. 지난 시간만으로 계산하니 0.7초 뒤에는 반드시 0이다 */
+        var sm = tp * tp * (3 - 2 * tp), dark = (A.trStr || 0.95) * (1 - sm);
+        if (dark > 0.005) { g.fillStyle = 'rgba(10,11,14,' + dark.toFixed(3) + ')'; g.fillRect(0, 0, 184, 150); }
       }
       base(dt);
     }
