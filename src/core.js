@@ -349,6 +349,10 @@
    *   story : 그 구역에 들어설 때, 목표 둘을 채웠을 때, 목표를 모두 채웠을 때 열리는 일지 3편.
    *           한 편은 { title 제목, text [문단, ...] }. 주인공(노란 우비를 입은 아이)이 쓰는 글이다.
    */
+  /* 5.5.1 여는 값(4 · 5 · 6구역)을 올렸다: 3e20 → 3e24, 8e24 → 4.8e27, 8e28 → 4e30, 혈청 ×1.5.
+   *   기준은 다른 방치형 게임(쿠키 클리커 메인 37시간 안팎, 에그 인크 마지막 알 두어 달)과 견주어,
+   *   하루 3시간 하는 사람이 엔딩까지 5주쯤(시뮬레이션 SESSIONS=12 WALLANY=1: 4구역 5일 · 5구역 10일 · 6구역 14일 · 7구역 17일 · 엔딩 38일).
+   *   전에는 4 · 5 · 6구역이 이틀 사이에 연달아 열리고 7구역 문 앞에서 오래 막혔다. 7구역 여는 값은 조금만 올려도 몇 주씩 밀려서 그대로 두었다. */
   var ZONES = [
     { no: 1, name: '주택가', kind: 'search', cost: 0, lead: '잔해를 수색하고 사람을 모은다',
       story: [
@@ -411,7 +415,7 @@
           "반장은 철망을 잡고 흔들지 않았다. 그냥 서서 강 쪽을 보고 있었다. 내가 이름을 불렀다. 고개가 아주 천천히 돌아왔다. 입이 한 번 움직였다. 소리는 없었지만 나는 그 모양을 안다. {hero}. 그리고 내 노란 우비를 한참 봤다. 나는 그 눈이 나를 알아봤다고 지금도 생각한다.",
           "철망 사이로 반장의 손이 나와 내 왼쪽 소매를 잡았다. 망을 보던 사람들이 소리를 질렀다. 놈들은 산 사람을 잡으면 문다. 그런데 반장은 물지 않았다. 소매에 코를 대고 한참 있다가, 놓았다. 아무도 그 까닭을 묻지 않았고 나도 말하지 않았다.",
           "새벽에 무리가 움직이자 반장도 따라갔다. 선로 쪽으로. 열일곱 명 중에 몇이나 건넜을까. 나는 쪽지 뒷면의 이름 하나에 줄을 그었다. 선로를 따라가면 환승역이다."] }] },
-    { no: 4, name: '환승역', kind: 'rail', cost: 3e20, lead: '화물칸을 모아 열차를 보낸다',      /* 4.7.7 1e19 → 1e21: 3구역과 같은 날 열렸다. 4.7.8 3e20 */
+    { no: 4, name: '환승역', kind: 'rail', cost: 3e24, lead: '화물칸을 모아 열차를 보낸다',      /* 4.7.7 1e19 → 1e21: 3구역과 같은 날 열렸다. 4.7.8 3e20 */
       story: [
         { title: "행선지", text: [
           "4구역. 환승역 계단을 내려가니 선로가 네 갈래로 갈라진다. 역 안은 캄캄한데 전광판 하나만 켜져 있다. 행선지: 7구역. 도착 예정: --분.",
@@ -433,7 +437,7 @@
           "아저씨가 그건 신호라고 했다. 누가 거기서 손으로 켰다 껐다 하는 거라고. 녹음이 아니라 사람이라고.",
           "나는 녹음 얘기를 그제야 꺼냈다. 방송이 테이프라는 것, 놈들이 그걸 듣는다는 것. 다들 조용해졌다. {student:이} 물었다. “그럼 7구역엔 아무도 없는 거야? 우린 놈들이랑 같이 빈 데로 가고 있는 거야?”",
           "아무도 대답하지 못했다. 나는 방송의 목소리를 한 번 더 떠올렸다. 숨 쉴 틈 없이 말하는 여자. 엄마는 급할 때 그렇게 말한다. 그 생각은 입 밖에 내지 않았다. 다음 급행은 병원 앞까지 간다."] }] },
-    { no: 5, name: '대학 병원', kind: 'lab', cost: 8e24, lead: '남은 연구를 이어 가며 과제를 고른다',      /* 4.7.7 1.5e24 → 2e25. 4.7.8 8e24 */
+    { no: 5, name: '대학 병원', kind: 'lab', cost: 4.8e27, lead: '남은 연구를 이어 가며 과제를 고른다',      /* 4.7.7 1.5e24 → 2e25. 4.7.8 8e24 */
       story: [
         { title: "감염내과, 7층", text: [
           "5구역. 응급실 문의 쇠사슬을 끊었다. 복도에 비상등이 깜박인다. 안내판의 화살표가 전부 한 곳을 가리킨다. 누가 매직으로 덧그려 놓았다. 감염내과, 7층.",
@@ -453,7 +457,7 @@
           "관 아래에 카세트테이프 케이스가 깔려 있었다. 테이프는 없고 케이스만. 엄마 글씨로 적혀 있다. “방송용. 지우지 말 것.” 그리고 뒷면에. “사람을 모으는 방법이 이것밖에 없었다. 놈들도 같이 올 줄은 몰랐다. 미안하다.”",
           "그러니까 7구역에서 오라고 부르는 건 엄마다. 살아남은 사람을, 물리고도 살아남은 사람을 찾으려고. 그리고 엄마가 찾던 건 처음부터 집 다락에서 통조림을 세고 있었다.",
           "옥상에 올라가니 강 건너 검문소의 탐조등이 아직 돈다. 길게, 짧게, 길게. 저 너머가 7구역이다. 나는 우비의 모자를 벗고 손전등을 켰다. 길게, 짧게, 길게."] }] },
-    { no: 6, name: '강변 검문소', kind: 'guard', cost: 8e28, lead: '다리를 지키며 밀려오는 무리를 막는다',      /* 4.7.7 1.5e27 → 2e29: 5구역과 같은 날 열렸다. 4.7.8 8e28 */
+    { no: 6, name: '강변 검문소', kind: 'guard', cost: 4e30, lead: '다리를 지키며 밀려오는 무리를 막는다',      /* 4.7.7 1.5e27 → 2e29: 5구역과 같은 날 열렸다. 4.7.8 8e28 */
       story: [
         { title: "다리", text: [
           "다리 입구의 검문소에 닿았다. 차단기는 내려가 있고 초소는 비었다. 탁자 위에 근무 일지가 펼쳐져 있다. 마지막 줄. “통과 17. 그중 아이 16.”",
@@ -659,6 +663,7 @@
    *   크기: 시뮬레이션(tools/sim.js DUMP=1)에서 그 구역의 문이 처음 열리는 순간 이번 회차에 쌓여 있던 기록의 70~80%.
    *     다음 구역을 여는 값이 모일 무렵 미션도 끝나게 한 것이다(예전 목표 셋은 그보다 몇 배에서 수십 배 작아서 금방 끝났다).
    *     물자 누적 미션만은 다음 구역을 여는 값 근처로 잡았다(시뮬레이션의 누적은 자리 비움 동안 문 값을 한참 넘겨 있어서).
+   *     5.5.1 4 · 5 · 6구역 여는 값을 올린 뒤 그 세 구역의 미션을 다시 쟀다(하루 3시간 하는 사람, 다시 오르는 회차의 문 앞 기록의 75%쯤).
    *     철수 뒤 다시 오르는 회차에서도 막지 않게, 시간이 지나야만 차는 것(동네 수색 · 고점 판매 · 단골 주문 · 큰 광차 등)은
    *     다시 오르는 회차의 문 앞 기록(MISS=1 의 MISSV)에 맞춰 더 작게 잡았다. 밤 습격 횟수처럼 기다리기만 하면 되는 것은 넣지 않는다.
    *   앞 셋은 예전 목표, 뒤 셋은 회차마다 바뀌던 다른 후보(GOALS_ALT, 5.5.0에서 없앴다)였던 것이라 id 가 그대로다: 옛 저장의 달성 기록이 이어진다.
@@ -685,24 +690,24 @@
       { id: 'z3a2', text: '3구역 개조 32번', need: 32, value: function (s) { return zoneUpgrades(s, 2); }, ups: true },
       { id: 'z3b2', text: '광부 75단계', need: 75, value: function (s) { return s.machines.miner || 0; } },
       { id: 'z3c2', text: '큰 광차 8번 보내기', need: 8, value: function (s) { return s.contractsRun; } } ],
-    [ { id: 'z4a', text: '기관차 30레벨', need: 30, value: function (s) { return s.trains; } },
-      { id: 'z4b', text: '10칸 이상 열차 18번', need: 18, value: function (s) { return s.longRuns || 0; } },
-      { id: 'z4c', text: '화물로 1자 벌기', need: 1e24, value: function (s) { return s.railEarned; } },
-      { id: 'z4a2', text: '화물 등급 4레벨', need: 4, value: function (s) { return s.routes.grade || 0; } },
-      { id: 'z4b2', text: '표류 화물 4번 끌어오기', need: 4, value: function (s) { return s.salvagesRun; } },
+    [ { id: 'z4a', text: '기관차 45레벨', need: 45, value: function (s) { return s.trains; } },
+      { id: 'z4b', text: '10칸 이상 열차 550번', need: 550, value: function (s) { return s.longRuns || 0; } },
+      { id: 'z4c', text: '화물로 2,500자 벌기', need: 2.5e27, value: function (s) { return s.railEarned; } },
+      { id: 'z4a2', text: '화물 등급 5레벨', need: 5, value: function (s) { return s.routes.grade || 0; } },
+      { id: 'z4b2', text: '표류 화물 95번 끌어오기', need: 95, value: function (s) { return s.salvagesRun; } },
       { id: 'z4c2', text: '4구역 개조 21번', need: 21, value: function (s) { return zoneUpgrades(s, 3); }, ups: true } ],
-    [ { id: 'z5a', text: '연구원 40명', need: 40, value: function (s) { return s.staff; } },
-      { id: 'z5b', text: '혈청 650대 놓기', need: 650, value: function (s) { return s.dosesAll || 0; } },
-      { id: 'z5c', text: '사람 40명 되돌리기', need: 40, value: function (s) { return s.curesRun || 0; } },
-      { id: 'z5a2', text: '5구역 개조 22번', need: 22, value: function (s) { return zoneUpgrades(s, 4); }, ups: true },
-      { id: 'z5b2', text: '사람 450명 멈추기', need: 450, value: function (s) { return s.stopsRun || 0; } },
+    [ { id: 'z5a', text: '연구원 55명', need: 55, value: function (s) { return s.staff; } },
+      { id: 'z5b', text: '혈청 4,000대 놓기', need: 4000, value: function (s) { return s.dosesAll || 0; } },
+      { id: 'z5c', text: '사람 250명 되돌리기', need: 250, value: function (s) { return s.curesRun || 0; } },
+      { id: 'z5a2', text: '5구역 개조 26번', need: 26, value: function (s) { return zoneUpgrades(s, 4); }, ups: true },
+      { id: 'z5b2', text: '사람 2,800명 멈추기', need: 2800, value: function (s) { return s.stopsRun || 0; } },
       { id: 'z5c2', text: '의자 6개', need: 6, value: function (s) { return seatCount(s); } } ],
     [ { id: 'z6a', text: '초소 60곳', need: 60, value: function (s) { return s.posts; } },
-      { id: 'z6b', text: '손으로 2,000마리 잡기', need: 2000, value: function (s) { return s.handKills || 0; } },
+      { id: 'z6b', text: '손으로 8,000마리 잡기', need: 8000, value: function (s) { return s.handKills || 0; } },
       { id: 'z6c', text: '통행 물자 1,500양', need: 1.5e31, value: function (s) { return s.guardEarned; } },
       { id: 'z6a2', text: '방어 수단 1,200개', need: 1200, value: function (s) { return defenseCount(s); } },
       { id: 'z6b2', text: '검문대 7단계', need: 7, value: function (s) { return s.upgrades.booth || 0; }, ups: true },
-      { id: 'z6c2', text: '큰 놈 90마리 잡기', need: 90, value: function (s) { return s.bigKills || 0; } } ],
+      { id: 'z6c2', text: '큰 놈 450마리 잡기', need: 450, value: function (s) { return s.bigKills || 0; } } ],
     [ { id: 'z7a', text: '안테나 21기', need: 21, value: function (s) { return s.antennas; } },
       { id: 'z7b', text: '생존자 7만 명 모으기', need: 7e4, value: function (s) { return s.survivors; } },
       { id: 'z7c', text: '혈청 3단계 완성', need: 3, value: function (s) { return s.serumStage; } },
@@ -1208,7 +1213,7 @@
    *   전체 생산 배수 = 1 + TOWER_GAIN × log10(1 + 생존자).  10만 명이면 3.5배.
    *   혈청: 물자를 들여 세 단계로 완성한다(SERUM_COSTS). 마지막 단계를 끝내면 이야기가 끝난다(ended).
    */
-  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [2.2e32, 4e32, 6.5e32];      // 4.7.7 [2e31, 6e31, 2e32] → [9e32 …](엔딩 40일, 너무 길었다) → 4.7.8 이 값(엔딩 약 25일)
+  var ANTENNA_COST = 5e28, ANTENNA_GROWTH = 1.13, TOWER_GAIN = 0.5, SERUM_COSTS = [3.3e32, 6e32, 9.75e32];      // 5.5.1 ×1.5: 7구역에서 엔딩까지 하루 3시간 하는 사람 기준 3주쯤      // 4.7.7 [2e31, 6e31, 2e32] → [9e32 …](엔딩 40일, 너무 길었다) → 4.7.8 이 값(엔딩 약 25일)
   function towerMult(state) { return zoneOpen(state, 6) ? 1 + TOWER_GAIN * Math.log(1 + Math.max(0, state.survivors || 0)) / Math.LN10 : 1; }
   function globalMult(state) {
     return mods(state).prod * (1 + WAVE_BONUS * state.wavesCleared) * (state.buff ? state.buff.mult : 1) * achMult(state) * towerMult(state) * medalMult(state) * rescueMult(state) * dangerPower(state) * (challengeOn(state, 'lean') ? LEAN_MULT : 1);

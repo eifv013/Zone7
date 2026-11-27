@@ -709,9 +709,9 @@ test('노선: 미션과 일지, 그리고 철수하면 열차와 노선이 사�
   s.defenses.rail = 1e9; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
   let ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'story' && e.id === 'z4-0'));
-  s.trains = 30; s.expressRuns = 3;
+  s.trains = 45; s.expressRuns = 3;
   ev = C.tick(s, 0.1, half);
-  assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z4a'), '기관차 30레벨');
+  assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z4a'), '기관차 45레벨');
   s.pendingPerks = []; s.runEarned = C.RETREAT_MIN * 10; s.routes.grade = 3;
   const r = C.retreat(s, 0);
   assert.equal(r.state.trains, 0);
@@ -888,7 +888,7 @@ test('연구: 목표와 일지, 그리고 철수하면 연구가 사라진다', 
   s.defenses.rail = 1e9; s.signalIn = 1e9; s.buildings.scouts = 1; s.clicks = 1;
   let ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'story' && e.id === 'z5-0'));
-  s.curesRun = 40;
+  s.curesRun = 250;
   ev = C.tick(s, 0.1, half);
   assert.ok(ev.some(e => e.type === 'goal' && e.id === 'z5c'));
   s.pendingPerks = []; s.runEarned = C.RETREAT_MIN * 10; s.staff = 9; s.points = 77; s.projectsDone = 4;
@@ -1937,7 +1937,8 @@ test('6구역 초소는 방어력도 올린다: 초소마다 더하고, 문턱�
 });
 
 test('구역 값의 차례: 문 값은 구역이 뒤로 갈수록 커지고, 그 구역에서 처음 살 것은 문 값보다 싸다', () => {
-  for (let i = 2; i < C.ZONES.length; i++) assert.ok(C.ZONES[i].cost > C.ZONES[i - 1].cost * 100, C.ZONES[i].name);
+  // 5.5.1: 6구역 여는 값을 올리면서 7구역과의 간격이 열 배로 줄었다(7구역 값은 조금만 올려도 몇 주씩 밀려 그대로 두었다). 그래서 기준을 백 배 → 열 배로
+  for (let i = 2; i < C.ZONES.length; i++) assert.ok(C.ZONES[i].cost >= C.ZONES[i - 1].cost * 10, C.ZONES[i].name);
   assert.ok(C.TRAIN_COST < C.ZONES[3].cost && C.STAFF_COST < C.ZONES[4].cost);
   const s = inLab(); s.zone = 6;
   assert.ok(C.postCost(s, 1) < C.ZONES[5].cost * 1.01 && C.antennaCost(s, 1) < C.ZONES[6].cost * 1.01);
@@ -3108,7 +3109,7 @@ test('4구역: 긴 시간 · 이상한 값 · 저장 · 자리 비움 · 철수 
   near(away.railEarned - before, rate * 1000 * C.OFFLINE_RATE, '자리를 비운 동안은 역무원이 보낸 것으로 친다'); assert.equal(away.plat.t, 0);
   assert.equal(C.greenSignal(onPlatform()).reason, 'gone');
   const g = onPlatform(); g.upgrades.longplat = 1; g.upgrades.fence = 5; C.stepRail(g, C.CAR_SECONDS * 10, [], calm); assert.equal(C.trainInfo(g).cars, 10); C.sendTrain(g); assert.equal(g.longRuns, 1); assert.equal(g.expressRuns, 0);
-  assert.equal(C.goals(g, 3)[1].text, '10칸 이상 열차 18번');
+  assert.equal(C.goals(g, 3)[1].text, '10칸 이상 열차 550번');
   away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(next.trainsSent, 0); assert.equal(next.longRuns, 0); assert.equal(next.plat.pos, 1);
 });
 
@@ -3246,7 +3247,7 @@ test('5구역 줄 · 연구 성과 · 저장 · 옛 저장 옮기기 · 자리 �
   // 자리 비움: 조교와 간호사가 다 있으면 초당 그대로
   const away = onWard(4); away.defenses.rail = 1e5; away.upgrades.autolab = 1; away.upgrades.nurse = 1; const rate = C.labRate(away), sup = away.supplies; C.applyOffline(away, 1000); assert.ok(away.supplies - sup >= rate * 1000 * C.OFFLINE_RATE * 0.999);
   // 목표 · 철수
-  assert.equal(C.goals(s, 4)[2].text, '사람 40명 되돌리기');
+  assert.equal(C.goals(s, 4)[2].text, '사람 250명 되돌리기');
   away.runEarned = 1e40; away.pendingPerks = []; const next = C.retreat(away, 1).state; assert.equal(next.racks, 0); assert.equal(next.curesRun, 0); assert.equal(next.staff, 0);
 });
 
