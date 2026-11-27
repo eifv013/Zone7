@@ -4010,18 +4010,19 @@
    *   보급 계약: 한 번 사면 영구히 생산 ×BAL.pact(곡선 자체를 당긴다).
    *   시간 건너뛰기: 현재 초당 수입의 SKIP_HOURS 시간치를 바로 받는다(물자만. 습격 · 밤 단계 · 건물 단계 같은 손으로 하는 것은 건너뛰지 않는다).
    */
-  var SKIP_HOURS = 2;
+  var BAL_PACT = 1.3;      // 보급 계약 배수(BAL.pact 와 같은 값. 상품 설명이 BAL 보다 앞에서 만들어져서 따로 둔다)
+  var SKIP_HOURS = 1;      // 5.5.2 2시간치 → 1시간치(적은 결제로 게임이 반으로 줄던 것을 누그러뜨린다. 광고 건너뛰기도 같은 값)
   /*
    * 4.8.0 보급소: 지금은 간식으로 사고, 나중에 같은 칸에 결제를 붙인다(kind 'paid' 는 결제 전용이라 아직 살 수 없다).
    *   perm: 한 번만(보급 계약 · 긴 휴식 · 야간 근무). cons: 여러 번(시간 건너뛰기는 하루 SKIP_DAILY 번). paid: 결제 전용(won 은 원).
    *   4.8.4 값: 간식 수입을 줄여 하루 1시간이면 120개쯤(밤 방어 · 연장 목표 · 납품, 시뮬레이터로 잼). 보급 계약은 열흘 남짓, 뽑기권은 하루 서너 장.
    */
-  var REST_CAP = 8 * 3600, NIGHT_RATE = 0.75, RETREAT_BOOST = 1.25, SKIP_DAILY = 3;
+  var REST_CAP = 8 * 3600, NIGHT_RATE = 0.75, RETREAT_BOOST = 1.25, SKIP_DAILY = 2;      // 5.5.2 하루 3번 → 2번
   var SHOP_ITEMS = [
-    { id: 'pact', kind: 'perm', treats: 1500, name: '보급 계약', desc: '모든 생산 ×1.5, 철수해도 유지', icon: 'supply' },
+    { id: 'pact', kind: 'perm', treats: 1500, name: '보급 계약', desc: '모든 생산 ×' + BAL_PACT + ', 철수해도 유지', icon: 'supply' },
     { id: 'rest', kind: 'perm', treats: 800, name: '긴 휴식', desc: '자리 비움 최대 8시간(기본 4시간)', icon: 'people' },
     { id: 'night', kind: 'perm', treats: 800, name: '야간 근무', desc: '자리 비움 효율 75%(기본 50%)', icon: 'serum' },
-    { id: 'skip', kind: 'cons', treats: 50, name: '시간 건너뛰기', desc: '물자 2시간치, 하루 3번', icon: 'supply' },
+    { id: 'skip', kind: 'cons', treats: 50, name: '시간 건너뛰기', desc: '물자 ' + SKIP_HOURS + '시간치, 하루 ' + SKIP_DAILY + '번', icon: 'supply' },
     { id: 'boost', kind: 'cons', treats: 100, name: '철수 보급', desc: '다음 철수 항체 샘플 ×1.25', icon: 'antibody' },
     { id: 'tix11', kind: 'cons', treats: 2000, name: '뽑기권 11장 묶음', desc: '10장 값에 11장', icon: 'ticket' },
     { id: 'shards', kind: 'cons', treats: 800, name: '조각 상자', desc: '조각 10개', icon: 'shard' },      // 5.2.7 전설 300조각 = 간식 24,000 = 보장 값과 같게
@@ -4264,7 +4265,8 @@
     state.supplies -= o.cost; state.survivors = Math.min(1e15, (state.survivors || 0) + o.gain); state.rescueSent = (state.rescueSent || 0) + 1;
     return { ok: true, gain: o.gain, cost: o.cost };
   }
-  var BAL = { anti: 0.57, pact: 1.5 };      // 4.7.9: anti 0.57 · pact 1.5(하루 1시간 무과금 약 30일, 보급 계약 + 하루 건너뛰기 1번이면 약 21일. README)
+  var BAL = { anti: 0.57, pact: BAL_PACT };      // 5.5.2 보급 계약 ×1.5 → ×1.3(하루 3시간 · ₩2만 결제가 엔딩을 15일째로 당기던 것을 누그러뜨린다)
+       // 4.7.9: anti 0.57 · pact 1.5
   function antibodiesFor(run, mult) {
     if (!(run >= RETREAT_MIN)) return 0;
     var d = Math.log(run / RETREAT_MIN) / Math.LN10;

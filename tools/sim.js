@@ -176,11 +176,21 @@ function run({ sessions = 4, minutes = 15, days = 30, taps = 0, seed = 1, stuck 
     if (process.env.CHAL && s.challenge && (s.challenge.done || s.challenge.failed)) { console.log(`도전 ${process.env.CHAL}: ${s.challenge.done ? '성공' : '실패'} · 회차 ${(s.runSeconds / 3600).toFixed(1)}시간(접속 ${(active / 3600).toFixed(1)}시간) · ${s.zone + 1}구역 · 뚫림 ${s.breaches}`); process.exit(0); }
     // POLICY=half: 흔한 방치형 습관(얻을 항체가 지금까지의 절반을 넘으면 철수)도 같이 본다. 두 버전을 같은 습관으로 견줄 때 쓴다
     const halfRule = process.env.POLICY === 'half' && gain >= Math.max(3, s.antibodyTotal * 0.5) && !(nz && nz.ready && nz.enough);
+    if (process.env.BOOST) s.retreatBoost = true;
+    if (process.env.SPEND && !s.retreatBoost && s.pact && (s.treats || 0) >= 300 && C.canRetreat(s)) { const today = new Date(Date.UTC(2026, 0, 1 + day)).toISOString().slice(0, 10); C.buyShop(s, 'boost', today); }      // BOOST=1: 철수할 때마다 철수 보급(항체 ×1.25)을 산 사람
     if (!process.env.NORETREAT && !C.activeChallenge(s) && C.canRetreat(s) && s.runSeconds > 1800 && (halfRule || (isStuck && s.zone < 4 && gain >= Math.max(3, s.antibodyTotal * share)) || ((wall || endWall) && gain >= Math.max(3, s.antibodyTotal * 0.15)))) { if (process.env.DBG) console.log('RETREAT', JSON.stringify({ goals: s.goalsDone, stalls: s.stalls, peak: s.peakSales, trade: s.tradeEarned.toExponential(2), run: s.runEarned.toExponential(2), sup: s.supplies.toExponential(2), pps: C.productionPerSec(s).toExponential(2), z1: C.searchRate(s).toExponential(2), z2: C.tradeRate(s).toExponential(2), waves: s.wavesCleared, siege: s.siege, def: C.defensePower(s), str: C.nightStrength(s) })); marks.push({ retreat: true, day: day + 1, hours: active / 3600, gain, zone: s.zone, why: wall ? 'gate' : endWall ? 'serum' : 'stuck', inc: C.incomePerSec(s).toExponential(1), sup: s.supplies.toExponential(1), next: nz ? nz.cost.toExponential(1) : '', depth: s.zone === 2 ? C.mineOf(s).depth : undefined, mlv: s.zone === 2 ? [s.machines.pick, s.machines.miner, s.machines.minecart].join('/') : undefined, goals: C.goals(s, s.zone).filter(g => !g.done).map(g => g.id + ':' + C.formatNumber(g.value) + '/' + C.formatNumber(g.need)).join(' ') }); s = C.retreat(s, 0, rng).state; spendTraits(); }
   };
   if (process.env.CONTRACT) C.buyContract(s);
+  if (process.env.OWN) { s.own = Object.assign({}, s.own, { rest: true, night: true }); }      // OWN=1: 긴 휴식 · 야간 근무(자리 비움 8시간 · 75%)를 산 사람
   const gap = Math.max(0, 16 * 3600 / sessions - minutes * 60);
   while (day < days && !marks.some(m => m.end)) {
+    // SPEND=1: 간식이 모이면 보급소에서 산다(보급 계약 → 야간 근무 → 긴 휴식 → 날마다 시간 건너뛰기 3번 · 철수 보급). PAYWON=원: 첫날 그만큼 결제(간식 1원에 0.25개로 셈)
+    if (process.env.SPEND) {
+      if (day === 0 && +process.env.PAYWON > 0 && !s._paid) { s._paid = true; s.treats = (s.treats || 0) + Math.round(+process.env.PAYWON * 0.25); }
+      const today = new Date(Date.UTC(2026, 0, 1 + day)).toISOString().slice(0, 10);
+      for (const id of ['pact', 'night', 'rest']) if (!(id === 'pact' ? s.pact : (s.own || {})[id])) C.buyShop(s, id, today);
+      if (s.pact && (s.own || {}).night && (s.own || {}).rest) for (let k = 0; k < 3; k++) if ((s.treats || 0) >= 150) C.buyShop(s, 'skip', today);
+    }
     for (let i = 0; i < sessions && !marks.some(m => m.end); i++) { if (i === 0 && +process.env.SKIP > 0) for (let k = 0; k < +process.env.SKIP; k++) C.timeSkip(s);      /* SKIP=n: 하루에 시간 건너뛰기 n번(과금 · 광고 가정). CONTRACT=1: 처음부터 보급 계약 */
       for (let t = 0; t < minutes * 60 && !marks.some(m => m.end); t += dt) step(); C.applyOffline(s, i === sessions - 1 ? gap + 8 * 3600 : gap); }
     day++;

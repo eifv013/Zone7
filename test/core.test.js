@@ -3626,7 +3626,7 @@ test('보급소: 간식으로 사고, 영구 상품은 한 번만, 결제 상품
   const back = C.deserialize(C.serialize(s)); assert.equal(back.own.rest, true); assert.equal(back.own.night, true); assert.equal(back.pact, true);
   s.runEarned = 1e30; const n = C.retreat(s, 0, () => 0.5).state; assert.equal(n.own.rest, true, '영구 상품은 철수해도 남는다');
 });
-test('보급소: 시간 건너뛰기는 하루 3번, 날이 바뀌면 다시', () => {
+test('보급소: 시간 건너뛰기는 하루 SKIP_DAILY(2)번, 날이 바뀌면 다시', () => {
   const s = fresh(); s.treats = 5000; s.zone = 1; s.bestZone = 1;
   if (!(C.incomePerSec(s) > 0)) { assert.equal(C.shopState(s, 'skip', 'd').reason, 'none'); return; }
   for (let i = 0; i < C.SKIP_DAILY; i++) assert.ok(C.buyShop(s, 'skip', '2026-11-22').ok);

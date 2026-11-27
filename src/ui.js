@@ -1982,7 +1982,7 @@
     if (!box.firstChild) STORE_GROUP.forEach(function (g) {
       box.appendChild(el('h4', '', g[1]));
       if (g[0] === 'ad') {      // 4.8.5 광고 보상 두 줄(출석 한 번 더는 출석 창에)
-        [['treat', 'treat', '간식 한 봉지', '간식 ' + C.AD_TREATS + '개, 하루 ' + C.AD_TREAT_DAILY + '번'], ['skip', 'supply', '시간 건너뛰기', '물자 2시간치, 하루 1번'], ['retreat', 'antibody', '철수 응원', '다음 철수 항체 샘플 ×1.1']]      /* 5.0.1 광고 간식을 맨 위에 */.forEach(function (a) {
+        [['treat', 'treat', '간식 한 봉지', '간식 ' + C.AD_TREATS + '개, 하루 ' + C.AD_TREAT_DAILY + '번'], ['skip', 'supply', '시간 건너뛰기', '물자 ' + C.SKIP_HOURS + '시간치, 하루 1번'], ['retreat', 'antibody', '철수 응원', '다음 철수 항체 샘플 ×1.1']]      /* 5.0.1 광고 간식을 맨 위에 */.forEach(function (a) {
           var arow = el('div', 'store-row'); arow.setAttribute('data-ad', a[0]); arow.appendChild(el('i', 'ic ic-' + a[1]));
           var at = el('div', 't'); at.appendChild(el('b', '', a[2])); at.appendChild(el('small', '', a[3])); arow.appendChild(at);
           var ab = el('button', 'ad'); ab.type = 'button'; arow.appendChild(ab); ab.addEventListener('click', function () { watchAd(a[0]); });
