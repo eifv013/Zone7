@@ -1965,9 +1965,9 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
       </div>
       <div class="trade rail" id="rail" hidden>
         <!-- 노선도: 왼쪽이 환승역, 오른쪽으로 갈수록 먼 노선. 열차가 갔다가 돌아오는 것이 보인다. 그림은 ui.js 의 drawRail 이 그린다. -->
-        <!-- 3.4.0 승강장의 열차: 화물칸이 하나씩 붙고, 무리가 닿기 전에 보낸다. 그림은 ui.js 의 drawPlatform 이 그린다 -->
+        <!-- 5.6.0 승강장의 열차: 빈 화차에 지게차가 짐을 싣고, 무리가 닿기 전에 보낸다. 그림은 ui.js 의 MS.station 장면이 그린다 -->
         <div class="order-head plat-head"><span class="label">승강장의 열차</span><span class="num" id="plat-cars"></span></div>
-        <canvas class="belt plat" id="platform" width="184" height="84" role="button" tabindex="0" data-tap aria-label="승강장에 선 화물 열차. 누르면 화물칸이 빨리 붙는다"></canvas>
+        <div class="zs-wrap"><canvas class="zs-cv" id="platform" width="184" height="132" role="button" tabindex="0" data-tap aria-label="승강장에 선 화물 열차. 누르면 지게차가 서둘러 화물을 빨리 싣는다"></canvas><div class="zs-fl" id="z4-fl" aria-hidden="true"></div></div>
         <div class="plat-pips" id="plat-pips" aria-hidden="true"></div>
         <div class="plat-horde"><span class="label" id="plat-horde-label">무리와의 거리</span><div class="track"><i id="plat-horde-bar"></i></div><b class="num" id="plat-horde-left"></b><button type="button" class="plat-horn" id="train-horn">경적</button></div>
         <button type="button" class="fortify sell plat-go" id="train-go"></button>
@@ -2245,7 +2245,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.5.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.6.0 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

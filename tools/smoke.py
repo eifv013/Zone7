@@ -559,8 +559,8 @@ def run_case(browser, name, size, state, mode):
         if not tap('#row-route-grade'): problems.append('화물 등급을 살 수 없다')
         if text('pps') == pps0: problems.append('화물 등급을 샀는데 초당이 그대로다: ' + pps0)
         crew0 = text('row-route-crew')
-        if not tap('#row-route-crew'): problems.append('연결 작업반을 살 수 없다')
-        if text('row-route-crew') == crew0 or '초 →' not in text('row-route-crew'): problems.append('연결 작업반을 샀는데 간격이 그대로다: ' + text('row-route-crew'))
+        if not tap('#row-route-crew'): problems.append('지게차를 살 수 없다')
+        if text('row-route-crew') == crew0 or '초 →' not in text('row-route-crew'): problems.append('지게차를 샀는데 간격이 그대로다: ' + text('row-route-crew'))
         tap('#row-train'); tap('#row-train')
         for old in ['#row-route-loop', '#row-route-express', '#row-signal', '#row-timetable']:
             if page.locator(old).count(): problems.append('옛 줄이나 개조가 남아 있다: ' + old)

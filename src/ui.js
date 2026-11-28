@@ -1243,115 +1243,7 @@
   }
   /** 화물칸의 수: 열차 4대마다 한 칸, 한 칸에서 세 칸까지. */
   function railCars(n) { return Math.max(1, Math.min(3, Math.ceil((n || 0) / 4))); }
-  /*
-   * 3.4.0 승강장 그림(184×84 도트). 뒤(벽돌 벽 · 노을 창 · 지붕 · 승강장 · 선로)는 한 번만 그려 두고, 그 위에 열차 · 다음 칸 · 무리를 매번 그린다.
-   *   - 화물칸은 붙은 수만큼. 다음에 붙을 칸은 오른쪽에서 굴러온다(붙기까지 남은 시간만큼 떨어져 있다).
-   *   - 무리는 오른쪽 끝에서 열차 꼬리까지, 남은 시간에 맞춰 다가온다.
-   *   - 열차가 떠나면(platAnim) 0.9초 동안 왼쪽으로 빠져나간다. 무리에 닿아 떼어 낸 칸은 그 자리에 남았다가 사라진다.
-   */
-  var platBack = null, platAnim = null, platRaf = 0, platSprint = 0, platPull = 0, platHorn = 0;
-  function platBackdrop() {
-    if (platBack) return platBack;
-    var cv = document.createElement('canvas'); cv.width = 184; cv.height = 84; var g = cv.getContext('2d');
-    var R = function (x, y, w, h, c) { px(g, x, y, w, h, c); }, P = function (x, y, c) { px(g, x, y, 1, 1, c); };
-    /* 4구역 배경(시안): 강가의 한데 승강장, 해 질 녘. 3구역(벽돌 공장 안)과 겹치지 않게 벽과 창을 없애고 하늘 · 건너편 도시 · 강 · 철교를 그린다 */
-    R(0, 0, 184, 84, '#2a2228');
-    [[0, 7, '#2b2a4a'], [7, 7, '#40365a'], [14, 6, '#5e4262'], [20, 5, '#8a4e5e'], [25, 5, '#b8604e'], [30, 4, '#d87c4a'], [34, 3, '#eca458'], [37, 2, '#f6c878']].forEach(function (b) { R(0, b[0], 184, b[1], b[2]); });
-    for (var sx0 = 3; sx0 < 184; sx0 += 17) P(sx0 + (sx0 * 7) % 5, 2 + (sx0 * 3) % 9, '#cfc8e0');      // 이른 별
-    R(58, 31, 10, 8, '#fff0c0'); R(56, 33, 14, 6, '#fff0c0'); R(54, 36, 18, 3, '#ffe0a0');      // 지는 해
-    R(20, 9, 22, 2, '#6a5070'); R(26, 8, 10, 1, '#6a5070'); R(96, 14, 26, 2, '#8a5a6a'); R(104, 13, 12, 1, '#8a5a6a');      // 구름
-    // 강 건너 도시(실루엣)와 불 켜진 창
-    [[0, 30, 9], [9, 26, 7], [16, 32, 10], [26, 28, 6], [32, 33, 12], [44, 29, 8], [74, 31, 9], [83, 25, 6], [89, 30, 11], [100, 33, 8], [108, 27, 7]].forEach(function (b, k) {
-      R(b[0], b[1], b[2], 39 - b[1], '#33284a'); if (k % 2) P(b[0] + 2, b[1] + 3, '#f6c878'); if (k % 3 === 0) P(b[0] + b[2] - 3, b[1] + 5, '#f6c878'); });
-    R(0, 39, 184, 7, '#34406a'); R(0, 39, 184, 1, '#5a5a86');      // 강
-    [[50, 40, 26], [54, 42, 18], [58, 44, 10]].forEach(function (r) { R(r[0], r[1], r[2], 1, '#eca458'); }); for (var rv = 4; rv < 184; rv += 13) R(rv, 41 + rv % 4, 5, 1, '#4a5a8a');
-    // 철교(오른쪽, 무리가 건너오는 쪽)
-    R(116, 20, 68, 2, '#17141c'); R(116, 36, 68, 2, '#17141c'); for (var bx = 116; bx < 184; bx += 12) { R(bx, 20, 2, 18, '#17141c'); for (var d = 0; d < 12; d++) P(bx + d, 22 + Math.round(d * 14 / 12), '#17141c'); }
-    R(128, 38, 4, 8, '#221e2a'); R(164, 38, 4, 8, '#221e2a');
-    // 전차선 기둥과 줄
-    [14, 108].forEach(function (cx) { R(cx, 5, 2, 41, '#17141c'); R(cx, 9, 16, 1, '#17141c'); for (var a = 0; a < 6; a++) P(cx + 2 + a, 14 - a, '#17141c'); R(cx + 14, 9, 1, 3, '#17141c'); });
-    for (var wx2 = 0; wx2 < 184; wx2++) P(wx2, 12 + Math.round(Math.sin((wx2 - 30) / 94 * Math.PI) * 1.2), '#17141c');
-    // 다듬기(3.9.3): 기둥 끝의 등과 불빛, 강에 비친 도시의 불, 멀리 나는 새, 승강장 뒤 난간
-    [28, 122].forEach(function (lx) { R(lx - 1, 12, 3, 2, BK); R(lx - 1, 14, 3, 1, '#fff2c0'); for (var c = 0; c < 30; c++) { var w = 3 + c * 0.5; g.fillStyle = 'rgba(255,236,170,' + Math.max(0, 0.10 - c * 0.003).toFixed(3) + ')'; g.fillRect(Math.round(lx + 0.5 - w / 2), 15 + c, Math.round(w), 1); } });
-    [[11, 41], [28, 43], [46, 41], [85, 42], [102, 44], [110, 41]].forEach(function (r) { P(r[0], r[1], '#f6c878'); P(r[0], r[1] + 2, '#c89a5a'); });
-    [[70, 10], [76, 8], [150, 6]].forEach(function (b) { P(b[0], b[1], '#17141c'); P(b[0] + 1, b[1] - 1, '#17141c'); P(b[0] + 2, b[1], '#17141c'); });
-    R(0, 42, 184, 1, '#17141c'); for (var fx2 = 2; fx2 < 184; fx2 += 8) R(fx2, 42, 1, 4, '#17141c'); R(0, 44, 184, 1, '#2a2630');
-    // 역 이름판(기둥에 건 것)과 시계
-    R(94, 26, 2, 20, '#17141c');
-    R(82, 13, 26, 13, BK); R(83, 14, 24, 11, '#f0b400'); spr(g, 86, 16, ['#..#', '#..#', '####', '...#', '...#', '...#', '...#'], { '#': BK }); spr(g, 93, 17, ['...#...', '....#..', '######.', '....#..', '...#...'], { '#': BK }); R(102, 16, 3, 7, BK); P(103, 17, '#f0b400'); P(103, 19, '#f0b400'); P(103, 21, '#f0b400');
-    R(40, 24, 2, 22, '#17141c'); R(36, 16, 10, 9, BK); R(37, 17, 8, 7, '#e8e6dc'); P(41, 18, BK); P(41, 19, BK); P(41, 20, '#b8402e'); P(42, 20, BK); P(43, 20, BK);
-    // 승강장과 그 위의 것들
-    R(0, 46, 184, 8, '#6a6a64'); R(0, 46, 184, 1, '#8a8a82'); for (var px1 = 0; px1 < 184; px1 += 10) R(px1, 47, 1, 7, '#5a5a54');
-    for (var sx = 0; sx < 184; sx += 6) { R(sx, 53, 3, 1, '#f0b400'); R(sx + 3, 53, 3, 1, BK); }
-    R(0, 54, 184, 3, '#3a3a36'); R(0, 54, 184, 1, '#4a4a44');
-    R(78, 41, 14, 1, '#8a5a2a'); R(78, 42, 14, 1, '#6a4420'); R(79, 43, 1, 3, BK); R(90, 43, 1, 3, BK); R(78, 38, 14, 1, '#8a5a2a'); R(78, 39, 1, 2, '#6a4420'); R(91, 39, 1, 2, '#6a4420');
-    var crate = function (x, y, c, d) { R(x, y, 7, 6, c); R(x, y, 7, 1, d); R(x, y + 5, 7, 1, d); R(x, y, 1, 6, d); R(x + 6, y, 1, 6, d); P(x + 3, y + 2, d); P(x + 3, y + 3, d); };
-    crate(140, 40, '#c9a04a', '#8a6a2a'); crate(148, 40, '#c9a04a', '#8a6a2a'); crate(144, 34, '#b8894a', '#7a5a2a'); crate(158, 40, '#7a9a6a', '#4a6a3a');
-    var man = { k: BK, s: '#e6c9a0', b: '#3f6f8f', p: '#3a3a36', c: '#c9a04a', e: '#8a6a2a' };
-    spr(g, 132, 35, ['.kk.', '.ss.', 'bbbcc', 'bbbce', '.bb.', '.pp.', '.pp.', '.p.p'], man);
-    spr(g, 120, 36, ['.kk.', '.ss.', '.bb.', 'bbbb', '.bb.', '.pp.', '.p.p'], { k: BK, s: '#e6c9a0', b: '#8a5a44', p: '#3a3a36' });
-    spr(g, 100, 35, ['.yy.', 'yssy', 'yyyy', 'yyyy', 'yyyyL', '.yy.L', '.dd.', '.d.d'], { y: '#f0b400', s: '#e6c9a0', d: '#3a3a36', L: '#3f8fd0' });
-    // 선로
-    R(0, 57, 184, 27, '#221c1e');
-    for (var i = 0; i < 260; i++) P((i * 37) % 184, 74 + (i * 13) % 10, i % 3 ? '#3a3034' : '#4a3e40');
-    for (var tie = 2; tie < 184; tie += 7) R(tie, 71, 4, 3, '#4a3626');
-    R(0, 70, 184, 1, '#a9a79c'); R(0, 71, 184, 1, '#6a6a64'); R(0, 76, 184, 1, '#8a8a82');
-    platBack = cv; return cv;
-  }
-  var CAR_W = 12;
-  function platWheels(g, x, w) { [x + 1, x + w - 4].forEach(function (a) { px(g, a, 67, 3, 3, BK); px(g, a + 1, 66, 1, 5, BK); px(g, a + 1, 68, 1, 1, '#8a8a82'); }); }
-  var CAR_KINDS = [
-    function (g, x) { px(g, x, 54, 11, 12, '#a03a2a'); px(g, x, 54, 11, 1, '#c4503a'); for (var k = 2; k < 11; k += 3) px(g, x + k, 55, 1, 10, '#7a2a20'); px(g, x + 4, 57, 3, 7, '#8a3024'); px(g, x + 5, 60, 1, 1, BK); px(g, x, 65, 11, 1, '#5a2018'); },
-    function (g, x) { px(g, x, 60, 11, 6, '#3f5f7a'); px(g, x, 60, 11, 1, '#5a7f9a'); px(g, x + 1, 55, 4, 5, '#c9a04a'); px(g, x + 1, 55, 4, 1, '#8a6a2a'); px(g, x + 6, 56, 4, 4, '#b8894a'); px(g, x + 6, 56, 4, 1, '#7a5a2a'); px(g, x, 65, 11, 1, '#2a4052'); },
-    function (g, x) { px(g, x + 1, 55, 9, 9, '#8a8a82'); px(g, x + 1, 55, 9, 2, '#b0b0a8'); px(g, x + 1, 62, 9, 2, '#5a5a54'); px(g, x, 57, 1, 5, '#8a8a82'); px(g, x + 10, 57, 1, 5, '#5a5a54'); px(g, x + 4, 53, 3, 2, '#55564e'); px(g, x + 2, 58, 2, 2, '#f0b400'); px(g, x, 64, 11, 2, '#3a3a36'); },
-    function (g, x) { px(g, x, 60, 11, 6, '#4a6a3a'); px(g, x, 60, 11, 1, '#6a8a52'); px(g, x + 1, 56, 9, 4, '#7a8a5a'); px(g, x + 2, 54, 7, 2, '#7a8a5a'); px(g, x + 1, 56, 9, 1, '#9aaa72'); px(g, x + 4, 58, 1, 1, '#5a6a42'); px(g, x, 65, 11, 1, '#2e4424'); }
-  ];
-  function platLoco(g, x) {
-    px(g, x, 50, 22, 16, '#f0b400'); px(g, x, 50, 22, 1, '#ffd34a'); px(g, x, 62, 22, 4, '#c98f00'); px(g, x + 11, 44, 11, 7, '#f0b400'); px(g, x + 11, 44, 11, 1, '#ffd34a'); px(g, x + 13, 46, 7, 4, BK); px(g, x + 14, 47, 5, 2, '#ffe9a0'); px(g, x + 15, 47, 2, 2, '#e6c9a0');
-    for (var k = 0; k < 5; k++) px(g, x + 1 + k * 4, 63, 2, 2, BK);
-    px(g, x + 3, 46, 3, 4, '#30343c'); px(g, x + 2, 45, 5, 1, BK); px(g, x + 4, 43, 1, 1, '#9a9a92'); px(g, x + 5, 41, 1, 1, '#b0b0a8'); px(g, x + 3, 39, 1, 1, '#c4c4bc');
-    px(g, x - 2, 56, 2, 4, BK); px(g, x - 3, 57, 1, 2, '#fff2c0'); px(g, x + 5, 53, 4, 6, BK); px(g, x + 6, 54, 2, 4, '#3f8fd0');
-    platWheels(g, x, 22);
-  }
-  function platCar(g, x, i) { CAR_KINDS[i % CAR_KINDS.length](g, x); platWheels(g, x, 11); px(g, x - 1, 63, 1, 1, '#55564e'); }
-  var PLAT_Z = [['.gg.', 'gkgk', '.gg.', 'ccccg', 'gcc..', '.cc.', '.d.d'], ['.gg.', 'gkgk', '.gr.', 'gccc.', '.ccg', '.dd.', 'd..d'], ['.gg.', 'kgkg', '.gg.', '.cc.g', 'gcc.', '.d.d', '.d.d']];
-  function drawPlatform(ti) {
-    var cv = $('platform'); if (!cv) return;
-    var g = cv.getContext('2d'), now = Date.now(), LX = 6, CX = LX + 24;
-    g.drawImage(platBackdrop(), 0, 0);
-    var anim = platAnim && now - platAnim.at < 900 ? platAnim : null, slide = 0;
-    if (platAnim && !anim) platAnim = null;
-    if (anim) {      // 떠나는 열차: 왼쪽으로 점점 빨리
-      var t = (now - anim.at) / 900; slide = -Math.round(t * t * 230);
-      platLoco(g, LX + slide); for (var a = 0; a < anim.kept; a++) platCar(g, CX + a * CAR_W + slide, a);
-      for (var c = 0; c < anim.cut; c++) platCar(g, CX + (anim.kept + c) * CAR_W, anim.kept + c);      // 떼어 낸 칸은 남는다
-      if (anim.cut) for (var z = 0; z < 3; z++) spr(g, CX + (anim.kept + anim.cut) * CAR_W + 2 + z * 6 - Math.round(t * 8), 62 + z % 2, PLAT_Z[z], { g: '#7fb85a', k: BK, c: ['#6b4a3a', '#3f5f7a', '#8a8a52'][z], d: '#3a3a36', r: '#b8402e' });
-      if (!platRaf) platRaf = requestAnimationFrame(function () { platRaf = 0; if ($('rail') && !$('rail').hidden) drawPlatform(C.trainInfo(state)); });
-      return;
-    }
-    if (!ti.running) return;
-    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(LX, 72, 24 + ti.cars * CAR_W, 2);
-    platLoco(g, LX); for (var i = 0; i < ti.cars; i++) platCar(g, CX + i * CAR_W, i);
-    var tail = CX + ti.cars * CAR_W;
-    if (ti.cars < ti.max) {      // 다음 칸이 굴러온다
-      var cs = C.carSeconds(state), far = Math.min(1, ti.next / cs), nx = Math.round(tail + far * Math.min(40, 178 - tail - CAR_W));
-      g.globalAlpha = 0.55 + 0.45 * (1 - far); platCar(g, nx, ti.cars); g.globalAlpha = 1;
-    }
-    // 무리: 오른쪽 끝에서 열차 꼬리까지
-    var hp = Math.max(0, Math.min(1, ti.near)), hx = Math.round(tail + CAR_W + 2 + hp * (200 - tail - CAR_W));
-    for (var q = 0; q < 3; q++) spr(g, hx + q * 7, 62 + q % 2 + (Math.floor(now / (ti.rush ? 90 : 300) + q) % 2), PLAT_Z[q], { g: '#7fb85a', k: BK, c: ['#6b4a3a', '#3f5f7a', '#8a8a52'][q], d: '#3a3a36', r: '#b8402e' });
-    if (now - platPull < 160 && ti.cars < ti.max) { px(g, tail - 2, 60, 2, 2, '#fff2c0'); px(g, tail, 57, 1, 2, '#ffd95a'); px(g, tail + 2, 62, 2, 1, '#ffd95a'); px(g, tail - 4, 63, 1, 1, '#fff2c0'); }      // 칸을 당길 때 연결기에서 불꽃
-    if (now - platHorn < 600) { var hw = Math.round((now - platHorn) / 600 * 60); g.fillStyle = 'rgba(255,242,192,' + (0.5 * (1 - (now - platHorn) / 600)).toFixed(3) + ')'; g.fillRect(tail + hw, 50, 3, 22); g.fillRect(tail + hw + 8, 52, 2, 18); }      // 경적: 소리가 무리 쪽으로 퍼진다
-    if (ti.rush) {      // 3.8.6 돌진: 선로가 붉게 깜빡이고, 무리 위에 느낌표가 뜨고, 달려오는 동안에는 먼지가 인다
-      if (Math.floor(now / 160) % 2) { g.fillStyle = 'rgba(255,90,74,.22)'; g.fillRect(0, 57, 184, 27); }
-      px(g, hx + 8, 52, 2, 5, '#ff5a4a'); px(g, hx + 8, 58, 2, 2, '#ff5a4a');
-      if (ti.rush === 'run') for (var du = 0; du < 4; du++) px(g, hx + 22 + du * 5 + Math.floor(now / 80) % 3, 70 - du % 2, 2, 1, '#8a8478');
-    }
-    if (now - platSprint < 500) { g.fillStyle = 'rgba(255,90,74,' + (0.28 * (1 - (now - platSprint) / 500)).toFixed(3) + ')'; g.fillRect(0, 57, 184, 27); }      // 달려드는 순간 선로가 붉게 번쩍인다
-    // 경고등: 무리가 가까우면 깜빡인다
-    px(g, 178, 36, 3, 3, BK); var lit = ti.near <= 0.3 && Math.floor(now / 250) % 2 === 0;
-    px(g, 179, 37, 1, 1, lit ? '#ff5a4a' : '#6a2a24'); if (lit) { g.fillStyle = 'rgba(255,90,74,.25)'; g.fillRect(175, 33, 9, 9); }
-  }
+  /* 3.4.0 ~ 5.5 의 승강장 그림(184×84, 굴러와 붙는 화물칸)은 5.6.0 에 MS.station 장면으로 바뀌었다. */
   function drawRail(plan) {
     try {
       var cv = $('railmap'), g = cv.getContext('2d'), css = getComputedStyle(document.body);
@@ -4728,7 +4620,463 @@
     return { draw: frame, event: event, tapped: tapped, icon: icon, S: function () { return S; } };
 
     }
-    return { mine: mine };
+    /* ================= 4구역 환승역 승강장(5.6.0, 시안 z4station 을 옮겼다) =================
+     * 게임 규칙은 모두 core 에 있다(trainInfo · pullCar · blowHorn · sendTrain · stepRail). 이 장면은 읽어서 보여 주기만 한다.
+     *  - 열차는 빈 화차를 끌고 들어와 선다. 지게차가 승강장 끝 더미에서 짐을 하나씩 들어 다음 빈 화차에 싣는다.
+     *    지게차의 움직임은 core 의 "다음 칸까지 남은 시간(next)"에 맞춘다: 포크가 다 올라가는 순간 core 에서 칸이 실린다.
+     *    (전에는 화물칸이 굴러와 붙었다. 열차가 서기도 전에 칸이 붙는 것처럼 보였고, 붙을 때마다 꼬리가 늘어 무리가 뒤로 밀려 보였다)
+     *  - 열차 꼬리 자리(END)는 늘 같다. 칸이 많으면(긴 승강장) 기관차가 왼쪽 밖으로 밀린다. 그래서 무리의 자리가 흔들리지 않는다.
+     *  - 무리: 오른쪽 터널에서 나온다. 거리(near)는 맨 앞 좀비의 목표 자리일 뿐이고, 좀비마다 한 걸음씩 휘청이며 따라간다.
+     *  - 승강장 사람들: 무리가 다가오면 돌아보고("!") · 뒷걸음질하고 · 달아난다. 열차가 떠나면 제자리로 돌아온다.
+     *  - 개조가 보인다: 철조망(선로 위 가시철사, 좀비가 걸려 버둥거린다) · 경적(기관차 나팔) · 튼튼한 연결기(굵은 빨간 고리) · 역무원(깃발).
+     * 그림이 틀려도 물자는 틀리지 않는다(그림 상태는 저장되지 않는다). */
+    function station(cv, flBox, host) {
+      var W = 184, H = 132, RAIL = 96, DECK = 88, LOCO_W = 31, CW = 12, GAP = 1, PLAT = 104, FOOT = 126, PILE_X = 150, END = 137, TUN = 172, FENCE_X = 152;
+      var K = makeKit(cv, flBox, W, H), px = K.px, spr = K.spr, g = K.main; K.bannerY = 44;
+      var GS = null, ti = null;
+      var V = { sky: Math.floor(Math.random() * 5), x: 0, n: 8, mode: 'stand', leave: null, arrive: 0, gap: 0, cut: null, prev: 0, loadAt: [], seed: 0,
+        fork: { x: PILE_X - 30, face: 1, lift: 0, carry: false }, zs: null, hit: 0, wave: null, flags: 0, flagT: 0, shake: 0, rushT: 0,
+        people: [], birds: [], parts: [], steam: [], smoke: [], crows: [], crowIn: 6, flash: 0, flashIn: 9, walkerIn: 4, dog: null, dogIn: 18, paper: null, fear: 0, skyAt: -1 };
+      var i;
+      for (i = 0; i < 4; i++) V.birds.push({ x: 20 + i * 41 + (hash(i, 3) % 12), y: 7, st: 'sit', vx: 0, vy: 0, t: hash(i, 9) % 7 });
+      V.people.push({ x: 64, hx: 64, seat: true, k: 3, t: 0, face: 1 });
+      for (i = 0; i < 3; i++) V.people.push({ hx: [18, 84, 128][i], x: [18, 84, 128][i], k: i, t: hash(i, 7) % 5, face: i % 2 ? -1 : 1, bag: i % 2 });
+
+      /* ---------- core 에서 읽어 오는 값 ---------- */
+      function up(id) { return GS && GS.upgrades ? GS.upgrades[id] || 0 : 0; }
+      function gradeV() { return Math.min(4, Math.floor(((GS && GS.routes && GS.routes.grade) || 0) / 3)); }      // 화물 등급 0~12 → 그림 다섯 가지
+      function trainLen(n) { return LOCO_W + n * (CW + GAP); }
+      function stopX(n) { return END - trainLen(n); }
+      function carX(k) { return V.x + LOCO_W + k * (CW + GAP); }
+      function standing() { return V.mode === 'stand' && ti && ti.running; }
+      function loadedN() { return standing() ? ti.cars : 0; }
+      function sync() {
+        ti = C.trainInfo(GS);
+        var sent = GS.trainsSent || 0;
+        if (V.skyAt < 0) V.skyAt = sent;
+        if (sent - V.skyAt >= 6) { V.skyAt = sent; V.sky = (V.sky + 1) % 5; bgCache = {}; }      // 열차 여섯 대마다 때 · 날씨가 바뀐다
+        if (V.mode === 'stand') {
+          V.n = ti.max; V.x = stopX(V.n);
+          if (ti.cars > V.prev) for (var k = V.prev; k < ti.cars; k++) { V.loadAt[k] = T; spark(carX(k) + 6, DECK - 2, 5); V.shake = Math.max(V.shake, 0.06); }
+          if (ti.cars < V.prev) V.loadAt = [];
+          V.prev = ti.cars;
+        }
+      }
+      /* ---------- 사건(ui 의 handleEvents · 단추가 부른다) ---------- */
+      function depart(ev) {
+        if (!(ev.cars >= 0)) return;
+        var kept = ev.kept || 0, n = V.n;
+        if (ev.why === 'horde' && ev.cars > kept) { V.cut = { x: carX(kept), n: n - kept, loaded: ev.cars - kept, t: 0 }; V.shake = 0.4; }
+        V.leave = { t: 0, v: 0, n: ev.why === 'horde' ? kept : n, loaded: kept }; V.mode = 'leave'; V.prev = 0; V.loadAt = []; V.zs = null; V.wave = null;
+        if (ev.why === 'auto') { V.flags = 1; V.flagT = 0; }
+        for (var k = 0; k < 8; k++) V.steam.push({ x: V.x + 24, y: 68, vx: -4 - Math.random() * 10, vy: -8 - Math.random() * 8, t: 0, life: 1 + Math.random() * 0.7 });
+        if (ev.gain > 0) K.say(kept + '칸 출발 · +' + fmt(ev.gain), 70, 56, 'big');
+        else if (ev.why === 'horde') K.say('무리에 닿아 ' + (ev.cars - kept) + '칸을 떼어 냈어요', 92, 56, 'big');
+      }
+      function event(ev) {
+        if (!ev) return;
+        if (ev.type === 'train') depart(ev);
+        else if (ev.type === 'load' && standing() && ev.cars >= 1) K.say('+' + fmt(ev.gain), carX(ev.cars - 1) + 6, DECK - 20, 'gold');
+        else if (ev.type === 'horde-sprint') K.banner('무리가 돌진해요! 경적!');
+      }
+      function horn(broke) {
+        V.wave = { t: 0 }; V.hit = 0.6; V.shake = 0.25;
+        if (broke) K.say('돌진을 막았어요', 150, 52, 'gold');
+        V.birds.forEach(function (b) { if (b.st === 'sit') { b.st = 'fly'; b.vx = (Math.random() - 0.5) * 30; b.vy = -18 - Math.random() * 10; b.t = 0; } });
+      }
+      function tapped(res, x, y) {
+        V.rushT = 0.7; spark(V.fork.x + 6, FOOT - 4, 2);
+        if (res && res.full) K.say('다 실었어요 · 출발!', x, y);
+      }
+      function spark(x, y, n) { for (var k = 0; k < n; k++) V.parts.push({ x: x, y: y, vx: (Math.random() - 0.5) * 40, vy: -Math.random() * 30, t: 0, life: 0.35 + Math.random() * 0.25, c: Math.random() < 0.5 ? '#ffe27a' : '#ff9a3a' }); }
+
+      /* ---------- 보기만 하는 움직임 ---------- */
+      function vtick(dt) {
+        T += dt; K.tick(dt);
+        if (V.mode === 'leave') {      // 떠나는 열차: 점점 빨라진다
+          var L = V.leave; L.t += dt; L.v += dt * 60; V.x -= L.v * dt;
+          if (Math.random() < 0.5) V.steam.push({ x: V.x + 24, y: 68, vx: 14, vy: -8 - Math.random() * 6, t: 0, life: 0.9 });
+          if (V.x + trainLen(L.n) < -10) { V.mode = 'gap'; V.gap = 0.6; V.leave = null; }
+        } else if (V.mode === 'gap') {
+          V.gap -= dt; if (V.gap <= 0) { V.mode = 'arrive'; V.n = ti ? ti.max : 8; V.x = -trainLen(V.n) - 6; V.seed++; }
+        } else if (V.mode === 'arrive') {      // 빈 화차를 끌고 들어와 선다(끼익)
+          var X = stopX(V.n), d = X - V.x; V.x += Math.max(dt * 8, d * Math.min(1, dt * 1.6));
+          if (d < 50 && Math.random() < 0.5) spark(V.x + 6 + Math.random() * trainLen(V.n), RAIL - 1, 1);
+          if (V.x >= X - 0.3) { V.mode = 'stand'; V.x = X; V.prev = 0; for (var k = 0; k < 4; k++) spark(Math.max(4, X + 6 + k * 40), RAIL - 1, 3); }
+        }
+        forkTick(dt); hordeTick(dt); people(dt); parts(dt); skyTick(dt);
+        if (V.cut) { V.cut.t += dt; if (V.cut.t > 3) V.cut = null; }
+        if (V.wave) { V.wave.t += dt; if (V.wave.t > 0.9) V.wave = null; }
+        V.hit = Math.max(0, V.hit - dt); V.shake = Math.max(0, V.shake - dt); V.rushT = Math.max(0, V.rushT - dt);
+        if (V.flags) { V.flagT += dt; if (V.flagT > 1.6) V.flags = 0; }
+      }
+      /* 지게차: core 의 다음 칸 진행(0~1)에 맞춰 자리를 정한다. 손으로 당기면 진행이 건너뛰니, 자리는 바로 옮기지 않고 따라가게 한다.
+       *   0~0.3 앞 칸에서 더미로 돌아온다(포크를 내리며) · 0.3~0.4 짐을 든다 · 0.4~0.75 다음 빈 칸으로 간다 · 0.75~1 포크를 올린다 */
+      function forkTick(dt) {
+        var f = V.fork, home = PILE_X - 30, tx = home, face = 1, lift = 0, carry = false;
+        if (standing() && !ti.full) {
+          var cs = C.carSeconds(GS), prog = cs > 0 ? Math.max(0, Math.min(1, 1 - ti.next / cs)) : 1, slot = ti.cars, at = function (k) { return carX(k) + CW / 2 + 6; };
+          if (prog < 0.3) { var a = prog / 0.3; tx = slot > 0 ? at(slot - 1) + (home - at(slot - 1)) * a : home; face = slot > 0 ? 1 : 1; lift = slot > 0 ? Math.max(0, 1 - a * 3) : 0; }
+          else if (prog < 0.4) { tx = home; carry = prog > 0.35; }
+          else if (prog < 0.75) { var b = (prog - 0.4) / 0.35; tx = home + (at(slot) - home) * b; face = -1; carry = true; }
+          else { tx = at(slot); face = -1; carry = true; lift = (prog - 0.75) / 0.25; }
+        }
+        var k = Math.min(1, dt * (V.rushT > 0 ? 16 : 10));
+        f.moving = Math.abs(tx - f.x) > 0.6;
+        f.x += (tx - f.x) * k; f.lift += (lift - f.lift) * Math.min(1, dt * 12); f.face = face; f.carry = carry;
+      }
+      /* 무리: 좀비마다 자리(zs)를 갖고 걸을 때만 앞으로 간다(발 그림과 움직임을 맞춘다). 경적에 밀리면 휘청 물러나고, 돌진 때는 달린다 */
+      var HZ = [0, 5, 9, 14, 18, 23, 28];
+      function frontX() { return END + 2 + Math.max(0, Math.min(1, ti.near)) * (TUN + 6 - END - 2); }
+      function snagged(zx) { return up('fence') > 0 && zx > FENCE_X - 5 && zx < FENCE_X + 9; }
+      function hordeTick(dt) {
+        if (!standing()) return;
+        if (!V.zs) V.zs = HZ.map(function (o, k) { return { x: W + 8 + o, step: 0, ph: (k * 0.37) % 1, back: 0 }; });
+        var run = ti.rush === 'run', front = frontX();
+        V.zs.forEach(function (z, k) {
+          var target = front + HZ[k], d = z.x - target;
+          if (d < -1) { z.x += Math.min(-d, dt * 40); z.back = 0.3; }
+          else if (d > 0.2) {
+            if (run) z.x -= Math.min(d, dt * 60);
+            else { z.ph = (z.ph + dt * (0.95 + (k % 3) * 0.15) * (snagged(z.x) ? 0.5 : 1)) % 1; z.step = z.ph < 0.45 ? 1 : 0; if (z.step) z.x -= Math.min(d, dt * Math.max(5, d * 1.2)); }      // 철조망에 걸리면 걸음 박자가 반으로
+          } else z.step = 0;
+          z.back = Math.max(0, z.back - dt);
+        });
+      }
+      /* 승강장 사람들이 무리에 반응한다(겁 0.25↑ 돌아보고 "!" · 0.6↑ 뒷걸음질 · 0.85↑ 달아난다) */
+      function people(dt) {
+        var fear = standing() ? Math.max(0, Math.min(1, (0.65 - ti.near) / 0.45)) : 0;
+        if (standing() && ti.rush) fear = Math.max(fear, 0.9);
+        V.fear = fear;
+        V.people.forEach(function (q, n) {
+          q.t += dt;
+          var fq = Math.max(0, fear - (n % 4) * 0.06), lvl = fq > 0.85 ? 3 : fq > 0.6 ? 2 : fq > 0.25 ? 1 : 0;      // 사람마다 알아채는 때가 조금씩 다르다
+          if (lvl > (q.lvl || 0)) { q.alertT = 1.1; if (q.seat) q.seat = false; }
+          q.lvl = lvl; q.alertT = Math.max(0, (q.alertT || 0) - dt); q.run = false; q.back = false;
+          if (q.walk) {
+            if (lvl >= 2 && q.face > 0) q.face = -1;
+            q.run = lvl >= 3; q.x += q.face * dt * (lvl >= 3 ? 34 : lvl >= 2 ? 22 : 14); if (q.x < -10 || q.x > W + 10) q.gone = true; return;
+          }
+          if (q.seat) return;
+          var goal = lvl >= 2 ? Math.min(q.hx, 6 + n * 9) : q.hx, d = goal - q.x;
+          if (Math.abs(d) > 0.5) { q.x += Math.sign(d) * Math.min(Math.abs(d), dt * (lvl >= 3 ? 30 : lvl >= 2 ? 12 : 8)); q.run = lvl >= 3; q.back = lvl === 2 && d < 0; q.face = q.back || lvl === 1 ? 1 : Math.sign(d); q.moving = true; }
+          else { q.moving = false; if (lvl >= 1) q.face = 1; if (lvl === 0 && q.k === 3) q.seat = true; }
+        });
+        V.people = V.people.filter(function (q) { return !q.gone; });
+        V.walkerIn -= dt; if (V.walkerIn <= 0 && fear < 0.25) { V.walkerIn = 5 + Math.random() * 6; var f = Math.random() < 0.5 ? 1 : -1; V.people.push({ x: f > 0 ? -8 : W + 8, k: Math.floor(Math.random() * 6), t: 0, face: f, walk: true, bag: Math.random() < 0.6 }); }
+        V.birds.forEach(function (b) {
+          b.t += dt; if (b.st === 'fly') { b.x += b.vx * dt; b.y += b.vy * dt; b.vy += dt * 8; if (b.t > 3.5) b.st = 'back'; }
+          if (b.st === 'back') { b.y += (7 - b.y) * dt * 2; if (Math.abs(b.y - 7) < 0.6) { b.st = 'sit'; b.y = 7; } }
+        });
+        if (V.dog && fear > 0.25 && V.dog.v > 0) { V.dog.v = 0; V.dog.bark = (V.dog.bark || 0) + dt; if (V.dog.bark > 2.5) V.dog.v = -40; }
+        if (V.dog) { V.dog.x += V.dog.v * dt; V.dog.t += dt; if (V.dog.x > W + 10 || V.dog.x < -10) V.dog = null; }
+        else { V.dogIn -= dt; if (V.dogIn <= 0) { V.dogIn = 20 + Math.random() * 15; var dv = fear > 0.25 ? -30 : Math.random() < 0.5 ? 24 : -24; V.dog = { x: dv > 0 ? -8 : W + 8, v: dv, t: 0 }; } }
+        if (V.paper) { V.paper.t += dt; V.paper.x += dt * (18 + Math.sin(V.paper.t * 3) * 10); V.paper.y = V.paper.y0 + Math.sin(V.paper.t * 4) * 1.5; if (V.paper.x > W + 6) V.paper = null; }
+        else if (Math.random() < dt / 14) V.paper = { x: -6, y0: 112 + Math.floor(Math.random() * 12), y: 0, t: 0 };
+      }
+      function parts(dt) {
+        V.parts.forEach(function (q) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 90 * dt; });
+        V.parts = V.parts.filter(function (q) { return q.t < q.life; });
+        V.steam.forEach(function (q) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy *= 0.97; });
+        V.steam = V.steam.filter(function (q) { return q.t < q.life; });
+      }
+      function skyTick(dt) {
+        if (Math.random() < dt * 5) V.smoke.push({ x: 130 + Math.random() * 3, y: 46, r: 1.5, t: 0, life: 6 + Math.random() * 2 });
+        V.smoke.forEach(function (q) { q.t += dt; q.y -= dt * 4.5; q.x += dt * (2.5 + q.t * 0.6); q.r += dt * 0.9; });
+        V.smoke = V.smoke.filter(function (q) { return q.t < q.life && q.y > -6; });
+        V.crowIn -= dt; if (V.crowIn <= 0) { V.crowIn = 12 + Math.random() * 10; for (var k = 0; k < 3 + Math.floor(Math.random() * 3); k++) V.crows.push({ x: -6 - k * 7, y: 20 + Math.random() * 14, v: 16 + Math.random() * 4, t: Math.random() }); }
+        V.crows.forEach(function (c) { c.x += c.v * dt; c.t += dt; c.y += Math.sin(c.t * 2) * dt * 3; });
+        V.crows = V.crows.filter(function (c) { return c.x < W + 8; });
+        if (V.sky === 3) { V.flashIn -= dt; if (V.flashIn <= 0) { V.flashIn = 7 + Math.random() * 9; V.flash = 0.35; } }
+        V.flash = Math.max(0, V.flash - dt);
+      }
+
+      /* ---------- 그리기 ---------- */
+      var bgCache = {};
+      function city(b, sk) {
+        var night = sk.dark > 0.1, k, x, y;
+        var far = mix(sk.hill, sk.b, 0.45);
+        for (x = 0; x < W; x += 1) { var h1 = 14 + hash(x >> 2, 1) % 14 + (hash(x >> 4, 3) % 3 === 0 ? 8 : 0); px(x, 74 - h1, 1, h1, far); }
+        px(152, 38, 1, 36, far); px(151, 42, 3, 1, far); px(150, 48, 5, 1, far);
+        [{ x: -2, w: 26, h: 30, c: '#4a4e5c', roof: 'tank' }, { x: 26, w: 18, h: 22, c: '#5a4e4a', roof: 'ant' }, { x: 46, w: 30, h: 36, c: '#3e4656', roof: 'sign' }, { x: 78, w: 20, h: 26, c: '#52504a', roof: 'tank' },
+          { x: 100, w: 24, h: 40, c: '#454a58', roof: 'ant' }, { x: 126, w: 22, h: 28, c: '#4c4540', roof: 'burnt' }, { x: 150, w: 36, h: 33, c: '#41495a', roof: 'tank' }].forEach(function (d, bi) {
+          var top = 76 - d.h, base = mix(d.c, sk.hill, 0.35), lite = mix(base, sk.b, 0.25), dark = mix(base, '#000000', 0.25);
+          px(d.x, top, d.w, d.h, base); px(d.x, top, 1, d.h, lite); px(d.x + d.w - 2, top, 2, d.h, dark); px(d.x, top, d.w, 1, lite);
+          for (y = top + 3; y < 72; y += 5) for (x = d.x + 2; x < d.x + d.w - 3; x += 4) {
+            var hsh = hash(x * 3 + bi, y), lit = night && hsh % 11 === 0, broken = hsh % 13 === 1;
+            px(x, y, 2, 3, lit ? '#ffd27a' : broken ? '#1c1d22' : mix(sk.a, '#1e2430', night ? 0.6 : 0.35));
+            if (!lit && !broken && !night) px(x, y, 1, 1, mix(sk.b, '#ffffff', 0.3));
+            if (lit) { b.fillStyle = 'rgba(255,210,120,.16)'; b.fillRect(x - 1, y - 1, 4, 5); }
+          }
+          if (d.roof === 'tank') { px(d.x + d.w - 10, top - 6, 7, 5, dark); px(d.x + d.w - 10, top - 6, 7, 1, lite); px(d.x + d.w - 9, top - 1, 1, 1, dark); px(d.x + d.w - 5, top - 1, 1, 1, dark); }
+          if (d.roof === 'ant') { px(d.x + 5, top - 9, 1, 9, dark); px(d.x + 3, top - 7, 5, 1, dark); px(d.x + 4, top - 4, 3, 1, dark); }
+          if (d.roof === 'sign') { px(d.x + 4, top - 8, 22, 7, '#2a2c34'); px(d.x + 5, top - 7, 20, 5, night ? '#3a1c20' : '#6a3a34'); px(d.x + 8, top - 1, 1, 1, dark); px(d.x + 22, top - 1, 1, 1, dark); }
+          if (d.roof === 'burnt') { px(d.x + 2, top - 3, 6, 3, '#2a2422'); px(d.x + 12, top - 2, 5, 2, '#2a2422'); for (k = 0; k < 6; k++) px(d.x + 3 + k * 3, top + 1 + (k % 2), 2, 1, '#1c1816'); }
+        });
+      }
+      function backdrop() {
+        var key = V.sky; if (bgCache[key]) return bgCache[key];
+        var c = document.createElement('canvas'); c.width = W; c.height = H; var b = c.getContext('2d'); K.to(b);
+        try {
+          var sk = SKY[V.sky], k, x, y;
+          for (y = 0; y < 78; y++) { b.fillStyle = mix(sk.a, sk.b, y / 78); b.fillRect(0, y, W, 1); }
+          if (V.sky === 0) { px(83, 39, 12, 10, '#ffcf6a'); px(82, 41, 14, 6, '#ffcf6a'); px(85, 40, 8, 1, '#fff0b0'); }      // 지는 해: 건물 사이로 걸린다
+          if (V.sky === 2) { px(26, 16, 8, 8, '#fff6d8'); px(25, 18, 10, 4, '#fff6d8'); }
+          if (V.sky === 1) { px(159, 15, 7, 7, '#e8ecf6'); px(158, 17, 9, 3, '#e8ecf6'); px(161, 16, 2, 2, '#c8ccd8'); }
+          city(b, sk);
+          // 선로 뒤 옹벽(비워 두면 지난 그림이 남아 번진다)
+          px(0, 74, W, 20, '#34353a'); px(0, 74, W, 1, '#4c4e55'); px(0, 75, W, 1, '#2a2b2f');
+          for (x = 0; x < W; x += 23) { px(x, 76, 1, 18, '#2b2c30'); px(x + 1, 76, 1, 18, '#3c3e44'); }
+          for (x = 10; x < W; x += 46) { px(x, 85, 5, 3, '#1c1d20'); px(x, 88, 5, 1, '#46484e'); px(x + 1, 88, 1, 3, 'rgba(90,110,120,.5)'); }
+          [['#c8483a', 30], ['#3f78ac', 96], ['#e8a23a', 140]].forEach(function (q) { for (k = 0; k < 9; k++) if (hash(k, q[1]) % 3) px(q[1] + k, 79 + hash(k, q[1] + 1) % 4, 1, 1, q[0]); });
+          px(0, 94, W, 10, '#3a3631'); for (k = 0; k < 300; k++) px(hash(k, 6) % W, 94 + hash(k, 7) % 10, 1, 1, ['#4c4740', '#2c2925', '#5a544b', '#655e54'][k % 4]);
+          for (x = 0; x < W; x += 6) { px(x, RAIL + 1, 4, 2, '#5a4030'); px(x, RAIL + 1, 4, 1, '#6e5040'); }
+          px(0, RAIL, W, 1, '#c8ccd4'); px(0, RAIL + 1, W, 1, '#6a7078'); px(0, RAIL + 4, W, 1, '#8a9098');
+          px(0, PLAT, W, H - PLAT, '#8e8c84'); px(0, PLAT, W, 1, '#5a5852'); px(0, PLAT + 1, W, 1, '#a8a69c'); px(0, PLAT + 2, W, 3, '#e6b81e');
+          for (x = 0; x < W; x += 3) px(x, PLAT + 3, 1, 1, '#b89012');
+          for (y = PLAT + 9; y < H; y += 7) px(0, y, W, 1, '#7c7a72'); for (y = PLAT + 9; y < H; y += 7) for (x = (y >> 1) % 14; x < W; x += 14) px(x, y, 1, 7, '#7c7a72');
+          px(0, 0, W, 4, '#24262c'); px(0, 4, W, 2, '#3a3d45'); px(0, 6, W, 1, '#1c1d22'); for (x = 0; x < W; x += 8) px(x, 4, 1, 2, '#2c2e35');
+          px(0, 31, W, 1, '#24262c'); for (x = 40; x < W; x += 92) { px(x, 26, 2, 48, '#3a3c44'); px(x + 1, 26, 1, 48, '#4c4f58'); px(x - 5, 28, 12, 1, '#3a3c44'); }
+        } finally { K.to(null); }
+        bgCache[key] = c; return c;
+      }
+      function skyLive() {
+        if (V.sky === 0) K.glow(89, 44, 34, 0.18 + 0.03 * Math.sin(T), '255,170,90');
+        if (V.sky === 2) K.glow(30, 20, 22, 0.3, '255,250,220');
+        if (V.sky === 1) { K.glow(162, 18, 14, 0.22, '220,230,255'); for (var k = 0; k < 24; k++) { var sx = hash(k, 31) % W, sy = 8 + hash(k, 32) % 20; if (Math.floor(T * 1.5 + k) % 7) px(sx, sy, 1, 1, '#dfe6ff'); } }
+        g.fillStyle = V.sky === 1 ? 'rgba(60,70,100,.55)' : V.sky >= 3 ? 'rgba(120,128,140,.7)' : 'rgba(255,240,225,.55)';
+        for (var c = 0; c < 4; c++) { var cx = ((hash(c, 41) % 220) + T * (2 + c)) % 240 - 40, cy = 12 + c * 7; g.fillRect(Math.round(cx), cy, 22, 2); g.fillRect(Math.round(cx) + 4, cy - 2, 12, 2); g.fillRect(Math.round(cx) + 8, cy - 3, 5, 1); }
+        V.smoke.forEach(function (q) { var a = Math.max(0, 1 - q.t / q.life) * (V.sky === 1 ? 0.35 : 0.45); g.fillStyle = 'rgba(70,64,62,' + a.toFixed(2) + ')'; g.beginPath(); g.arc(q.x, q.y, q.r, 0, Math.PI * 2); g.fill(); });
+        if (V.sky !== 2 && V.sky !== 4) K.glow(133, 48, 7, 0.25 + 0.1 * Math.sin(T * 6), '255,120,60');
+        if (SKY[V.sky].dark > 0.1) { for (var s2 = 0; s2 < 5; s2++) if ((Math.floor(T * 2) + s2) % 7) px(53 + s2 * 4, 34, 2, 3, '#ff6a5a'); if (Math.floor(T * 1.2) % 2) { px(31, 45, 1, 1, '#ff4a3a'); px(105, 27, 1, 1, '#ff4a3a'); } }
+        V.crows.forEach(function (c2) { spr(c2.x, c2.y, Math.floor(c2.t * 8) % 2 ? ['#.#', '.#.'] : ['...', '###'], { '#': '#1c1c20' }); });
+      }
+      var DIG = { 0: ['###', '#.#', '#.#', '#.#', '###'], 1: ['.#.', '##.', '.#.', '.#.', '###'], 2: ['###', '..#', '###', '#..', '###'], 3: ['###', '..#', '###', '..#', '###'], 4: ['#.#', '#.#', '###', '..#', '..#'], 5: ['###', '#..', '###', '..#', '###'], 6: ['###', '#..', '###', '#.#', '###'], 7: ['###', '..#', '..#', '.#.', '.#.'], 8: ['###', '#.#', '###', '#.#', '###'], 9: ['###', '#.#', '###', '..#', '###'] };
+      function digits(s, x, y, col) { for (var k = 0; k < s.length; k++) { var d = DIG[s[k]]; if (d) spr(x + k * 4, y, d, { '#': col }); } }
+      /* 전광판: 실린 칸 / 칸 수와 칸마다 등(8칸을 넘으면 초록: 한 칸 값이 크게 뛴다). 돌진 경고 때는 빨갛게 깜빡인다 */
+      function board() {
+        var x = 118, y = 9, n = loadedN(), max = V.n, warn = standing() && ti.rush === 'warn' && Math.floor(T * 8) % 2;
+        px(x + 26, 6, 1, 3, '#3e424a'); px(x + 29, 6, 1, 3, '#3e424a');
+        px(x - 1, y - 1, 62, 17, OL); px(x, y, 60, 15, warn ? '#3a0c0c' : '#101114'); px(x, y, 60, 1, '#26272c');
+        var ns = String(n), ms = String(max), cx = x + 3;
+        digits(ns, cx, y + 3, warn ? '#ff4a3a' : '#ffd23a'); cx += ns.length * 4;
+        spr(cx, y + 3, ['..#', '..#', '.#.', '#..', '#..'], { '#': '#8a7a3a' }); cx += 4; digits(ms, cx, y + 3, '#8a7a3a');
+        for (var k = 0; k < max; k++) px(x + 22 + k * 3, y + 4, 2, 4, k < n ? (k >= 8 ? '#7ed492' : '#ffd23a') : '#2a2b30');
+        var bonus = max > 1 ? Math.min(1, Math.max(0, n - 1) / (max - 1)) : 0;
+        px(x + 3, y + 11, 54, 2, '#2a2b30'); px(x + 3, y + 11, Math.round(54 * bonus), 2, '#7ed492');
+        if (SKY[V.sky].dark > 0.1) K.glow(x + 30, y + 7, 24, 0.12, '255,210,90');
+      }
+      function signal(green) {
+        px(4, 44, 2, 30, '#3a3c44'); px(2, 34, 6, 11, OL); px(3, 35, 4, 4, green ? '#2a1a1a' : '#ff3b2b'); px(3, 40, 4, 4, green ? '#5aff7a' : '#1f3a24');
+        K.glow(5, green ? 42 : 37, 8, V.sky === 1 ? 0.55 : 0.28, green ? '90,255,120' : '255,60,40');
+      }
+      function lamps() {
+        var night = SKY[V.sky].dark > 0.1;
+        for (var x = 22; x < W; x += 46) { px(x - 1, 6, 1, 3, '#3a3c44'); px(x - 3, 9, 7, 2, '#2a2c32'); px(x - 2, 11, 5, 1, night ? '#fff2b0' : '#c8c4a8'); if (night) { K.glow(x, 14, 28, 0.2); K.glow(x, PLAT + 8, 24, 0.13); } }
+      }
+      function bogie(x, phase) {
+        x = Math.round(x); var sp = Math.floor(phase) % 2;
+        px(x - 1, RAIL - 7, 11, 3, OL); px(x, RAIL - 6, 9, 1, '#4a4e58');
+        for (var k = 0; k < 2; k++) { var wx = x + k * 5; px(wx, RAIL - 4, 4, 4, OL); px(wx + 1, RAIL - 3, 2, 2, '#5a5e68'); px(wx + (sp ? 1 : 2), RAIL - 3, 1, 1, '#9aa0aa'); }
+      }
+      /* 기관차(왼쪽이 앞): 둥근 지붕의 운전실 · 몸통 · 난간 · 통풍구 · 경고 줄무늬 · 굴뚝 · 전조등 · 번호판 · 경적 나팔(개조할수록 늘어난다) */
+      function loco(x, phase, head) {
+        x = Math.round(x); var Y = '#f0b400', Yl = '#ffd95a', Yd = '#c08a00', Yx = '#8a6200', t = 70, k;
+        px(x + 2, t, 9, 1, OL); px(x + 1, t + 1, 11, 1, OL); px(x, t + 2, 13, 20, OL);
+        px(x + 2, t + 1, 8, 1, Yl); px(x + 1, t + 2, 11, 19, Y); px(x + 1, t + 2, 11, 1, Yl); px(x + 1, t + 2, 1, 18, Yl); px(x + 1, t + 17, 11, 4, Yd);
+        px(x + 1, t + 4, 3, 6, OL); px(x + 1, t + 5, 2, 4, '#26303c'); px(x + 1, t + 5, 1, 1, '#8ab4d4');
+        px(x + 5, t + 4, 6, 6, OL); px(x + 6, t + 5, 4, 4, '#26303c'); px(x + 6, t + 5, 2, 1, '#8ab4d4');
+        if (SKY[V.sky].dark > 0.1) { px(x + 6, t + 6, 4, 3, '#ffe39a'); K.glow(x + 8, t + 8, 8, 0.25, '255,220,140'); }
+        px(x + 4, t + 11, 1, 6, Yx); px(x + 8, t + 12, 4, 3, '#f1f0e6'); px(x + 9, t + 13, 1, 1, OL); px(x + 10, t + 13, 1, 1, OL);
+        for (k = 0; k <= up('horn'); k++) { px(x + 3 + k * 4, t - 2, 3, 2, OL); px(x + 4 + k * 4, t - 2, 1, 1, '#c8ccd4'); px(x + 3 + k * 4, t - 3, 1, 1, OL); }
+        var bx = x + 12, bw = LOCO_W - 12;
+        px(bx, t + 6, bw, 16, OL); px(bx + 1, t + 5, bw - 2, 1, OL);
+        px(bx, t + 7, bw - 1, 14, Y); px(bx + 1, t + 6, bw - 3, 1, Yl); px(bx, t + 17, bw - 1, 4, Yd);
+        for (k = 0; k < 4; k++) { px(bx + 2 + k * 4, t + 9, 2, 6, Yx); px(bx + 2 + k * 4, t + 9, 2, 1, Yd); }
+        for (k = 0; k < bw; k += 3) px(bx + k, t + 5, 1, 1, '#c8ccd4'); px(bx, t + 4, bw - 1, 1, '#9aa0aa');
+        px(bx + 11, t + 1, 3, 5, OL); px(bx + 12, t + 2, 1, 3, '#5a5e68');
+        for (k = 0; k < LOCO_W - 1; k += 4) { px(x + k, t + 18, 2, 2, OL); px(x + k + 2, t + 18, 2, 2, Y); }
+        px(x - 1, t + 21, LOCO_W + 1, 2, OL); px(x, t + 21, LOCO_W - 1, 1, '#3a3d46');
+        px(x - 2, t + 12, 2, 3, OL); px(x - 1, t + 13, 1, 1, '#fff6c8');
+        if (head) K.glow(x - 2, t + 13, 18, SKY[V.sky].dark > 0.1 ? 0.55 : 0.22, '255,240,180');
+        px(x - 2, t + 19, 2, 2, OL);
+        bogie(x + 3, phase); bogie(x + LOCO_W - 13, phase);
+      }
+      var CRATE = ['#a8764a', '#9a6a40', '#b4824e'], BOX = ['#2f6aa0', '#c86a2a', '#2f7a4a', '#a83a3a', '#5a4a8a'];
+      /* 화차(평판). load 면 등급에 맞는 화물(나무 상자 · 곡물 자루 · 탱크 · 컨테이너 · 냉동 컨테이너) */
+      function car(x, load, gr, s, at, phase) {
+        x = Math.round(x); var d = DECK, k;
+        if (x > W + 2 || x < -CW - 4) return;
+        px(x, d, CW, 3, OL); px(x + 1, d, CW - 2, 1, '#7a5a3a'); px(x + 1, d + 1, CW - 2, 1, '#4a3424');
+        for (k = 2; k < CW - 1; k += 4) px(x + k, d, 1, 1, '#5a4030');
+        if (up('coupler')) { px(x - 2, d, 3, 3, OL); px(x - 1, d + 1, 1, 1, '#c8483a'); } else px(x - 1, d + 1, 1, 1, OL);      // 연결기(튼튼하면 굵은 빨간 고리)
+        bogie(x + 1, phase);
+        if (!load) { px(x + 2, d - 1, 1, 1, '#8a8f99'); px(x + CW - 3, d - 1, 1, 1, '#8a8f99'); return; }
+        var drop = Math.max(0, 1 - (T - (at || -9)) / 0.18), y0 = d - Math.round(drop * 3);
+        if (gr === 0) {
+          for (k = 0; k < 3; k++) { var cx = x + (k < 2 ? k * 5 : 3), cy = y0 - (k < 2 ? 6 : 12), col = CRATE[(s + k) % 3];
+            px(cx, cy, 7, 6, OL); px(cx + 1, cy + 1, 5, 4, col); px(cx + 1, cy + 1, 5, 1, mix(col, '#ffffff', 0.25)); px(cx + 1, cy + 3, 5, 1, mix(col, '#000000', 0.25)); px(cx + 3, cy + 1, 1, 4, mix(col, '#000000', 0.2)); }
+        } else if (gr === 1) {
+          [[0, -5], [4, -5], [7, -5], [2, -9], [5, -9]].forEach(function (p, j) { var sx = x + p[0], sy = y0 + p[1]; px(sx, sy + 1, 5, 4, OL); px(sx + 1, sy, 3, 1, OL); px(sx + 1, sy + 1, 3, 3, '#d8c08a'); px(sx + 1, sy + 1, 3, 1, '#ecd8a8'); px(sx + 2, sy + 2, 1, 1, j % 2 ? '#a8905a' : '#c8483a'); });
+        } else if (gr === 2) {
+          px(x + 1, y0 - 12, CW - 2, 12, OL); px(x + 2, y0 - 11, 1, 10, '#6a6e78'); px(x + CW - 3, y0 - 11, 1, 10, '#6a6e78');
+          px(x + 3, y0 - 10, CW - 6, 8, '#d8dce2'); px(x + 3, y0 - 10, CW - 6, 2, '#f2f4f6'); px(x + 3, y0 - 4, CW - 6, 2, '#a8acb4');
+          px(x + 5, y0 - 7, 2, 2, '#e8762a'); px(x + 5, y0 - 13, 2, 1, OL);
+        } else {
+          var reefer = gr === 4, col2 = reefer ? '#e6ecf0' : BOX[s % 5];
+          px(x, y0 - 13, CW, 13, OL); px(x + 1, y0 - 12, CW - 2, 11, col2); px(x + 1, y0 - 12, CW - 2, 1, mix(col2, '#ffffff', 0.35)); px(x + 1, y0 - 2, CW - 2, 1, mix(col2, '#000000', 0.3));
+          for (k = 2; k < CW - 4; k += 2) px(x + k, y0 - 11, 1, 9, mix(col2, '#000000', 0.18));
+          px(x + CW - 4, y0 - 11, 1, 9, mix(col2, '#000000', 0.35)); px(x + CW - 3, y0 - 9, 1, 5, '#c8ccd4');
+          if (reefer) { px(x + 1, y0 - 7, CW - 5, 2, '#3f78ac'); px(x + 2, y0 - 11, 3, 3, '#8a9098'); px(x + 3, y0 - 10, 1, 1, Math.floor(T * 3 + s) % 2 ? '#5aff7a' : '#1f3a24'); }
+          else px(x + 3, y0 - 8, 4, 2, 'rgba(255,255,255,.6)');
+        }
+      }
+      function cargoCol(gr, k) { return gr === 0 ? CRATE[k % 3] : gr === 1 ? '#d8c08a' : gr === 2 ? '#d8dce2' : gr === 4 ? '#e6ecf0' : BOX[k % 5]; }
+      function pile() {
+        var x = PILE_X, gr = gradeV();
+        px(x - 1, FOOT - 1, 26, 2, 'rgba(0,0,0,.35)');
+        for (var k = 0; k < 4; k++) { var cx = x + (k % 2) * 12, cy = FOOT - 10 - Math.floor(k / 2) * 9, col = cargoCol(gr, k);
+          px(cx, cy, 11, 9, OL); px(cx + 1, cy + 1, 9, 7, col); px(cx + 1, cy + 1, 9, 1, mix(col, '#ffffff', 0.3)); px(cx + 1, cy + 7, 9, 1, mix(col, '#000000', 0.25));
+          for (var j = 3; j < 10; j += 3) px(cx + j, cy + 2, 1, 5, mix(col, '#000000', 0.18)); }
+      }
+      /* 지게차(옆모습, 왼쪽을 볼 때 기준으로 그리고 오른쪽을 보면 뒤집는다): 마스트 · 포크 · 노란 차체 · 평형추 · 인부 · 보호틀 · 경광등 */
+      function forklift(f) {
+        var X = Math.round(f.x), face = f.face || -1, B = FOOT, L = Math.round(f.lift * (B - 1 - DECK)), night = SKY[V.sky].dark > 0.1, k;
+        function q(lx, y, w, h, c) { px(face < 0 ? X + lx : X + 23 - lx - w, y, w, h, c); }
+        var Y = '#f0a818', Yl = '#ffcc4a', Yd = '#b87a10', Gr = '#3a3d46', Gl = '#6a6e78';
+        shadow(K, face < 0 ? X - 1 : X + 2, B, 21);
+        var top = B - 24, inner = Math.max(0, L - 4);
+        q(0, top, 2, 22, Gr); q(0, top, 1, 22, Gl);
+        if (inner) { q(1, top - inner, 1, inner + 2, Gl); q(0, top - inner, 2, 1, Gr); }
+        q(0, top + 3, 2, 1, '#2a2c32'); q(0, top + 12, 2, 1, '#2a2c32'); q(2, top + 2, 1, 1, night ? '#fff6c8' : '#d8d4b8');
+        var fy = B - 2 - L;
+        q(-2, fy - 6, 2, 7, '#2a2c32'); q(-1, fy - 6, 1, 7, '#565a64');
+        q(-10, fy, 9, 1, '#8a8f99'); q(-10, fy + 1, 9, 1, '#4a4e58'); q(-10, fy, 1, 1, '#b8bcc4');
+        if (f.carry) { var col = cargoCol(gradeV(), 1); q(-10, fy - 8, 8, 8, OL); q(-9, fy - 7, 6, 6, col); q(-9, fy - 7, 6, 1, mix(col, '#ffffff', 0.3)); q(-9, fy - 2, 6, 1, mix(col, '#000000', 0.25)); q(-6, fy - 7, 1, 5, mix(col, '#000000', 0.2)); }
+        q(5, B - 22, 11, 1, Gr); q(5, B - 21, 11, 1, '#565a64'); q(5, B - 21, 1, 4, Gr); q(6, B - 17, 1, 5, Gr); q(15, B - 21, 1, 9, Gr);
+        var busy = f.moving || f.lift > 0.05;
+        if (busy && Math.floor(T * 6) % 2) { q(10, B - 24, 2, 2, '#ffb43a'); K.glow(face < 0 ? X + 11 : X + 12, B - 23, 6, 0.35, '255,180,60'); } else q(10, B - 24, 2, 2, '#a86a1a');
+        q(9, B - 19, 4, 1, '#ff8a2a'); q(8, B - 18, 6, 2, '#ff8a2a'); q(9, B - 16, 4, 2, '#f1c9a0'); q(9, B - 16, 1, 1, OL);
+        q(9, B - 14, 5, 4, '#e8762a'); q(10, B - 13, 1, 3, '#ffe27a'); q(7, B - 13, 2, 1, '#f1c9a0');
+        q(6, B - 15, 1, 4, Gr); q(5, B - 15, 3, 1, Gr); q(13, B - 15, 2, 5, '#2a2c32');
+        q(3, B - 10, 17, 6, OL); q(4, B - 10, 15, 5, Y); q(4, B - 10, 15, 1, Yl); q(4, B - 6, 15, 1, Yd);
+        q(15, B - 13, 5, 4, OL); q(16, B - 13, 3, 1, OL); q(16, B - 12, 3, 3, Y); q(16, B - 12, 3, 1, Yl); q(19, B - 11, 1, 5, OL);
+        q(16, B - 9, 3, 1, Yd); for (k = 0; k < 3; k++) q(5 + k * 3, B - 8, 2, 1, Yd); q(3, B - 8, 1, 2, '#c8483a');
+        var sp = f.moving ? Math.floor(T * 10) % 2 : 0;
+        q(3, B - 6, 6, 6, OL); q(4, B - 5, 4, 4, '#2c2d32'); q(5, B - 4, 2, 2, '#8a8f99'); q(sp ? 5 : 6, B - 4, 1, 1, '#c8ccd4');
+        q(14, B - 5, 5, 5, OL); q(15, B - 4, 3, 3, '#2c2d32'); q(16, B - 3, 1, 1, '#8a8f99');
+        q(2, B - 7, 8, 1, Yd); q(13, B - 6, 7, 1, Yd);
+        if (night) K.glow(face < 0 ? X - 2 : X + 25, top + 3, 12, 0.3, '255,230,160');
+      }
+      /* 터널: 무리가 여기서 나온다. 입구 위 판에 남은 거리를 적는다(돌진 경고 때는 빨간 "!!!") */
+      function tunnel() {
+        var x = TUN, top = 58, y;
+        for (y = top + 6; y < RAIL + 1; y++) { g.fillStyle = mix('#0c0b10', '#1c1a22', (y - top) / 40); g.fillRect(x + 3, y, W - x, 1); }
+        px(x, top, 3, RAIL - top, '#4a4c54'); px(x + 1, top, 1, RAIL - top, '#5c5f68'); px(x, top, W - x, 6, '#3e4048'); px(x, top, W - x, 1, '#5c5f68'); px(x + 3, top + 6, W - x, 1, '#1a191f');
+        for (var k = 0; k < 3; k++) px(x + 4 + k * 4, top + 2, 2, 2, '#2c2e35');
+        var on = standing(), n = on ? Math.max(0, Math.round(ti.near * 100)) : 0, close = on && ti.near < 0.4, col = close && Math.floor(T * 6) % 2 ? '#ff4a3a' : '#ffd23a';
+        px(x - 1, top - 9, 13, 9, OL); px(x, top - 8, 11, 7, '#2a1c16'); if (on) digits(String(Math.min(99, n)), x + 1 + (n < 10 ? 2 : 0), top - 7, col);
+        if (on && ti.rush === 'warn' && Math.floor(T * 8) % 2) { px(x - 1, top - 9, 13, 9, '#ff3b2b'); spr(x + 3, top - 7, ['#.#.#', '#.#.#', '#.#.#', '.....', '#.#.#'], { '#': '#fff6c8' }); }
+        px(x + 3, top - 1, 1, 1, OL); px(x + 7, top - 1, 1, 1, OL);
+      }
+      function fence(front) {
+        var lv = up('fence'); if (!lv) return;
+        var x = FENCE_X, k, j;
+        for (k = 0; k < 2; k++) { px(x + k * 9, RAIL - 6 - lv * 2, 1, 6 + lv * 2, '#5a4030'); px(x + k * 9, RAIL - 6 - lv * 2, 1, 1, '#7a5a40'); }
+        for (k = 0; k < lv; k++) { var y = RAIL - 3 - k * 2; for (j = 0; j < 11; j++) if ((j + k) % 3) px(x - 1 + j, y + ((j + k) % 2), 1, 1, j % 4 ? '#8a8f99' : '#c8ccd4'); if (front) px(x + 2 + (k % 2) * 4, y - 1, 1, 1, '#c8ccd4'); }
+      }
+      function horde() {
+        if (!standing() || !V.zs) return;
+        var run = ti.rush === 'run';
+        for (var k = V.zs.length - 1; k >= 0; k--) {
+          var z = V.zs[k], zx = Math.round(z.x);
+          if (zx > W + 2) continue;
+          var lean = z.step && !run ? -1 : 0, fr = run ? Math.floor(T * 12 + k) % 2 : z.step ? 1 : 0;
+          var y = RAIL - 12 + (z.step ? 0 : (Math.floor(T * 2 + k) % 3 === 0 ? 1 : 0)), dark = zx > TUN + 1;
+          var pal = dark ? { g: '#18161e', r: '#ff3b2b', k: '#18161e', t: '#121016', p: '#121016' } : zomPal(k, V.hit > 0.4, k === 3);
+          var sway = z.back ? Math.round(Math.sin(T * 30 + k)) : snagged(zx) ? Math.round(Math.sin(T * 18 + k * 2)) : 0, f = ZOM[fr];
+          spr(zx + lean + sway, y, f.slice(0, 8), pal, true); spr(zx, y + 8, f.slice(8), pal, true);
+          if (!dark && !z.step && Math.floor(T * 1.3 + k) % 3 === 0) px(zx - 1, y + 6, 2, 1, pal.g);
+          if (dark && k % 2 === 0) K.glow(zx + 3, y + 2, 3, 0.18, '255,50,40');
+          if (!dark) { shadow(K, zx, RAIL, 6); if ((run || z.step) && Math.floor(T * 8 + k) % 4 === 0) px(zx + 5, RAIL - 1, 2, 1, 'rgba(200,180,150,.6)'); }
+        }
+      }
+      /* 승강장 뒤쪽 줄: 의자 · 놓고 간 봉투 · 자판기 · 쓰레기통 · 시간표 · 바닥 얼룩 · 날씨 · 바람에 굴러가는 신문지 */
+      function platformLife() {
+        var night = SKY[V.sky].dark > 0.1, y0 = 116, k, x;
+        px(44, 121, 5, 1, '#7a786f'); px(47, 122, 3, 1, '#7a786f'); px(118, 112, 1, 3, '#76746c'); px(119, 114, 2, 1, '#76746c'); px(138, 123, 1, 1, '#5a5852'); px(76, 125, 1, 1, '#5a5852');
+        x = 52; px(x, y0 - 6, 22, 2, OL); px(x + 1, y0 - 6, 20, 1, '#3f78ac'); px(x, y0 - 4, 22, 1, '#2c5a86'); px(x + 2, y0 - 3, 1, 3, OL); px(x + 19, y0 - 3, 1, 3, OL); px(x, y0 - 10, 22, 1, OL); px(x + 1, y0 - 9, 20, 3, '#3f78ac'); px(x + 1, y0 - 9, 20, 1, '#5a92c4');
+        shadow(K, x, y0, 22); px(x + 4, y0 - 8, 4, 2, '#c8b48a'); px(x + 4, y0 - 8, 4, 1, '#e0cfa4');
+        x = 98; var on = !night || Math.floor(T * 3) % 23;
+        px(x, y0 - 17, 11, 17, OL); px(x + 1, y0 - 16, 9, 15, '#b83a34'); px(x + 1, y0 - 16, 9, 1, '#d85a4a');
+        px(x + 2, y0 - 14, 7, 7, on ? '#cfe6f2' : '#3a4048'); for (k = 0; k < 3; k++) px(x + 3 + k * 2, y0 - 13 + (k % 2) * 3, 1, 2, ['#e8a23a', '#3f78ac', '#7ed492'][k]);
+        px(x + 2, y0 - 5, 4, 2, '#1c1d22'); px(x + 7, y0 - 6, 1, 3, '#ffd23a'); shadow(K, x, y0, 11); if (night && on) K.glow(x + 5, y0 - 9, 14, 0.3, '190,230,255');
+        x = 116; px(x, y0 - 7, 6, 7, OL); px(x + 1, y0 - 6, 4, 6, '#4a5a4a'); px(x, y0 - 8, 6, 1, '#5a6a5a'); px(x + 1, y0 - 9, 2, 1, '#e8e4d8'); shadow(K, x, y0, 6);
+        x = 30; px(x + 3, y0 - 18, 1, 18, '#3a3c44'); px(x, y0 - 22, 8, 7, OL); px(x + 1, y0 - 21, 6, 5, '#e8e4d8'); for (k = 0; k < 3; k++) px(x + 2, y0 - 20 + k * 2, k === 1 ? 3 : 4, 1, '#5a5e68');
+        if (V.sky === 3) [[40, 124, 12], [86, 119, 9], [128, 127, 10]].forEach(function (p, j) {
+          px(p[0], p[1], p[2], 2, 'rgba(70,90,120,.55)'); px(p[0] + 1, p[1], p[2] - 2, 1, 'rgba(160,180,210,.35)');
+          var r = (T * 1.6 + j * 0.7) % 1; px(p[0] + p[2] / 2 - r * 4, p[1], Math.max(1, r * 8), 1, 'rgba(220,230,255,' + (0.6 * (1 - r)).toFixed(2) + ')');
+        });
+        if (V.sky === 4) { px(52, y0 - 11, 22, 1, '#f2f4f8'); px(98, y0 - 18, 11, 1, '#f2f4f8'); for (k = 0; k < 18; k++) px(hash(k, 51) % W, 106 + hash(k, 52) % 24, 2, 1, '#e6eaf0'); }
+        var nw = V.paper; if (nw) { var f2 = Math.floor(nw.t * 6) % 3; spr(nw.x, nw.y - (f2 === 1 ? 2 : 0), [['###', '#.#'], ['.##', '##.'], ['##.', '.##']][f2], { '#': '#e8e4d8' }); }
+      }
+      function figures() {
+        var night = SKY[V.sky].dark > 0.1;
+        V.people.forEach(function (q) {
+          var pal = manPal(['#3f78ac', '#c8483a', '#5a6a3a', '#6a5a3a', '#e8a23a', '#4a4a50'][q.k % 6], ['#6a7a8a', '#a8845a', '#4c6a8a', '#8a4a4a', '#5a5a7a', '#8a8a6a'][q.k % 6]);
+          if (q.seat) { var nod = Math.floor(T * 0.6) % 5 === 0 ? 1 : 0; spr(q.x, 101 + nod, ['.yyyy.', 'yyyyyy', '.ssss.', '.s.se.', 'vvvvvv', 'vvvvvv', 'pppppp', '.p..p.'], pal); if (nod) { px(q.x + 6, 98, 1, 1, '#c8ccd4'); px(q.x + 8, 96, 1, 1, '#c8ccd4'); } return; }
+          var mv = q.walk || q.moving, fr = mv ? (Math.floor(q.t * (q.run ? 12 : q.back ? 4 : 6)) % 2 ? MAN.w1 : MAN.w2) : q.lvl >= 1 ? MAN.dn : (Math.floor(q.t * 0.7) % 4 === 0 ? MAN.up : MAN.dn);
+          var shake = q.lvl >= 2 && !mv ? (Math.floor(T * 14 + q.k) % 2) : 0, hop = q.run && Math.floor(q.t * 12) % 2 ? 1 : 0;
+          spr(q.x + shake, FOOT - 12 - hop, fr, pal, q.face < 0); shadow(K, q.x, FOOT, 6);
+          if (q.lvl >= 2 && !q.walk) px(q.x + (q.face > 0 ? 6 : -1), FOOT - 7, 1, 2, pal.s);
+          if (q.alertT > 0 || (q.lvl >= 3 && Math.floor(T * 4 + q.k) % 2)) { var bx = q.x + 1, by = FOOT - 21 - (q.alertT > 0.9 ? 1 : 0); px(bx + 1, by, 3, 7, '#fff6e0'); px(bx, by + 1, 5, 5, '#fff6e0'); px(bx + 1, by + 7, 1, 1, '#fff6e0'); px(bx + 2, by + 1, 1, 3, '#e03a2a'); px(bx + 2, by + 5, 1, 1, '#e03a2a'); }
+          if (q.bag) { px(q.x + (q.face > 0 ? 6 : -3), FOOT - 6, 3, 4, OL); px(q.x + (q.face > 0 ? 6 : -3) + 1, FOOT - 5, 1, 2, '#c89a5a'); }
+        });
+        if (up('autosig') > 0) {
+          var sx = 12, upf = V.flags && Math.floor(V.flagT * 4) % 2 === 0;
+          spr(sx, FOOT - 12, upf ? MAN.up : MAN.dn, manPal('#2a3a6a', '#2a3a6a')); shadow(K, sx, FOOT, 6);
+          px(sx + 5, FOOT - (upf ? 18 : 10), 1, 8, '#c8ccd4'); px(sx + 6, FOOT - (upf ? 18 : 10), 4, 3, V.flags ? '#5aff7a' : '#ff3b2b');
+        }
+        if (V.dog && V.dog.v === 0) { var bk = Math.floor(T * 5) % 2; spr(V.dog.x, FOOT - 5 - bk, ['....##', '#####.', '.####.', '.#..#.'], { '#': '#a8845a' }); if (bk) { px(V.dog.x + 7, FOOT - 7, 1, 1, '#fff6e0'); px(V.dog.x + 9, FOOT - 8, 1, 1, '#fff6e0'); px(V.dog.x + 9, FOOT - 6, 1, 1, '#fff6e0'); } }
+        else if (V.dog) { var dx = Math.round(V.dog.x), df = Math.floor(V.dog.t * 10) % 2; spr(dx, FOOT - 5, df ? ['....##', '#####.', '.####.', '.#..#.'] : ['....##', '#####.', '.####.', '#....#'], { '#': '#a8845a' }, V.dog.v < 0); }
+        if (night) for (var x = 22; x < W; x += 46) K.glow(x, FOOT - 4, 18, 0.08);
+      }
+      function birds() {
+        V.birds.forEach(function (b) { spr(b.x, b.y - 2, b.st === 'sit' ? (Math.floor(b.t * 1.3) % 5 === 0 ? ['.#.', '###'] : ['##.', '###']) : (Math.floor(b.t * 10) % 2 ? ['#.#', '.#.'] : ['...', '###']), { '#': '#8a8f99' }); });
+      }
+      function pillars() { for (var x = 1; x < W; x += 91) { px(x, 6, 3, PLAT - 2, '#3a3d45'); px(x + 1, 6, 1, PLAT - 2, '#565b66'); px(x - 1, PLAT + 2, 5, 2, '#2a2c32'); } }
+      function weather() {
+        var s = V.sky, k;
+        if (s === 3) { g.fillStyle = 'rgba(180,200,230,.5)'; for (k = 0; k < 46; k++) { var x = (hash(k, 11) % W + T * 40) % W, y = (hash(k, 12) % H + T * 160) % H; if (y > 6) g.fillRect(Math.round(x), Math.round(y), 1, 3); } if (V.flash > 0) { g.fillStyle = 'rgba(230,240,255,' + (V.flash * 1.4).toFixed(2) + ')'; g.fillRect(0, 7, W, 67); } }
+        if (s === 4) { g.fillStyle = 'rgba(255,255,255,.85)'; for (k = 0; k < 40; k++) { var sx = (hash(k, 13) % W + Math.sin(T + k) * 6 + T * 6) % W, sy = (hash(k, 14) % H + T * 18) % H; if (sy > 6) g.fillRect(Math.round(sx), Math.round(sy), 1, 1); } }
+        if (SKY[s].dark) { g.fillStyle = 'rgba(10,14,30,' + SKY[s].dark + ')'; g.fillRect(0, 0, W, H); }
+      }
+      function draw() {
+        var sh = V.shake > 0 ? Math.round(Math.sin(T * 60)) : 0, gr = gradeV(), running = ti && ti.running;
+        g.save(); g.translate(sh, 0);
+        g.drawImage(backdrop(), 0, 0); skyLive(); lamps(); board(); signal(V.mode === 'leave' || !!V.flags);
+        tunnel();
+        if (V.cut) { var cx = V.cut.x; for (var c = 0; c < V.cut.n; c++) car(cx + c * (CW + GAP), c < V.cut.loaded, gr, c, -9, 0); for (var z = 0; z < Math.min(7, V.cut.n * 2); z++) spr(cx + 1 + z * 5, DECK - 18 + (z % 2) * 3 - Math.min(5, V.cut.t * 8), ZOM[Math.floor(T * 5 + z) % 2], zomPal(z), true); }
+        if (running && V.mode !== 'gap') {
+          var phase = V.mode === 'leave' ? V.leave.t * 14 : V.mode === 'arrive' ? T * 8 : 0, n = V.mode === 'leave' ? V.leave.n : V.n, ld = V.mode === 'leave' ? V.leave.loaded : V.mode === 'stand' ? ti.cars : 0;
+          loco(V.x, phase, true);
+          for (var k = 0; k < n; k++) car(carX(k), k < ld, gr, (V.seed * 13 + k * 7) % 97, V.loadAt[k], phase);
+          if (standing()) { fence(false); horde(); fence(true); }
+        } else fence(false);
+        if (V.wave) { var r = V.wave.t * 160, a = Math.max(0, 1 - V.wave.t / 0.9), ox = Math.max(2, V.x + 30); g.strokeStyle = 'rgba(255,240,180,' + a.toFixed(2) + ')'; g.lineWidth = 1; for (var w = 0; w < 3; w++) { var rr = r - w * 12; if (rr > 0) { g.beginPath(); g.arc(ox, 80, rr, -0.9, 0.9); g.stroke(); } } }
+        V.steam.forEach(function (q) { var a2 = Math.max(0, 1 - q.t / q.life); g.fillStyle = 'rgba(232,232,238,' + (a2 * 0.75).toFixed(2) + ')'; var s = 2 + Math.round(q.t * 6); g.fillRect(Math.round(q.x), Math.round(q.y), s, s); });
+        pillars(); birds(); platformLife(); pile(); figures(); forklift(V.fork);
+        V.parts.forEach(function (q) { px(q.x, q.y, 1, 1, q.c); });
+        weather();
+        danger(K, standing() ? Math.max(0, 1 - ti.near / 0.35) : 0);
+        g.restore();
+      }
+      K.tap = function (x, y) { if (host.tap) host.tap(x, y); };
+      if (!hostFmt) hostFmt = host.fmt;
+      function frame(dt, state) { GS = state; sync(); vtick(dt); draw(); }
+      return { draw: frame, event: event, horn: horn, tapped: tapped, V: function () { return V; } };
+    }
+    return { mine: mine, station: station };
   })();
   var zs1 = null, zs2 = null, zsRaf = 0, zsLast = 0, zsAcc = 0, zsPrev1 = null, zsPrev2 = null, zsIc = {};
   var ZS_FPS = 20;      /* 도트 장면은 초당 20장이면 충분하다. 60장으로 그리면 폰이 뜨거워진다 */
@@ -4763,8 +5111,8 @@
   function zsOff(cv) { var r = cv.getBoundingClientRect(); if (!(r.bottom < 0 || r.top > (window.innerHeight || 0))) return false; var now = Date.now(); if (now - zsSlow > 1000) { zsSlow = now; return false; } return true; }
   function zsLoop(now) {
     zsRaf = 0;
-    var c1 = $('z1-cv'), c2 = $('z2-cv'), c3 = $('z3-cv'), v1 = !!c1 && c1.offsetParent !== null, v2 = !!c2 && c2.offsetParent !== null, v3 = !!c3 && c3.offsetParent !== null;
-    if ((!v1 && !v2 && !v3) || document.hidden) return;      // 안 보이면 멈춘다(다시 보이면 render 가 깨운다)
+    var c1 = $('z1-cv'), c2 = $('z2-cv'), c3 = $('z3-cv'), c4 = $('platform'), v1 = !!c1 && c1.offsetParent !== null, v2 = !!c2 && c2.offsetParent !== null, v3 = !!c3 && c3.offsetParent !== null, v4 = !!c4 && c4.offsetParent !== null;
+    if ((!v1 && !v2 && !v3 && !v4) || document.hidden) return;      // 안 보이면 멈춘다(다시 보이면 render 가 깨운다)
     zsAcc += Math.min(0.25, Math.max(0, (now - zsLast) / 1000)); zsLast = now;
     if (zsAcc >= 1 / ZS_FPS) {
       var dt = Math.min(0.2, zsAcc); zsAcc = 0;
@@ -4772,7 +5120,8 @@
         if (v1 && !zs1) zs1 = ZS.town(c1, $('z1-fl'), { tap: function (i) { search(i >= 0 ? i : undefined); } });
         if (v2 && !zs2) zs2 = ZS.market(c2, $('z2-fl'), { sell: function () { $('sell').click(); }, fill: function () { var b = $('order-fill'); if (b && !$('order').hidden && !b.disabled) b.click(); else $('sell').click(); } });
         if (v3 && !zs3) zs3 = MS.mine(c3, $('z3-fl'), mineHost());
-        if (v1 && zsOff(c1)) v1 = false; if (v2 && zsOff(c2)) v2 = false; if (v3 && zsOff(c3)) v3 = false;      /* 화면 밖이면 그리기만 건너뛴다(누르기 처리는 이미 붙어 있다) */
+        if (v4 && !zs4) zs4 = MS.station(c4, $('z4-fl'), { fmt: fmt, tap: function (x, y) { zs4Tap.x = x; zs4Tap.y = y; } });      // 누르기(칸 당기기)는 #platform 의 click 이 한다
+        if (v1 && zsOff(c1)) v1 = false; if (v2 && zsOff(c2)) v2 = false; if (v3 && zsOff(c3)) v3 = false; if (v4 && zsOff(c4)) v4 = false;      /* 화면 밖이면 그리기만 건너뛴다(누르기 처리는 이미 붙어 있다) */
         if (v1) {
           var a = zsView1();
           if (zsPrev1) a.counts.forEach(function (n, i) { if (n > zsPrev1.counts[i]) zs1.built(i, a.tier[i] > zsPrev1.tier[i]); });
@@ -4784,16 +5133,18 @@
           if (zsPrev2) { if (m.stalls > zsPrev2.stalls) zs2.bought(0); if (m.porter > zsPrev2.porter) zs2.bought(1); if (m.crier > zsPrev2.crier) zs2.bought(2); if (m.broker && !zsPrev2.broker) zs2.bought(3); }
           zsPrev2 = m; zs2.draw(dt, m); zsIcons(zs2.icon, ZS_ROWS2);
         }
+        if (v4) zs4.draw(dt, state);
         if (v3) { zs3.draw(dt, state); ZS_ROWS3.forEach(function (id) { var ic = zsIcon(id); if (ic) zs3.icon(id, ic.getContext('2d'), state); }); }
       } catch (e) {
         /* 그림이 실패하면 왜 실패했는지 그림판 위에 작게 적는다(화면 한 장만 받아도 원인을 알 수 있게). 게임은 아래 단추로 계속된다 */
-        try { var eb = $(v1 ? 'z1-fl' : v2 ? 'z2-fl' : 'z3-fl'); if (eb && !eb.getAttribute('data-err')) { eb.setAttribute('data-err', '1'); var es = document.createElement('i'); es.style.cssText = 'position:absolute;left:4px;right:4px;bottom:4px;font:11px/1.3 monospace;color:#ffd95a;background:rgba(0,0,0,.7);padding:3px;word-break:break-all'; es.textContent = '그림 오류: ' + String(e && e.message || e).slice(0, 140); eb.appendChild(es); } } catch (e2) { /* 알림조차 못 띄워도 게임은 계속된다 */ }
+        try { var eb = $(v1 ? 'z1-fl' : v2 ? 'z2-fl' : v3 ? 'z3-fl' : 'z4-fl'); if (eb && !eb.getAttribute('data-err')) { eb.setAttribute('data-err', '1'); var es = document.createElement('i'); es.style.cssText = 'position:absolute;left:4px;right:4px;bottom:4px;font:11px/1.3 monospace;color:#ffd95a;background:rgba(0,0,0,.7);padding:3px;word-break:break-all'; es.textContent = '그림 오류: ' + String(e && e.message || e).slice(0, 140); eb.appendChild(es); } } catch (e2) { /* 알림조차 못 띄워도 게임은 계속된다 */ }
         window.ZONE7_SCENE_ERROR = String(e && e.stack || e); /* 그림이 없어도 아래 단추로 게임은 된다. 화면 테스트가 이 값을 본다 */ }
     }
     zsRaf = requestAnimationFrame(zsLoop);
   }
   function zsWake() { if (!zsRaf && typeof requestAnimationFrame === 'function') { zsLast = performance.now(); zsRaf = requestAnimationFrame(zsLoop); } }
   /* 3구역 광산 장면의 집(5.4.0). 1 · 2구역 장면과 같은 고리(zsLoop)에서 그린다. */
+  var zs4 = null, zs4Tap = { x: 92, y: 110 };      // 5.6.0 4구역 승강장 장면
   var zs3 = null, ZS_ROWS3 = ['pick', 'miner', 'minecart', 'powder', 'wall', 'guard'];
   function mineEvents(list) { if (list && list.length) handleEvents(list); }
   function mineHost() {
@@ -5823,18 +6174,18 @@
       var go = $('train-go'), nextMult = ti.cars < ti.max ? C.carMult(ti.cars + 1) : 0;
       go.disabled = !(ti.running && ti.cars >= 1);
       var goKey = (ti.cars >= 1 ? fmt(ti.gain) : '-') + (ti.full ? 'F' : '');
-      if (go._t !== goKey) { go._t = goKey; go.textContent = ''; go.appendChild(el('span', '', ti.full ? '꽉 찼어요 · 출발' : '출발')); go.appendChild(el('span', '', ti.cars >= 1 ? '+' + fmt(ti.gain) : ti.running ? '첫 칸을 붙이는 중' : '열차가 없어요')); }
+      if (go._t !== goKey) { go._t = goKey; go.textContent = ''; go.appendChild(el('span', '', ti.full ? '꽉 찼어요 · 출발' : '출발')); go.appendChild(el('span', '', ti.cars >= 1 ? '+' + fmt(ti.gain) : ti.running ? '첫 짐을 싣는 중' : '열차가 없어요')); }
       go.classList.toggle('full', ti.running && ti.full);
       var hb = $('train-horn'); hb.disabled = !(ti.running && ti.horn > 0); setText(hb, '경적 ' + (ti.running ? ti.horn : 0));
       $('platform').classList.toggle('tappable', ti.running && !ti.full);
       setText($('plat-note'), !ti.running ? '기관차를 사면 승강장에 열차가 서요.'
         : ti.rush ? (ti.horn > 0 ? '경적으로 돌진을 막으세요' : '경적이 없어요 · 바로 보내세요')
         : ti.full ? '보내야 다음 열차가 와요'
-        : (state.trainsSent || 0) < 5 ? '그림을 누르면 칸이 빨리 붙어요 · 무리가 닿기 전에 보내세요'      // 3.8.4: 누르는 법은 처음 몇 대만. 횟수 기록은 목표와 업적에 있어서 뺐다
-        : ti.hand && !ti.rushed ? '칸을 당긴 열차에는 무리가 돌진할 수 있어요 · 경적으로 막아요'      // 3.9.2: 돌진이 언제 오고 어떻게 막는지 그 자리에서 알려 준다
-        : ti.cars >= 1 ? '한 칸 더 붙으면 ×' + nextMult.toFixed(2) : '');
+        : (state.trainsSent || 0) < 5 ? '그림을 누르면 지게차가 서둘러요 · 무리가 닿기 전에 보내세요'      // 3.8.4: 누르는 법은 처음 몇 대만. 횟수 기록은 목표와 업적에 있어서 뺐다
+        : ti.hand && !ti.rushed ? '서두른 열차에는 무리가 돌진할 수 있어요 · 경적으로 막아요'      // 3.9.2: 돌진이 언제 오고 어떻게 막는지 그 자리에서 알려 준다
+        : ti.cars >= 1 ? '한 칸 더 실으면 ×' + nextMult.toFixed(2) : '');
       $('platform').setAttribute('data-pulls', state.pullsRun || 0); $('platform').setAttribute('data-sent', state.trainsSent || 0);      // 화면 테스트가 읽는다
-      drawPlatform(ti);
+      zsWake();      // 5.6.0: 승강장 그림은 장면 고리(zsLoop)가 그린다
       C.ROUTES.forEach(function (d) {
         var r = rows.routes[d.id], lv = state.routes[d.id] || 0, cost = C.routeCost(state, d.id);
         setText(r.count, 'Lv ' + lv + ' / ' + d.max);
@@ -6425,13 +6776,17 @@
           if (ev.final) log('최후의 밤에 뚫렸다. 건물을 고치고 다시 맞을 수 있다.', 'bad');
           break;
         case 'train':      // 3.4.0: 승강장의 열차가 떠났다(why: hand 손으로 · auto 역무원 · full 만차 · horde 무리에 닿음)
-          platAnim = { at: Date.now(), kept: ev.kept, cut: ev.cars - ev.kept, why: ev.why };
+          if (zs4) zs4.event(ev);
           if (ev.why === 'horde') { if (state.zone === 3) log('무리가 승강장에 닿았다. 뒤쪽 ' + (ev.cars - ev.kept) + '칸을 떼고 떠났다.', 'bad'); if (tab === 'z3' && pane === 'play') { sfx('breached'); buzz(60); } }
           else if (ev.full) { if (state.zone === 3) log('12칸 만차를 보냈다. 물자 ' + fmt(ev.gain) + ' 확보.', 'good'); if (tab === 'z3' && pane === 'play') sfx('goal'); }
           else if (tab === 'z3' && pane === 'play') sfx('train');
           break;
+        case 'load':      // 5.6.0: 칸이 실려 몫을 받았다(승강장 그림에 +물자를 띄운다)
+          if (zs4) zs4.event(ev);
+          break;
         case 'horde-sprint':      // 무리가 달려든다: 4구역을 보고 있을 때만 알린다
-          if (tab === 'z3' && pane === 'play') { platSprint = Date.now(); sfx('rush'); buzz([40, 60, 40]); }
+          if (zs4) zs4.event(ev);
+          if (tab === 'z3' && pane === 'play') { sfx('rush'); buzz([40, 60, 40]); }
           break;
         case 'ending':
           pendingEnding = ev;      // 일지 창과 특전 창이 닫힌 뒤에 끝 화면을 띄운다(render 가 본다)
@@ -6749,18 +7104,19 @@
     $('platform').addEventListener('click', function () {
       var res = C.pullCar(state);
       if (!res.ok) return;
-      platPull = Date.now(); sfx(res.added ? 'buy' : 'click'); if (res.added) buzz(12);
+      if (zs4) zs4.tapped(res, zs4Tap.x, zs4Tap.y);
+      sfx(res.added ? 'buy' : 'click'); if (res.added) buzz(12);
       render();
     });
     $('train-horn').addEventListener('click', function () {
       var res = C.blowHorn(state);
       if (!res.ok) return;
-      platHorn = Date.now(); log(res.broke ? '경적으로 무리의 돌진을 막았다.' : '경적을 울렸다. 무리가 물러선다.', ''); sfx('signal'); buzz(35); Store.save(); render();
+      if (zs4) zs4.horn(res.broke); log(res.broke ? '경적으로 무리의 돌진을 막았다.' : '경적을 울렸다. 무리가 물러선다.', ''); sfx('signal'); buzz(35); Store.save(); render();
     });
     $('train-go').addEventListener('click', function () {
       var res = C.sendTrain(state);
       if (!res.ok) return;
-      platAnim = { at: Date.now(), kept: res.kept, cut: 0, why: 'hand' };
+      if (zs4) zs4.event(res);
       log(res.kept + '칸 열차를 보냈다. 물자 ' + fmt(res.gain) + ' 확보.' + (res.full ? ' 만차다.' : ''), res.kept >= C.LONG_CARS ? 'good' : '');
       sfx(res.kept >= C.LONG_CARS ? 'goal' : 'train'); buzz(res.kept >= C.LONG_CARS ? 40 : 20); Store.save(); render();
     });
