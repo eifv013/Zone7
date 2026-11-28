@@ -5074,7 +5074,38 @@
       K.tap = function (x, y) { if (host.tap) host.tap(x, y); };
       if (!hostFmt) hostFmt = host.fmt;
       function frame(dt, state) { GS = state; sync(); vtick(dt); draw(); }
-      return { draw: frame, event: event, horn: horn, tapped: tapped, V: function () { return V; } };
+      /* ---------- 구매 줄 그림(46×30): 그 줄이 무엇이고 지금 어디까지 왔는지(1~3구역 줄과 같은 꼴) ---------- */
+      function bg(c) { px(0, 0, 46, 30, c || '#24232e'); }
+      function rail() { px(0, 26, 46, 4, '#3a3631'); px(0, 26, 46, 1, '#c8ccd4'); }
+      function at(dx, dy, fn) { K.g.save(); K.g.translate(dx, dy); try { fn(); } finally { K.g.restore(); } }
+      function lvDots(lv, max, col) { for (var k = 0; k < max; k++) px(44 - (max - k) * 4, 2, 3, 2, k < lv ? col || '#ffd23a' : '#4a4b55'); }
+      var ICONS = {
+        train: function () { var sk = SKY[V.sky]; bg(mix(sk.a, sk.b, 0.5)); rail(); at(9, -71, function () { loco(0, Math.floor(T * 4), false); }); spr(2, 10 - Math.floor(T * 3) % 4, ['.##', '###'], { '#': 'rgba(232,232,238,.7)' }); },
+        'route-grade': function () { var lv = (GS.routes.grade || 0), g0 = Math.min(4, Math.floor(lv / 3)), g1 = Math.min(4, Math.floor((lv + 1) / 3)); bg(); px(0, 26, 46, 1, '#c8ccd4');
+          at(4, -70, function () { car(0, true, g0, 2, -9, 0); car(26, true, g1, 4, -9, 0); }); spr(19, 14, ['#..', '##.', '###', '##.', '#..'], { '#': '#7ed492' }); },
+        'route-crew': function () { bg(); var f = { x: 22, face: -1, lift: 0.08 + 0.06 * Math.sin(T * 3), carry: true, moving: true }; at(0, -97, function () { forklift(f); }); },
+        fence: function () { bg(); px(0, 25, 46, 1, '#c8ccd4'); var lv = up('fence');
+          for (var k = 0; k < Math.max(1, lv); k++) for (var j = 0; j < 30; j++) if ((j + k) % 3) px(8 + j, 22 - k * 3 + (j + k) % 2, 1, 1, lv ? (j % 4 ? '#8a8f99' : '#c8ccd4') : '#4a4b55');
+          px(8, 8, 1, 17, '#7a5a40'); px(38, 8, 1, 17, '#7a5a40'); spr(28 + Math.round(Math.sin(T * 9)), 12, ZOM[Math.floor(T * 3) % 2], zomPal(1), true); lvDots(lv, 5); },
+        horn: function () { bg(); var lv = up('horn'); for (var h = 0; h <= lv; h++) { px(8, 7 + h * 7, 4, 4, '#8a8f99'); px(12, 6 + h * 7, 6, 6, '#c8ccd4'); px(18, 5 + h * 7, 2, 8, '#e8ecf0'); }
+          var a = (T * 1.6) % 1; K.g.strokeStyle = 'rgba(255,240,180,' + (1 - a).toFixed(2) + ')'; K.g.lineWidth = 1; K.g.beginPath(); K.g.arc(20, 14, 5 + a * 16, -0.8, 0.8); K.g.stroke(); lvDots(lv, 2); },
+        coupler: function () { bg(); px(0, 26, 46, 1, '#c8ccd4'); var on = up('coupler') > 0; at(3, -70, function () { car(0, true, gradeV(), 1, -9, 0); car(27, true, gradeV(), 3, -9, 0); });
+          px(16, 18, 13, 3, OL); px(17, 19, 11, 1, on ? '#c8483a' : '#6a6e78'); px(20, 17, 5, 5, OL); px(21, 18, 3, 3, on ? '#ff8a6a' : '#8a8f99'); },
+        longplat: function () { bg(); px(0, 26, 46, 1, '#c8ccd4'); var lv = up('longplat'); at(-2, -70, function () { for (var k = 0; k < 4; k++) car(k * 13, k < 3, gradeV(), k, -9, 0); });
+          px(38, 7, 5, 1, '#7ed492'); px(40, 5, 1, 5, '#7ed492'); lvDots(lv, 2, '#7ed492'); },
+        autosig: function () { bg(); var upf = Math.floor(T * 2) % 2 === 0; spr(18, 14, upf ? MAN.up : MAN.dn, manPal('#2a3a6a', '#2a3a6a')); px(23, upf ? 7 : 15, 1, 8, '#c8ccd4'); px(24, upf ? 7 : 15, 5, 3, up('autosig') ? '#5aff7a' : '#ff3b2b'); px(0, 26, 46, 1, '#c8ccd4'); },
+        yard: function () { bg(); px(0, 26, 46, 1, '#c8ccd4'); px(6, 8, 34, 18, '#4a4c54'); px(5, 6, 36, 3, '#3a3c44'); px(10, 12, 26, 14, '#1c1d22'); at(14, -73, function () { loco(0, 0, false); });
+          var sp = Math.floor(T * 6) % 3; if (sp < 2) { px(34 + sp, 14, 1, 1, '#ffe27a'); px(33, 15 + sp, 1, 1, '#ff9a3a'); } spr(36, 2, ['.#.#', '..##', '.##.', '##..'], { '#': '#c8ccd4' }); },
+        buoy: function () { bg('#2c3a5a'); for (var k = 0; k < 46; k += 6) px((k + Math.floor(T * 6)) % 46, 22 + (k % 12 ? 0 : 1), 3, 1, '#5a7aa8'); var bob = Math.round(Math.sin(T * 3));
+          px(18, 10 + bob, 9, 10, OL); px(19, 11 + bob, 7, 3, '#e03a2a'); px(19, 14 + bob, 7, 3, '#f2f4f6'); px(19, 17 + bob, 7, 2, '#e03a2a'); px(22, 6 + bob, 1, 4, '#3a3c44'); if (Math.floor(T * 2) % 2) K.glow(22, 6 + bob, 5, 0.5, '255,220,120'); }
+      };
+      var ICON_IDS = Object.keys(ICONS);
+      function icon(id, ctx, state) {
+        if (!ICONS[id]) return;
+        GS = state; ti = C.trainInfo(state); ctx.clearRect(0, 0, 46, 30); K.to(ctx);
+        try { ICONS[id](); } finally { K.to(null); }
+      }
+      return { draw: frame, event: event, horn: horn, tapped: tapped, icon: icon, ICON_IDS: ICON_IDS, idle: function (dt) { T += dt; }, V: function () { return V; } };
     }
     return { mine: mine, station: station };
   })();
@@ -5112,7 +5143,8 @@
   function zsLoop(now) {
     zsRaf = 0;
     var c1 = $('z1-cv'), c2 = $('z2-cv'), c3 = $('z3-cv'), c4 = $('platform'), v1 = !!c1 && c1.offsetParent !== null, v2 = !!c2 && c2.offsetParent !== null, v3 = !!c3 && c3.offsetParent !== null, v4 = !!c4 && c4.offsetParent !== null;
-    if ((!v1 && !v2 && !v3 && !v4) || document.hidden) return;      // 안 보이면 멈춘다(다시 보이면 render 가 깨운다)
+    var r4 = zsShown('rows-z3') || zsShown('ups-z3');      // 4구역 구매 줄(운영 · 개조)이 보이면 줄 그림도 움직인다
+    if ((!v1 && !v2 && !v3 && !v4 && !r4) || document.hidden) return;      // 안 보이면 멈춘다(다시 보이면 render 가 깨운다)
     zsAcc += Math.min(0.25, Math.max(0, (now - zsLast) / 1000)); zsLast = now;
     if (zsAcc >= 1 / ZS_FPS) {
       var dt = Math.min(0.2, zsAcc); zsAcc = 0;
@@ -5120,7 +5152,7 @@
         if (v1 && !zs1) zs1 = ZS.town(c1, $('z1-fl'), { tap: function (i) { search(i >= 0 ? i : undefined); } });
         if (v2 && !zs2) zs2 = ZS.market(c2, $('z2-fl'), { sell: function () { $('sell').click(); }, fill: function () { var b = $('order-fill'); if (b && !$('order').hidden && !b.disabled) b.click(); else $('sell').click(); } });
         if (v3 && !zs3) zs3 = MS.mine(c3, $('z3-fl'), mineHost());
-        if (v4 && !zs4) zs4 = MS.station(c4, $('z4-fl'), { fmt: fmt, tap: function (x, y) { zs4Tap.x = x; zs4Tap.y = y; } });      // 누르기(칸 당기기)는 #platform 의 click 이 한다
+        if ((v4 || r4) && !zs4 && c4) zs4 = MS.station(c4, $('z4-fl'), { fmt: fmt, tap: function (x, y) { zs4Tap.x = x; zs4Tap.y = y; } });      // 누르기(칸 당기기)는 #platform 의 click 이 한다
         if (v1 && zsOff(c1)) v1 = false; if (v2 && zsOff(c2)) v2 = false; if (v3 && zsOff(c3)) v3 = false; if (v4 && zsOff(c4)) v4 = false;      /* 화면 밖이면 그리기만 건너뛴다(누르기 처리는 이미 붙어 있다) */
         if (v1) {
           var a = zsView1();
@@ -5133,7 +5165,8 @@
           if (zsPrev2) { if (m.stalls > zsPrev2.stalls) zs2.bought(0); if (m.porter > zsPrev2.porter) zs2.bought(1); if (m.crier > zsPrev2.crier) zs2.bought(2); if (m.broker && !zsPrev2.broker) zs2.bought(3); }
           zsPrev2 = m; zs2.draw(dt, m); zsIcons(zs2.icon, ZS_ROWS2);
         }
-        if (v4) zs4.draw(dt, state);
+        if (v4) zs4.draw(dt, state); else if (r4 && zs4) zs4.idle(dt);
+        if (r4 && zs4) zs4.ICON_IDS.forEach(function (id) { var ic = zsIcon(id); if (ic) zs4.icon(id, ic.getContext('2d'), state); });
         if (v3) { zs3.draw(dt, state); ZS_ROWS3.forEach(function (id) { var ic = zsIcon(id); if (ic) zs3.icon(id, ic.getContext('2d'), state); }); }
       } catch (e) {
         /* 그림이 실패하면 왜 실패했는지 그림판 위에 작게 적는다(화면 한 장만 받아도 원인을 알 수 있게). 게임은 아래 단추로 계속된다 */
@@ -5145,6 +5178,7 @@
   function zsWake() { if (!zsRaf && typeof requestAnimationFrame === 'function') { zsLast = performance.now(); zsRaf = requestAnimationFrame(zsLoop); } }
   /* 3구역 광산 장면의 집(5.4.0). 1 · 2구역 장면과 같은 고리(zsLoop)에서 그린다. */
   var zs4 = null, zs4Tap = { x: 92, y: 110 };      // 5.6.0 4구역 승강장 장면
+  function zsShown(id) { var e = $(id); return !!e && !e.hidden && e.offsetParent !== null; }
   var zs3 = null, ZS_ROWS3 = ['pick', 'miner', 'minecart', 'powder', 'wall', 'guard'];
   function mineEvents(list) { if (list && list.length) handleEvents(list); }
   function mineHost() {

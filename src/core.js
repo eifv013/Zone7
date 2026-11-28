@@ -568,7 +568,7 @@
     /* 5.3.2 '칸 넓히기'(선반 줄 늘리기)를 '출하대'로 바꿨다: 선반이 길어지면 화면이 커져 스크롤해야 했다. 줄 수는 늘 네 줄이고, 대신 가득 찼을 때 바로 출하되는 상자의 값이 오른다. 저장의 이름(wide)은 그대로라 산 사람은 잃지 않는다 */
     { id: 'wide',    zone: 2, name: '갱목',     desc: '암반 제한 시간 +5초', key: 'overflow', per: 0.5, baseCost: 5e13, growth: 400, max: 2 },
     { id: 'yard',    zone: 3, name: '정비창',    desc: '4구역 시설 값 -4%',      key: 'traincost', per: -0.04, baseCost: 3e18, growth: 3, max: 12 },
-    { id: 'longplat', zone: 3, name: '긴 승강장', desc: '화물칸을 2칸 더 붙일 수 있다', key: 'platlen', per: 2, baseCost: 2e19, growth: 500, max: 2 },
+    { id: 'longplat', zone: 3, name: '긴 승강장', desc: '열차가 2칸 더 길어진다', key: 'platlen', per: 2, baseCost: 2e19, growth: 500, max: 2 },
     { id: 'fence',   zone: 3, name: '철조망',    desc: '무리가 다가오는 걸음 -8%', key: 'hordespeed', per: -0.08, baseCost: 2e18, growth: 4, max: 5 },
     { id: 'horn',    zone: 3, name: '경적',      desc: '열차마다 경적을 한 번 더 울릴 수 있다(돌진을 막는다)', key: 'horn', per: 1, baseCost: 8e18, growth: 300, max: 2 },
     { id: 'coupler', zone: 3, name: '튼튼한 연결기', desc: '무리에 닿아도 뒤쪽 3분의 1만 떼인다', key: 'keepmore', per: 1, baseCost: 5e20, growth: 1, max: 1 },
