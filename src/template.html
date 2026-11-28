@@ -1704,10 +1704,11 @@ button.row.rec.rec-night { outline-color: #c0392b; }
 .zs-wrap { position: relative; margin: 0 auto 8px; max-width: 460px; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; background: #22242a; }
 .zs-cv { display: block; width: 100%; height: auto; image-rendering: pixelated; touch-action: manipulation; cursor: pointer; }
 .zs-fl { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; }
-.zs-fl span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font: 400 14px/1.2 var(--font-head); color: #fff6c8; text-shadow: 0 2px 0 #17180f, 0 -1px 0 #17180f, 1px 0 0 #17180f, -1px 0 0 #17180f; animation: zs-up .9s ease-out forwards; }
-.zs-fl span.big { font-size: 19px; color: #ffd95a; animation-duration: 1.5s; }
+.zs-fl span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font: 400 14px/1.2 var(--font-head); color: #fff6c8; text-shadow: 0 2px 0 #17180f, 0 -2px 0 #17180f, 2px 0 0 #17180f, -2px 0 0 #17180f, 1px 1px 0 #17180f, -1px -1px 0 #17180f, 1px -1px 0 #17180f, -1px 1px 0 #17180f; animation: zs-up .9s ease-out forwards; }
+.zs-fl span.big { font-size: 18px; color: #ffd95a; animation: zs-ban 1.7s ease-out forwards; padding: 4px 12px 5px; border-radius: 10px; background: rgba(23, 24, 15, .86); border: 2px solid #ffd95a; text-shadow: none; box-shadow: 0 3px 0 rgba(0, 0, 0, .45); z-index: 2; }      /* 5.6.2 큰 알림은 판 위에 얹는다: 글자 테두리만으로는 그림과 섞여 읽기 어려웠다 */
 .zs-fl span.gold { color: #ffd95a; font-size: 16px; }
 @keyframes zs-up { 0% { opacity: 0; margin-top: 6px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -26px; } }
+@keyframes zs-ban { 0% { opacity: 0; margin-top: 6px; } 12% { opacity: 1; margin-top: 0; } 80% { opacity: 1; margin-top: -4px; } 100% { opacity: 0; margin-top: -10px; } }      /* 큰 알림은 읽을 동안 또렷이 머문다 */
 #search-grid, #board, #streak, #trade .trade-top { display: none; }
 #trade .check { display: inline-flex; width: 48.5%; vertical-align: top; } #trade #sell-peak-row { margin-left: 3%; float: right; } #trade #auto-sell-row { float: left; } #trade::after { content: ''; display: block; clear: both; } #trade #auto-sell-row[hidden], #trade #sell-peak-row[hidden] { display: none; }      /* 스위치 둘을 한 줄에 */      /* 옛 칸 격자 · 시세 막대 · 연속 호가 점은 장면이 대신한다 */
 #line-head #line-load { visibility: hidden; width: 0; overflow: hidden; }      /* 초당 값은 위 머리줄에 나온다(두 번 보일 필요가 없다) */
@@ -2245,7 +2246,7 @@ try { window.BOOT = window.Boot.mount(document, window); } catch (e) { window.BO
     <div class="reset-row"><button type="button" class="danger" id="reset">처음부터 다시</button><p class="label">모든 기록을 지워요. 잘못 눌렀다면 아래 되돌리기로 돌아갈 수 있어요.</p></div>
     <div class="reset-row" id="undo-row" hidden><button type="button" id="restore-undo">되돌리기</button><p class="label" id="undo-info"></p></div>
     <div class="reset-row" id="bak-row" hidden><button type="button" id="restore-bak">백업에서 되살리기</button><p class="label" id="bak-info"></p></div>
-    <p class="ver">7구역 알파 5.6.1 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
+    <p class="ver">7구역 알파 5.6.2 · 알파 기간에는 구조와 수치가 바뀔 수 있습니다.</p>
   </section>
 </footer>
 

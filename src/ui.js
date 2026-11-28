@@ -1494,10 +1494,13 @@
       log('혈청 ' + state.serumStage + '단계를 끝냈다.', 'good'); sfx('perk'); buzz(30); Store.save(); render();
     });
     $('ending-ok').addEventListener('click', function () { $('ending').hidden = true; pendingEnding = null; sfx('story'); });
+    /* 5.6.2 4구역은 운영 줄이 셋뿐이었다(기관차 · 화물 등급 · 지게차). 승강장에 보이는 개조(긴 승강장 · 철조망 · 경적 · 연결기 · 역무원)는
+     * 운영 줄 아래에 같이 둔다: 그림에서 보이는 것을 그 자리에서 산다 */
+    var PLAY_UPS = { longplat: 1, fence: 1, horn: 1, coupler: 1, autosig: 1 };
     C.UPGRADES.forEach(function (u) {
       var r = buildRow(u, function () { buy(C.buyUpgrade(state, u.id), 'upgrade'); });
       r.btn.classList.add('row-zone');
-      rows.upgrades[u.id] = r; $(u.zone < 0 ? 'ups-wall' : 'ups-z' + u.zone).appendChild(r.btn);      // zone -1 은 방벽 개조
+      rows.upgrades[u.id] = r; $(u.zone < 0 ? 'ups-wall' : PLAY_UPS[u.id] ? 'rows-z3' : 'ups-z' + u.zone).appendChild(r.btn);      // zone -1 은 방벽 개조
     });
     C.DEFENSES.forEach(function (d) {
       var r = buildRow(d, function () { buy(C.buyDefense(state, d.id, qtyFor(C.maxDefenses(state, d.id), 1e6)), 'defense'); });
@@ -4631,7 +4634,10 @@
      *  - 개조가 보인다: 철조망(선로 위 가시철사, 좀비가 걸려 버둥거린다) · 경적(기관차 나팔) · 튼튼한 연결기(굵은 빨간 고리) · 역무원(깃발).
      * 그림이 틀려도 물자는 틀리지 않는다(그림 상태는 저장되지 않는다). */
     function station(cv, flBox, host) {
-      var W = 184, H = 132, RAIL = 96, DECK = 88, LOCO_W = 31, CW = 12, GAP = 1, PLAT = 104, FOOT = 126, PILE_X = 150, END = 137, TUN = 172, FENCE_X = 152;
+      var W = 184, H = 132, RAIL = 96, DECK = 88, LOCO_W = 31, CW = 12, GAP = 1, PLAT = 104, FOOT = 126, PILE_X = 150, END = 143, TUN = 176, FENCE_X = 158;
+      /* 5.6.2 열차는 늘 화면 안에 다 들어온다: 칸이 많으면(긴 승강장 · 12칸) 화차를 좁힌다.
+       * 전에는 칸 너비가 같아 12칸이면 기관차와 앞 화차가 왼쪽 밖으로 밀렸다. 짐은 앞 칸부터 실으니 실린 칸이 거의 안 보였다 */
+      function fitCW(n) { return Math.max(7, Math.min(12, Math.floor((END - 4 - LOCO_W) / Math.max(1, n)) - GAP)); }
       var K = makeKit(cv, flBox, W, H), px = K.px, spr = K.spr, g = K.main; K.bannerY = 44;
       var GS = null, ti = null;
       var V = { sky: Math.floor(Math.random() * 5), x: 0, n: 8, mode: 'stand', leave: null, arrive: 0, gap: 0, cut: null, prev: 0, loadAt: [], seed: 0,
@@ -4656,7 +4662,8 @@
         if (V.skyAt < 0) V.skyAt = sent;
         if (sent - V.skyAt >= 6) { V.skyAt = sent; V.sky = (V.sky + 1) % 5; bgCache = {}; }      // 열차 여섯 대마다 때 · 날씨가 바뀐다
         if (V.mode === 'stand') {
-          V.n = ti.max; V.x = stopX(V.n);
+          if (V.n !== ti.max || CW !== fitCW(ti.max)) { V.n = ti.max; CW = fitCW(V.n); }
+          V.x = stopX(V.n);
           if (ti.cars > V.prev) for (var k = V.prev; k < ti.cars; k++) { V.loadAt[k] = T; spark(carX(k) + 6, DECK - 2, 5); V.shake = Math.max(V.shake, 0.06); }
           if (ti.cars < V.prev) V.loadAt = [];
           V.prev = ti.cars;
@@ -4698,7 +4705,7 @@
           if (Math.random() < 0.5) V.steam.push({ x: V.x + 24, y: 68, vx: 14, vy: -8 - Math.random() * 6, t: 0, life: 0.9 });
           if (V.x + trainLen(L.n) < -10) { V.mode = 'gap'; V.gap = 0.6; V.leave = null; }
         } else if (V.mode === 'gap') {
-          V.gap -= dt; if (V.gap <= 0) { V.mode = 'arrive'; V.n = ti ? ti.max : 8; V.x = -trainLen(V.n) - 6; V.seed++; }
+          V.gap -= dt; if (V.gap <= 0) { V.mode = 'arrive'; V.n = ti ? ti.max : 8; CW = fitCW(V.n); V.x = -trainLen(V.n) - 6; V.seed++; }
         } else if (V.mode === 'arrive') {      // 빈 화차를 끌고 들어와 선다(끼익)
           var X = stopX(V.n), d = X - V.x; V.x += Math.max(dt * 8, d * Math.min(1, dt * 1.6));
           if (d < 50 && Math.random() < 0.5) spark(V.x + 6 + Math.random() * trainLen(V.n), RAIL - 1, 1);
@@ -4910,25 +4917,26 @@
         px(x, d, CW, 3, OL); px(x + 1, d, CW - 2, 1, '#7a5a3a'); px(x + 1, d + 1, CW - 2, 1, '#4a3424');
         for (k = 2; k < CW - 1; k += 4) px(x + k, d, 1, 1, '#5a4030');
         if (up('coupler')) { px(x - 2, d, 3, 3, OL); px(x - 1, d + 1, 1, 1, '#c8483a'); } else px(x - 1, d + 1, 1, 1, OL);      // 연결기(튼튼하면 굵은 빨간 고리)
-        bogie(x + 1, phase);
+        if (CW >= 11) bogie(x + 1, phase); else { var sp2 = Math.floor(phase) % 2; px(x, RAIL - 7, CW, 3, OL); px(x + 1, RAIL - 6, CW - 2, 1, '#4a4e58'); [x + 1, x + CW - 5].forEach(function (wx) { px(wx, RAIL - 4, 4, 4, OL); px(wx + 1, RAIL - 3, 2, 2, '#5a5e68'); px(wx + (sp2 ? 1 : 2), RAIL - 3, 1, 1, '#9aa0aa'); }); }
         if (!load) { px(x + 2, d - 1, 1, 1, '#8a8f99'); px(x + CW - 3, d - 1, 1, 1, '#8a8f99'); return; }
         var drop = Math.max(0, 1 - (T - (at || -9)) / 0.18), y0 = d - Math.round(drop * 3);
         if (gr === 0) {
-          for (k = 0; k < 3; k++) { var cx = x + (k < 2 ? k * 5 : 3), cy = y0 - (k < 2 ? 6 : 12), col = CRATE[(s + k) % 3];
-            px(cx, cy, 7, 6, OL); px(cx + 1, cy + 1, 5, 4, col); px(cx + 1, cy + 1, 5, 1, mix(col, '#ffffff', 0.25)); px(cx + 1, cy + 3, 5, 1, mix(col, '#000000', 0.25)); px(cx + 3, cy + 1, 1, 4, mix(col, '#000000', 0.2)); }
+          var cwn = CW >= 11 ? 3 : 2;      // 좁은 화차는 상자 둘을 쌓는다
+          for (k = 0; k < cwn; k++) { var bw = cwn === 3 ? 7 : CW, cx = cwn === 3 ? x + (k < 2 ? k * 5 : 3) : x, cy = y0 - (cwn === 3 ? (k < 2 ? 6 : 12) : 6 + k * 6), col = CRATE[(s + k) % 3];
+            px(cx, cy, bw, 6, OL); px(cx + 1, cy + 1, bw - 2, 4, col); px(cx + 1, cy + 1, bw - 2, 1, mix(col, '#ffffff', 0.25)); px(cx + 1, cy + 3, bw - 2, 1, mix(col, '#000000', 0.25)); px(cx + (bw >> 1), cy + 1, 1, 4, mix(col, '#000000', 0.2)); }
         } else if (gr === 1) {
-          [[0, -5], [4, -5], [7, -5], [2, -9], [5, -9]].forEach(function (p, j) { var sx = x + p[0], sy = y0 + p[1]; px(sx, sy + 1, 5, 4, OL); px(sx + 1, sy, 3, 1, OL); px(sx + 1, sy + 1, 3, 3, '#d8c08a'); px(sx + 1, sy + 1, 3, 1, '#ecd8a8'); px(sx + 2, sy + 2, 1, 1, j % 2 ? '#a8905a' : '#c8483a'); });
+          (CW >= 11 ? [[0, -5], [4, -5], [7, -5], [2, -9], [5, -9]] : [[0, -5], [CW - 5, -5], [(CW - 5) >> 1, -9]]).forEach(function (p, j) { var sx = x + p[0], sy = y0 + p[1]; px(sx, sy + 1, 5, 4, OL); px(sx + 1, sy, 3, 1, OL); px(sx + 1, sy + 1, 3, 3, '#d8c08a'); px(sx + 1, sy + 1, 3, 1, '#ecd8a8'); px(sx + 2, sy + 2, 1, 1, j % 2 ? '#a8905a' : '#c8483a'); });
         } else if (gr === 2) {
           px(x + 1, y0 - 12, CW - 2, 12, OL); px(x + 2, y0 - 11, 1, 10, '#6a6e78'); px(x + CW - 3, y0 - 11, 1, 10, '#6a6e78');
           px(x + 3, y0 - 10, CW - 6, 8, '#d8dce2'); px(x + 3, y0 - 10, CW - 6, 2, '#f2f4f6'); px(x + 3, y0 - 4, CW - 6, 2, '#a8acb4');
-          px(x + 5, y0 - 7, 2, 2, '#e8762a'); px(x + 5, y0 - 13, 2, 1, OL);
+          px(x + (CW >> 1) - 1, y0 - 7, 2, 2, '#e8762a'); px(x + (CW >> 1) - 1, y0 - 13, 2, 1, OL);
         } else {
           var reefer = gr === 4, col2 = reefer ? '#e6ecf0' : BOX[s % 5];
           px(x, y0 - 13, CW, 13, OL); px(x + 1, y0 - 12, CW - 2, 11, col2); px(x + 1, y0 - 12, CW - 2, 1, mix(col2, '#ffffff', 0.35)); px(x + 1, y0 - 2, CW - 2, 1, mix(col2, '#000000', 0.3));
           for (k = 2; k < CW - 4; k += 2) px(x + k, y0 - 11, 1, 9, mix(col2, '#000000', 0.18));
           px(x + CW - 4, y0 - 11, 1, 9, mix(col2, '#000000', 0.35)); px(x + CW - 3, y0 - 9, 1, 5, '#c8ccd4');
-          if (reefer) { px(x + 1, y0 - 7, CW - 5, 2, '#3f78ac'); px(x + 2, y0 - 11, 3, 3, '#8a9098'); px(x + 3, y0 - 10, 1, 1, Math.floor(T * 3 + s) % 2 ? '#5aff7a' : '#1f3a24'); }
-          else px(x + 3, y0 - 8, 4, 2, 'rgba(255,255,255,.6)');
+          if (reefer) { px(x + 1, y0 - 7, CW - 5, 2, '#3f78ac'); px(x + 2, y0 - 11, Math.min(3, CW - 6), 3, '#8a9098'); px(x + 3, y0 - 10, 1, 1, Math.floor(T * 3 + s) % 2 ? '#5aff7a' : '#1f3a24'); }
+          else px(x + 2, y0 - 8, Math.min(4, CW - 6), 2, 'rgba(255,255,255,.6)');
         }
       }
       function cargoCol(gr, k) { return gr === 0 ? CRATE[k % 3] : gr === 1 ? '#d8c08a' : gr === 2 ? '#d8dce2' : gr === 4 ? '#e6ecf0' : BOX[k % 5]; }
@@ -4975,9 +4983,10 @@
         px(x, top, 3, RAIL - top, '#4a4c54'); px(x + 1, top, 1, RAIL - top, '#5c5f68'); px(x, top, W - x, 6, '#3e4048'); px(x, top, W - x, 1, '#5c5f68'); px(x + 3, top + 6, W - x, 1, '#1a191f');
         for (var k = 0; k < 3; k++) px(x + 4 + k * 4, top + 2, 2, 2, '#2c2e35');
         var on = standing(), n = on ? Math.max(0, Math.round(ti.near * 100)) : 0, close = on && ti.near < 0.4, col = close && Math.floor(T * 6) % 2 ? '#ff4a3a' : '#ffd23a';
-        px(x - 1, top - 9, 13, 9, OL); px(x, top - 8, 11, 7, '#2a1c16'); if (on) digits(String(Math.min(99, n)), x + 1 + (n < 10 ? 2 : 0), top - 7, col);
-        if (on && ti.rush === 'warn' && Math.floor(T * 8) % 2) { px(x - 1, top - 9, 13, 9, '#ff3b2b'); spr(x + 3, top - 7, ['#.#.#', '#.#.#', '#.#.#', '.....', '#.#.#'], { '#': '#fff6c8' }); }
-        px(x + 3, top - 1, 1, 1, OL); px(x + 7, top - 1, 1, 1, OL);
+        var sx = W - 14;
+        px(sx - 1, top - 9, 13, 9, OL); px(sx, top - 8, 11, 7, '#2a1c16'); if (on) digits(String(Math.min(99, n)), sx + 1 + (n < 10 ? 2 : 0), top - 7, col);
+        if (on && ti.rush === 'warn' && Math.floor(T * 8) % 2) { px(sx - 1, top - 9, 13, 9, '#ff3b2b'); spr(sx + 3, top - 7, ['#.#.#', '#.#.#', '#.#.#', '.....', '#.#.#'], { '#': '#fff6c8' }); }
+        px(sx + 3, top - 1, 1, 1, OL); px(sx + 7, top - 1, 1, 1, OL);
       }
       function fence(front) {
         var lv = up('fence'); if (!lv) return;
@@ -5102,8 +5111,8 @@
       var ICON_IDS = Object.keys(ICONS);
       function icon(id, ctx, state) {
         if (!ICONS[id]) return;
-        GS = state; ti = C.trainInfo(state); ctx.clearRect(0, 0, 46, 30); K.to(ctx);
-        try { ICONS[id](); } finally { K.to(null); }
+        GS = state; ti = C.trainInfo(state); ctx.clearRect(0, 0, 46, 30); K.to(ctx); var keep = CW; CW = 12;
+        try { ICONS[id](); } finally { K.to(null); CW = keep; }
       }
       return { draw: frame, event: event, horn: horn, tapped: tapped, icon: icon, ICON_IDS: ICON_IDS, idle: function (dt) { T += dt; }, V: function () { return V; } };
     }
